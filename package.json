@@ -1,0 +1,31 @@
+{
+  "name": "astrum",
+  "version": "1.0.0",
+  "description": "astrum project",
+  "author": "iona1l",
+  "scripts": {
+    "dev": "turbo dev",
+    "db:generate": "pnpm --filter @astrum/db db:generate",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "check-types": "turbo check-types",
+    "dev:customer": "turbo dev --filter=@astrum/customer",
+    "dev:api": "turbo dev --filter=@astrum/api",
+    "dev:auth": "turbo dev --filter=@astrum/auth",
+    "dev:business": "turbo dev --filter=@astrum/business",
+    "prisma:generate": "turbo prisma:generate",
+    "prisma:migrate:dev": "pnpm --filter @astrum/db exec prisma migrate dev",
+    "prisma:migrate:deploy": "pnpm --filter @astrum/db exec prisma migrate deploy",
+    "prisma:studio": "pnpm --filter @astrum/db exec prisma studio",
+    "prisma:seed": "pnpm --filter @astrum/db seed",
+    "db:up": "docker compose up astrum-db -d",
+    "db:rm": "docker compose rm astrum-db -s -f -v",
+    "db:restart": "pnpm db:rm && pnpm db:up && timeout 2 && pnpm prisma:migrate:deploy",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "turbo": "^2.8.18"
+  },
+  "packageManager": "pnpm@10.4.0"
+}

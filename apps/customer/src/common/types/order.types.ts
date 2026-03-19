@@ -1,0 +1,115 @@
+// Enums - matching database schema exactly
+export enum OrderStatus {
+  PENDING = "PENDING",
+  CONFIRMED = "CONFIRMED",
+  SHIPPED = "SHIPPED",
+  DELIVERED = "DELIVERED",
+  CANCELED = "CANCELED", // Note: CANCELED not CANCELLED to match DB
+}
+
+export enum PaymentMethod {
+  CASH = "CASH",
+  CARD_ON_DELIVERY = "CARD_ON_DELIVERY",
+  ONLINE_CARD = "ONLINE_CARD",
+  PAYPAL = "PAYPAL",
+  STRIPE = "STRIPE",
+}
+
+export enum PaymentStatus {
+  PENDING = "PENDING",
+  PAID = "PAID",
+  FAILED = "FAILED",
+  REFUNDED = "REFUNDED",
+  CANCELLED = "CANCELLED", // DB uses CANCELLED (with double L)
+}
+
+export enum OrderItemStatus {
+  PENDING = "PENDING",
+  CONFIRMED = "CONFIRMED",
+  OUT_OF_STOCK = "OUT_OF_STOCK",
+  CANCELLED = "CANCELLED", // DB uses CANCELLED (with double L)
+  SHIPPED = "SHIPPED",
+  DELIVERED = "DELIVERED",
+  RETURNED = "RETURNED",
+  BACKORDERED = "BACKORDERED",
+  REPLACED = "REPLACED",
+}
+
+// Interfaces - matching database schema
+export interface ShippingMethod {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export interface OrderItem {
+  id: string;
+  productId: string;
+  name: string;
+  previewImage: string;
+  quantity: number;
+  price: number;
+  orderId: string;
+  receiptDate?: string; // DateTime from DB
+  status: OrderItemStatus;
+  userId: string;
+  product?: {
+    id: string;
+    name: string;
+    previewImage: string;
+    description?: string;
+  };
+}
+
+export interface Order {
+  id: string;
+  userId: string;
+  totalPrice: number;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  paymentDetails?: string;
+  status: OrderStatus;
+  createdAt: string; // ISO string from DB
+  updatedAt: string; // ISO string from DB
+  shippingMethod?: ShippingMethod; // Optional to handle API inconsistencies
+  deliveryAddress: string; // Simple string as in DB
+  deliveryDate: Date; // ISO string from DB
+  orderItems: OrderItem[]; // camelCase to match backend response
+  shippingMethodId: string;
+}
+
+// DTOs for API calls
+export interface CreateOrderItemDto {
+  productId: string;
+  name: string;
+  previewImage: string;
+  quantity: number;
+  price: number;
+}
+
+export interface CreateOrderDto {
+  paymentMethod: PaymentMethod;
+  paymentDetails?: string;
+  deliveryAddress: string; // Simple string as in DB
+  deliveryDate: Date; // Date type for form, converted to ISO string for API
+  shippingMethodId: string;
+  orderItems: CreateOrderItemDto[]; // camelCase for backend compatibility
+}
+
+export interface UpdateOrderStatusDto {
+  status: OrderStatus;
+}
+
+export interface UpdateOrderItemStatusDto {
+  status: OrderItemStatus;
+  receiptDate?: string;
+}
+
+// Response Types
+export interface OrdersResponse {
+  orders: Order[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}

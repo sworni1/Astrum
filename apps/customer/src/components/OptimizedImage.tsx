@@ -1,0 +1,355 @@
+"use client";
+
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import Image, { ImageProps } from "next/image";
+import { cn } from "@/lib/utils";
+import { Eye, Download, Maximize2, AlertCircle, ImageIcon } from "lucide-react";
+import { Skeleton } from "./ui/skeleton";
+
+interface OptimizedImageProps extends Omit<ImageProps, "onLoad" | "onError"> {
+  fallbackSrc?: string;
+  fallbackSrcs?: string[];
+  showLoadingSpinner?: boolean;
+  containerClassName?: string;
+  onLoadComplete?: () => void;
+  onError?: () => void;
+  enableHoverEffects?: boolean;
+  showOverlay?: boolean;
+  overlayActions?: boolean;
+  aspectRatio?: "square" | "4/3" | "16/9" | "3/2" | "auto";
+  rounded?: "none" | "sm" | "md" | "lg" | "xl" | "full";
+  shadow?: "none" | "sm" | "md" | "lg" | "xl";
+  errorVariant?: "minimal" | "detailed" | "retry";
+  onImageClick?: () => void;
+  onDownload?: () => void;
+  onFullscreen?: () => void;
+}
+
+// Enhanced blur data URL for smoother loading
+const DEFAULT_BLUR_DATA_URL =
+  "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyuwjA2g+lbCRjf7dA=";
+
+// Aspect ratio classes
+const aspectRatioClasses = {
+  square: "aspect-square",
+  "4/3": "aspect-4/3",
+  "16/9": "aspect-video",
+  "3/2": "aspect-3/2",
+  auto: "",
+};
+
+// Rounded classes
+const roundedClasses = {
+  none: "",
+  sm: "rounded-sm",
+  md: "rounded-md",
+  lg: "rounded-lg",
+  xl: "rounded-xl",
+  full: "rounded-full",
+};
+
+// Shadow classes
+const shadowClasses = {
+  none: "",
+  sm: "shadow-sm",
+  md: "shadow-md",
+  lg: "shadow-lg",
+  xl: "shadow-xl",
+};
+
+const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
+  src,
+  alt,
+  fallbackSrc,
+  fallbackSrcs = [],
+  showLoadingSpinner = false,
+  containerClassName,
+  className,
+  onLoadComplete,
+  onError,
+  enableHoverEffects = true,
+  showOverlay = false,
+  overlayActions = false,
+  aspectRatio = "auto",
+  rounded = "md",
+  shadow = "sm",
+  errorVariant = "detailed",
+  onImageClick,
+  onDownload,
+  onFullscreen,
+  placeholder = "blur",
+  blurDataURL = DEFAULT_BLUR_DATA_URL,
+  sizes = "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw",
+  quality = 85,
+  priority = false,
+  ...props
+}) {
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+  const [imageSrc, setImageSrc] = useState(src);
+  const [isHovered, setIsHovered] = useState(false);
+  const fallbackIndexRef = useRef(0);
+  const triedSrcsRef = useRef(new Set<string>());
+  const imageRef = useRef<HTMLDivElement>(null);
+
+  const allFallbacks = React.useMemo(() => {
+    const sources: string[] = [];
+    for (const s of fallbackSrcs) {
+      if (s && s !== src) sources.push(s);
+    }
+    if (fallbackSrc && fallbackSrc !== src) sources.push(fallbackSrc);
+    return sources;
+  }, [fallbackSrcs, fallbackSrc, src]);
+
+  const handleLoad = useCallback(() => {
+    setIsLoading(false);
+    setHasError(false);
+    onLoadComplete?.();
+  }, [onLoadComplete]);
+
+  const handleError = useCallback(() => {
+    setIsLoading(false);
+    triedSrcsRef.current.add(typeof imageSrc === "string" ? imageSrc : "");
+
+    let nextSrc: string | null = null;
+    while (fallbackIndexRef.current < allFallbacks.length) {
+      const candidate = allFallbacks[fallbackIndexRef.current];
+      fallbackIndexRef.current++;
+      if (!triedSrcsRef.current.has(candidate)) {
+        nextSrc = candidate;
+        break;
+      }
+    }
+
+    if (nextSrc) {
+      setImageSrc(nextSrc);
+      setIsLoading(true);
+      setHasError(false);
+    } else {
+      setHasError(true);
+      onError?.();
+    }
+  }, [imageSrc, allFallbacks, onError]);
+
+  const handleRetry = useCallback(() => {
+    fallbackIndexRef.current = 0;
+    triedSrcsRef.current.clear();
+    setIsLoading(true);
+    setHasError(false);
+    setImageSrc(src);
+  }, [src]);
+
+  const handleDownload = useCallback(async () => {
+    if (onDownload) {
+      onDownload();
+      return;
+    }
+
+    try {
+      // Handle different image source types
+      let downloadUrl: string;
+
+      if (typeof imageSrc === "string") {
+        downloadUrl = imageSrc;
+      } else if (typeof imageSrc === "object" && "src" in imageSrc) {
+        downloadUrl = imageSrc.src;
+      } else {
+        console.warn("Cannot download: unsupported image source type");
+        return;
+      }
+
+      const response = await fetch(downloadUrl);
+      if (!response.ok) throw new Error("Download failed");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = alt || "image";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download failed:", error);
+    }
+  }, [imageSrc, alt, onDownload]);
+
+  const handleFullscreen = useCallback(() => {
+    if (onFullscreen) {
+      onFullscreen();
+      return;
+    }
+
+    if (imageRef.current) {
+      if (imageRef.current.requestFullscreen) {
+        imageRef.current.requestFullscreen();
+      }
+    }
+  }, [onFullscreen]);
+
+  useEffect(() => {
+    setImageSrc(src);
+    setIsLoading(true);
+    setHasError(false);
+    fallbackIndexRef.current = 0;
+    triedSrcsRef.current.clear();
+  }, [src]);
+
+  const renderLoadingState = () => {
+    if (!isLoading || !showLoadingSpinner) return null;
+
+    return <Skeleton className="w-full h-full rounded-lg" />;
+  };
+
+  const renderErrorState = () => {
+    if (!hasError) return null;
+
+    const errorContent = {
+      minimal: (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+          <ImageIcon className="h-8 w-8 text-gray-400" />
+        </div>
+      ),
+      detailed: (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 p-4">
+          <AlertCircle className="h-8 w-8 text-red-500 mb-2" />
+          <p className="text-sm text-red-600 dark:text-red-400 text-center mb-2">
+            Failed to load image
+          </p>
+          <p className="text-xs text-gray-500 text-center">{alt}</p>
+        </div>
+      ),
+      retry: (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 p-4">
+          <AlertCircle className="h-8 w-8 text-red-500 mb-2" />
+          <p className="text-sm text-red-600 dark:text-red-400 text-center mb-3">
+            Failed to load image
+          </p>
+          <button
+            onClick={handleRetry}
+            className="px-3 py-1 text-xs bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      ),
+    };
+
+    return errorContent[errorVariant];
+  };
+
+  const renderOverlay = () => {
+    if (!showOverlay && !overlayActions) return null;
+    if (!isHovered && !showOverlay) return null;
+
+    return (
+      <div
+        className={cn(
+          "absolute inset-0 bg-black/40 backdrop-blur-[1px] transition-all duration-300 flex items-center justify-center",
+          isHovered || showOverlay ? "opacity-100" : "opacity-0",
+        )}
+      >
+        {overlayActions && (
+          <div className="flex gap-2">
+            {onImageClick && (
+              <button
+                onClick={onImageClick}
+                className="p-2 bg-white/90 hover:bg-white rounded-full transition-all duration-200 transform hover:scale-110 shadow-lg"
+                title="View Image"
+              >
+                <Eye className="h-4 w-4 text-gray-700" />
+              </button>
+            )}
+            <button
+              onClick={handleFullscreen}
+              className="p-2 bg-white/90 hover:bg-white rounded-full transition-all duration-200 transform hover:scale-110 shadow-lg"
+              title="Fullscreen"
+            >
+              <Maximize2 className="h-4 w-4 text-gray-700" />
+            </button>
+            <button
+              onClick={handleDownload}
+              className="p-2 bg-white/90 hover:bg-white rounded-full transition-all duration-200 transform hover:scale-110 shadow-lg"
+              title="Download"
+            >
+              <Download className="h-4 w-4 text-gray-700" />
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div
+      ref={imageRef}
+      className={cn(
+        "relative overflow-hidden group",
+        aspectRatioClasses[aspectRatio],
+        roundedClasses[rounded],
+        shadowClasses[shadow],
+        enableHoverEffects &&
+          "transform transition-all duration-300 hover:shadow-xl hover:scale-[1.02]",
+        onImageClick && "cursor-pointer",
+        containerClassName,
+      )}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={onImageClick}
+    >
+      {/* Loading State */}
+      {renderLoadingState()}
+
+      {/* Error State */}
+      {renderErrorState()}
+
+      {/* Main Image */}
+      {!hasError && (
+        <Image
+          {...props}
+          src={imageSrc}
+          alt={alt}
+          className={cn(
+            "transition-all duration-500 object-cover",
+            isLoading ? "opacity-0 scale-105" : "opacity-100 scale-100",
+            enableHoverEffects && "group-hover:scale-105",
+            roundedClasses[rounded],
+            className,
+          )}
+          placeholder={placeholder}
+          blurDataURL={blurDataURL}
+          sizes={sizes}
+          quality={quality}
+          priority={priority}
+          onLoad={handleLoad}
+          onError={handleError}
+          unoptimized={
+            typeof imageSrc === "string" && imageSrc.startsWith("http")
+          }
+        />
+      )}
+
+      {/* Overlay */}
+      {renderOverlay()}
+
+      {/* Hover Ring Effect */}
+      {enableHoverEffects && (
+        <div
+          className={cn(
+            "absolute inset-0 ring-2 ring-gray-500/0 transition-all duration-300 pointer-events-none",
+            roundedClasses[rounded],
+            isHovered && "ring-gray-500/30",
+          )}
+        />
+      )}
+    </div>
+  );
+});
+
+OptimizedImage.displayName = "OptimizedImage";
+
+export default OptimizedImage;
+
+// Export types for better TypeScript support
+export type { OptimizedImageProps };

@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  astrum-db:
+    image: postgres:13
+    container_name: astrum-db
+    ports:
+      - 5432:5432
+    env_file:
+      - packages/Astrum-db/.env
+    networks:
+      - astrumnetwork
+
+  astrum-api:
+    container_name: astrum-backend
+    build:
+      context: ./apps/api-astrum
+    ports:
+      - 3580:3580
+    env_file:
+      - apps/api-astrum/.env.prod
+    networks:
+      - astrumnetwork
+
+  astrum-auth:
+    container_name: auth-service
+    build:
+      context: ./apps/auth-astrum
+    ports:
+      - 4580:4580
+    env_file:
+      - apps/auth-astrum/.env.prod
+    networks:
+      - astrumnetwork
+
+  astrum-customer:
+    container_name: frontend-astrum-customer
+    build:
+      context: ./apps/customer
+    ports:
+      - 3000:3000
+    env_file:
+      - apps/customer/.env.production
+    networks:
+      - astrumnetwork
+
+networks:
+  astrumnetwork:
+    external: true

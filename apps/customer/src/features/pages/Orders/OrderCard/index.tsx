@@ -1,0 +1,142 @@
+import Link from "next/link";
+import { Card, CardContent } from "../../../../components/ui/card";
+import { Badge } from "../../../../components/ui/badge";
+import { Button } from "../../../../components/ui/button";
+import Image from "next/image";
+import dayjs from "dayjs";
+import { Order, OrderStatus } from "../../../../common/types/order.types";
+import { Currency } from "../../../../common/types/product.types";
+import { getCurrencyEmoji } from "../../../../common/helpers";
+
+type Props = {
+  order: Order;
+};
+
+const getStatusVariant = (status: OrderStatus) => {
+  switch (status) {
+    case OrderStatus.PENDING:
+    case OrderStatus.CONFIRMED:
+      return "bg-yellow-500 hover:bg-yellow-500";
+    case OrderStatus.SHIPPED:
+      return "bg-blue-500 hover:bg-blue-500";
+    case OrderStatus.DELIVERED:
+      return "bg-green-500 hover:bg-green-500";
+    case OrderStatus.CANCELED:
+      return "bg-red-500 hover:bg-red-500";
+    default:
+      return "bg-gray-500 hover:bg-gray-500";
+  }
+};
+
+const OrderCard = ({ order }: Props) => {
+  const orderItems = order.orderItems || [];
+  const firstItem = orderItems.length > 0 ? orderItems[0] : null;
+  const remainingItemsCount = Math.max(0, orderItems.length - 1);
+
+  return (
+    <Link href={`/orders/${order.id}`}>
+      <Card className="w-full rounded-lg hover:shadow-md transition-shadow">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-bold">
+                Order #{order.id.slice(-8)}{" "}
+                {/* Use last 8 chars of ID as order number */}
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                {dayjs(order.createdAt).format("MMMM DD, YYYY [at] HH:mm")}
+              </p>
+              <p className="text-muted-foreground text-xs mt-1">{order.id}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground">Total paid</p>
+              <p className="font-bold text-lg">
+                {getCurrencyEmoji(Currency.USD)}
+                {order.totalPrice.toFixed(2)}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <p className="text-sm">
+                  {order.shippingMethod?.name || "Shipping method"}
+                </p>
+                <Badge
+                  className={`text-white px-2 py-0.5 rounded-md text-xs font-medium ${getStatusVariant(order.status)}`}
+                >
+                  {order.status.replace("_", " ")}
+                </Badge>
+              </div>
+
+              <p className="text-sm text-muted-foreground mb-3">
+                Delivery: {dayjs(order.deliveryDate).format("MMMM DD, YYYY")}
+              </p>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    // Navigate to order details
+                  }}
+                  size="sm"
+                >
+                  View Details
+                </Button>
+                {order.status === OrderStatus.PENDING && (
+                  <Button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      // Handle order cancellation via status update
+                    }}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Cancel Order
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-shrink-0 mt-4 md:mt-0">
+              {firstItem?.previewImage || firstItem?.product?.previewImage ? (
+                <div className="relative">
+                  <Image
+                    src={
+                      firstItem.previewImage ||
+                      firstItem.product?.previewImage ||
+                      ""
+                    }
+                    alt={
+                      firstItem.name ||
+                      firstItem.product?.name ||
+                      "Product image"
+                    }
+                    width={80}
+                    height={80}
+                    className="rounded-md object-cover"
+                  />
+                  {remainingItemsCount > 0 && (
+                    <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      +{remainingItemsCount}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="w-20 h-20 bg-muted rounded-md flex items-center justify-center">
+                  <span className="text-muted-foreground text-xs">
+                    {orderItems.length} item
+                    {orderItems.length > 1 ? "s" : ""}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+};
+
+export default OrderCard;
