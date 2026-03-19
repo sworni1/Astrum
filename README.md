@@ -1,155 +1,105 @@
 ## Astrum
 
-Монорепозиторий с фронтендом и бэкендом.
+Монорепозиторий с фронтендом и бэкендом на базе Turborepo + pnpm workspaces.
 
 ### Структура
 
-- **Frontend (customer)**: `Astrum-frontend/customer`
-- **Backend (api-astrum)**: `Astrum-backend/api-astrum`
-- **Auth service (auth-astrum)**: `Astrum-backend/auth-astrum`
-- **Database (Astrum-db)**: `Astrum-db`
-- **Prisma schema**: `Astrum-backend/api-astrum/prisma/schema.prisma`
+- **Frontend (customer)**: `apps/customer`
+- **Backend API (api-astrum)**: `apps/api-astrum`
+- **Auth service (auth-astrum)**: `apps/auth-astrum`
+- **Database / Prisma**: `packages/Astrum-db`
+- **Прочие общие пакеты**: `packages/*`
 
 ### Требования
 
 - Node.js (рекомендуется LTS)
-- npm
-- Docker (опционально, если используете `docker compose`)
+- pnpm (см. версию в `package.json`, поле `packageManager`)
+- Docker и Docker Compose (для локальной БД и инфраструктуры)
 
-### Быстрый старт
+### Установка и быстрый старт
 
-#### Frontend (customer)
+Все команды выполняются из корня монорепозитория.
 
-Перейти в папку и установить зависимости:
-
-```bash
-cd Astrum-frontend/customer
-npm i
-```
-
-Запуск в разработке:
+1. **Установка зависимостей**
 
 ```bash
-npm run dev
+pnpm install
 ```
 
-Сборка и запуск:
+2. **База данных и Prisma (dev)**
 
 ```bash
-npm run build
-npm run start
+# поднять контейнер с БД
+pnpm db:up
+
+# применить миграции (dev)
+pnpm prisma:migrate:dev
 ```
 
-#### Backend (api-astrum)
-
-Перейти в папку и установить зависимости:
+3. **Запуск в режиме разработки**
 
 ```bash
-cd Astrum-backend/api-astrum
-npm i
+# запустить все основные приложения через Turborepo
+pnpm dev
+
+# либо по отдельности
+pnpm dev:customer
+pnpm dev:api
+pnpm dev:auth
+pnpm dev:business
 ```
 
-Сборка TypeScript:
+### Скрипты (корень репозитория)
 
-```bash
-npm run build
-```
+Основные скрипты из корневого `package.json`:
 
-Запуск:
+- **Разработка**
+  - **`pnpm dev`**: общий dev‑режим через Turborepo.
+  - **`pnpm dev:customer`**: dev только для `apps/customer`.
+  - **`pnpm dev:api`**: dev только для `apps/api-astrum`.
+  - **`pnpm dev:auth`**: dev только для `apps/auth-astrum`.
+  - **`pnpm dev:business`**: dev только для `apps/business`.
 
-```bash
-# dev (читает .env)
-npm run dev
+- **Сборка и проверка**
+  - **`pnpm build`**: сборка всех приложений/пакетов через Turborepo.
+  - **`pnpm lint`**: запуск линтеров во всех пакетах.
+  - **`pnpm check-types`**: проверка типов во всех пакетах.
 
-# старт с предварительной сборкой (читает .env)
-npm run start:dev
+- **Prisma / БД (пакет `packages/Astrum-db`)**
+  - **`pnpm db:generate`**: генерация клиента БД (использует `@astrum/db`).
+  - **`pnpm prisma:generate`**: `prisma generate` для `packages/Astrum-db`.
+  - **`pnpm prisma:migrate:dev`**: `prisma migrate dev` (dev‑миграции).
+  - **`pnpm prisma:migrate:deploy`**: `prisma migrate deploy` (prod‑миграции).
+  - **`pnpm prisma:studio`**: запуск Prisma Studio.
+  - **`pnpm prisma:seed`**: сидинг данных.
 
-# prod (читает .env.prod)
-npm run start:prod
-```
+- **Docker / инфраструктура**
+  - **`pnpm db:up`**: поднять контейнер `astrum-db` в Docker.
+  - **`pnpm db:rm`**: удалить контейнер `astrum-db` с томами.
+  - **`pnpm db:restart`**: пересоздать БД и применить миграции (`db:rm` → `db:up` → `prisma:migrate:deploy`).
+  - **`pnpm docker:up`**: поднять все сервисы из `docker-compose`.
+  - **`pnpm docker:down`**: остановить и удалить все сервисы из `docker-compose`.
 
-#### Auth service (auth-astrum)
+Отдельные приложения (`apps/*`) могут иметь свои специфические скрипты (Next.js, NestJS и т.д.) — подробности см. в `package.json` соответствующего приложения. Как правило, dev‑запуск удобнее делать через корневые Turborepo‑скрипты, описанные выше.
 
-Перейти в папку и установить зависимости:
+### Database / Prisma
 
-```bash
-cd Astrum-backend/auth-astrum
-npm i
-```
-
-Запуск в разработке:
-
-```bash
-npm run dev
-```
-
-Сборка и запуск:
-
-```bash
-npm run build
-npm run start:prod
-```
-
-#### Database (Astrum-db)
-
-База поднимается через Docker Compose (PostgreSQL).
-
-```bash
-cd Astrum-db
-docker compose up -d
-```
-
-### Скрипты
-
-#### Frontend (customer) — `Astrum-frontend/customer`
-
-- **`npm run dev`**: запуск Next.js в режиме разработки
-- **`npm run build`**: сборка Next.js
-- **`npm run start`**: запуск собранного приложения
-- **`npm run lint`**: ESLint (Next.js lint)
-- **`npm run prettier`**: форматирование (Prettier)
-- **`npm run linper`**: Prettier → небольшая пауза → ESLint
-- **`npm run build:prod`**: сборка TypeScript project references + Next build
-- **`npm run docker:compose`**: пересоздание/сборка сервиса фронта через Docker Compose
-
-#### Backend (api-astrum) — `Astrum-backend/api-astrum`
-
-- **`npm run build`**: компиляция TypeScript
-- **`npm run dev`**: запуск собранного сервера (читает `.env`)
-- **`npm run start:dev`**: build → запуск (читает `.env`)
-- **`npm run start:prod`**: запуск (читает `.env.prod`)
-- **`npm run docker:compose`**: пересоздание/сборка сервиса бэка через Docker Compose
-
-#### Auth service (auth-astrum) — `Astrum-backend/auth-astrum`
-
-- **`npm run dev`**: NestJS в watch-режиме
-- **`npm run build`**: сборка NestJS
-- **`npm run start`**: запуск NestJS
-- **`npm run start:prod`**: запуск `dist/main`
-- **`npm run lint`**: ESLint (`--fix`)
-- **`npm run format`**: Prettier (ts-файлы)
-- **`npm run prisma:deploy`**: `prisma generate` с `.env.prod`
-- **`npm run docker:compose`**: пересоздание/сборка контейнера `auth-service` через Docker Compose
-
-#### Database (Astrum-db) — `Astrum-db`
-
-- **`docker compose up -d`**: поднять PostgreSQL
-- **`docker compose down`**: остановить и удалить контейнер
+- Основная схема Prisma и конфигурация БД находятся в пакете `packages/Astrum-db`.
+- Файл схемы: `packages/Astrum-db/prisma/schema.prisma`.
+- Конфигурация Prisma: `packages/Astrum-db/prisma.config.ts`.
+- Для работы с БД используются корневые скрипты `pnpm db:*` и `pnpm prisma:*` (см. выше).
 
 ### Переменные окружения
 
-Бэкенд использует файлы:
+Бэкенд и сервисы аутентификации используют файлы:
 
 - **`.env`** для dev
 - **`.env.prod`** для prod
 
-Auth service использует:
+Расположение основных `.env`:
 
-- **`.env`** для dev
-- **`.env.prod`** для prod (в том числе для `docker compose`)
+- `apps/api-astrum/.env`, `apps/api-astrum/.env.prod`
+- `apps/auth-astrum/.env`, `apps/auth-astrum/.env.prod`
+- `packages/Astrum-db/.env` (PostgreSQL‑переменные + `DATABASE_URL`)
 
-Astrum-db использует:
-
-- **`.env`** (PostgreSQL переменные + `DATABASE_URL`)
-
-Конкретный набор переменных см. по месту использования в `Astrum-backend/api-astrum` и `Astrum-backend/auth-astrum`.
+`DATABASE_URL` и связанные переменные для БД должны соответствовать значениям, которые использует пакет `packages/Astrum-db` (см. `packages/Astrum-db/prisma.config.ts` и `.env` в этом пакете).
