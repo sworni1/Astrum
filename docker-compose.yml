@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   astrum-db:
     image: postgres:13
@@ -14,7 +12,8 @@ services:
   astrum-api:
     container_name: astrum-backend
     build:
-      context: ./apps/api-astrum
+      context: .
+      dockerfile: apps/api-astrum/Dockerfile
     ports:
       - 3580:3580
     env_file:
@@ -25,7 +24,8 @@ services:
   astrum-auth:
     container_name: auth-service
     build:
-      context: ./apps/auth-astrum
+      context: .
+      dockerfile: apps/auth-astrum/Dockerfile
     ports:
       - 4580:4580
     env_file:
@@ -36,7 +36,8 @@ services:
   astrum-customer:
     container_name: frontend-astrum-customer
     build:
-      context: ./apps/customer
+      context: .
+      dockerfile: apps/customer/Dockerfile
     ports:
       - 3000:3000
     env_file:

@@ -2,14 +2,20 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-COPY package*.json ./
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
 
-COPY . .
+RUN corepack enable
 
-RUN npm install
-RUN npm run build
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps ./apps
+COPY packages ./packages
 
+RUN pnpm install --filter @astrum/api...
+RUN pnpm --filter @astrum/api build
 
 EXPOSE 3580
 
-CMD ["npm", "run", "start:prod"]
+ENV NODE_ENV=production
+
+CMD ["pnpm", "--filter", "@astrum/api", "start:prod"]
