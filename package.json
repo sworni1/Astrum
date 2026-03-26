@@ -4,7 +4,7 @@
   "description": "astrum project",
   "author": "iona1l",
   "scripts": {
-    "dev": "turbo dev",
+    "dev": "docker start astrum-db && turbo dev",
     "db:generate": "pnpm --filter @astrum/db db:generate",
     "build": "turbo build",
     "lint": "turbo lint",

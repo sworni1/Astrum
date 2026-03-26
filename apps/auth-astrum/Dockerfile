@@ -2,18 +2,20 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-COPY package*.json ./
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
 
-RUN npm cache clean --force
+RUN corepack enable
 
-FROM node:lts-slim
-RUN apt-get update -y
-RUN apt-get install -y openssl
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps ./apps
+COPY packages ./packages
 
-COPY . .
-    
-RUN npm install
-RUN npm run prisma:deploy
-RUN npm run build
+RUN pnpm install --filter @astrum/auth...
+RUN pnpm --filter @astrum/auth build
 
-CMD [ "npm", "run", "start:prod" ]
+EXPOSE 4580
+
+ENV NODE_ENV=production
+
+CMD ["pnpm", "--filter", "@astrum/auth", "start:prod"]

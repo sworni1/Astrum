@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { Card, CardContent } from "../../../../../components/ui/card";
-import { Checkbox } from "../../../../../components/ui/checkbox";
-import Image from "next/image";
-import { ProductCartProps } from "../../../../../common/types/product.types";
-import { ToggleWishlistItemButton } from "../../../../general/ProductCard/actions";
-import AddToCartWithQuantity from "./actions/AddToCartWithQuantity";
-import RemoveFromCartButton from "./actions/RemoveFromCartButton";
-import Link from "next/link";
+import { Card, CardContent } from '../../../../../components/ui/card';
+import Image from 'next/image';
+import { ProductCartProps } from '../../../../../common/types/product.types';
+import { ToggleWishlistItemButton } from '../../../../general/ProductCard/actions';
+import AddToCartWithQuantity from './actions/AddToCartWithQuantity';
+import RemoveFromCartButton from './actions/RemoveFromCartButton';
+import Link from 'next/link';
+import SelectionButton from './actions/SelectionButton';
 
 const CartCard = ({
   id,
@@ -21,19 +21,12 @@ const CartCard = ({
   onSelectionChange,
 }: ProductCartProps) => {
   return (
-    <Card className={`overflow-hidden p-0 transition-all `}>
+    <Card
+      className={`overflow-hidden p-0 transition-all ${isSelected ? 'border-1 border-primary' : ''}`}
+    >
       <CardContent className="p-0">
         <div className="flex h-full flex-col md:flex-row">
           <div className="relative h-auto w-full md:w-37">
-            {/* Checkbox overlay on image */}
-            <div className="absolute z-10 bg-white text-center p-[7px] border-none border-0 rounded-none rounded-br-[8px]">
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={onSelectionChange}
-                className="border-gray-400 data-[state=checked]:bg-gray-900 data-[state=checked]:border-gray-900 w-4 h-4"
-              />
-            </div>
-
             <Link href={`/products/${id}`}>
               <Image
                 unoptimized
@@ -54,14 +47,20 @@ const CartCard = ({
                 </Link>
 
                 <p className="text-muted-foreground text-sm">
-                  {"Grey"} • {15}
+                  {'Grey'} • {15}
                 </p>
                 <p className="text-sm font-medium mt-1">
                   ${price.toFixed(2)} each
                 </p>
               </div>
 
-              <RemoveFromCartButton id={id} />
+              <div>
+                <SelectionButton
+                  onSelectionChange={onSelectionChange}
+                  isSelected={isSelected}
+                />
+                <RemoveFromCartButton id={id} />
+              </div>
             </div>
 
             <div className="mt-4 flex items-center justify-between">
@@ -72,7 +71,7 @@ const CartCard = ({
               <AddToCartWithQuantity
                 productId={id}
                 quantity={quantity}
-                size={"sm"}
+                size={'sm'}
                 quantityInCart={quantityInCart}
               />
             </div>
