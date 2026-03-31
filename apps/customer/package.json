@@ -10,7 +10,8 @@
     "timeout": "node -e \"require('node:timers/promises').setTimeout(1_250)\"",
     "prettier": "prettier --write --ignore-unknown .",
     "linper": "npm run prettier && npm run timeout && npm run lint",
-    "build:prod": "tsc -b && next build"
+    "build:prod": "tsc -b && next build",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@apollo/client": "^3.13.8",

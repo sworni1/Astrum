@@ -5,7 +5,8 @@
     "prisma:generate": "prisma generate",
     "start:dev": "dotenv -e .env -- tsx watch src/server.ts",
     "dev": "dotenv -e .env -- tsx watch src/server.ts",
-    "start:prod": "dotenv -e .env.prod -- tsx dist/src/server.js"
+    "start:prod": "dotenv -e .env.prod -- tsx dist/src/server.js",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.5.0",
