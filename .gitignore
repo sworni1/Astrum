@@ -6,3 +6,18 @@ dist/
 .env
 .env.*
 *.log
+
+# OMC / agent state
+.agents/
+.claude/
+.codex/
+.mcp.json
+.omc/
+opencode.jsonc
+
+# plugin scaff
+plugins/
+
+# package manager artifacts
+package-lock.json
+pnpm-lock.yaml
