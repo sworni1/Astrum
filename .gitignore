@@ -20,4 +20,4 @@ plugins/
 
 # package manager artifacts
 package-lock.json
-pnpm-lock.yaml
+docs/

@@ -22,9 +22,16 @@
     "db:rm": "docker compose rm astrum-db -s -f -v",
     "db:restart": "pnpm db:rm && pnpm db:up && timeout 2 && pnpm prisma:migrate:deploy",
     "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "prepare": "husky",
+    "mcp:check": "pwsh ./scripts/mcp-health-check.ps1"
+  },
+  "lint-staged": {
+    "*.json": "node -e \"try { JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')); console.log('Valid JSON'); } catch(e) { process.exit(1); }\""
   },
   "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "turbo": "^2.8.18"
   },
   "packageManager": "pnpm@10.4.0"
