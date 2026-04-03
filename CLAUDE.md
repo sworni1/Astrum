@@ -108,6 +108,12 @@ Network: `astrumnetwork` (external, created separately).
 - Seeds: `packages/Astrum-db/prisma/productSeeds.js` and `seedFromExcel.ts`
 - Always run `pnpm prisma:generate` after schema changes.
 
+## Правила коммуникации
+
+- **Язык общения — русский.** Все ответы, комментарии в коде, заметки в Obsidian, commit-сообщения, документация — на русском языке.
+- Если пользователь написал на русском — отвечай на русском. Если на английском — можно на английском.
+- **По умолчанию используй русский язык.**
+
 ## Agent Workflows & Automation
 
 ### Superpowers Auto-Trigger Rules
