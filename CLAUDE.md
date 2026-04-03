@@ -151,18 +151,31 @@ Store project knowledge in the Obsidian vault at `C:\Users\ADMIN\Documents\Obsid
 - `/bugs/` — Bug investigations and root cause analyses
 - `/runbooks/` — Operational runbooks and deployment guides
 
-When to save to Obsidian:
-- After completing a significant feature or migration
-- When an architectural decision is made
-- After debugging a tricky issue (save the root cause and fix)
-- When the user explicitly asks to "remember" or "document" something
+**ОБЯЗАТЕЛЬНО сохранять в Obsidian** (обязательное правило):
+- После **каждого** коммита — создать заметку с описанием изменений в `Projects/Astrum/session-logs/`
+- После завершения значимой фичи или миграции — обновить или создать документ в `Projects/Astrum/specs/` или `Projects/Astrum/architecture/`
+- Когда принимается архитектурное решение — создать ADR в `Projects/Astrum/decisions/`
+- После отладки сложной проблемы — описать причину и исправление в `Projects/Astrum/bugs/`
+- Когда пользователь говорит «запомни это» или «задокументируй»
+
+### Правила именования файлов в Obsidian
+
+Все файлы в Obsidian должны иметь **осмысленные имена на русском языке**, кратко отражающие суть:
+
+- **Хорошо:** `Добавление эндпоинта регистрации пользователей.md`
+- **Хорошо:** `Исправление утечки памяти в API.md`
+- **Хорошо:** `Выбор между GraphQL и REST.md`
+- **Плохо:** `commit1.md`, `fix.md`, `session-2026-04-03.md`, `note.md`
+
+Формат: `[Действие] + [объект изменений]` или `[Проблема] → [решение]` для багов.
+Примеры багов: `Исправление — дублирование записей при импорте.md`
 
 ### Security & Safety Rules
 
 - **NEVER commit secrets** — `.env`, tokens, keys, credentials
-- **Security review** — use `superpowers:security-reviewer` agent when modifying `apps/auth-astrum/` or authentication logic
-- **Database migrations** — always verify migration safety before `pnpm prisma:migrate`
-- **Validate input** — use `class-validator` in Auth, Express middleware validation in API
+- **Security review** — use `superpowers:security-reviewer` agent when modifying `apps/auth-astrum/` или логику аутентификации
+- **Database migrations** — всегда проверять безопасность перед `pnpm prisma:migrate`
+- **Validate input** — использовать `class-validator` в Auth, валидацию Express middleware в API
 
 ### MCP Health
 
