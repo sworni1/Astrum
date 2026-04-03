@@ -107,3 +107,67 @@ Network: `astrumnetwork` (external, created separately).
 - Migrations: `packages/Astrum-db/prisma/migrations/`
 - Seeds: `packages/Astrum-db/prisma/productSeeds.js` and `seedFromExcel.ts`
 - Always run `pnpm prisma:generate` after schema changes.
+
+## Agent Workflows & Automation
+
+### Superpowers Auto-Trigger Rules
+
+ALWAYS use these skills automatically based on context:
+
+| Trigger | Skill |
+|---------|-------|
+| Any creative work / new feature / design decision | `superpowers:brainstorming` |
+| Implementation plan exists, ready to code | `superpowers:executing-plans` |
+| Writing multi-step plan | `superpowers:writing-plans` |
+| Bug, test failure, unexpected behavior | `superpowers:systematic-debugging` |
+| Code review requested or PR feedback | `superpowers:receiving-code-review` |
+| Before claiming work is done | `superpowers:verification-before-completion` |
+| After major step completion | `superpowers:code-reviewer` (subagent) |
+| Multiple independent tasks (2+) | `superpowers:dispatching-parallel-agents` |
+| Refactoring existing code | `superpowers:test-driven-development` |
+| Branch complete, all tests pass | `superpowers:finishing-a-development-branch` |
+| About to write code | Check if any skill applies (even 1%) |
+
+### Search & Knowledge Tools
+
+- **Exa is the primary search tool** — use `mcp__exa__web_search_exa` and `mcp__exa__get_code_context_exa` instead of generic `WebSearch`.
+- **Context7 (`mcp__plugin_context7_context7__`)** — use for library/framework documentation lookups.
+- **Obsidian (`mcp__obsidian__`)** — use as the persistent knowledge base for project documentation, decisions, and session learnings.
+
+### Knowledge Management (Obsidian)
+
+Store project knowledge in the Obsidian vault at `C:\Users\ADMIN\Documents\Obsidian Vault\Projects\Astrum\`:
+
+- `/specs/` — Feature specifications and design docs
+- `/decisions/` — Architectural Decision Records (ADRs)
+- `/session-logs/` — Notable session outcomes and learnings
+- `/architecture/` — System architecture documentation
+- `/bugs/` — Bug investigations and root cause analyses
+- `/runbooks/` — Operational runbooks and deployment guides
+
+When to save to Obsidian:
+- After completing a significant feature or migration
+- When an architectural decision is made
+- After debugging a tricky issue (save the root cause and fix)
+- When the user explicitly asks to "remember" or "document" something
+
+### Security & Safety Rules
+
+- **NEVER commit secrets** — `.env`, tokens, keys, credentials
+- **Security review** — use `superpowers:security-reviewer` agent when modifying `apps/auth-astrum/` or authentication logic
+- **Database migrations** — always verify migration safety before `pnpm prisma:migrate`
+- **Validate input** — use `class-validator` in Auth, Express middleware validation in API
+
+### MCP Health
+
+If an MCP server fails to connect:
+1. Check `.mcp.json` for command/args correctness
+2. For `npx`-based servers on Windows, use `cmd /c npx` wrapper
+3. Run `/mcp` to diagnose connection status
+4. Fall back to alternative tools if a server is temporarily unavailable
+
+### Session Lifecycle
+
+- **Session start**: CLAUDE.md is auto-loaded; check Obsidian for prior session context if working on an ongoing feature
+- **Session end**: Save notable learnings to Obsidian via `obsidian_create_note` in `Projects/Astrum/session-logs/`
+- **Before commits**: Husky pre-commit hook runs lint + type checks
