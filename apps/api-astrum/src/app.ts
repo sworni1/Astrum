@@ -12,6 +12,7 @@ import productRoutes from './modules/product/product.routes';
 import wishlistRoutes from './modules/wishlist/wishlist.routes';
 import cartRoutes from './modules/cart/cart.routes';
 import orderRoutes from './modules/order/order.routes';
+import { reviewsRouter } from './modules/reviews/reviews.routes';
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use('/api/products', authenticateToken, productRoutes);
 app.use('/api/wishlist', authenticateToken, wishlistRoutes);
 app.use('/api/cart', authenticateToken, cartRoutes);
 app.use('/api/orders', authenticateToken, orderRoutes);
+app.use('/api/reviews', authenticateToken, reviewsRouter);
 
 app.get('/', (req, res) => {
   res.send('Astrum backend is running...');
