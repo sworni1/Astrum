@@ -8,7 +8,7 @@
 
 | # | Name | Status | Summary |
 |---|------|--------|---------|
-| 1 | Prisma Schema & Core CRUD | planned | Схема Review/ReviewResponse, CRUD эндпоинты, валидация OrderItem |
+| 1 | Prisma Schema & Core CRUD | executing | ✅ Схема Review/ReviewResponse, ✅ CRUD эндпоинты, ✅ валидация OrderItem |
 | 2 | Photo Upload & S3 Storage | not-started | MinIO dev, presigned URLs, sharp обработка, multer интеграция |
 | 3 | Moderation Workflow | not-started | State machine PENDING→APPROVED/REJECTED, ML stub, агрегаты Product |
 | 4 | ML Service (Python/FastAPI) | not-started | docker-сервис ml-astrum, scikit-learn TF-IDF + Naive Bayes |
@@ -30,4 +30,4 @@ Phase 4 (ML Service) — independent, can run in parallel
 ## Phase 1 Plans
 
 **Plans:** 1 plan
-- [ ] 01-prisma-schema-core-crud-01-PLAN.md — Prisma schema + Reviews module (CRUD, purchase validation, cursor pagination, aggregates)
+- [x] 01-prisma-schema-core-crud-01-PLAN.md — Prisma schema + Reviews module (CRUD, purchase validation, cursor pagination, aggregates) ✅ Complete
