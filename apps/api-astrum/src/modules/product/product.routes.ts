@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { ProductController } from "./product.controller";
+import { productReviewsRouter } from "../reviews/reviews.routes";
 
 const productController = new ProductController();
 
@@ -12,5 +13,8 @@ productRoutes.get(
 );
 productRoutes.post("/", productController.createProduct);
 productRoutes.get("/:productId", productController.getProduct);
+
+// Nested review routes for a specific product
+productRoutes.use("/:productId/reviews", productReviewsRouter);
 
 export default productRoutes;

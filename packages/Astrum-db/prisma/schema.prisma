@@ -20,6 +20,7 @@ model User {
   preferredCategories String[]
   dateOfBirth         DateTime
   lastViewedProduct   LastViewedProduct[]
+  reviews             Review[]
 }
 
 model LastViewedProduct {
@@ -89,6 +90,9 @@ model Product {
   views        Int               @default(0)
   impressions  Impression[]
   properties   ProductProperty[]
+  reviews      Review[]
+  reviewCount  Int      @default(0)
+  averageRating Float   @default(0)
 }
 
 model ProductProperty {
@@ -129,6 +133,7 @@ model OrderItem {
   status       OrderItemStatus @default(PENDING)
   userId       String
   order        Order           @relation(fields: [orderId], references: [id])
+  review       Review?
 }
 
 model ShippingMethod {
@@ -238,4 +243,45 @@ enum ProductVisibility {
 enum Gender {
   Male
   Female
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Review {
+  id               String        @id @default(uuid())
+  userId           String
+  productId        String
+  orderItemId      String        @unique
+  rating           Int           @db.SmallInt
+  qualityRating    Int           @db.SmallInt
+  deliveryRating   Int           @db.SmallInt
+  accuracyRating   Int           @db.SmallInt
+  comment          String
+  photos           String[]      @default([])
+  status           ReviewStatus  @default(PENDING)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  Product          Product       @relation(fields: [productId], references: [id])
+  User             User          @relation(fields: [userId], references: [id])
+  OrderItem        OrderItem     @relation(fields: [orderItemId], references: [id])
+
+  @@index([productId, status])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model ReviewResponse {
+  id         String   @id @default(uuid())
+  reviewId   String
+  businessId String
+  comment    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([reviewId])
 }
