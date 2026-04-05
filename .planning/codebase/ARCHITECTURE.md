@@ -1,250 +1,139 @@
 # Architecture
 
-**Analysis Date:** 2026-04-04
+**Analysis Date:** 2026-04-05
 
 ## Pattern Overview
 
-**Overall:** Microservices with API Gateway pattern (service-oriented monolith)
-
-The project is a monorepo with three independent servers sharing a single PostgreSQL database through a shared Prisma package. Services communicate synchronously -- the API Gateway acts as a reverse proxy for the auth service and handles all business-domain REST endpoints.
+**Overall:** Multi-service monorepo (Turborepo + pnpm workspaces) with a BFF-style API gateway, dedicated auth service, customer SPA, and a single PostgreSQL database accessed through Prisma.
 
 **Key Characteristics:**
-- Two independent backend services (Express API Gateway + NestJS Auth)
-- Shared database with Prisma ORM in a dedicated workspace package
-- Token-based authentication via HTTP cookies
-- Next.js 15 App Router frontend consuming both services through a fetcher hook
 
-## Services
-
-| Service | Name | Stack | Port | Role |
-|---------|------|-------|------|------|
-| API Gateway | `@astrum/api` | Express + TypeScript | `3580` | Business logic, product/cart/order/wishlist/user CRUD |
-| Auth Service | `@astrum/auth` | NestJS + TypeScript | `4580` | Registration, sign-in, JWT issuance |
-| Frontend | `@astrum/customer` | Next.js 15 + React 19 | `3000` | Customer-facing storefront |
-| Database Package | `@astrum/db` | Prisma 7.5 | -- | Schema, migrations, Prisma client |
+- Three HTTP services: Express (`@astrum/api`), NestJS (`@astrum/auth`), Next.js App Router (`@astrum/customer`).
+- One relational data store; schema ownership and migrations live under `packages/Astrum-db/prisma/`.
+- Auth traffic to the Nest service is reverse-proxied from the Express app (`apps/api-astrum/src/app.ts`).
+- JWT sessions use a shared secret; the browser stores an httpOnly cookie `__auth` set by the Next app (`apps/customer/src/common/helpers/session.ts`).
 
 ## Layers
 
-### API Gateway (`apps/api-astrum/src`)
+**Presentation (customer):**
 
-**Entry points:**
-- `apps/api-astrum/src/server.ts` -- starts Express server on port 3580
-- `apps/api-astrum/src/app.ts` -- Express app configuration, middleware stack, route registration
+- Purpose: Server and client UI, route protection, calling backend via HTTP.
+- Location: `apps/customer/src/`
+- Contains: App Router pages under `apps/customer/src/app/`, feature UI under `apps/customer/src/features/`, hooks under `apps/customer/src/hooks/`.
+- Depends on: Environment-configured API base URL (`NEXT_PUBLIC_API_GATEWAY_URL` in `apps/customer/src/hooks/useFetcher.ts`), `JWT_SECRET` for server-side session verification.
+- Used by: End users in the browser.
 
-**Layers:**
-1. **Presentation** -- Controller classes (`*.controller.ts`) in each module, receive Express Request/Response
-2. **Routing** -- Express Router instances (`*.routes.ts`) map endpoints to controller methods
-3. **Business Logic** -- Service classes (`*.service.ts`) in each module, handle domain logic and Prisma calls
-4. **Data Access** -- Prisma client (`packages/Astrum-db/lib/prisma.ts`) shared across services
-5. **Middleware** -- Cross-cutting concerns: `authenticateToken.ts`, `corsOptions.ts`, `validateDto.ts`
+**API gateway (business API + auth proxy):**
 
-**Middleware stack (applied in order in `app.ts`):**
+- Purpose: Terminate CORS, JSON body parsing, cookies; proxy `/api/auth` to the auth service; enforce JWT on protected REST routes.
+- Location: `apps/api-astrum/src/`
+- Contains: `apps/api-astrum/src/app.ts` (Express app wiring), `apps/api-astrum/src/modules/*` (domain routes/controllers/services), `apps/api-astrum/src/middlewares/`.
+- Depends on: `AUTH_SERVICE_URL` for `http-proxy-middleware` (`apps/api-astrum/src/common/helpers/proxyOptions.ts`), `JWT_SECRET` for `jsonwebtoken` verification (`apps/api-astrum/src/middlewares/authenticateToken.ts`), Prisma client from `apps/api-astrum/lib/prisma.ts`.
+- Used by: Customer app and any other HTTP clients targeting port `3580`.
 
-1. `helmet` -- security headers (cross-origin resource policy)
-2. `morgan` -- HTTP request logging (dev mode)
-3. `cors(corsOptions)` -- restricts to `http://localhost:3000`, credentials enabled
-4. HTTP proxy for `/api/auth` -> `AUTH_SERVICE_URL` via `http-proxy-middleware`
-5. `express.json` / `express.urlencoded` / `cookie-parser`
-6. Route handlers with `authenticateToken` middleware for protected routes
+**Auth service:**
 
-### Auth Service (`apps/auth-astrum/src`)
+- Purpose: Register and sign-in; issue JWT access tokens; persist users via Prisma.
+- Location: `apps/auth-astrum/src/`
+- Contains: NestJS modules (`apps/auth-astrum/src/app.module.ts`, `apps/auth-astrum/src/auth/auth.module.ts`), `AuthController` (`apps/auth-astrum/src/auth/auth.controller.ts`), `AuthService` (`apps/auth-astrum/src/auth/auth.service.ts`), Passport JWT strategy (`apps/auth-astrum/src/auth/strategy/jwt.strategy.ts`), `PrismaService` (`apps/auth-astrum/src/prisma/prisma.service.ts`).
+- Depends on: `DATABASE_URL`, `JWT_SECRET` (via `ConfigModule`), Prisma client generated under `apps/auth-astrum/generated/prisma/`.
+- Used by: Proxied through Express at `/api/auth` (see `apps/api-astrum/src/app.ts`); Swagger UI at `/swagger` on the auth app (`apps/auth-astrum/src/main.ts`).
 
-**Entry point:**
-- `apps/auth-astrum/src/main.ts` -- NestJS bootstrap, port 4580, Swagger UI at `/swagger`
+**Data access (Prisma):**
 
-**NestJS module structure:**
-```
-app.module.ts
-  |-- ConfigModule (global)
-  |-- AuthModule
-  |     |-- AuthController (POST /auth/register, POST /auth/signin)
-  |     |-- AuthService (signToken, register, signin)
-  |     |-- JwtStrategy (passport-jwt, Bearer token extraction)
-  |     |-- JwtGuard
-  |     |-- GetUser decorator
-  |-- PrismaModule
-        |-- PrismaService
-```
-
-**Endpoints:**
-- `POST /api/auth/register` -- Create user, return JWT (1d expiry)
-- `POST /api/auth/signin` -- Verify credentials, return JWT (1d expiry)
-
-### Frontend (`apps/customer/src`)
-
-**Entry point:**
-- `apps/customer/src/app/layout.tsx` -- Root layout with ThemeProvider, ProgressBarProvider, Toaster
-
-**Route groups:**
-- `(auth)` -- `/auth/signin`, `/auth/register` -- authentication pages
-- `(content)` -- all other pages (home, catalog, product, cart, profile, orders, wishlist)
-
-**Layers:**
-1. **Pages** -- Next.js App Router route segments (`src/app/(content)/.../page.tsx`)
-2. **Features** -- Feature-specific components organized by domain (`src/features/...`)
-3. **Hooks** -- Data-fetching hooks using SWR + SWR Mutations (`src/hooks/...`)
-4. **Shared API** -- Service clients (`src/shared/api/`)
-5. **Components** -- Reusable UI (`components/ui/`), skeletons, providers, system
-6. **Common** -- Types, helpers, constants, validation schemas (Zod), regexps
+- Purpose: ORM access to PostgreSQL with the `pg` driver and `@prisma/adapter-pg`.
+- Location: Canonical schema and migrations: `packages/Astrum-db/prisma/schema.prisma`, `packages/Astrum-db/prisma/migrations/`. Per-app clients: `apps/api-astrum/lib/prisma.ts`, `apps/auth-astrum/src/prisma/prisma.service.ts`, shared singleton pattern in `packages/Astrum-db/lib/prisma.ts`.
+- Contains: Generated client output configured as `output = "../generated/prisma"` in each schema file that uses that pattern.
+- Depends on: `DATABASE_URL`.
+- Used by: Express services and Nest `AuthService` / `PrismaService`.
 
 ## Data Flow
 
-### Authentication Flow
+**Sign-in / register:**
 
-```
-Customer Frontend                    Auth Service (NestJS)
------------------                    ----------------------
-POST /api/auth/register  ----------> POST /auth/register
-  (via proxy)                          1. Validate RegisterUserDto
-                                        2. Hash password (argon2)
-  <-- { token, expiresIn }              3. Create User in Prisma
-                                         4. Sign JWT (1d expiry)
-                                         5. Return { token, expiresIn }
+1. Browser posts credentials to the API gateway path `/api/auth/...` (`apps/api-astrum/src/app.ts`).
+2. Request proxies to Nest auth (`apps/auth-astrum/src/auth/auth.controller.ts`).
+3. `AuthService` reads/writes `User` via Prisma (`apps/auth-astrum/src/auth/auth.service.ts`).
+4. JWT string returned to client; Next may persist it in `__auth` via `createSession` (`apps/customer/src/common/helpers/session.ts`).
 
-createSession(res.data.token)
-  stores token in localStorage.__auth
+**Authenticated REST (products, cart, orders, etc.):**
 
-Every subsequent request:
-  authenticateToken middleware reads
-  cookies.__auth, verifies JWT,
-  attaches req.userId
-```
+1. Client sends requests with cookie `__auth` to `NEXT_PUBLIC_API_GATEWAY_URL` (see `apps/customer/src/hooks/useFetcher.ts`).
+2. `authenticateToken` reads `req.cookies.__auth` and verifies with `JWT_SECRET` (`apps/api-astrum/src/middlewares/authenticateToken.ts`).
+3. `req.userId` is set from the payload; controllers/services use Prisma in `apps/api-astrum/src/modules/*`.
 
-**Frontend auth flow detail:**
-1. User submits credentials via `useAuth()` hook (`apps/customer/src/hooks/auth/useAuth.ts`)
-2. `useFetcher` (axios instance) posts to `/auth/register` or `/auth/signin`
-3. On success, `createSession()` stores token in `localStorage.__auth`
-4. `verifySession()` in server components reads the token to check auth state
-5. All API requests include `withCredentials: true` on the axios instance
-6. API Gateway's `authenticateToken` middleware extracts token from `req.cookies.__auth`, verifies with `jsonwebtoken`, attaches `req.userId`
+**Server-rendered session check (Next):**
 
-### Product/Order Data Flow
+1. `middleware` (`apps/customer/src/middleware.ts`) decrypts/verifies the cookie for non-public paths using `decrypt` from `apps/customer/src/common/helpers/session.ts`.
+2. Content layout may call `verifySession` (`apps/customer/src/app/(content)/layout.tsx`).
 
-```
-Customer Frontend                    API Gateway (Express)                  Prisma / PostgreSQL
------------------                    ---------------------                  --------------------
-useGetRecommendations()
-  GET /recommendations  ----------->  GET /api/products/recommendations
-  (via fetcher)                            authenticateToken middleware
-                                            ProductController.getRecommendations
-                                              ProductService.getRecommendations
-                                                prisma.product.findMany (cursor pagination)
-  <-- { products, nextCursor,              prisma.cartItem, prisma.wishlistItem
-       hasNextPage }                        lookups per product
-```
+**State Management:**
 
-**Key pattern:** The frontend uses SWR hooks (`useSWR`, `useSWRInfinite`, `useSWRMutation`) that call `useFetcher` (axios-based). Each domain has its own hook family:
-- `useProducts/*` -- product queries (recommendations, categories, single product)
-- `useCart/*` -- cart mutations and queries
-- `useWishlist/*` -- wishlist mutations and queries
-- `useUser` -- profile SWR with optimized dedupe configuration
-- `useOrder/*` -- order creation and queries
-- `useAuth` -- registration and sign-in
-
-### Cart/Order Data Flow
-
-```
-POST /api/orders  -----> authenticateToken middleware
-                          OrderController.createOrder
-                            OrderService.createOrder
-                              prisma.order.create (with nested OrderItem.create)
-  <-- Order
-```
-
-The frontend `useCreateOrder` hook (`apps/customer/src/hooks/order/useCreateOrder.ts`) uses `useSWRMutation` with an `onSuccess` callback that calls `mutate("/cart")` and `mutate("/orders")` to invalidate cache.
-
-## API Patterns
-
-### API Gateway Route Registry (`apps/api-astrum/src/app.ts`)
-
-| Route Prefix | Middleware | Module |
-|-------------|-----------|--------|
-| `/api/auth` | Proxy to auth service (no auth required) | Auth Service |
-| `/api/users` | `authenticateToken` required | User |
-| `/api/products` | `authenticateToken` required | Product |
-| `/api/wishlist` | `authenticateToken` required | Wishlist |
-| `/api/cart` | `authenticateToken` required | Cart |
-| `/api/orders` | `authenticateToken` required | Order |
-
-### Error Handling
-
-**API Gateway:**
-- `handleErrors(res, err)` -- `apps/api-astrum/src/common/helpers/errorHandler.ts`
-- Maps `Error` instances to 400 BAD_REQUEST with message
-- Maps unknown errors to 500 INTERNAL_SERVER_ERROR
-- Each controller wraps endpoints in try/catch calling `handleErrors`
-
-**Auth Service (NestJS):**
-- `ValidationPipe` with `whitelist: true` strips unknown DTO fields
-- `ForbiddenException` for auth failures (duplicate email, wrong password)
-- Swagger/OpenAPI documentation auto-generated
-
-### Pagination Pattern
-
-Products use cursor-based pagination:
-- `take: limit` (default 8)
-- `cursor: { id: cursor }` for next page
-- `skip: cursor ? 1 : 0`
-- `nextCursor` = last item ID if result set equals limit
-- Frontend uses `useSWRInfinite` to handle multi-page loading
-
-### Auth Token Pattern
-
-- Token stored in `localStorage.__auth` by the frontend
-- Read from `req.cookies.__auth` by the `authenticateToken` middleware
-- JWT payload: `{ userId: string }` (`apps/api-astrum/src/common/types/jwt.payload.ts`)
-- 1-day expiration
-- Same secret (`JWT_SECRET`) shared between auth service and API gateway via environment variable
-
-## State Management
-
-**Frontend:**
-- Server state: **SWR** (`useSWR`, `useSWRInfinite`, `useSWRMutation`) with custom `useFetcher` axios instance
-- Client state: minimal, derived from SWR data with `useMemo`
-- Form state: **React Hook Form** with Zod validation
-- Session: `localStorage.__auth` for the JWT token
-
-**Backend:**
-- Stateless -- no in-memory state
-- All persistence via PostgreSQL through shared Prisma client
+- Server: React `cache` and cookies in Next (`apps/customer/src/common/helpers/session.ts`).
+- Client: SWR usage in hooks (see `apps/customer/package.json`); feature hooks under `apps/customer/src/hooks/`.
 
 ## Key Abstractions
 
-### Product Selection Patterns
-- `productPublicSelect` -- full product detail select (for single product view)
-- `productPreviewPublicSelect` -- lightweight product preview select (for listings)
-- `cartPublicSelect` / `cartActionsPublicSelect` -- cart-specific field selections
-- Located in `apps/api-astrum/src/common/prisma-selects/product.select.ts`
+**Express module pattern:**
 
-### Prisma Client Export
-- `packages/Astrum-db/lib/prisma.ts` -- creates and exports singleton `prisma` instance
-- `packages/Astrum-db/lib/index.ts` -- re-exports for consumption by services
-- Generated types at `apps/api-astrum/generated/prisma/` and `apps/auth-astrum/generated/prisma/`
+- Purpose: Group REST surface by domain.
+- Examples: `apps/api-astrum/src/modules/user/user.routes.ts`, `user.controller.ts`, `user.service.ts` (same pattern for `product`, `wishlist`, `cart`, `order`, `reviews`).
+- Pattern: `*.routes.ts` mounts `Router`; controllers are classes; DTOs use `class-validator` with `validateDto` (`apps/api-astrum/src/middlewares/validateDto.ts`).
 
-## Database Architecture
+**NestJS auth stack:**
 
-**Single database, shared schema:** All three services connect to the same PostgreSQL instance via `DATABASE_URL`.
+- Purpose: Framework-native auth with Swagger and Passport JWT for future protected Nest routes.
+- Examples: `apps/auth-astrum/src/auth/guard/jwt.guard.ts`, `apps/auth-astrum/src/auth/strategy/jwt.strategy.ts`.
+- Pattern: `AuthModule` imports `JwtModule` (`apps/auth-astrum/src/auth/auth.module.ts`).
 
-**Prisma ownership:** `packages/Astrum-db/` owns the schema (`prisma/schema.prisma`), runs migrations, and generates client.
+**Prisma client singleton:**
 
-**Entities:**
-- `User` -- with `LastViewedProduct` relation
-- `Product` -- with `Impression[]`, `ProductProperty[]`
-- `WishlistItem` -- unique composite (userId, productId)
-- `CartItem` -- unique composite (userId, productId), with quantity
-- `Order` -- with `OrderItem[]`, `ShippingMethod` relation
-- 14 enums (PaymentMethod, PaymentStatus, OrderStatus, ProductCategory, ProductVisibility, etc.)
+- Purpose: Avoid connection explosion in development.
+- Examples: `packages/Astrum-db/lib/prisma.ts` (global cache when `NODE_ENV !== 'production'`).
+
+## Entry Points
+
+**Express API:**
+
+- Location: `apps/api-astrum/src/server.ts`
+- Triggers: `pnpm dev` / `tsx watch` via `apps/api-astrum/package.json`.
+- Responsibilities: Listen on port `3580`, mount `app` from `apps/api-astrum/src/app.ts`.
+
+**NestJS auth:**
+
+- Location: `apps/auth-astrum/src/main.ts`
+- Triggers: `nest start` scripts in `apps/auth-astrum/package.json`.
+- Responsibilities: Listen on port `4580`, global prefix `/api`, Swagger at `/swagger`, CORS for `http://localhost:3000`.
+
+**Next.js customer:**
+
+- Location: `apps/customer/src/app/layout.tsx`, route segments under `apps/customer/src/app/`
+- Triggers: `next dev` / `next start` per `apps/customer/package.json`.
+- Responsibilities: App Router UI; middleware in `apps/customer/src/middleware.ts`.
+
+**Prisma CLI (migrations / generate):**
+
+- Location: Root scripts delegate to `@astrum/db` (`package.json` at repo root).
+- Triggers: `pnpm prisma:migrate:dev`, `pnpm db:generate`, etc.
+- Responsibilities: Apply migrations from `packages/Astrum-db/prisma/migrations/`.
+
+## Error Handling
+
+**Strategy:** Per-handler try/catch in services/controllers; shared helper for generic Express errors (`apps/api-astrum/src/common/helpers/errorHandler.ts`). Nest uses standard exceptions (`ForbiddenException` in `apps/auth-astrum/src/auth/auth.service.ts`).
+
+**Patterns:**
+
+- HTTP status via `http-status-codes` on the Express API (`apps/api-astrum/src/middlewares/authenticateToken.ts`).
+- Validation errors surfaced as JSON messages from `validateDto` pipeline.
 
 ## Cross-Cutting Concerns
 
-**CORS:** Both services restrict origin to `http://localhost:3000`, credentials enabled.
+**Logging:** `morgan('dev')` on the Express app (`apps/api-astrum/src/app.ts`). Console logging in Next session helpers on verification failure (`apps/customer/src/common/helpers/session.ts`).
 
-**Logging:** `morgan` (Express, dev mode) for HTTP access logs; `console.log` in NestJS bootstrap.
+**Validation:** `class-validator` DTOs + `ValidationPipe` in Nest (`apps/auth-astrum/src/main.ts`); Express uses `validateDto` with `class-transformer`/`class-validator` (`apps/api-astrum/src/middlewares/validateDto.ts`).
 
-**Validation:** Zod schemas (`apps/customer/src/common/zodSchemes/`) for frontend; NestJS DTO classes with class-validator for auth service; no request body validation in Express API gateway (relies on Prisma constraints).
-
-**Security:** `helmet` on API gateway, argon2 for password hashing, JWT for auth tokens, `authenticateToken` middleware on all protected routes.
+**Authentication:** JWT signed in Nest (`apps/auth-astrum/src/auth/auth.service.ts`); verified on Express with `jsonwebtoken` (`apps/api-astrum/src/middlewares/authenticateToken.ts`); Next verifies with `jose` for middleware and RSC (`apps/customer/src/common/helpers/session.ts`).
 
 ---
 
-*Architecture analysis: 2026-04-04*
+*Architecture analysis: 2026-04-05*

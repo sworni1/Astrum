@@ -1,82 +1,60 @@
-# Тестирование — Astrum
+# Testing Patterns
 
-Обновлено: 2026-04-04
+**Analysis Date:** 2026-04-05
 
-## Обзор
+## Test Framework
 
-Тестирование в проекте находится на начальном этапе. Покрыт только Auth-сервис базовыми тестами. API Gateway и Frontend не имеют тестов.
+**Runner:**
 
-## Фреймворки
+- **Jest 29** + **ts-jest** — единственный настроенный автотестовый стек для приложений; конфигурация встроена в `apps/auth-astrum/package.json` (секция `"jest"`).
 
-| Приложение | Фреймворк | Трансформер | Запуск |
-|-----------|-----------|-------------|--------|
-| auth-astrum (NestJS) | Jest 29.7.0 | ts-jest 29.1.2 | `pnpm --filter @astrum/auth test` |
-| frontend (Next.js) | Не установлен | — | — |
-| API (Express) | Не установлен | — | — |
+**Assertion Library:**
 
-## Структура тестов
+- Встроенные матчеры Jest (`expect`).
 
-### Auth сервис (NestJS)
+**Run Commands:**
 
-Тест-файлы находятся **рядом с тестируемым кодом**, суффикс `*.spec.ts`:
-
-```
-src/auth/
-├── auth.controller.spec.ts
-├── auth.service.spec.ts
-├── auth.controller.ts
-└── auth.service.ts
-
-src/prisma/
-├── prisma.service.spec.ts
-└── prisma.service.ts
+```bash
+pnpm --filter @astrum/auth test              # unit в apps/auth-astrum/src/**/*.spec.ts
+pnpm --filter @astrum/auth test:watch
+pnpm --filter @astrum/auth test:cov          # coverageDirectory: apps/auth-astrum/coverage (относительно rootDir)
+pnpm --filter @astrum/auth test:e2e          # jest --config apps/auth-astrum/test/jest-e2e.json
 ```
 
-### Конфигурация Jest (из auth-astrum/package.json)
+**Корень монорепозитория:** скрипта `pnpm test` в корневом `package.json` **нет** — тесты запускают точечно через `--filter @astrum/auth`.
 
-```json
-{
-  "moduleFileExtensions": ["js", "json", "ts"],
-  "rootDir": "src",
-  "testRegex": ".*\\.spec\\.ts$",
-  "transform": { "^.+\\.(t|j)s$": "ts-jest" },
-  "collectCoverageFrom": ["**/*.(t|j)s"],
-  "coverageDirectory": "../coverage",
-  "testEnvironment": "node"
-}
+## Test File Organization
+
+**Location:**
+
+- **Unit (Nest):** рядом с исходниками в `apps/auth-astrum/src/`, суффикс `*.spec.ts`.
+- **E2E:** каталог `apps/auth-astrum/test/`, шаблон имён `*.e2e-spec.ts` (см. `testRegex` в `apps/auth-astrum/test/jest-e2e.json`).
+
+**Naming:**
+
+- Unit: `*.spec.ts` (например `apps/auth-astrum/src/auth/auth.controller.spec.ts`).
+- E2E: `*.e2e-spec.ts` (например `apps/auth-astrum/test/app.e2e-spec.ts`, `apps/auth-astrum/test/api-astrum.e2e-spec.ts`).
+
+**Structure:**
+
+```
+apps/auth-astrum/
+├── src/
+│   └── **/*.spec.ts          # Jest rootDir: src
+└── test/
+    ├── jest-e2e.json
+    ├── app.e2e-spec.ts
+    └── api-astrum.e2e-spec.ts
 ```
 
-Доступные команды:
-- `pnpm test` — запустить все тесты
-- `pnpm test:watch` — watch-режим
-- `pnpm test:cov` — с покрытием
-- `pnpm test:debug` — отладка
-- `pnpm test:e2e` — E2E тесты (конфиг: `./test/jest-e2e.json`)
+## Test Structure
 
-## Существующие тесты
-
-### auth.service.spec.ts
+**Suite Organization:**
 
 ```typescript
-describe('AuthService', () => {
-  let service: AuthService;
+import { Test, TestingModule } from '@nestjs/testing';
+import { AuthController } from './auth.controller';
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [AuthService],
-    }).compile();
-    service = module.get<AuthService>(AuthService);
-  });
-
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-});
-```
-
-### auth.controller.spec.ts
-
-```typescript
 describe('AuthController', () => {
   let controller: AuthController;
 
@@ -84,6 +62,7 @@ describe('AuthController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
     }).compile();
+
     controller = module.get<AuthController>(AuthController);
   });
 
@@ -93,96 +72,93 @@ describe('AuthController', () => {
 });
 ```
 
-### prisma.service.spec.ts
+(фрагмент из `apps/auth-astrum/src/auth/auth.controller.spec.ts`.)
 
-Проверяется что `PrismaService` определён и что `PrismaClient` инициализирован.
+**Patterns:**
 
-## Стратегия мокания
+- Nest unit: `Test.createTestingModule({ controllers / providers }).compile()`, затем `module.get(...)`.
+- E2E с Supertest: `createNestApplication()`, `request(app.getHttpServer())` — см. `apps/auth-astrum/test/app.e2e-spec.ts`.
 
-Текущие тесты используют минимальную стратегию мокания:
+**Setup / Teardown:**
 
-### Mock NestJS TestingModule
+- Интеграционный сценарий `apps/auth-astrum/test/api-astrum.e2e-spec.ts`: `beforeAll` поднимает Nest-приложение, проверяет `process.env.DATABASE_URL`, задаёт дефолты для `JWT_SECRET` и `AUTH_SERVICE_URL`; `jest.setTimeout(30000)`; `afterAll` закрывает приложение.
 
-Используется `@nestjs/testing` Module:
-```typescript
-const module: TestingModule = await Test.createTestingModule({
-  controllers: [AuthController],
-}).compile();
+## Mocking
+
+**Framework:** Jest mocks при необходимости; в текущих `*.spec.ts` глубокого мока зависимостей почти нет — спеки на уровне «определён ли контроллер/сервис».
+
+**Patterns:** для новых тестов Nest — `Test.createTestingModule({ providers: [{ provide: TOKEN, useValue: mock }] })` по документации `@nestjs/testing`.
+
+**What to Mock:** внешние сервисы и БД при unit-тестах сервисов; Prisma — через подмену `PrismaService` при расширении покрытия.
+
+**What NOT to Mock:** сами тестируемые классы без необходимости.
+
+## Fixtures and Factories
+
+**Test Data:** отдельной фабрики/fixture-папки в репозитории не выделено; e2e зависят от реальной БД (`DATABASE_URL`).
+
+**Location:** при добавлении — логично `apps/auth-astrum/test/fixtures/` или рядом со спеками.
+
+## Coverage
+
+**Requirements:** явного порога покрытия в CI или в `jest` config не задано.
+
+**collectCoverageFrom:** `"**/*.(t|j)s"` под `rootDir: "src"` в `apps/auth-astrum/package.json`.
+
+**View Coverage:**
+
+```bash
+pnpm --filter @astrum/auth test:cov
+# отчёт: apps/auth-astrum/coverage (относительно package)
 ```
 
-### Чего нет
+## Test Types
 
-- **Нет моков для зависимостей** — `PrismaService` и `JwtService` не мокнуты в тестах
-- **Нет моков для HTTP-запросов** — нет тестов контроллеров с реальными реквестами
-- **Нет моков для Prisma** — `PrismaClient` подключается к реальной БД
-- **E2E шаблон пустой** — `test/jest-e2e.ts` содержит только базовый "should pass"
+**Unit Tests:**
 
-## Покрытие
+- Только в `apps/auth-astrum` — smoke-тесты контроллеров/сервисов/prisma (`auth.controller.spec.ts`, `auth.service.spec.ts`, `prisma.service.spec.ts`).
 
-| Приложение | Единицы | Интеграции | E2E | Покрытие |
-|-----------|---------|------------|-----|----------|
-| auth-astrum | 3 spec-файла | Нет | Шаблон пустой | ~10-15% |
-| api-astrum | Нет | Нет | Нет | 0% |
-| frontend | Нет | Нет | Нет | 0% |
+**Integration / API tests:**
 
-Тесты проверяют только что сервисы/контроллеры "определены" (базовые sanity-чекы). Не тестируется бизнес-логика (регистрация, авторизация, работа с JWT, Prisma-запросы).
+- **`@astrum/api` (Express):** файлов `*.spec.ts` / `*.test.ts` **нет** — автотестов для Express не обнаружено.
 
-## CI/CD
+**E2E Tests:**
 
-В CI/CD пайплайне тестов нет. Турбо-конфиг не включает `test` таску:
+- Jest e2e для auth и связки с api-astrum: `apps/auth-astrum/test/jest-e2e.json` (`testRegex`: `.e2e-spec.ts$`). Сценарий `api-astrum.e2e-spec.ts` подключает Express-приложение через `require('../../api-astrum/src/app').default` — для прогона нужны сервисы и переменные окружения.
 
-```json
-{
-  "tasks": {
-    "build": { ... },
-    "dev": { ... },
-    "lint": { ... },
-    "check-types": { ... }
-  }
-}
-```
+**Frontend (`@astrum/customer`):**
 
-Pre-commit хук запускает только `lint-staged` (валидация JSON).
+- Файлов `*.test.*` / `*.spec.*` в `apps/customer` **нет** — Vitest/Playwright/Jest для customer в `package.json` не подключены.
 
-## Инфраструктура для тестирования
+**`packages/Astrum-db`:**
 
-### Шаблон E2E (auth-astrum)
+- Тестовых скриптов в `packages/Astrum-db/package.json` нет.
+
+## Common Patterns
+
+**Async Testing:**
 
 ```typescript
-// test/jest-e2e.ts
-import * as request from 'supertest';
-import { Test } from '@nestjs/testing';
-import { AppModule } from './../src/app.module';
-import { INestApplication } from '@nestjs/common';
-
-describe('AuthController (e2e)', () => {
-  let app: INestApplication;
-
-  beforeAll(async () => {
-    const moduleFixture = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-    app = moduleFixture.createNestApplication();
-    await app.init();
-  });
-
-  it('/auth/register (POST)', () => {
-    return request(app.getHttpServer())
-      .post('/auth/register')
-      .send({ /* ... */ })
-      .expect(200);
-  });
+it('/ (GET)', () => {
+  return request(app.getHttpServer())
+    .get('/')
+    .expect(200)
+    .expect('Hello World!');
 });
 ```
 
-### Supertest (auth-astrum)
+(`apps/auth-astrum/test/app.e2e-spec.ts` — ожидание ответа должно соответствовать фактическому поведению приложения; при расхождении править тест или роут.)
 
-Установлен `supertest` для HTTP-тестирования, но не используется в текущих тестах.
+**Error Testing:** при расширении — `expect().rejects` или проверка статусов Supertest `.expect(4xx)`.
 
-## Рекомендации по масштабированию тестирования
+## CI Hooks
 
-1. **API Gateway (Express)**: добавить Jest + supertest, начать с модульных тестов сервисов
-2. **Frontend**: добавить Vitest для юнит-тестов хуков и утилит + Playwright для E2E
-3. **Auth**: дописать тесты для `register()`, `signin()`, `signToken()` с моками Prisma
-4. **Моки Prisma**: использовать `jest.mock` или специализированные библиотеки для изоляции от БД
-5. **CI**: добавить `test` таску в turbo.json для запуска в пайплайне
+**Husky:** `prepare` в корневом `package.json` ставит husky; `.husky/pre-commit` → `pnpm lint-staged` — **только валидация JSON** для staged файлов (см. корневой `lint-staged`). Тесты на pre-commit **не** запускаются.
+
+**Turborepo:** `turbo.json` определяет задачи `lint` и `check-types`, но не `test` — единого turbo-пайплайна для тестов нет.
+
+**Рекомендация для исполнителей:** перед PR вручную запускать `pnpm --filter @astrum/auth test` при изменениях в auth и целевой линт/типы в затронутых пакетах; не полагаться на Husky для полной проверки качества.
+
+---
+
+*Testing analysis: 2026-04-05*

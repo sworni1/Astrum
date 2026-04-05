@@ -1,136 +1,96 @@
-# External Integrations — Astrum
+# External Integrations
 
-## Database Layer
+**Analysis Date:** 2026-04-05
 
-### PostgreSQL 13
+## APIs & External Services
 
-- **Connection**: `DATABASE_URL` environment variable (single global env in `turbo.json`)
-- **Driver**: `pg` 8.20.0 (native PostgreSQL node driver)
-- **Prisma Adapter**: `@prisma/adapter-pg` 7.5.0 — uses the pg driver wrapped in Prisma's driver adapter pattern
-- **Network**: Port `5432` exposed via Docker, shared `astrumnetwork` network
-- **Container**: `astrum-db` (postgres:13 image)
-- **Environment file**: `packages/Astrum-db/.env`
+**HTTP APIs (first-party):**
+- Customer → API gateway — `axios` base URL from `process.env.NEXT_PUBLIC_API_GATEWAY_URL` (`apps/customer/src/hooks/useFetcher.ts`)
+- API gateway → Auth service — reverse proxy `/api/auth` to `process.env.AUTH_SERVICE_URL` (`apps/api-astrum/src/app.ts`, `apps/api-astrum/src/common/helpers/proxyOptions.ts`)
 
-### Prisma ORM 7.5.0
+**Documentation / discovery:**
+- OpenAPI (Swagger UI) — Nest auth at `/swagger` (`apps/auth-astrum/src/main.ts`)
 
-- **Schema location**: `packages/Astrum-db/prisma/schema.prisma`
-- **Client output**: `generated/prisma/` within the package
-- **Shared across**: All three apps (api, auth, customer) depend on `@astrum/db` for Prisma types and client
-- **Migrations**: `prisma migrate dev` / `prisma migrate deploy` scripts in root
-- **Studio**: `pnpm prisma:studio` for database browser UI
-- **Seeding**: Excel-based seeding via `tsx prisma/seedFromExcel.ts` using `xlsx` library
+**Third-party SDKs (not detected in application code):**
+- Stripe — only enum/value `PaymentMethod.STRIPE` in UI (`apps/customer/src/common/types/order.types.ts`, checkout UI); no `stripe` package in workspace `package.json` files
 
-### Database Connection Pattern
+**GraphQL:**
+- `@apollo/client` and `@apollo/client-integration-nextjs` are dependencies of `apps/customer` but no Apollo client usage found under `apps/customer/src` — treat as unused or planned integration
 
-```
-@astrum/db → @prisma/client + @prisma/adapter-pg → pg driver → PostgreSQL 13
-```
+## Data Storage
 
-The `@astrum/db` package re-exports both the full `@prisma/client` and a singleton `PrismaClient` instance with the pg adapter. The singleton uses `globalThis` guard to prevent multiple connections in dev/watch mode.
+**Databases:**
+- PostgreSQL `13` — Docker image `postgres:13` (`docker-compose.yml` service `astrum-db`)
+- Connection string: `DATABASE_URL` (Prisma `packages/Astrum-db/prisma.config.ts`; apps use `process.env.DATABASE_URL` in `apps/api-astrum/lib/prisma.ts`, `apps/auth-astrum/src/prisma/prisma.service.ts`, `packages/Astrum-db/lib/prisma.ts`)
+- ORM: Prisma with `@prisma/adapter-pg` and `pg` driver
+- Schema ownership: migrations live under `packages/Astrum-db/prisma/migrations`; root scripts invoke Prisma via `pnpm --filter @astrum/db`. Duplicate `schema.prisma` files also exist in `apps/api-astrum/prisma/` and `apps/auth-astrum/prisma/` — keep in sync with `packages/Astrum-db/prisma/schema.prisma` when changing schema
 
-## Internal Service Communication
+**File Storage:**
+- Local / app-managed — product images referenced by URLs in Next config (see below), not a dedicated blob SDK in repo
 
-### API Gateway Pattern
+**Caching:**
+- Not detected — no Redis or similar in package manifests
 
-- **API service** (`@astrum/api`): Port `3580`
-  - Has `http-proxy-middleware` suggesting it proxies certain routes
-  - Likely proxies auth-related endpoints to the auth service
-- **Auth service** (`@astrum/auth`): Port `4580`
-  - Separate NestJS service handling authentication
-  - Has `@nestjs/swagger` for OpenAPI documentation
-- **Customer frontend** (`@astrum/customer`): Port `3000`
-  - `NEXT_PUBLIC_API_GATEWAY_URL=http://localhost:3580/api` — calls API through gateway URL
-  - Has both Apollo Client (GraphQL) and axios (REST) — suggesting dual API exposure patterns
-  - Uses `swr` for additional data fetching scenarios
+## Authentication & Identity
 
-### Inter-service network
+**Auth Provider:**
+- Custom — NestJS auth service (`apps/auth-astrum`) with JWT (`@nestjs/jwt`, `passport-jwt`, `JwtStrategy` in `apps/auth-astrum/src/auth/auth.module.ts`)
+- Password hashing: `argon2` (`apps/auth-astrum` dependencies)
+- API gateway validates JWT from cookie `__auth` using `JWT_SECRET` (`apps/api-astrum/src/middlewares/authenticateToken.ts`)
+- Customer: `jose`, `jsonwebtoken`, `jwt-decode` for session/token handling (`apps/customer` dependencies, `apps/customer/src/common/helpers/session.ts` uses `JWT_SECRET`)
 
-All services share the Docker network `astrumnetwork` (declared as `external: true`, must exist before `docker compose up`).
+**CORS:**
+- API: `http://localhost:3000` (`apps/api-astrum/src/middlewares/corsOptions.ts`)
+- Auth: same origin list (`apps/auth-astrum/src/main.ts`)
 
-## Authentication & Authorization
+## Monitoring & Observability
 
-### JWT-based auth flow
+**Error Tracking:**
+- Not detected — no Sentry/Rollbar/etc. in dependencies
 
-- **Secret**: `JWT_SECRET` in environment (`.env` files) — same secret shared across api and customer
-- **Password hashing**: `argon2` used in both api and auth services
-- **Auth service**: Full NestJS + Passport + JWT strategy
-  - `JwtStrategy` extracts Bearer tokens from `Authorization` header
-  - Validates JWT payload against DB via Prisma
-  - Removes `passwordhash` from returned user object
-- **API service**: `jsonwebtoken` for verification, custom middleware
-- **Customer**: `jose` (browser-safe JWT), `jwt-decode` for client-side decoding, `jsonwebtoken` for server-side Next.js operations
+**Logs:**
+- `morgan` HTTP logging on API (`apps/api-astrum/src/app.ts`)
+- `console` usage in fetcher error paths (`apps/customer/src/hooks/useFetcher.ts`)
 
-## External Image Sources (Customer Frontend)
+## CI/CD & Deployment
 
-Next.js `remotePatterns` configuration allows images from:
+**Hosting:**
+- Docker Compose stack for local/prod-style runs (`docker-compose.yml`) — services `astrum-db`, `astrum-api`, `astrum-auth`, `astrum-customer` with env files per app path
 
-| Source | Pattern | Purpose |
-|--------|---------|---------|
-| Flowbite | `flowbite.s3.amazonaws.com` | UI component gallery images |
-| BundUI | `bundui-images.netlify.app` | UI component images |
-| Unsplash | `images.unsplash.com` | Stock photos |
-| Magazilla | `magazilla.ru` / `mzimg.com` | Product images (likely scraped or affiliate) |
+**CI Pipeline:**
+- Not detected — no `.github/workflows` in repository at analysis time
 
-## Third-Party Payment References (Schema Level)
+**Git hooks:**
+- Husky + lint-staged (root `package.json`)
 
-Prisma enum `PaymentMethod` includes:
+## Environment Configuration
 
-- `CASH`
-- `CARD_ON_DELIVERY`
-- `ONLINE_CARD`
-- `PAYPAL` — referenced but no PayPal SDK integration found
-- `STRIPE` — referenced but no Stripe SDK integration found
+**Required env vars (non-exhaustive, from code references):**
+- `DATABASE_URL` — Prisma and services
+- `JWT_SECRET` — API token verification, customer session helpers, auth tests (`apps/auth-astrum/test/api-astrum.e2e-spec.ts`)
+- `AUTH_SERVICE_URL` — API gateway proxy target (`apps/api-astrum/src/app.ts`); e2e tests default `http://localhost:4580` (`apps/auth-astrum/test/api-astrum.e2e-spec.ts`)
+- `NEXT_PUBLIC_API_GATEWAY_URL` — customer axios base URL (`apps/customer/src/hooks/useFetcher.ts`)
 
-These appear to be schema-ready but not yet wired to actual payment provider SDKs.
+**Secrets location:**
+- Per-service `.env` files referenced by Compose (`docker-compose.yml` `env_file`); `packages/Astrum-db/.env` for DB container — do not commit contents
 
-## DevOps & Infrastructure
+## Webhooks & Callbacks
 
-### Docker Compose
+**Incoming:**
+- Not detected — no Stripe/webhook route handlers found in scanned app entrypoints
 
-4 services orchestrated via `docker-compose.yml`:
+**Outgoing:**
+- Not detected — no dedicated webhook client libraries in manifests
 
-| Service | Container | Port | Base Image | Env File |
-|---------|-----------|------|------------|----------|
-| PostgreSQL | `astrum-db` | 5432 | postgres:13 | `packages/Astrum-db/.env` |
-| API | `astrum-backend` | 3580 | node:18-alpine | `apps/api-astrum/.env.prod` |
-| Auth | `auth-service` | 4580 | node:18-alpine | `apps/auth-astrum/.env.prod` |
-| Customer | `frontend-astrum-customer` | 3000 | node:20-alpine | `apps/customer/.env.production` |
+## Remote assets & CDNs
 
-### Git Hooks (Husky)
+**Next.js `images.remotePatterns`** (`apps/customer/next.config.ts`):
+- `https://flowbite.s3.amazonaws.com/docs/gallery/**`
+- `https://bundui-images.netlify.app/**`
+- `https://images.unsplash.com/**`
+- `http://magazilla.ru/**`, `https://magazilla.ru/**`
+- `http://mzimg.com/**`, `https://mzimg.com/**`
 
-- **Pre-commit**: JSON validation on `*.json` files via `lint-staged`
-- **prepare**: `husky` install runs on `pnpm install`
+---
 
-### Health Check Script
-
-`pnpm mcp:check` runs `./scripts/mcp-health-check.ps1` — PowerShell script for verifying MCP server connectivity.
-
-## Development Tooling
-
-| Tool | Purpose |
-|------|---------|
-| ESLint 8 (api/auth) / ESLint 9 (customer) | Code linting |
-| Prettier 3.2–3.4 | Code formatting |
-| Jest 29 (auth service) | Unit/integration tests |
-| TypeScript 5.9.3 | Type checking across all packages |
-| tsx 4.21.0 | Fast TS/JS execution (dev + seed scripts) |
-
-## Missing / Not Yet Integrated
-
-- **No GraphQL server** — Apollo Client is installed on the customer frontend, but no GraphQL server schema or resolver was found in the backend packages. This may be planned for future development.
-- **No Stripe SDK** — Payment enum references `STRIPE` but `stripe` npm package is not installed.
-- **No PayPal SDK** — Payment enum references `PAYPAL` but no PayPal integration exists.
-- **No email service** — No nodemailer, SendGrid, Resend, or similar email sending library.
-- **No Redis/caching** — No Redis client installed; caching may need to be added.
-- **No file storage SDK** — Image references suggest S3 usage (Flowbite gallery), but no AWS SDK is installed for product image uploads.
-- **No E2E testing** — Playwright listed in rules but not in dependencies.
-- **No API testing framework** — For the Express api service (auth service has Jest + Supertest).
-
-## Environment Variables Summary
-
-| Variable | Required By | Purpose |
-|----------|-------------|---------|
-| `DATABASE_URL` | All packages via Prisma | PostgreSQL connection string |
-| `JWT_SECRET` | api + customer | JWT token signing/verification |
-| `NEXT_PUBLIC_API_GATEWAY_URL` | customer frontend | Backend API URL |
-| `NODE_ENV` | All packages | Environment mode |
+*Integration audit: 2026-04-05*

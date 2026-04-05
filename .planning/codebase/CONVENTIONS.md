@@ -1,287 +1,113 @@
-# Соглашения по коду — Astrum
+# Coding Conventions
 
-Обновлено: 2026-04-04
+**Analysis Date:** 2026-04-05
 
-## Именование
+## Naming Patterns
 
-| Сущность | Convention | Примеры |
-|----------|------------|---------|
-| Компоненты React | PascalCase | `ProductCard`, `CheckoutForm`, `OptimizedImage` |
-| Hook-и React | camelCase, `use` префикс | `useFetcher`, `useAuth` |
-| Переменные/функции | camelCase | `getWishlistAndCart`, `handleRegister` |
-| Классы (контроллеры, сервисы) | PascalCase | `ProductController`, `CartService`, `AuthService` |
-| DTO классы | PascalCase + суффикс `Dto` | `RegisterUserDto`, `SignInUserDto`, `CreateProductDto` |
-| Файлы DTO | kebab-case + `.dto.ts` | `create-product.dto.ts`, `update-user.dto.ts` |
-| Типы/интерфейсы TypeScript | PascalCase | `ProductCardProps`, `UserData`, `JwtData`, `SignUpCredentials` |
-| Enums | PascalCase | `Gender`, `Currency`, `ProductCategory`, `PropertyLabel` |
-| Zod схемы | camelCase + суффикс `Schema`/`Scheme` | `signInFormSchema`, `registerFormSchema` |
-| Константы | UPPER_SNAKE_CASE | `StatusCodes`, `ReasonPhrases` |
-| Файлы helpers | camelCase | `showToast.tsx`, `getCurrencyEmoji.ts`, `errorHandler.ts` |
-| Файлы index | `index.ts`, `index.tsx` | Баррель-экспорты |
+**Files:**
 
-## Организация файлов
+- **Next.js (`@astrum/customer`):** React-компоненты и страницы — по соглашению проекта предпочитать **PascalCase** для файлов `.tsx`/`.jsx` (см. правила пользователя); маршруты App Router — `page.tsx`, `layout.tsx` в `apps/customer/src/app/`.
+- **Express (`@astrum/api`):** модули по домену — `*.routes.ts`, `*.controller.ts`, `*.service.ts` в `apps/api-astrum/src/modules/<domain>/`; общие части — `apps/api-astrum/src/middlewares/`, `apps/api-astrum/src/common/helpers/`.
+- **NestJS (`@astrum/auth`):** стандарт Nest — `*.controller.ts`, `*.service.ts`, `*.module.ts`, DTO в `apps/auth-astrum/src/**/dto/`.
 
-### Monorepo структура
+**Functions:**
 
-```
-apps/
-├── api-astrum/        # Express API (порт 3580)
-├── auth-astrum/       # NestJS Auth Service (порт 4580)
-└── customer/          # Next.js 15 Frontend (порт 3000)
-packages/
-└── Astrum-db/         # Prisma (владелец схемы)
-```
+- Обработчики событий в UI: префикс `handle` (см. `.cursor/rules/front-end-cursor-rules.mdc`), например `handleClick`.
+- Хуки React: префикс `use` в `apps/customer/src/hooks/`.
 
-### API (Express) — модульная структура по доменам
+**Variables:**
 
-Каждый модуль — отдельная папка в `src/modules/<module>/`:
+- Булевы флаги: `isLoading`, `hasError`, `canDelete` и т.п. (согласовано с правилами репозитория).
 
-```
-modules/
-├── product/
-│   ├── product.controller.ts    # Обработчики HTTP
-│   ├── product.service.ts       # Бизнес-логика + Prisma
-│   ├── product.routes.ts        # Определение роутов
-│   └── dto/                     # DTO для этого модуля
-│       └── create-product.dto.ts
-```
+**Types:**
 
-Shared-код: `src/common/helpers/`, `src/common/types/`, `src/common/prisma-selects/`
-Middleware: `src/middlewares/`
-Entry: `src/server.ts` -> `src/app.ts`
+- Клиент: типы в `apps/customer/src/common/types/` (например `product.types`).
+- API: DTO с `class-validator` / `class-transformer` в модулях Express и Nest.
 
-### Auth (NestJS) — стандартная структура NestJS
+## Code Style
 
-```
-src/
-├── auth/
-│   ├── auth.controller.ts       # Декораторы + декораторы Swagger
-│   ├── auth.service.ts          # Бизнес-логика
-│   ├── auth.module.ts           # NestJS Module
-│   ├── dto/                     # DTO с class-validator
-│   ├── guard/                   # JWT Guard
-│   ├── strategy/                # Passport Strategy
-│   └── decorator/               # Кастомные декораторы (@User())
-├── prisma/
-│   ├── prisma.module.ts
-│   └── prisma.service.ts
-└── main.ts
-```
+**Formatting:**
 
-Файлы тестов — рядом с тестовыми единицами: `*.spec.ts`, `*.service.spec.ts`.
+- **`@astrum/customer`:** Prettier через `pnpm prettier` в `apps/customer/package.json` (`prettier --write --ignore-unknown .`); плагин `@trivago/prettier-plugin-sort-imports` в зависимостях — сортировка импортов при форматировании. Отдельного committed `.prettierrc` в `apps/customer` нет — используются настройки по умолчанию Prettier и плагин.
+- **`@astrum/auth`:** Prettier в `apps/auth-astrum/.prettierrc` — `singleQuote: true`, `trailingComma: "all"`; скрипт `format`: `prettier --write "src/**/*.ts" "test/**/*.ts"`.
 
-### Customer (Next.js) — App Router + Feature-Sliced
+**Linting:**
 
-```
-src/
-├── app/                          # Next.js App Router
-│   ├── (auth)/                   # Route group — авторизация
-│   │   └── auth/
-│   │       ├── signin/page.tsx
-│   │       └── register/page.tsx
-│   └── (content)/                # Route group — контент
-│       ├── products/[productId]/page.tsx
-│       └── orders/[orderId]/page.tsx
-├── common/                       # Shared — типы, хелперы, схемы
-│   ├── types/                    # `.types.ts` файлы
-│   ├── helpers/                  # Утилиты
-│   ├── constants/                # Константы
-│   ├── zodSchemes/               # Zod схемы валидации
-│   └── regexp/                   # Регулярные выражения
-├── components/                   # Общие UI компоненты
-│   ├── ui/                       # shadcn/ui компоненты
-│   ├── skeletons/                # Костяки загрузки
-│   └── providers/                # Провайдеры (theme, progress bar)
-├── features/                     # Фичи по доменам
-│   └── auth/
-│       ├── SignIn/index.tsx
-│       └── Register/index.tsx
-├── hooks/                        # Кастомные хуки
-└── lib/                          # Утилиты уровня приложения (cn)
-```
+- **`@astrum/customer`:** ESLint flat-config `apps/customer/eslint.config.mjs` — `FlatCompat` + `next/core-web-vitals`, `next/typescript`. Запуск: `next lint` (`apps/customer/package.json`). В `apps/customer/next.config.ts` задано `eslint.ignoreDuringBuilds: true` — линт **не** блокирует production-сборку Next.
+- **`@astrum/auth`:** `apps/auth-astrum/.eslintrc.js` — `@typescript-eslint/parser`, extends `plugin:@typescript-eslint/recommended`, `plugin:prettier/recommended`. Явно отключены: `explicit-function-return-type`, `explicit-module-boundary-types`, `interface-name-prefix`; `no-explicit-any` — `off`. Запуск: `eslint "{src,apps,libs,test}/**/*.ts" --fix`.
+- **`@astrum/api`:** скрипта `lint` в `apps/api-astrum/package.json` **нет** — ESLint для Express-пакета не подключён в монорепозитории.
 
-## TypeScript паттерны
+**TypeScript:**
 
-### Типы vs Интерфейсы
+- **`@astrum/customer`:** `apps/customer/tsconfig.json` — `strict: true`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`, алиас `@/*` → `./src/*`.
+- **`@astrum/api`:** `apps/api-astrum/tsconfig.json` — `strict: true`, CommonJS, декораторы для DI-подхода с `reflect-metadata`.
+- **`@astrum/auth`:** `apps/auth-astrum/tsconfig.json` — смягчённые проверки (`strictNullChecks: false`, `noImplicitAny: false` и др.) относительно строгого клиента — при новом коде предпочитать выравнивание с доменными правилами проекта.
+- **`@astrum/db`:** `packages/Astrum-db/tsconfig.json` — `strict: true`, ESM.
 
-- **`type`** для простых объектов-пропсов и DTO: `type UserData = { email: string; ... }`
-- **`interface`** для более сложных структур с вложенностью: `interface Product`, `interface Impression`, `interface ProductOverview`
-- **`enum`** везде где нужен фиксированный набор значений: `Gender`, `Currency`, `ProductCategory`, `ProductStatus`, `ProductVisibility`, `PropertyLabel`
+## Import Organization
 
-### Enum-стиль
+**Order:**
 
-String-enums (значение совпадает с именем):
-```typescript
-export enum ProductCategory {
-  Electronics = "Electronics",
-  Fashion = "Fashion",
-  // ...
-}
-```
+- В customer после Prettier — порядок задаётся `@trivago/prettier-plugin-sort-imports` при запуске Prettier.
 
-Numeric enums (без явных значений):
-```typescript
-export enum Gender {
-  Male,
-  Female,
-}
-```
+**Path Aliases:**
 
-### Generics
+- **`@astrum/customer`:** `"@/*": ["./src/*"]` в `apps/customer/tsconfig.json` — импорты вида `@/components/...`.
 
-Используются в хуках и утилитах:
-- `useDebounce<T>` — debounce с сохранением типа
-- `postItem<TData>`, `patchItem<TData>`, `putItem<TData>` — SWR-обёртки с типизацией аргумента
+## Error Handling
 
-### Inferred типы от Zod
+**Express (`@astrum/api`):**
 
-Типы выводятся из схем валидации, но также дублируются явными типами:
-```typescript
-export const signInFormSchema = z.object({ ... });
-// Тип SignInCredentials определён отдельно в auth.types.ts
-```
+- Централизованный хелпер `handleErrors` в `apps/api-astrum/src/common/helpers/errorHandler.ts`: для `instanceof Error` — ответ `400` с `message`; иначе — `500` с `ReasonPhrases.INTERNAL_SERVER_ERROR`. Контроллеры вызывают его в `catch` (пример: `apps/api-astrum/src/modules/reviews/reviews.controller.ts` с `StatusCodes` из `http-status-codes`).
+- При добавлении эндпоинтов: оборачивать async-логику в `try/catch` и передавать `err` в `handleErrors(res, err)` либо выносить в общий middleware, если появится единый паттерн.
 
-### `as any` использование
+**NestJS (`@astrum/auth`):**
 
-Встречается в `product.service.ts`:
-```typescript
-const { impressions, properties, _count, ...rest } = product as any;
-```
-Это обходное решение для деструктуризации Prisma-результата с `_count`. Не является паттерном — это workaround.
+- Глобальный `ValidationPipe` с `whitelist: true` в `apps/auth-astrum/src/main.ts`.
+- Контроллеры возвращают результат сервиса; HTTP-коды — декораторы `@HttpCode`, `HttpStatus` (пример: `apps/auth-astrum/src/auth/auth.controller.ts`).
 
-### React.FC не используется
+**Next.js:**
 
-Компоненты определяются как именованные функции:
-```typescript
-function Button({ className, variant, size, asChild = false, ...props }) { ... }
-```
+- Клиентские запросы: обработка ошибок в хуках/SWR (например `productError` в `apps/customer/src/hooks/product/useProducts/useGetProduct.ts`).
 
-## Обработка ошибок
+## Logging
 
-### API (Express)
+**Framework:** в dev для API — `morgan('dev')` в `apps/api-astrum/src/app.ts`; иначе `console` там, где используется напрямую (например `apps/api-astrum/src/server.ts`).
 
-Единый `handleErrors` в `common/helpers/errorHandler.ts`:
-```typescript
-export const handleErrors = (res: Response, err: any) => {
-  if (err instanceof Error) {
-    res.status(StatusCodes.BAD_REQUEST).json({ message: err.message });
-  } else {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR)
-       .json({ message: ReasonPhrases.INTERNAL_SERVER_ERROR });
-  }
-};
-```
+**Patterns:** структурированного единого логгера (pino/winston) в репозитории не зафиксировано.
 
-Каждый контроллер оборачивает методы в `try/catch` с вызовом `handleErrors`.
+## Comments
 
-**Важно**: API не использует единый envelope-ответ (`{ success, data, error }`). Контроллеры возвращают сырые данные напрямую.
+**When to Comment:** в коде новых фич — минимально; проектные правила пользователя: не добавлять комментарии к коду без необходимости. Документация API — Swagger в auth (`apps/auth-astrum/src/main.ts`).
 
-### Auth (NestJS)
+**JSDoc/TSDoc:** в правилах Nest (`.cursor/rules/clean-nestjs-typescript-cursor-rules.mdc`) указан JSDoc для публичных API; фактическое покрытие — по файлам, без обязательной автоматизации.
 
-NestJS built-in исключения:
-```typescript
-throw new ForbiddenException('The user already exists');
-throw new ForbiddenException('The user does not exist');
-throw new ForbiddenException('Password is incorrect');
-```
+## Function Design
 
-Перехват Prisma-специфичных ошибок:
-```typescript
-if (err instanceof PrismaClientKnownRequestError) {
-  if (err.code === 'P2002') { // Unique constraint violation
-    throw new ForbiddenException('The user already exists');
-  }
-}
-```
+**Size:** короткие методы контроллеров с делегированием в сервисы (Express и Nest).
 
-### Frontend
+**Parameters:** DTO через тело запроса и `class-validator` там, где уже принято (Nest DTO в `apps/auth-astrum/src/auth/dto/`, Express — валидация в сервисах/DTO по модулям).
 
-Axios error handling с `axios.isAxiosError()` проверкой:
-```typescript
-if (axios.isAxiosError(error) && error.response) {
-  if (error.response.status === 403) { ... }
-}
-```
+**Return Values:** JSON-ответы с кодами из `http-status-codes` / `HttpStatus`.
 
-Toast-уведомления через `sonner`:
-```typescript
-showToast({ title: "Error", description: "...", type: "error" });
-```
+## Module Design
 
-### Console.log
+**Exports:** в Express — `export default app` из `apps/api-astrum/src/app.ts`; маршруты — именованные/дефолтные экспорты по файлам в `modules/`.
 
-Встречаются `console.log` в production-коде:
-- `apps/api-astrum/src/server.ts`: `console.log('API Gateway running at http://...')`
-- `apps/customer/src/hooks/useFetcher.ts`: `console.error("GET request failed:", ...)`
-- `apps/customer/src/hooks/auth/useAuth.ts`: `console.log(res.data)` — дебаг-строка
+**Barrel Files:** `index.ts` в подпапках auth (например `apps/auth-astrum/src/auth/dto/index.ts`) — по мере необходимости.
 
-## Логирование
+## Monorepo Commands (quality)
 
-- API Express: `morgan('dev')` для HTTP-логов
-- Auth NestJS: без кастомного логгера, только встроенный NestJS
-- Frontend: `console.error` в catch-блоках, `console.log` для отладки
-- Нет единого логгера (winston, pino и т.п.) — только стандартные средства
+**Root `package.json`:**
 
-## Формат API-ответов
+- `pnpm lint` → `turbo lint` — выполняют только пакеты с определённым скриптом `lint` (сейчас в основном `@astrum/customer`, `@astrum/auth`).
+- `pnpm check-types` → `turbo check-types` — пакеты без скрипта `check-types` в своём `package.json` не участвуют в задаче.
 
-### Auth service (NestJS)
+**Husky:**
 
-Возвращает объект с токеном:
-```json
-{ "token": "...", "expiresIn": "1d" }
-```
+- `.husky/pre-commit` вызывает `pnpm lint-staged`.
+- Корневой `package.json` → `lint-staged`: для `*.json` — проверка валидности JSON через однострочный `node -e`. Автоматический запуск ESLint/tsc по всему репо на коммите **не** настроен.
 
-### API Gateway (Express)
+---
 
-Без envelope — возвращает данные напрямую:
-```json
-// GET /api/products/recommendations
-{
-  "products": [...],
-  "nextCursor": "abc123",
-  "hasNextPage": true
-}
-```
-
-### Ошибки
-
-Express-ошибки:
-```json
-{ "message": "Product not found" }
-```
-
-Ошибки валидации DTO:
-```json
-{
-  "errors": [
-    { "property": "email", "constraints": { "isEmail": "..." } }
-  ]
-}
-```
-
-## Валидация
-
-- **API (Express)** — `class-validator` + `class-transformer` через middleware `validateDto`
-- **Auth (NestJS)** — `class-validator` декораторы на свойствах DTO
-- **Frontend** — `zod` схемы + `@hookform/resolvers` для react-hook-form
-
-## Документация (Swagger/JSDoc)
-
-- **Auth (NestJS)**: `@nestjs/swagger` с декораторами `@ApiProperty`, `@ApiOperation`, `@ApiResponse`, `@ApiTags`
-- **API (Express)**: Без Swagger
-- **Frontend**: Без JSDoc-документации
-- **Комментарии к коду**: Минимальные, в основном только JSDoc отсутствует
-
-## CI/CD Pre-commit хуки
-
-- `pre-commit`: `lint-staged` (валидация JSON файлов)
-- `commit-msg`: Conventional commits (`feat|fix|docs|style|refactor|test|chore|ci|build|perf`)
-
-## Турбо-таски
-
-```
-build -> зависит от ^build, ^db:generate
-dev -> persistent, cache: false
-lint -> зависит от ^build
-check-types -> зависит от ^check-types
-```
+*Convention analysis: 2026-04-05*
