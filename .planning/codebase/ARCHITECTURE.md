@@ -1,139 +1,148 @@
-# Architecture
+# Архитектура
 
-**Analysis Date:** 2026-04-05
+**Дата анализа:** 2026-04-07
 
-## Pattern Overview
+## Обзор паттерна
 
-**Overall:** Multi-service monorepo (Turborepo + pnpm workspaces) with a BFF-style API gateway, dedicated auth service, customer SPA, and a single PostgreSQL database accessed through Prisma.
+**В целом:** Turborepo + pnpm workspace (монорепо), 3 приложения в `apps/` и общий пакет БД в `packages/`.
 
-**Key Characteristics:**
+**Ключевые характеристики:**
+- **Разделение по доменам**: отдельные процессы/порты для API gateway, auth и frontend.
+- **Единый источник истины по схеме БД**: Prisma-схема в `packages/Astrum-db/prisma/schema.prisma`.
+- **JWT-сессия через cookie**: токен хранится в cookie `__auth` и используется как контракт между фронтом и бэкендом.
 
-- Three HTTP services: Express (`@astrum/api`), NestJS (`@astrum/auth`), Next.js App Router (`@astrum/customer`).
-- One relational data store; schema ownership and migrations live under `packages/Astrum-db/prisma/`.
-- Auth traffic to the Nest service is reverse-proxied from the Express app (`apps/api-astrum/src/app.ts`).
-- JWT sessions use a shared secret; the browser stores an httpOnly cookie `__auth` set by the Next app (`apps/customer/src/common/helpers/session.ts`).
+## Сервисы и их роли
 
-## Layers
+### Customer Frontend (`@astrum/customer`)
 
-**Presentation (customer):**
+- **Назначение**: клиентское web-приложение (Next.js App Router).
+- **Расположение**: `apps/customer/`
+- **Роутинг**: `apps/customer/src/app/**/page.tsx`, группировка сегментов в `apps/customer/src/app/(auth)/...` и `apps/customer/src/app/(content)/...`
+- **Auth gate (edge middleware)**: `apps/customer/src/middleware.ts`
+  - Публичные маршруты: `["/auth/signin", "/auth/register"]`
+  - Остальное требует cookie `__auth` и валидного `userId` в payload (см. `decrypt()`).
+- **Сессии (cookie) и проверка JWT**: `apps/customer/src/common/helpers/session.ts`
+  - `createSession(token)` устанавливает httpOnly cookie `__auth`
+  - `decrypt(cookie)` делает `jwtVerify()` по `process.env.JWT_SECRET`
+  - `verifySession()` (server-side, `cache`) редиректит на `/auth/signin` если payload невалиден
+- **Вызовы API**: `apps/customer/src/hooks/useFetcher.ts`
+  - axios instance с `withCredentials: true`
+  - baseURL: `process.env.NEXT_PUBLIC_API_GATEWAY_URL` (контракт: URL API gateway)
 
-- Purpose: Server and client UI, route protection, calling backend via HTTP.
-- Location: `apps/customer/src/`
-- Contains: App Router pages under `apps/customer/src/app/`, feature UI under `apps/customer/src/features/`, hooks under `apps/customer/src/hooks/`.
-- Depends on: Environment-configured API base URL (`NEXT_PUBLIC_API_GATEWAY_URL` in `apps/customer/src/hooks/useFetcher.ts`), `JWT_SECRET` for server-side session verification.
-- Used by: End users in the browser.
+### API Gateway (`@astrum/api`)
 
-**API gateway (business API + auth proxy):**
+- **Назначение**: единая точка входа для фронта, проксирование auth и доменные CRUD-модули.
+- **Расположение**: `apps/api-astrum/`
+- **Entrypoint**: `apps/api-astrum/src/server.ts` (слушает порт **3580**)
+- **Сборка приложения/маршрутизация**: `apps/api-astrum/src/app.ts`
+  - **Прокси на auth-сервис**: `app.use('/api/auth', proxyOptions(process.env.AUTH_SERVICE_URL!))`
+    - Источник: `apps/api-astrum/src/app.ts`
+    - Клиент: `apps/api-astrum/src/common/helpers/proxyOptions.ts` (через `http-proxy-middleware`)
+  - **Доменные роуты** (все под `authenticateToken`):
+    - `/api/users` → `apps/api-astrum/src/modules/user/user.routes.ts`
+    - `/api/products` → `apps/api-astrum/src/modules/product/product.routes.ts`
+    - `/api/wishlist` → `apps/api-astrum/src/modules/wishlist/wishlist.routes.ts`
+    - `/api/cart` → `apps/api-astrum/src/modules/cart/cart.routes.ts`
+    - `/api/orders` → `apps/api-astrum/src/modules/order/order.routes.ts`
+    - `/api/reviews` → `apps/api-astrum/src/modules/reviews/reviews.routes.ts`
+- **Контракт авторизации (JWT)**: `apps/api-astrum/src/middlewares/authenticateToken.ts`
+  - Читает cookie `__auth`
+  - Делает `verify(token, process.env.JWT_SECRET)`
+  - Кладёт `userId` в `req.userId` для модулей
+- **Слои внутри доменного модуля (пример user)**:
+  - router: `apps/api-astrum/src/modules/user/user.routes.ts`
+  - controller: `apps/api-astrum/src/modules/user/user.controller.ts`
+  - service: `apps/api-astrum/src/modules/user/user.service.ts` (работа с Prisma)
+  - DTO validation middleware: `apps/api-astrum/src/middlewares/validateDto.ts` (class-validator/class-transformer)
+  - Ошибки: `apps/api-astrum/src/common/helpers/errorHandler.ts` (маппинг Error → 400)
 
-- Purpose: Terminate CORS, JSON body parsing, cookies; proxy `/api/auth` to the auth service; enforce JWT on protected REST routes.
-- Location: `apps/api-astrum/src/`
-- Contains: `apps/api-astrum/src/app.ts` (Express app wiring), `apps/api-astrum/src/modules/*` (domain routes/controllers/services), `apps/api-astrum/src/middlewares/`.
-- Depends on: `AUTH_SERVICE_URL` for `http-proxy-middleware` (`apps/api-astrum/src/common/helpers/proxyOptions.ts`), `JWT_SECRET` for `jsonwebtoken` verification (`apps/api-astrum/src/middlewares/authenticateToken.ts`), Prisma client from `apps/api-astrum/lib/prisma.ts`.
-- Used by: Customer app and any other HTTP clients targeting port `3580`.
+### Auth Service (`@astrum/auth`)
 
-**Auth service:**
+- **Назначение**: регистрация/логин и выпуск JWT.
+- **Расположение**: `apps/auth-astrum/`
+- **Entrypoint**: `apps/auth-astrum/src/main.ts` (слушает порт **4580**)
+  - `app.setGlobalPrefix('/api')` → все контроллеры живут под `/api/*`
+  - Swagger: `SwaggerModule.setup('swagger', ...)` (путь `/swagger`)
+  - CORS ограничен `origin: ['http://localhost:3000']`
+- **Композиция модулей**: `apps/auth-astrum/src/app.module.ts`
+  - `ConfigModule.forRoot({ isGlobal: true })`
+  - `AuthModule` (`apps/auth-astrum/src/auth/auth.module.ts`)
+  - `PrismaModule` (`apps/auth-astrum/src/prisma/prisma.module.ts`, помечен `@Global()`)
+- **HTTP-контракты**:
+  - `POST /api/auth/register` → `apps/auth-astrum/src/auth/auth.controller.ts`
+  - `POST /api/auth/signin` → `apps/auth-astrum/src/auth/auth.controller.ts`
+  - Возвращаемое значение: `{ token, expiresIn }` (источник: `apps/auth-astrum/src/auth/auth.service.ts`)
+- **JWT-контракт**:
+  - payload: `{ userId }` (источник: `apps/auth-astrum/src/auth/auth.service.ts`)
+  - секрет: `JWT_SECRET` через `ConfigService` (источник: `apps/auth-astrum/src/auth/auth.service.ts`)
 
-- Purpose: Register and sign-in; issue JWT access tokens; persist users via Prisma.
-- Location: `apps/auth-astrum/src/`
-- Contains: NestJS modules (`apps/auth-astrum/src/app.module.ts`, `apps/auth-astrum/src/auth/auth.module.ts`), `AuthController` (`apps/auth-astrum/src/auth/auth.controller.ts`), `AuthService` (`apps/auth-astrum/src/auth/auth.service.ts`), Passport JWT strategy (`apps/auth-astrum/src/auth/strategy/jwt.strategy.ts`), `PrismaService` (`apps/auth-astrum/src/prisma/prisma.service.ts`).
-- Depends on: `DATABASE_URL`, `JWT_SECRET` (via `ConfigModule`), Prisma client generated under `apps/auth-astrum/generated/prisma/`.
-- Used by: Proxied through Express at `/api/auth` (see `apps/api-astrum/src/app.ts`); Swagger UI at `/swagger` on the auth app (`apps/auth-astrum/src/main.ts`).
+## Общий пакет БД (`@astrum/db`) и контракт схемы
 
-**Data access (Prisma):**
+### Источник схемы
 
-- Purpose: ORM access to PostgreSQL with the `pg` driver and `@prisma/adapter-pg`.
-- Location: Canonical schema and migrations: `packages/Astrum-db/prisma/schema.prisma`, `packages/Astrum-db/prisma/migrations/`. Per-app clients: `apps/api-astrum/lib/prisma.ts`, `apps/auth-astrum/src/prisma/prisma.service.ts`, shared singleton pattern in `packages/Astrum-db/lib/prisma.ts`.
-- Contains: Generated client output configured as `output = "../generated/prisma"` in each schema file that uses that pattern.
-- Depends on: `DATABASE_URL`.
-- Used by: Express services and Nest `AuthService` / `PrismaService`.
+- **Prisma schema**: `packages/Astrum-db/prisma/schema.prisma`
+  - Определяет доменные модели (`User`, `Product`, `Order`, `Review`, …)
+  - generator `client.output = "../generated/prisma"` (источник: `packages/Astrum-db/prisma/schema.prisma`)
 
-## Data Flow
+### Доступ к PrismaClient
 
-**Sign-in / register:**
+- Экспорт prisma singleton: `packages/Astrum-db/lib/prisma.ts`
+- Публичный экспорт пакета: `packages/Astrum-db/lib/index.ts`
 
-1. Browser posts credentials to the API gateway path `/api/auth/...` (`apps/api-astrum/src/app.ts`).
-2. Request proxies to Nest auth (`apps/auth-astrum/src/auth/auth.controller.ts`).
-3. `AuthService` reads/writes `User` via Prisma (`apps/auth-astrum/src/auth/auth.service.ts`).
-4. JWT string returned to client; Next may persist it in `__auth` via `createSession` (`apps/customer/src/common/helpers/session.ts`).
+### Использование Prisma в сервисах
 
-**Authenticated REST (products, cart, orders, etc.):**
+**API gateway (`@astrum/api`)**:
+- В модулях импортируется prisma из локального слоя: пример `apps/api-astrum/src/modules/user/user.service.ts` импортирует `../../../lib/prisma`
+- Реальная инициализация Prisma: `apps/api-astrum/lib/prisma.ts` (использует `@prisma/adapter-pg` и `process.env.DATABASE_URL`)
 
-1. Client sends requests with cookie `__auth` to `NEXT_PUBLIC_API_GATEWAY_URL` (see `apps/customer/src/hooks/useFetcher.ts`).
-2. `authenticateToken` reads `req.cookies.__auth` and verifies with `JWT_SECRET` (`apps/api-astrum/src/middlewares/authenticateToken.ts`).
-3. `req.userId` is set from the payload; controllers/services use Prisma in `apps/api-astrum/src/modules/*`.
+**Auth (`@astrum/auth`)**:
+- `apps/auth-astrum/src/prisma/prisma.service.ts` расширяет `PrismaClient` и создаёт adapter `PrismaPg` из `process.env.DATABASE_URL`
+- Импорт клиента: `../../generated/prisma/client` (гипотеза: generated артефакты не закоммичены; источник: `apps/auth-astrum/src/prisma/prisma.service.ts`)
 
-**Server-rendered session check (Next):**
+## Потоки данных (практически)
 
-1. `middleware` (`apps/customer/src/middleware.ts`) decrypts/verifies the cookie for non-public paths using `decrypt` from `apps/customer/src/common/helpers/session.ts`.
-2. Content layout may call `verifySession` (`apps/customer/src/app/(content)/layout.tsx`).
+### Поток “Регистрация/Логин”
 
-**State Management:**
+1. UI форма (например SignIn): `apps/customer/src/features/auth/SignIn/index.tsx`
+2. Хук отправляет запрос на gateway: `apps/customer/src/hooks/auth/useAuth.ts` → `fetcher.post("/auth/signin" | "/auth/register")`
+   - baseURL берётся из `process.env.NEXT_PUBLIC_API_GATEWAY_URL` (источник: `apps/customer/src/hooks/useFetcher.ts`)
+3. Gateway проксирует `/api/auth/*` на auth-сервис: `apps/api-astrum/src/app.ts`
+4. Auth сервис возвращает JWT: `apps/auth-astrum/src/auth/auth.service.ts` → `signToken()`
+5. Frontend записывает JWT в cookie `__auth`: `apps/customer/src/common/helpers/session.ts` → `createSession(token)`
 
-- Server: React `cache` and cookies in Next (`apps/customer/src/common/helpers/session.ts`).
-- Client: SWR usage in hooks (see `apps/customer/package.json`); feature hooks under `apps/customer/src/hooks/`.
+### Поток “Доступ к защищённым ресурсам (CRUD)”
 
-## Key Abstractions
+1. Browser автоматически прикладывает cookie `__auth` (axios `withCredentials: true`): `apps/customer/src/hooks/useFetcher.ts`
+2. Gateway проверяет JWT и выставляет `req.userId`: `apps/api-astrum/src/middlewares/authenticateToken.ts`
+3. Router → controller → service выполняют операцию и обращаются к БД через Prisma:
+   - пример: `apps/api-astrum/src/modules/user/user.routes.ts` → `user.controller.ts` → `user.service.ts`
 
-**Express module pattern:**
+## Зависимости и “контракты” между сервисами
 
-- Purpose: Group REST surface by domain.
-- Examples: `apps/api-astrum/src/modules/user/user.routes.ts`, `user.controller.ts`, `user.service.ts` (same pattern for `product`, `wishlist`, `cart`, `order`, `reviews`).
-- Pattern: `*.routes.ts` mounts `Router`; controllers are classes; DTOs use `class-validator` with `validateDto` (`apps/api-astrum/src/middlewares/validateDto.ts`).
+**Контракт 1: URL API gateway**
+- Frontend ожидает `NEXT_PUBLIC_API_GATEWAY_URL` как baseURL (источник: `apps/customer/src/hooks/useFetcher.ts`)
 
-**NestJS auth stack:**
+**Контракт 2: URL Auth service**
+- Gateway ожидает `AUTH_SERVICE_URL` для проксирования (источник: `apps/api-astrum/src/app.ts`)
 
-- Purpose: Framework-native auth with Swagger and Passport JWT for future protected Nest routes.
-- Examples: `apps/auth-astrum/src/auth/guard/jwt.guard.ts`, `apps/auth-astrum/src/auth/strategy/jwt.strategy.ts`.
-- Pattern: `AuthModule` imports `JwtModule` (`apps/auth-astrum/src/auth/auth.module.ts`).
+**Контракт 3: JWT_SECRET общий**
+- Frontend (`jose/jwtVerify`), Gateway (`jsonwebtoken/verify`) и Auth service (`@nestjs/jwt/signAsync`) используют `JWT_SECRET`
+  - Источники: `apps/customer/src/common/helpers/session.ts`, `apps/api-astrum/src/middlewares/authenticateToken.ts`, `apps/auth-astrum/src/auth/auth.service.ts`
+  - Практический вывод: секрет должен быть одинаковым для всех трёх компонентов, иначе авторизация ломается
 
-**Prisma client singleton:**
+**Контракт 4: cookie-имя**
+- `__auth` как имя cookie используется везде (источники: `apps/customer/src/common/helpers/session.ts`, `apps/customer/src/middleware.ts`, `apps/api-astrum/src/middlewares/authenticateToken.ts`)
 
-- Purpose: Avoid connection explosion in development.
-- Examples: `packages/Astrum-db/lib/prisma.ts` (global cache when `NODE_ENV !== 'production'`).
+## Entrypoints (server/bootstrap)
 
-## Entry Points
-
-**Express API:**
-
-- Location: `apps/api-astrum/src/server.ts`
-- Triggers: `pnpm dev` / `tsx watch` via `apps/api-astrum/package.json`.
-- Responsibilities: Listen on port `3580`, mount `app` from `apps/api-astrum/src/app.ts`.
-
-**NestJS auth:**
-
-- Location: `apps/auth-astrum/src/main.ts`
-- Triggers: `nest start` scripts in `apps/auth-astrum/package.json`.
-- Responsibilities: Listen on port `4580`, global prefix `/api`, Swagger at `/swagger`, CORS for `http://localhost:3000`.
-
-**Next.js customer:**
-
-- Location: `apps/customer/src/app/layout.tsx`, route segments under `apps/customer/src/app/`
-- Triggers: `next dev` / `next start` per `apps/customer/package.json`.
-- Responsibilities: App Router UI; middleware in `apps/customer/src/middleware.ts`.
-
-**Prisma CLI (migrations / generate):**
-
-- Location: Root scripts delegate to `@astrum/db` (`package.json` at repo root).
-- Triggers: `pnpm prisma:migrate:dev`, `pnpm db:generate`, etc.
-- Responsibilities: Apply migrations from `packages/Astrum-db/prisma/migrations/`.
-
-## Error Handling
-
-**Strategy:** Per-handler try/catch in services/controllers; shared helper for generic Express errors (`apps/api-astrum/src/common/helpers/errorHandler.ts`). Nest uses standard exceptions (`ForbiddenException` in `apps/auth-astrum/src/auth/auth.service.ts`).
-
-**Patterns:**
-
-- HTTP status via `http-status-codes` on the Express API (`apps/api-astrum/src/middlewares/authenticateToken.ts`).
-- Validation errors surfaced as JSON messages from `validateDto` pipeline.
-
-## Cross-Cutting Concerns
-
-**Logging:** `morgan('dev')` on the Express app (`apps/api-astrum/src/app.ts`). Console logging in Next session helpers on verification failure (`apps/customer/src/common/helpers/session.ts`).
-
-**Validation:** `class-validator` DTOs + `ValidationPipe` in Nest (`apps/auth-astrum/src/main.ts`); Express uses `validateDto` with `class-transformer`/`class-validator` (`apps/api-astrum/src/middlewares/validateDto.ts`).
-
-**Authentication:** JWT signed in Nest (`apps/auth-astrum/src/auth/auth.service.ts`); verified on Express with `jsonwebtoken` (`apps/api-astrum/src/middlewares/authenticateToken.ts`); Next verifies with `jose` for middleware and RSC (`apps/customer/src/common/helpers/session.ts`).
+- **API gateway**: `apps/api-astrum/src/server.ts` → `import app from "./app"` → `app.listen(3580)`
+- **Auth service**: `apps/auth-astrum/src/main.ts` → `bootstrap()` → `NestFactory.create(AppModule)` → `listen(4580)`
+- **Frontend**: Next.js entry управляется фреймворком, ключевые точки:
+  - Root layout: `apps/customer/src/app/layout.tsx`
+  - Auth/content layouts: `apps/customer/src/app/(auth)/auth/layout.tsx`, `apps/customer/src/app/(content)/layout.tsx`
+  - Middleware: `apps/customer/src/middleware.ts`
 
 ---
 
-*Architecture analysis: 2026-04-05*
+*Архитектурный анализ: 2026-04-07*
+

@@ -1,94 +1,115 @@
 # Technology Stack
 
-**Analysis Date:** 2026-04-05
+**Дата анализа:** 2026-04-07
 
-## Languages
+## Языки и рантайм
 
-**Primary:**
-- TypeScript — backend (`apps/api-astrum`, `apps/auth-astrum`), frontend (`apps/customer`), database package (`packages/Astrum-db`)
+- **TypeScript**: используется во всех сервисах (`apps/api-astrum`, `apps/auth-astrum`, `apps/customer`, `packages/Astrum-db`)
+- **Node.js**:
+  - **Node 18 (alpine)**: контейнеры `apps/api-astrum/Dockerfile`, `apps/auth-astrum/Dockerfile`
+  - **Node 20 (alpine)**: контейнер `apps/customer/Dockerfile`
 
-**Secondary:**
-- JavaScript — seed scripts in `packages/Astrum-db` (e.g. `prisma/productSeeds.js`)
-- SQL — Prisma migrations under `packages/Astrum-db/prisma/migrations`
+## Монорепо и сборка
 
-## Runtime
+### Менеджер пакетов
 
-**Environment:**
-- Node.js — `node:18-alpine` in `apps/api-astrum/Dockerfile` and `apps/auth-astrum/Dockerfile`; `node:20-alpine` in `apps/customer/Dockerfile`
-- Local dev: Node with `tsx` for API (`apps/api-astrum/package.json`), Nest CLI for auth, Next.js dev server for customer
+- **pnpm**: `pnpm@10.4.0` (см. `package.json#packageManager`)
+- Workspaces: `pnpm-workspace.yaml` (`apps/*`, `packages/*`)
 
-**Package Manager:**
-- pnpm `10.4.0` (`package.json` field `packageManager`)
-- Lockfile: `pnpm-lock.yaml` (lockfileVersion `9.0`)
+### Оркестрация задач
 
-## Frameworks
+- **Turborepo**: `turbo@^2.8.18` (см. `package.json`)
+  - Pipeline: `turbo.json`
+  - **Глобальная env-переменная для задач**: `DATABASE_URL` (`turbo.json#globalEnv`)
 
-**Core:**
-- Turborepo `^2.8.18` — task orchestration (`turbo.json`, root `package.json`)
-- Express `^4.21.x` — API gateway (`apps/api-astrum`)
-- NestJS `^10.3.x` — auth service (`apps/auth-astrum`)
-- Next.js `15.4.2` — customer app (`apps/customer`)
-- React `19.1.0` — UI (`apps/customer`)
+## Сервисы (apps/*)
 
-**Testing:**
-- Jest `^29.7.0` — auth unit/e2e (`apps/auth-astrum/package.json`, `test/jest-e2e.json`)
-- Supertest — HTTP e2e (`apps/auth-astrum`)
+### `@astrum/api` — API Gateway (Express)
 
-**Build/Dev:**
-- TypeScript `^5.9.3` (api/auth/db) / `^5` (customer)
-- `tsx` — watch and scripts (`apps/api-astrum`, `packages/Astrum-db`)
-- `@nestjs/cli` — Nest build (`apps/auth-astrum`)
-- ESLint + Prettier — customer and auth (see `apps/customer/package.json`, `apps/auth-astrum/package.json`)
+- **Пакет**: `apps/api-astrum/package.json`
+- **Стек**:
+  - Express `^4.21.2`
+  - Prisma Client `^7.5.0` + `@prisma/adapter-pg` `^7.5.0` (PostgreSQL)
+  - `pg` `^8.20.0`
+  - Auth/JWT: `jsonwebtoken` `^9.0.2`
+  - Security/HTTP: `helmet`, `cors`, `cookie-parser`, `morgan`
+  - Proxy: `http-proxy-middleware` `^3.0.3`
+  - Runtime TS: `tsx` `^4.21.0`
+- **Порт**: `3580` (`apps/api-astrum/src/server.ts`)
+- **Запуск**:
+  - Dev: `pnpm dev:api` (корень) → `turbo dev --filter=@astrum/api` (`package.json`)
+  - Локально в пакете: `pnpm --filter @astrum/api dev` (`apps/api-astrum/package.json`)
+  - Prod: `pnpm --filter @astrum/api start:prod` (использует `.env.prod`, см. `apps/api-astrum/package.json`)
 
-## Key Dependencies
+### `@astrum/auth` — Auth service (NestJS)
 
-**Critical:**
-- Prisma `^7.5.0` / catalog `prisma: latest` (resolved in `pnpm-lock.yaml` to `7.6.0` for workspace catalog) — ORM; client output configured in generators (`packages/Astrum-db/prisma/schema.prisma`, duplicate schemas in `apps/api-astrum/prisma/schema.prisma`, `apps/auth-astrum/prisma/schema.prisma`)
-- `@prisma/adapter-pg` + `pg` — PostgreSQL driver adapter (`packages/Astrum-db/lib/prisma.ts`, `apps/api-astrum/lib/prisma.ts`)
-- `jsonwebtoken` — JWT verification on API (`apps/api-astrum/src/middlewares/authenticateToken.ts`) and customer session helpers (`apps/customer/src/common/helpers/session.ts`)
-- `@nestjs/jwt`, `passport`, `passport-jwt` — auth service (`apps/auth-astrum`)
-- `argon2` — password hashing (api `^0.41.1`, auth `^0.40.3`)
-- `axios` + `swr` — customer HTTP and data fetching (`apps/customer/src/hooks/useFetcher.ts`, feature hooks)
-- `zod`, `react-hook-form`, `@hookform/resolvers` — forms and validation (`apps/customer`)
-- Radix UI + Tailwind CSS `^4.1.x` — UI (`apps/customer`)
+- **Пакет**: `apps/auth-astrum/package.json`
+- **Стек**:
+  - NestJS `^10.x` (`@nestjs/common`, `@nestjs/core`, `@nestjs/config`, `@nestjs/swagger`)
+  - Auth/JWT: `@nestjs/jwt`, `passport`, `passport-jwt`
+  - Hashing: `argon2`
+  - Validation: `class-validator`, `class-transformer`, `ValidationPipe`
+  - Prisma Client `^7.5.0` + `@prisma/adapter-pg` `^7.5.0`, `pg` `^8.20.0`
+  - Тесты: Jest (скрипты `test*` в `apps/auth-astrum/package.json`)
+- **Порт**: `4580` (`apps/auth-astrum/src/main.ts`)
+- **Swagger**: включён, путь `swagger` (`apps/auth-astrum/src/main.ts`)
+- **Запуск**:
+  - Dev: `pnpm dev:auth` (корень) → `turbo dev --filter=@astrum/auth` (`package.json`)
+  - Локально в пакете: `pnpm --filter @astrum/auth dev`
+  - Prod: `pnpm --filter @astrum/auth start:prod`
 
-**Infrastructure:**
-- `dotenv` / `dotenv-cli` — env loading (`apps/api-astrum` scripts, `packages/Astrum-db`)
-- `helmet`, `cors`, `morgan`, `cookie-parser` — API middleware (`apps/api-astrum/src/app.ts`)
-- `http-proxy-middleware` — proxy `/api/auth` to auth service (`apps/api-astrum/src/common/helpers/proxyOptions.ts`, `apps/api-astrum/src/app.ts`)
-- `compression` — Nest auth (`apps/auth-astrum/src/main.ts`)
-- `xlsx` — Excel-related seed path (`packages/Astrum-db/package.json` script `seed:excel`)
+### `@astrum/customer` — Frontend (Next.js App Router)
 
-**Declared but not imported in customer source (verify before use):**
-- `@apollo/client`, `@apollo/client-integration-nextjs` — listed in `apps/customer/package.json`; no `import` from `@apollo` under `apps/customer/src` at analysis time
+- **Пакет**: `apps/customer/package.json`
+- **Стек**:
+  - Next.js **15.4.2**
+  - React **19.1.0**
+  - UI: Radix UI (`@radix-ui/*`), shadcn (`shadcn`), Tailwind CSS **4.1.11**
+  - Data fetching: `axios`, `swr`
+  - Validation: `zod`
+  - (В зависимостях присутствует GraphQL-клиент) `@apollo/client`, `@apollo/client-integration-nextjs`
+  - JWT libs: `jose`, `jsonwebtoken`, `jwt-decode`
+- **Порт**: `3000` (docker/дефолт Next; контейнер выставляет `PORT=3000`, см. `apps/customer/Dockerfile`)
+- **Запуск**:
+  - Dev: `pnpm dev:customer` (корень) → `turbo dev --filter=@astrum/customer` (`package.json`)
+  - Локально в пакете: `pnpm --filter @astrum/customer dev`
+  - Prod: `pnpm --filter @astrum/customer start`
 
-## Configuration
+## Пакеты (packages/*)
 
-**Environment:**
-- Prisma config: `packages/Astrum-db/prisma.config.ts` (`defineConfig` from `prisma/config`, `datasource.url` from `env('DATABASE_URL')`)
-- Turbo passes `DATABASE_URL` to tasks (`turbo.json` `globalEnv`)
-- Per-app `.env` / `.env.prod` / `.env.production` referenced by Docker Compose and scripts — do not commit; see `docker-compose.yml` `env_file` entries
+### `@astrum/db` — Prisma schema/migrations/client
 
-**Build:**
-- API: `apps/api-astrum/tsconfig.json` → `tsc` → `dist/` (`apps/api-astrum/package.json` `build`)
-- Auth: Nest `nest build` (`apps/auth-astrum`)
-- Customer: Next `next build` (`apps/customer`), `output: "standalone"` in `apps/customer/next.config.ts`
-- Monorepo scripts: root `package.json` (`dev`, `build`, `lint`, `check-types`, Prisma commands targeting `@astrum/db`)
+- **Пакет**: `packages/Astrum-db/package.json`
+- **Стек**:
+  - Prisma `^7.5.0` (в т.ч. `catalog:prisma` из `pnpm-workspace.yaml`)
+  - `@prisma/client` `^7.5.0`, `@prisma/adapter-pg` `^7.5.0`
+  - PostgreSQL драйвер: `pg` `^8.20.0`
+  - Seed tooling: `tsx`, `xlsx`
+- **Команды** (из корня и пакета):
+  - Генерация клиента: `pnpm db:generate` (корень) → `pnpm --filter @astrum/db db:generate` (`package.json`)
+  - Миграции dev: `pnpm prisma:migrate:dev` (корень) → `pnpm --filter @astrum/db exec prisma migrate dev`
+  - Миграции deploy: `pnpm prisma:migrate:deploy` (корень) → `pnpm --filter @astrum/db exec prisma migrate deploy`
+  - Prisma Studio: `pnpm prisma:studio` (корень)
+  - Seed: `pnpm prisma:seed` (корень) → `pnpm --filter @astrum/db seed`
 
-**Workspace:**
-- `pnpm-workspace.yaml` — `apps/*`, `packages/*`
-- `pnpm-workspace.yaml` `catalogs.prisma` pins `prisma: latest` for `packages/Astrum-db`
+## Инфраструктура и локальная разработка
 
-## Platform Requirements
+- **PostgreSQL (Docker)**: `docker-compose.yml` использует `postgres:13`
+- **Сеть Docker**: `astrumnetwork` помечена как `external: true` (`docker-compose.yml`)
 
-**Development:**
-- Docker — PostgreSQL service `astrum-db` (`docker-compose.yml`), optional full stack services (`astrum-api`, `astrum-auth`, `astrum-customer`)
-- Corepack-enabled Node for pnpm (Dockerfiles use `corepack enable`)
-- Network `astrumnetwork` external for Compose (`docker-compose.yml`)
+## Основные команды (корень репозитория)
 
-**Production:**
-- Container images built from repo Dockerfiles under `apps/*/Dockerfile`; multi-stage copy of `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `apps/`, `packages/`
+См. `package.json` и `README.md`:
+
+- **Установка**: `pnpm install`
+- **Dev (всё)**: `pnpm dev` (стартует `astrum-db` и запускает `turbo dev`)
+- **Dev (по сервисам)**: `pnpm dev:customer`, `pnpm dev:api`, `pnpm dev:auth`
+- **Сборка**: `pnpm build`
+- **Линт**: `pnpm lint`
+- **Типы**: `pnpm check-types`
+- **Docker**: `pnpm docker:up`, `pnpm docker:down`
+- **База**: `pnpm db:up`, `pnpm db:rm`, `pnpm db:restart`
 
 ---
 
-*Stack analysis: 2026-04-05*
+*Stack analysis: 2026-04-07*

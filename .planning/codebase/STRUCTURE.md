@@ -1,140 +1,204 @@
-# Codebase Structure
+# Структура репозитория
 
-**Analysis Date:** 2026-04-05
+**Дата анализа:** 2026-04-07
 
-## Directory Layout
+## Дерево верхнего уровня (куда смотреть в первую очередь)
 
 ```
-astrum/
-├── apps/
-│   ├── api-astrum/          # Express API gateway (port 3580)
-│   ├── auth-astrum/         # NestJS auth service (port 4580)
-│   └── customer/            # Next.js 15 customer app (port 3000)
+E:/Astrum/Astrum/
+├── apps/                          # приложения (runtime-сервисы)
+│   ├── api-astrum/                # Express API gateway (порт 3580)
+│   ├── auth-astrum/               # NestJS auth service (порт 4580)
+│   └── customer/                  # Next.js frontend (порт 3000)
 ├── packages/
-│   └── Astrum-db/           # Prisma schema, migrations, seeds (@astrum/db)
-├── docker-compose.yml       # Postgres + optional builds for all three apps
-├── pnpm-workspace.yaml      # workspaces: apps/*, packages/*
-├── turbo.json               # Turborepo task graph (build, dev, lint, check-types)
-└── package.json             # Root scripts (db, prisma, turbo)
+│   └── Astrum-db/                 # Prisma schema + генерация клиента + сиды
+├── .planning/                     # планы/артефакты процессов
+│   └── codebase/                  # (это сюда пишутся карты кодовой базы)
+├── docs/                          # проектная документация
+├── .husky/                        # git hooks
+├── package.json                   # корневые скрипты (turbo/pnpm)
+├── pnpm-workspace.yaml            # workspace packages (apps/*, packages/*)
+├── pnpm-lock.yaml                 # lockfile
+├── turbo.json                     # Turborepo pipeline (build/dev/lint/...)
+├── docker-compose.yml             # инфраструктура (например postgres контейнер)
+└── .env                           # env-конфиг (не читать в анализе)
 ```
 
-## Directory Purposes
+## Workspace и сборка (монорепо)
 
-**`apps/api-astrum/`:**
+- **Workspace-границы**: `pnpm-workspace.yaml`
+  - `apps/*`
+  - `packages/*`
+- **Orchestration задач**: `turbo.json`
+  - Глобальная env: `DATABASE_URL` (только факт наличия; значения не фиксируются)
+  - `dev` зависит от `db:generate`
+- **Корневые команды**: `package.json`
+  - `pnpm dev` запускает `turbo dev` и поднимает контейнер БД (через `docker start astrum-db`)
+  - Точечные dev-команды: `dev:customer`, `dev:api`, `dev:auth`
 
-- Purpose: REST API and reverse proxy to auth.
-- Contains: `src/app.ts`, `src/server.ts`, `src/modules/*`, `src/middlewares/`, `src/common/`, `lib/prisma.ts`, local `prisma/schema.prisma`, `generated/prisma/` (after generate).
-- Key files: `apps/api-astrum/src/app.ts`, `apps/api-astrum/src/server.ts`, `apps/api-astrum/lib/prisma.ts`
+## `apps/api-astrum/` (API gateway на Express)
 
-**`apps/auth-astrum/`:**
+### Где entrypoint
 
-- Purpose: NestJS authentication API and Swagger.
-- Contains: `src/main.ts`, `src/app.module.ts`, `src/auth/*`, `src/prisma/*`, local `prisma/schema.prisma`, `generated/prisma/`, `test/` (Jest e2e config via `apps/auth-astrum/package.json`).
-- Key files: `apps/auth-astrum/src/main.ts`, `apps/auth-astrum/src/auth/auth.controller.ts`, `apps/auth-astrum/src/prisma/prisma.service.ts`
+- **Запуск сервера**: `apps/api-astrum/src/server.ts`
+- **Создание app и top-level middleware/router wiring**: `apps/api-astrum/src/app.ts`
 
-**`apps/customer/`:**
+### Где маршрутизация
 
-- Purpose: Next.js App Router storefront UI.
-- Contains: `src/app/` (routes), `src/features/` (pages and layout components), `src/hooks/`, `src/components/`, `src/common/helpers/`, `src/middleware.ts`.
-- Key files: `apps/customer/src/middleware.ts`, `apps/customer/src/app/layout.tsx`, `apps/customer/tsconfig.json` (`@/*` → `./src/*`)
+- Подключение модулей и путей:
+  - `apps/api-astrum/src/app.ts`
+- Роуты конкретного домена:
+  - `apps/api-astrum/src/modules/user/user.routes.ts`
+  - `apps/api-astrum/src/modules/product/product.routes.ts`
+  - `apps/api-astrum/src/modules/wishlist/wishlist.routes.ts`
+  - `apps/api-astrum/src/modules/cart/cart.routes.ts`
+  - `apps/api-astrum/src/modules/order/order.routes.ts`
+  - `apps/api-astrum/src/modules/reviews/reviews.routes.ts`
 
-**`packages/Astrum-db/`:**
+### Где “слои” внутри домена (практический паттерн)
 
-- Purpose: Single source of truth for SQL migrations and shared Prisma client wiring for tooling.
-- Contains: `prisma/schema.prisma`, `prisma/migrations/`, `prisma/productSeeds.js`, `lib/prisma.ts`, `lib/index.ts`.
-- Key files: `packages/Astrum-db/prisma/schema.prisma`, `packages/Astrum-db/lib/prisma.ts`
+Для каждого домена в `apps/api-astrum/src/modules/<domain>/` обычно есть:
+- **router**: `*.routes.ts` (Express Router + binding контроллера)
+- **controller**: `*.controller.ts` (HTTP слой, StatusCodes)
+- **service**: `*.service.ts` (бизнес-логика + Prisma)
+- **dto/**: `dto/*.ts` (class-validator DTO для `validateDto`)
 
-## Key File Locations
+Пример (user):
+- `apps/api-astrum/src/modules/user/user.routes.ts`
+- `apps/api-astrum/src/modules/user/user.controller.ts`
+- `apps/api-astrum/src/modules/user/user.service.ts`
+- `apps/api-astrum/src/modules/user/dto/update-user.dto.ts`
 
-**Entry Points:**
+### Где auth/guard/валидация/ошибки
 
-- `apps/api-astrum/src/server.ts`: HTTP server bootstrap.
-- `apps/auth-astrum/src/main.ts`: Nest bootstrap, Swagger, CORS, global prefix `/api`.
-- `apps/customer/src/app/layout.tsx`: Root layout; nested layouts under `apps/customer/src/app/(content)/layout.tsx`, `apps/customer/src/app/(auth)/auth/layout.tsx`.
+- **JWT auth middleware**: `apps/api-astrum/src/middlewares/authenticateToken.ts` (cookie `__auth` → `req.userId`)
+- **DTO validation middleware**: `apps/api-astrum/src/middlewares/validateDto.ts`
+- **CORS options**: `apps/api-astrum/src/middlewares/corsOptions.ts`
+- **Прокси на auth service**: `apps/api-astrum/src/common/helpers/proxyOptions.ts`
+- **Обработка ошибок**: `apps/api-astrum/src/common/helpers/errorHandler.ts`
 
-**Configuration:**
+### Где Prisma/DB
 
-- `turbo.json`: Build outputs and `DATABASE_URL` in `globalEnv`.
-- `pnpm-workspace.yaml`: Workspace globs and Prisma version catalog.
-- `apps/api-astrum/prisma.config.ts`, `apps/auth-astrum/prisma.config.ts`: Prisma 7 `defineConfig` for schema and datasource URL.
-- Per-app `tsconfig.json` / `nest-cli.json` (Nest) in each app folder.
+- Prisma adapter и клиент для gateway: `apps/api-astrum/lib/prisma.ts`
+- Модули импортируют `prisma` через `../../../lib/prisma` (пример: `apps/api-astrum/src/modules/user/user.service.ts`)
+- Prisma client генерируется в `apps/api-astrum/generated/prisma` (гипотеза: директория не закоммичена; источник: импорт `apps/api-astrum/lib/prisma.ts`)
 
-**Core Logic:**
+## `apps/auth-astrum/` (Auth service на NestJS)
 
-- Express domains: `apps/api-astrum/src/modules/<domain>/` (`user`, `product`, `wishlist`, `cart`, `order`, `reviews`).
-- Nest auth: `apps/auth-astrum/src/auth/`.
-- Next features: `apps/customer/src/features/pages/<PageName>/` and `apps/customer/src/features/layout/`.
+### Где entrypoint
 
-**Testing:**
+- **Bootstrap**: `apps/auth-astrum/src/main.ts`
 
-- Nest unit tests: `*.spec.ts` alongside sources (e.g. `apps/auth-astrum/src/auth/auth.service.spec.ts`).
-- Jest e2e entry: `apps/auth-astrum/test/jest-e2e.json` (referenced from `apps/auth-astrum/package.json`).
+### Где модули и DI
 
-## Naming Conventions
+- Root module: `apps/auth-astrum/src/app.module.ts`
+  - `ConfigModule` глобальный
+  - `AuthModule`: `apps/auth-astrum/src/auth/auth.module.ts`
+  - `PrismaModule`: `apps/auth-astrum/src/prisma/prisma.module.ts` (global)
 
-**Files:**
+### Где HTTP API / контракты
 
-- Express: `*.routes.ts`, `*.controller.ts`, `*.service.ts`, DTOs under `dto/` (example: `apps/api-astrum/src/modules/user/dto/update-user.dto.ts`).
-- Nest: `*.module.ts`, `*.controller.ts`, `*.service.ts`, `*.guard.ts`, `*.strategy.ts` under `apps/auth-astrum/src/auth/`.
-- Next: App Router `page.tsx`, `layout.tsx`, `not-found.tsx` under `apps/customer/src/app/`; feature components often `index.tsx` in feature subfolders.
+- Controller: `apps/auth-astrum/src/auth/auth.controller.ts`
+  - `POST /api/auth/register`
+  - `POST /api/auth/signin`
+- Service: `apps/auth-astrum/src/auth/auth.service.ts`
+  - хеширование пароля (argon2)
+  - выпуск JWT через `@nestjs/jwt`
+- Guards/strategy (JWT):
+  - `apps/auth-astrum/src/auth/guard/jwt.guard.ts`
+  - `apps/auth-astrum/src/auth/strategy/jwt.strategy.ts`
 
-**Directories:**
+### Где Prisma/DB
 
-- Route groups: parentheses folders `(content)`, `(auth)` under `apps/customer/src/app/`.
-- Feature-sliced UI: `apps/customer/src/features/pages/<Feature>/components/`.
+- PrismaModule: `apps/auth-astrum/src/prisma/prisma.module.ts`
+- PrismaService: `apps/auth-astrum/src/prisma/prisma.service.ts`
+  - Prisma adapter `@prisma/adapter-pg`
+  - Prisma client импортируется из `../../generated/prisma/client` (гипотеза: generated артефакты не закоммичены)
 
-**Modules:**
+## `apps/customer/` (Frontend на Next.js App Router)
 
-- npm scope: `@astrum/api`, `@astrum/auth`, `@astrum/customer`, `@astrum/db` (`apps/*/package.json`, `packages/Astrum-db/package.json`).
+### Где роутинг/страницы
 
-## Where to Add New Code
+- Root layout: `apps/customer/src/app/layout.tsx`
+- Content layout: `apps/customer/src/app/(content)/layout.tsx`
+- Auth layout: `apps/customer/src/app/(auth)/auth/layout.tsx`
+- Страницы (page routes):
+  - `apps/customer/src/app/(content)/page.tsx` (главная)
+  - `apps/customer/src/app/(content)/cart/page.tsx`
+  - `apps/customer/src/app/(content)/orders/page.tsx`
+  - `apps/customer/src/app/(content)/orders/[orderId]/page.tsx`
+  - `apps/customer/src/app/(content)/products/[productId]/page.tsx`
+  - `apps/customer/src/app/(content)/wishlist/page.tsx`
+  - `apps/customer/src/app/(content)/profile/page.tsx`
+  - `apps/customer/src/app/(content)/categories/page.tsx`
+  - `apps/customer/src/app/(content)/categories/[category]/page.tsx`
+  - `apps/customer/src/app/(auth)/auth/signin/page.tsx`
+  - `apps/customer/src/app/(auth)/auth/register/page.tsx`
 
-**New REST domain on the Express API:**
+### Где “защита” страниц
 
-- Routes + controller + service: `apps/api-astrum/src/modules/<new-domain>/`
-- Register router in `apps/api-astrum/src/app.ts` with `authenticateToken` if user-specific.
-- Add DTOs under `apps/api-astrum/src/modules/<new-domain>/dto/`.
+- Next middleware: `apps/customer/src/middleware.ts`
+  - проверяет cookie `__auth` и редиректит на `/auth/signin`
+- Server-side проверка сессии: `apps/customer/src/common/helpers/session.ts` (`verifySession()`)
+  - применяется в content layout: `apps/customer/src/app/(content)/layout.tsx`
 
-**New auth-only endpoint:**
+### Где запросы к backend
 
-- Controller/service in `apps/auth-astrum/src/auth/` (or new Nest module if the domain grows), register in `apps/auth-astrum/src/app.module.ts`.
-- Remember global prefix `/api` and path `auth/...` from `AuthController` (`@Controller('auth')` in `apps/auth-astrum/src/auth/auth.controller.ts`).
+- axios-wrapper: `apps/customer/src/hooks/useFetcher.ts`
+  - baseURL = `NEXT_PUBLIC_API_GATEWAY_URL`
+  - `withCredentials: true` (cookie уходят на gateway)
+- Domain hooks:
+  - auth: `apps/customer/src/hooks/auth/useAuth.ts`
+  - user: `apps/customer/src/hooks/user/useUser.ts`
+  - order: `apps/customer/src/hooks/order/*`
+  - product/cart/wishlist: `apps/customer/src/hooks/product/**`
 
-**New customer page:**
+### Где UI “фичи”
 
-- Route: `apps/customer/src/app/(content)/<segment>/page.tsx` (or new group under `apps/customer/src/app/`).
-- UI: `apps/customer/src/features/pages/<Name>/`.
-- Data hooks: `apps/customer/src/hooks/<area>/`.
+- Feature modules/pages:
+  - `apps/customer/src/features/pages/**` (например `Home`, `Profile`, `Cart`, `Orders`, `ProductOverview`)
+  - `apps/customer/src/features/auth/**` (например `SignIn`, `Register`)
+  - `apps/customer/src/features/layout/**` (`Navbar`, `Footer`)
+- Общие компоненты:
+  - `apps/customer/src/components/**`
 
-**Prisma model / migration:**
+## `packages/Astrum-db/` (схема БД, генерация Prisma, сиды)
 
-- Edit `packages/Astrum-db/prisma/schema.prisma`, run migrations via root `pnpm prisma:migrate:dev` (see root `package.json`).
-- Regenerate clients in apps that embed a copy of the schema (`apps/api-astrum/`, `apps/auth-astrum/`) so generated types stay aligned with `packages/Astrum-db/prisma/schema.prisma`.
+### Где схема и генерация
 
-**Utilities:**
+- Prisma schema: `packages/Astrum-db/prisma/schema.prisma`
+  - `generator client.output = "../generated/prisma"`
+- Скрипты генерации/сидов:
+  - `packages/Astrum-db/package.json` → `db:generate`, `seed`, `seed:excel`
 
-- Shared API helpers: `apps/api-astrum/src/common/helpers/`, `apps/api-astrum/src/common/types/`.
-- Shared frontend helpers: `apps/customer/src/common/helpers/`, `apps/customer/src/lib/utils.ts`.
+### Где runtime API для импорта
 
-## Special Directories
+- Экспорт prisma singleton: `packages/Astrum-db/lib/prisma.ts`
+- Экспорт пакета: `packages/Astrum-db/lib/index.ts`
 
-**`packages/Astrum-db/generated/`** (after `prisma generate`):
+## Где добавлять новый код (правило “куда положить X”)
 
-- Purpose: Prisma client output per `schema.prisma` generator block.
-- Generated: Yes.
-- Committed: Follow team policy; typically generated artifacts are gitignored or committed—verify `.gitignore` at repo root.
+### Новый endpoint в gateway
 
-**`apps/api-astrum/generated/`, `apps/auth-astrum/generated/`:**
+- Router: `apps/api-astrum/src/modules/<domain>/<domain>.routes.ts`
+- Controller: `apps/api-astrum/src/modules/<domain>/<domain>.controller.ts`
+- Service: `apps/api-astrum/src/modules/<domain>/<domain>.service.ts`
+- DTO: `apps/api-astrum/src/modules/<domain>/dto/*.ts`
+- Подключение маршрута: `apps/api-astrum/src/app.ts`
 
-- Purpose: App-local Prisma client output for TypeScript builds.
-- Generated: Yes.
+### Новый auth endpoint
 
-**`apps/customer/.next/`:**
+- Controller: `apps/auth-astrum/src/auth/*.controller.ts` (или новый модуль в `src/<module>/`)
+- Service: `apps/auth-astrum/src/auth/*.service.ts`
+- Модуль/DI: `apps/auth-astrum/src/app.module.ts` + новый модуль `apps/auth-astrum/src/<module>/<module>.module.ts`
 
-- Purpose: Next.js build cache and output.
-- Generated: Yes.
-- Committed: No (standard Next ignore).
+### Новая страница фронта
+
+- Route segment: `apps/customer/src/app/.../page.tsx`
+- UI реализация: `apps/customer/src/features/pages/<PageName>/...`
+- API hook: `apps/customer/src/hooks/<domain>/...` (использовать `useFetcher`)
 
 ---
 
-*Structure analysis: 2026-04-05*
+*Структурный анализ: 2026-04-07*
+

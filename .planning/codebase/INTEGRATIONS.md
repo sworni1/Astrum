@@ -1,96 +1,140 @@
 # External Integrations
 
-**Analysis Date:** 2026-04-05
+**Дата анализа:** 2026-04-07
 
-## APIs & External Services
+## Базы данных и хранилища данных
 
-**HTTP APIs (first-party):**
-- Customer → API gateway — `axios` base URL from `process.env.NEXT_PUBLIC_API_GATEWAY_URL` (`apps/customer/src/hooks/useFetcher.ts`)
-- API gateway → Auth service — reverse proxy `/api/auth` to `process.env.AUTH_SERVICE_URL` (`apps/api-astrum/src/app.ts`, `apps/api-astrum/src/common/helpers/proxyOptions.ts`)
+### PostgreSQL (основная БД)
 
-**Documentation / discovery:**
-- OpenAPI (Swagger UI) — Nest auth at `/swagger` (`apps/auth-astrum/src/main.ts`)
+- **Назначение**: основное хранилище данных для всех доменных моделей (пользователи, товары, заказы, отзывы и т.д.)
+- **Где используется**:
+  - Prisma schema/migrations: `packages/Astrum-db/prisma/schema.prisma`, `packages/Astrum-db/prisma/migrations/*`
+  - Prisma client/adapter в API gateway: `apps/api-astrum/lib/prisma.ts`
+  - Prisma client/adapter в auth service: `apps/auth-astrum/src/prisma/prisma.service.ts`
+  - Prisma config (url берётся из env):  
+    - `packages/Astrum-db/prisma.config.ts`  
+    - `apps/api-astrum/prisma.config.ts`  
+    - `apps/auth-astrum/prisma.config.ts`
+- **Docker (локально/инфра)**:
+  - `docker-compose.yml` поднимает `postgres:13` как сервис `astrum-db`
+  - `docker-compose.yml` использует `env_file: packages/Astrum-db/.env` (файл присутствует по ссылке в compose; содержимое не анализировалось)
+- **Env**:
+  - `DATABASE_URL` — используется в Prisma конфиге и рантайм-клиенте:
+    - `turbo.json#globalEnv` (пробрасывается в turbo tasks)
+    - `packages/Astrum-db/prisma.config.ts`
+    - `apps/api-astrum/lib/prisma.ts`
+    - `apps/auth-astrum/src/prisma/prisma.service.ts`
 
-**Third-party SDKs (not detected in application code):**
-- Stripe — only enum/value `PaymentMethod.STRIPE` in UI (`apps/customer/src/common/types/order.types.ts`, checkout UI); no `stripe` package in workspace `package.json` files
+## Аутентификация и идентификация
 
-**GraphQL:**
-- `@apollo/client` and `@apollo/client-integration-nextjs` are dependencies of `apps/customer` but no Apollo client usage found under `apps/customer/src` — treat as unused or planned integration
+### JWT (кастомная аутентификация)
 
-## Data Storage
+- **Назначение**: выдача и проверка JWT для пользовательских сессий
+- **Где используется**:
+  - Auth service (выдача токенов):
+    - `apps/auth-astrum/src/auth/auth.service.ts` (подпись токена через `JwtService`)
+    - `apps/auth-astrum/src/auth/strategy/jwt.strategy.ts` (валидация через `passport-jwt`)
+  - API gateway (проверка токена в cookie):
+    - `apps/api-astrum/src/middlewares/authenticateToken.ts` (verify cookie `__auth`)
+  - Frontend (проверка сессии на сервере Next.js middleware/утилитой):
+    - `apps/customer/src/common/helpers/session.ts`
+    - `apps/customer/src/middleware.ts`
+- **Хранение токена**:
+  - Cookie `__auth` выставляется серверной функцией в Next: `apps/customer/src/common/helpers/session.ts`
+  - API gateway ожидает cookie `__auth`: `apps/api-astrum/src/middlewares/authenticateToken.ts`
+- **Env**:
+  - `JWT_SECRET`
+    - используется в API gateway: `apps/api-astrum/src/middlewares/authenticateToken.ts`
+    - используется в auth service через `@nestjs/config`: `apps/auth-astrum/src/auth/auth.service.ts`, `apps/auth-astrum/src/auth/strategy/jwt.strategy.ts`
+    - используется в customer (server-side verify): `apps/customer/src/common/helpers/session.ts`
 
-**Databases:**
-- PostgreSQL `13` — Docker image `postgres:13` (`docker-compose.yml` service `astrum-db`)
-- Connection string: `DATABASE_URL` (Prisma `packages/Astrum-db/prisma.config.ts`; apps use `process.env.DATABASE_URL` in `apps/api-astrum/lib/prisma.ts`, `apps/auth-astrum/src/prisma/prisma.service.ts`, `packages/Astrum-db/lib/prisma.ts`)
-- ORM: Prisma with `@prisma/adapter-pg` and `pg` driver
-- Schema ownership: migrations live under `packages/Astrum-db/prisma/migrations`; root scripts invoke Prisma via `pnpm --filter @astrum/db`. Duplicate `schema.prisma` files also exist in `apps/api-astrum/prisma/` and `apps/auth-astrum/prisma/` — keep in sync with `packages/Astrum-db/prisma/schema.prisma` when changing schema
+## Внутрисервисные интеграции (монорепо)
 
-**File Storage:**
-- Local / app-managed — product images referenced by URLs in Next config (see below), not a dedicated blob SDK in repo
+### API gateway → Auth service (reverse proxy)
 
-**Caching:**
-- Not detected — no Redis or similar in package manifests
+- **Назначение**: проксирование auth-эндпоинтов через единый gateway
+- **Где используется**:
+  - Маршрут прокси: `apps/api-astrum/src/app.ts` (`/api/auth`)
+  - Реализация прокси: `apps/api-astrum/src/common/helpers/proxyOptions.ts` (на базе `http-proxy-middleware`)
+- **Env**:
+  - `AUTH_SERVICE_URL` — target для прокси: `apps/api-astrum/src/app.ts`
+- **Docker**:
+  - `docker-compose.yml` поднимает `astrum-api` и `astrum-auth` с `env_file`:
+    - `apps/api-astrum/.env.prod` (содержимое не анализировалось)
+    - `apps/auth-astrum/.env.prod` (содержимое не анализировалось)
 
-## Authentication & Identity
+### Frontend → API gateway (HTTP, cookies)
 
-**Auth Provider:**
-- Custom — NestJS auth service (`apps/auth-astrum`) with JWT (`@nestjs/jwt`, `passport-jwt`, `JwtStrategy` in `apps/auth-astrum/src/auth/auth.module.ts`)
-- Password hashing: `argon2` (`apps/auth-astrum` dependencies)
-- API gateway validates JWT from cookie `__auth` using `JWT_SECRET` (`apps/api-astrum/src/middlewares/authenticateToken.ts`)
-- Customer: `jose`, `jsonwebtoken`, `jwt-decode` for session/token handling (`apps/customer` dependencies, `apps/customer/src/common/helpers/session.ts` uses `JWT_SECRET`)
+- **Назначение**: клиентские запросы из Next.js к gateway с передачей cookie
+- **Где используется**:
+  - Axios instance с `withCredentials: true`: `apps/customer/src/hooks/useFetcher.ts`
+- **Env**:
+  - `NEXT_PUBLIC_API_GATEWAY_URL` — baseURL для axios: `apps/customer/src/hooks/useFetcher.ts`
+- **Примечание**: этот env должен быть доступен на клиенте (префикс `NEXT_PUBLIC_`).
 
-**CORS:**
-- API: `http://localhost:3000` (`apps/api-astrum/src/middlewares/corsOptions.ts`)
-- Auth: same origin list (`apps/auth-astrum/src/main.ts`)
+## Платежи
 
-## Monitoring & Observability
+### Stripe / PayPal (следы в доменной модели)
 
-**Error Tracking:**
-- Not detected — no Sentry/Rollbar/etc. in dependencies
+- **Статус**: интеграция как SDK/обработчики не обнаружена; присутствует как варианты в перечислении методов оплаты.
+- **Где используется**:
+  - Prisma enum `PaymentMethod` содержит `PAYPAL`, `STRIPE`:
+    - `packages/Astrum-db/prisma/schema.prisma`
+    - `apps/api-astrum/prisma/schema.prisma`
+    - `apps/auth-astrum/prisma/schema.prisma`
+- **Env**: переменные вида `STRIPE_*`, `PAYPAL_*` по коду/зависимостям не обнаружены.
 
-**Logs:**
-- `morgan` HTTP logging on API (`apps/api-astrum/src/app.ts`)
-- `console` usage in fetcher error paths (`apps/customer/src/hooks/useFetcher.ts`)
+## Email / SMS / уведомления
 
-## CI/CD & Deployment
+- **Статус**: SDK/провайдеры (SendGrid/Mailgun/Nodemailer/SES и т.п.) в зависимостях и коде не обнаружены.
 
-**Hosting:**
-- Docker Compose stack for local/prod-style runs (`docker-compose.yml`) — services `astrum-db`, `astrum-api`, `astrum-auth`, `astrum-customer` with env files per app path
+## Объектное хранилище (S3/MinIO) и файлы
 
-**CI Pipeline:**
-- Not detected — no `.github/workflows` in repository at analysis time
+- **S3/MinIO SDK**: не обнаружено (`@aws-sdk/*`, `aws-sdk`, `minio` отсутствуют в найденных местах).
+- **Внешние источники изображений (remote images)**:
+  - Next.js `images.remotePatterns`: `apps/customer/next.config.ts`
+  - Домены, на которые настроены remotePatterns:
+    - `flowbite.s3.amazonaws.com`
+    - `bundui-images.netlify.app`
+    - `images.unsplash.com`
+    - `magazilla.ru`
+    - `mzimg.com`
 
-**Git hooks:**
-- Husky + lint-staged (root `package.json`)
+## Очереди/стриминг/кэш
 
-## Environment Configuration
+- **Redis/BullMQ/RabbitMQ/Kafka/NATS**: не обнаружено по зависимостям/коду.
 
-**Required env vars (non-exhaustive, from code references):**
-- `DATABASE_URL` — Prisma and services
-- `JWT_SECRET` — API token verification, customer session helpers, auth tests (`apps/auth-astrum/test/api-astrum.e2e-spec.ts`)
-- `AUTH_SERVICE_URL` — API gateway proxy target (`apps/api-astrum/src/app.ts`); e2e tests default `http://localhost:4580` (`apps/auth-astrum/test/api-astrum.e2e-spec.ts`)
-- `NEXT_PUBLIC_API_GATEWAY_URL` — customer axios base URL (`apps/customer/src/hooks/useFetcher.ts`)
+## Аналитика/мониторинг/трекинг ошибок
 
-**Secrets location:**
-- Per-service `.env` files referenced by Compose (`docker-compose.yml` `env_file`); `packages/Astrum-db/.env` for DB container — do not commit contents
+- **Sentry/Datadog/GA/Amplitude/PostHog**: не обнаружено по зависимостям/коду.
+- **Логи**: `morgan` в API gateway (`apps/api-astrum/src/app.ts`).
 
-## Webhooks & Callbacks
+## GraphQL
 
-**Incoming:**
-- Not detected — no Stripe/webhook route handlers found in scanned app entrypoints
+- **Статус**: в `apps/customer/package.json` присутствуют зависимости `@apollo/client` и `@apollo/client-integration-nextjs`, но явных GraphQL-операций/клиентов по структуре (`apollo*`, `graphql*`) не обнаружено.
+- **Где видно**:
+  - Зависимости: `apps/customer/package.json`
 
-**Outgoing:**
-- Not detected — no dedicated webhook client libraries in manifests
+## CI/CD и деплой
 
-## Remote assets & CDNs
+- **Docker**:
+  - `docker-compose.yml` описывает 4 сервиса: `astrum-db`, `astrum-api`, `astrum-auth`, `astrum-customer`
+  - В `apps/*/Dockerfile` используется `corepack` + `pnpm` и фильтр-установка (`pnpm install --filter ...`)
+- **Env files для контейнеров** (только факт наличия ссылки):
+  - `packages/Astrum-db/.env`
+  - `apps/api-astrum/.env.prod`
+  - `apps/auth-astrum/.env.prod`
+  - `apps/customer/.env.production`
 
-**Next.js `images.remotePatterns`** (`apps/customer/next.config.ts`):
-- `https://flowbite.s3.amazonaws.com/docs/gallery/**`
-- `https://bundui-images.netlify.app/**`
-- `https://images.unsplash.com/**`
-- `http://magazilla.ru/**`, `https://magazilla.ru/**`
-- `http://mzimg.com/**`, `https://mzimg.com/**`
+## Сводка env-переменных (по коду/конфигам)
+
+| Env | Назначение | Где используется |
+|---|---|---|
+| `DATABASE_URL` | строка подключения к Postgres для Prisma | `turbo.json`, `packages/Astrum-db/prisma.config.ts`, `apps/api-astrum/prisma.config.ts`, `apps/auth-astrum/prisma.config.ts`, `apps/api-astrum/lib/prisma.ts`, `apps/auth-astrum/src/prisma/prisma.service.ts` |
+| `JWT_SECRET` | подпись/проверка JWT | `apps/auth-astrum/src/auth/auth.service.ts`, `apps/auth-astrum/src/auth/strategy/jwt.strategy.ts`, `apps/api-astrum/src/middlewares/authenticateToken.ts`, `apps/customer/src/common/helpers/session.ts` |
+| `AUTH_SERVICE_URL` | target для прокси gateway → auth | `apps/api-astrum/src/app.ts` |
+| `NEXT_PUBLIC_API_GATEWAY_URL` | baseURL для фронта (axios) | `apps/customer/src/hooks/useFetcher.ts` |
 
 ---
 
-*Integration audit: 2026-04-05*
+*Integration audit: 2026-04-07*

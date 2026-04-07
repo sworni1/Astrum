@@ -1,113 +1,192 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-04-05
+**Дата анализа:** 2026-04-07
 
-## Naming Patterns
+## Контекст монорепозитория
 
-**Files:**
+- **Монорепозиторий**: Turborepo + pnpm workspaces
+  - Workspaces: `pnpm-workspace.yaml`
+  - Оркестрация задач: `turbo.json`
+  - Корневые скрипты: `package.json`
 
-- **Next.js (`@astrum/customer`):** React-компоненты и страницы — по соглашению проекта предпочитать **PascalCase** для файлов `.tsx`/`.jsx` (см. правила пользователя); маршруты App Router — `page.tsx`, `layout.tsx` в `apps/customer/src/app/`.
-- **Express (`@astrum/api`):** модули по домену — `*.routes.ts`, `*.controller.ts`, `*.service.ts` в `apps/api-astrum/src/modules/<domain>/`; общие части — `apps/api-astrum/src/middlewares/`, `apps/api-astrum/src/common/helpers/`.
-- **NestJS (`@astrum/auth`):** стандарт Nest — `*.controller.ts`, `*.service.ts`, `*.module.ts`, DTO в `apps/auth-astrum/src/**/dto/`.
+## TypeScript
 
-**Functions:**
+### Версии и размещение
 
-- Обработчики событий в UI: префикс `handle` (см. `.cursor/rules/front-end-cursor-rules.mdc`), например `handleClick`.
-- Хуки React: префикс `use` в `apps/customer/src/hooks/`.
+- **TypeScript** используется в:
+  - Next.js фронтенд: `apps/customer`
+  - Express API: `apps/api-astrum`
+  - NestJS auth: `apps/auth-astrum`
+  - Prisma DB пакет: `packages/Astrum-db`
 
-**Variables:**
+### Настройки компилятора (tsconfig)
 
-- Булевы флаги: `isLoading`, `hasError`, `canDelete` и т.п. (согласовано с правилами репозитория).
+- **`apps/customer/tsconfig.json`**
+  - `strict: true`, `noEmit: true`
+  - `moduleResolution: "bundler"`, `module: "esnext"`
+  - **Aliases**: `@/* -> ./src/*` (см. `compilerOptions.paths`)
+  - Включены проверки: `noUnusedLocals: true`, `noUnusedParameters: true`
 
-**Types:**
+- **`apps/api-astrum/tsconfig.json`**
+  - `strict: true`, `skipLibCheck: true`
+  - `module: "commonjs"`, `outDir: "./dist"`
+  - Декораторы включены: `experimentalDecorators`, `emitDecoratorMetadata`
+  - Файл выглядит как сгенерированный шаблон `tsc --init` (много закомментированных опций)
 
-- Клиент: типы в `apps/customer/src/common/types/` (например `product.types`).
-- API: DTO с `class-validator` / `class-transformer` в модулях Express и Nest.
+- **`apps/auth-astrum/tsconfig.json`**
+  - Включены `noUnusedLocals`, `noUnusedParameters`
+  - `module: "commonjs"`, `declaration: true`, `removeComments: true`, `outDir: "./dist"`
+  - Декораторы включены: `experimentalDecorators`, `emitDecoratorMetadata`
+  - `strictNullChecks: false`, `noImplicitAny: false` (см. `apps/auth-astrum/tsconfig.json`)
+  - Build-конфиг: `apps/auth-astrum/tsconfig.build.json` исключает `test`, `dist`, `**/*spec.ts`
 
-## Code Style
+- **`packages/Astrum-db/tsconfig.json`**
+  - `strict: true`
+  - `moduleResolution: "bundler"`, `module: "ESNext"`
+  - `target: "ES2023"`
 
-**Formatting:**
+### Typecheck (как запускается)
 
-- **`@astrum/customer`:** Prettier через `pnpm prettier` в `apps/customer/package.json` (`prettier --write --ignore-unknown .`); плагин `@trivago/prettier-plugin-sort-imports` в зависимостях — сортировка импортов при форматировании. Отдельного committed `.prettierrc` в `apps/customer` нет — используются настройки по умолчанию Prettier и плагин.
-- **`@astrum/auth`:** Prettier в `apps/auth-astrum/.prettierrc` — `singleQuote: true`, `trailingComma: "all"`; скрипт `format`: `prettier --write "src/**/*.ts" "test/**/*.ts"`.
+- **Корень**: `package.json`
+  - `pnpm check-types` → `turbo check-types`
+- **Turbo pipeline**: `turbo.json` содержит task `check-types`, который зависит от `^check-types`.
+- **Пробел/дыра**:
+  - В workspace’ах не обнаружены скрипты `check-types` (поиск по `**/package.json` нашёл только корневой `check-types` в `package.json`).
+  - Это означает, что конкретная команда typecheck на уровне пакетов не описана в `apps/*/package.json` и `packages/*/package.json` (в текущем состоянии).
 
-**Linting:**
+## Линтинг и форматирование
 
-- **`@astrum/customer`:** ESLint flat-config `apps/customer/eslint.config.mjs` — `FlatCompat` + `next/core-web-vitals`, `next/typescript`. Запуск: `next lint` (`apps/customer/package.json`). В `apps/customer/next.config.ts` задано `eslint.ignoreDuringBuilds: true` — линт **не** блокирует production-сборку Next.
-- **`@astrum/auth`:** `apps/auth-astrum/.eslintrc.js` — `@typescript-eslint/parser`, extends `plugin:@typescript-eslint/recommended`, `plugin:prettier/recommended`. Явно отключены: `explicit-function-return-type`, `explicit-module-boundary-types`, `interface-name-prefix`; `no-explicit-any` — `off`. Запуск: `eslint "{src,apps,libs,test}/**/*.ts" --fix`.
-- **`@astrum/api`:** скрипта `lint` в `apps/api-astrum/package.json` **нет** — ESLint для Express-пакета не подключён в монорепозитории.
+### ESLint
 
-**TypeScript:**
+- **Корень**: `package.json`
+  - `pnpm lint` → `turbo lint`
+- **`apps/customer` (Next.js)**:
+  - Скрипт: `apps/customer/package.json` → `lint: "next lint"`
+  - Конфиг ESLint (flat config): `apps/customer/eslint.config.mjs`
+    - Расширяет `next/core-web-vitals` и `next/typescript`
+  - `apps/customer/next.config.ts`:
+    - `eslint.ignoreDuringBuilds: true` (линт при `next build` отключён)
+- **`apps/auth-astrum` (NestJS)**:
+  - Скрипт: `apps/auth-astrum/package.json` → `lint: eslint "{src,apps,libs,test}/**/*.ts" --fix`
+  - Конфиг: `apps/auth-astrum/.eslintrc.js`
+    - `parser: @typescript-eslint/parser`, `parserOptions.project: tsconfig.json`
+    - `extends`: `plugin:@typescript-eslint/recommended`, `plugin:prettier/recommended`
+    - Отключены правила:
+      - `@typescript-eslint/explicit-function-return-type`
+      - `@typescript-eslint/explicit-module-boundary-types`
+      - `@typescript-eslint/no-explicit-any`
+- **`apps/api-astrum`**:
+  - ESLint-конфиги/скрипты `lint` в `apps/api-astrum/package.json` не обнаружены
 
-- **`@astrum/customer`:** `apps/customer/tsconfig.json` — `strict: true`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`, алиас `@/*` → `./src/*`.
-- **`@astrum/api`:** `apps/api-astrum/tsconfig.json` — `strict: true`, CommonJS, декораторы для DI-подхода с `reflect-metadata`.
-- **`@astrum/auth`:** `apps/auth-astrum/tsconfig.json` — смягчённые проверки (`strictNullChecks: false`, `noImplicitAny: false` и др.) относительно строгого клиента — при новом коде предпочитать выравнивание с доменными правилами проекта.
-- **`@astrum/db`:** `packages/Astrum-db/tsconfig.json` — `strict: true`, ESM.
+### Prettier
 
-## Import Organization
+- **`apps/auth-astrum`**:
+  - Скрипт: `apps/auth-astrum/package.json` → `format: prettier --write "src/**/*.ts" "test/**/*.ts"`
+  - Конфиг: `apps/auth-astrum/.prettierrc`
+    - `singleQuote: true`
+    - `trailingComma: "all"`
+- **`apps/customer`**:
+  - Скрипт: `apps/customer/package.json` → `prettier: prettier --write --ignore-unknown .`
+  - В `apps/customer` отдельный конфиг Prettier (`.prettierrc`, `prettier.config.*`) не обнаружен
+- **Корень**:
+  - Корневые конфиги Prettier (`.prettierrc*`, `prettier.config.*`) не обнаружены
 
-**Order:**
+### pre-commit / commit hooks
 
-- В customer после Prettier — порядок задаётся `@trivago/prettier-plugin-sort-imports` при запуске Prettier.
+- **Husky включён**: корень `package.json` → `prepare: husky`
+- **Pre-commit hook**: `.husky/pre-commit`
+  - Запускает `pnpm lint-staged`
+- **lint-staged**: корень `package.json`
+  - Настроена проверка только для `*.json` (валидность JSON через `node -e ...`)
+  - **Пробел/дыра**: не обнаружены pre-commit действия для ESLint/Prettier/typecheck/test
+- **Commit message hook**: `.husky/commit-msg`
+  - Проверяет Conventional Commits regex:
+    - `^(feat|fix|docs|style|refactor|test|chore|ci|build|perf)(\(.+\))?!?: .+`
 
-**Path Aliases:**
+## Импорты и алиасы
 
-- **`@astrum/customer`:** `"@/*": ["./src/*"]` в `apps/customer/tsconfig.json` — импорты вида `@/components/...`.
+- **`apps/customer`**:
+  - Path alias: `@/*` (см. `apps/customer/tsconfig.json`)
+- **`apps/api-astrum`**:
+  - Импорты преимущественно относительные, структура модулей: `./modules/*`, middleware: `./middlewares/*` (см. `apps/api-astrum/src/app.ts`)
+- **`apps/auth-astrum`**:
+  - Импорты через относительные пути, Prisma client импортируется из сгенерированного пути (пример: `apps/auth-astrum/src/auth/auth.service.ts`)
 
-## Error Handling
+## Структура модулей / слоёв
 
-**Express (`@astrum/api`):**
+### `apps/api-astrum` (Express)
 
-- Централизованный хелпер `handleErrors` в `apps/api-astrum/src/common/helpers/errorHandler.ts`: для `instanceof Error` — ответ `400` с `message`; иначе — `500` с `ReasonPhrases.INTERNAL_SERVER_ERROR`. Контроллеры вызывают его в `catch` (пример: `apps/api-astrum/src/modules/reviews/reviews.controller.ts` с `StatusCodes` из `http-status-codes`).
-- При добавлении эндпоинтов: оборачивать async-логику в `try/catch` и передавать `err` в `handleErrors(res, err)` либо выносить в общий middleware, если появится единый паттерн.
+- **Entry points**:
+  - `apps/api-astrum/src/server.ts` — запуск HTTP-сервера
+  - `apps/api-astrum/src/app.ts` — конфигурация express app, middleware, маршруты
+- **Middleware**: `apps/api-astrum/src/middlewares/`
+  - `authenticateToken.ts` — проверка JWT из cookie `__auth` (использует `process.env.JWT_SECRET`)
+  - `validateDto.ts` — валидация DTO через `class-transformer` + `class-validator`
+  - `corsOptions.ts` — CORS конфиг
+- **Модули**: `apps/api-astrum/src/modules/*`
+  - Пример подключения роутов в `apps/api-astrum/src/app.ts`: `userRoutes`, `productRoutes`, `wishlistRoutes`, `cartRoutes`, `orderRoutes`, `reviewsRouter`
+- **Общие хелперы**: `apps/api-astrum/src/common/helpers/*`
+  - Есть `errorHandler.ts` (см. ниже)
 
-**NestJS (`@astrum/auth`):**
+### `apps/auth-astrum` (NestJS)
 
-- Глобальный `ValidationPipe` с `whitelist: true` в `apps/auth-astrum/src/main.ts`.
-- Контроллеры возвращают результат сервиса; HTTP-коды — декораторы `@HttpCode`, `HttpStatus` (пример: `apps/auth-astrum/src/auth/auth.controller.ts`).
+- **Entry point**: `apps/auth-astrum/src/main.ts`
+  - Global prefix: `app.setGlobalPrefix('/api')`
+  - Global pipes: `ValidationPipe({ whitelist: true })`
+  - Swagger включён: `SwaggerModule.setup('swagger', ...)`
+- Модульная структура Nest по `src/*` (пример: `apps/auth-astrum/src/auth/*`, `apps/auth-astrum/src/prisma/*`)
 
-**Next.js:**
+### `apps/customer` (Next.js)
 
-- Клиентские запросы: обработка ошибок в хуках/SWR (например `productError` в `apps/customer/src/hooks/product/useProducts/useGetProduct.ts`).
+- Конфиг Next: `apps/customer/next.config.ts`
+  - `output: "standalone"`
+  - Список `images.remotePatterns` задан
+  - ESLint на build отключён (см. выше)
+- Исходники обнаружены в `apps/customer/src/*` (пример путей из логирования: `apps/customer/src/features/pages/*`, `apps/customer/src/hooks/*`, `apps/customer/src/common/helpers/*`)
 
-## Logging
+## Ошибки и логирование
 
-**Framework:** в dev для API — `morgan('dev')` в `apps/api-astrum/src/app.ts`; иначе `console` там, где используется напрямую (например `apps/api-astrum/src/server.ts`).
+### `apps/api-astrum` — ошибки/ответы
 
-**Patterns:** структурированного единого логгера (pino/winston) в репозитории не зафиксировано.
+- **HTTP статусы**:
+  - Контроллеры отвечают через `res.status(StatusCodes.X).json(...)` (см. `apps/api-astrum/src/modules/*/*.controller.ts`)
+  - DTO-валидация возвращает `400` с `{ errors: [...] }` (см. `apps/api-astrum/src/middlewares/validateDto.ts`)
+- **Обработчик ошибок**:
+  - `apps/api-astrum/src/common/helpers/errorHandler.ts`:
+    - Если `err instanceof Error` → `400` и `{ message: err.message }`
+    - Иначе → `500` и `{ message: ReasonPhrases.INTERNAL_SERVER_ERROR }`
+- **Пробел/дыра**:
+  - Не обнаружен централизованный middleware error handler `app.use((err, req, res, next) => ...)` в `apps/api-astrum/src/app.ts`
+  - В сервисах используются `throw new Error("...")`, местами строка содержит коды (`'404: ...'`, `'409: ...'`) (см. `apps/api-astrum/src/modules/**/*.service.ts`, `apps/api-astrum/src/common/helpers/getWishlistAndCart.ts`)
 
-## Comments
+### `apps/api-astrum` — логирование
 
-**When to Comment:** в коде новых фич — минимально; проектные правила пользователя: не добавлять комментарии к коду без необходимости. Документация API — Swagger в auth (`apps/auth-astrum/src/main.ts`).
+- Используется `morgan('dev')` (см. `apps/api-astrum/src/app.ts`)
+- Используется `console.log` на старте сервера (см. `apps/api-astrum/src/server.ts`)
 
-**JSDoc/TSDoc:** в правилах Nest (`.cursor/rules/clean-nestjs-typescript-cursor-rules.mdc`) указан JSDoc для публичных API; фактическое покрытие — по файлам, без обязательной автоматизации.
+### `apps/auth-astrum` — ошибки/ответы (NestJS)
 
-## Function Design
+- Используются Nest исключения (пример): `ForbiddenException` в `apps/auth-astrum/src/auth/auth.service.ts`
+- Ошибки Prisma обрабатываются частично:
+  - `PrismaClientKnownRequestError` с кодом `P2002` → `ForbiddenException('The user already exists')`
+  - Иначе — `throw err` (см. `apps/auth-astrum/src/auth/auth.service.ts`)
 
-**Size:** короткие методы контроллеров с делегированием в сервисы (Express и Nest).
+### `apps/customer` — логирование
 
-**Parameters:** DTO через тело запроса и `class-validator` там, где уже принято (Nest DTO в `apps/auth-astrum/src/auth/dto/`, Express — валидация в сервисах/DTO по модулям).
+- Обнаружены `console.log(...)` в коде фронтенда (например: `apps/customer/src/features/pages/Orders/OrderPage/index.tsx`, `apps/customer/src/features/pages/Cart/components/CheckoutForm/index.tsx`, `apps/customer/src/hooks/auth/useAuth.ts`, `apps/customer/src/common/helpers/session.ts`)
 
-**Return Values:** JSON-ответы с кодами из `http-status-codes` / `HttpStatus`.
+## Env / переменные окружения (без чтения секретов)
 
-## Module Design
-
-**Exports:** в Express — `export default app` из `apps/api-astrum/src/app.ts`; маршруты — именованные/дефолтные экспорты по файлам в `modules/`.
-
-**Barrel Files:** `index.ts` в подпапках auth (например `apps/auth-astrum/src/auth/dto/index.ts`) — по мере необходимости.
-
-## Monorepo Commands (quality)
-
-**Root `package.json`:**
-
-- `pnpm lint` → `turbo lint` — выполняют только пакеты с определённым скриптом `lint` (сейчас в основном `@astrum/customer`, `@astrum/auth`).
-- `pnpm check-types` → `turbo check-types` — пакеты без скрипта `check-types` в своём `package.json` не участвуют в задаче.
-
-**Husky:**
-
-- `.husky/pre-commit` вызывает `pnpm lint-staged`.
-- Корневой `package.json` → `lint-staged`: для `*.json` — проверка валидности JSON через однострочный `node -e`. Автоматический запуск ESLint/tsc по всему репо на коммите **не** настроен.
+- Turbo globalEnv: `turbo.json` → `globalEnv: ["DATABASE_URL"]`
+- Использование dotenv-cli:
+  - `apps/api-astrum/package.json`: `dev`/`start:*` используют `dotenv -e .env -- ...` и `dotenv -e .env.prod -- ...`
+- README фиксирует расположения env-файлов (содержимое не анализировалось):
+  - `apps/api-astrum/.env`, `apps/api-astrum/.env.prod`
+  - `apps/auth-astrum/.env`, `apps/auth-astrum/.env.prod`
+  - `packages/Astrum-db/.env`
+  - См. `README.md` (раздел “Переменные окружения”)
 
 ---
 
-*Convention analysis: 2026-04-05*
+*Convention analysis: 2026-04-07*
+
