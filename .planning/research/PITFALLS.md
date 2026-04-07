@@ -1,129 +1,69 @@
-# Pitfalls — Система отзывов + ML анализ
+# PITFALLS: ML-анализ отзывов
 
-**Project:** Astrum Reviews System
-**Mode:** Pitfalls dimension
-**Confidence:** HIGH
+**Date:** 2026-04-08
 
-## Domain-Specific Pitfalls
+## P1: Нейтральные / смешанные отзывы
 
-### 1. Fake Reviews / Spam (HIGH)
+**Проблема:** Бинарная классификация (positive/negative) плохо работает с нейтральными отзывами ("Нормально", "Средне")
 
-**Warning Signs:**
-- Один пользователь оставляет 10+ отзывов за час
-- Отзывы без связанного заказа
-- Шаблоные тексты ("хороший товар", "отличный товар")
+**Предупреждение:** < 70% accuracy на тестовых данных, особенно на русском языке
 
-**Prevention Strategy:**
-- `Review.orderItemId` — обязательная связь с OrderItem + статус DELIVERED
-- Rate limiting: max 1 отзыв на OrderItem
-- ML stub для спама: короткие тексты (< 5 слов) → flag
-- Уникальность: один отзыв на один OrderItem
+**Профилактика:** Добавить класс 'neutral' как промежуточную категорию. Rating 3 → neutral.
 
-**Phase:** 1 (Prisma schema)
+**Фаза:** Фаза 2 (Модель ML)
 
-### 2. N+1 при агрегациях (HIGH)
+## P2: Символический разрыв между training и production данными
 
-**Warning Signs:**
-- `Product.reviews.length` в цикле для каждого товара
-- Каждый запрос продукта тянет все отзывы
+**Проблема:** Модель обучена на английском (Amazon/IMDB), но в продакшене русские отзывы
 
-**Prevention Strategy:**
-- Кэшированные поля на Product: `reviewCount`, `stars`, `ratingDistribution`
-- Обновление агрегатов при APPROVED через Prisma `$transaction`
-- NEVER compute on the fly
+**Предупреждение:** Низкий confidence score для большинства русских отзывов
 
-**Phase:** 1 (schema design)
+**Профилактика:** Использовать русскоязычные датасеты (Ozon, RuReviews) или хотя бы перевести и адаптировать. Либо сразу тренировать на смешанных данных.
 
-### 3. ML Service Unavailable (MEDIUM)
+**Фаза:** Фаза 2 (Модель ML)
 
-**Warning Signs:**
-- Синхронный вызов ML при создании отзыва → таймауты
-- Ошибка ML → ошибка всего эндпоинта
+## P3: Latency ML-сервиса блокирует создание отзыва
 
-**Prevention Strategy:**
-- Async fire-and-forget ML
-- Stub fallback если сервис недоступен
-- Retry queue для проваленных анализов
+**Проблема:** Синхронный вызов ML-сервиса увеличивает время ответа POST /api/reviews
 
-**Phase:** 4 (ML stub)
+**Предупреждение:** > 1s ответ на создание отзыва, таймауты
 
-### 4. Photo Storage Not Ready (MEDIUM)
+**Профилактика:** Async паттерн — отзыв создаётся, ML запускается в фоне (setImmediate / worker queue). Sentiment обновляется retroactively.
 
-**Warning Signs:**
-- Нет S3 или disk storage настроенного
-- multer сохраняет в /tmp и файлы пропадают
+**Фаза:** Фаза 3 (Интеграция)
 
-**Prevention Strategy:**
-- Отдельная фаза для storage setup
-- MinIO для dev (Docker), S3 для prod
-- Пресайнед URL для прямой загрузки
+## P4: Модель деградирует со временем
 
-**Phase:** 2 (photo upload)
+**Проблема:** Без переобучения модель теряет accuracy когда появляются новые типы товаров/отзывов
 
-### 5. Frontend Reviews UI без готового API (MEDIUM)
+**Предупреждение:** Accuracy падает на > 5% за месяц
 
-**Warning Signs:**
-- Начинаем верстать отзывы до готовности эндпоинтов
-- Фронтенд мокит API и потом ломаются интеграции
+**Профилактика:** Endpoint /api/train + автоматическое переобучение по расписанию (cron). Сохранение метрик для мониторинга.
 
-**Prevention Strategy:**
-- API first — эндпоинты и контракты до UI
-- OpenAPI/Swagger для документации контрактов
-- Фронтенд интегрирует в реальность
+**Фаза:** Фаза 5 (ML Ops)
 
-**Phase:** 6 (frontend only after API phases)
+## P5: Отсутствие sentiment на старых отзывах
 
-### 6. Moderation UI — где? (MEDIUM)
+**Проблема:** Уже существующие отзывы без sentiment выглядят незавершёнными
 
-**Warning Signs:**
-- Нет административной панели в current frontend
-- Модераторам негде approve/reject отзывы
+**Профилактика:** Бэкфил — скрипт который проходит по всем Review без sentiment и классифицирует.
 
-**Prevention Strategy:**
-- Простые эндпоинты: GET /reviews/pending, POST /reviews/:id/approve
-- Модерация через API или простой админ-страницей
-- Не строить полноценную admin панель для MVP
+**Фаза:** Фаза 3 (Интеграция)
 
-**Phase:** 3 (moderation workflow)
+## P6: Docker-сборка Python сервиса
 
-### 7. ML Model Doesn't Handle Russian (MEDIUM)
+**Проблема:** Python-образ + npm-пакеты могут конфликтовать в monorepo, docker-compose не поддерживает pnpm напрямую
 
-**Warning Signs:**
-- Натренировали на английском — русский не работает
-- TF-IDF токенизация не учитывает морфологию
+**Профилактика:** Отдельный Dockerfile для Python-сервиса, не связанный с pnpm-билдом. Использовать multi-stage build для минимизации размера.
 
-**Prevention Strategy:**
-- Stub с русскими словами на этапе MVP
-- NLTK punkt для русского языка в ML сервисе
-- Датасет: Amazon Reviews + собранные русские отзывы
+**Фаза:** Фаза 2 (Модель ML)
 
-**Phase:** 5 (ML model training)
+## P7: UX — доверие к ML-анализу
 
-## Generic Pitfalls
+**Проблема:** Пользователи могут не доверять автоматической оценке тональности, особенно если она ошибочна
 
-### 8. Review Aggregates Inconsistent with Reviews (LOW)
+**Предупреждение:** Жалобы на неправильную классификацию
 
-**Prevention:** Обновление агрегатов в Prisma transaction при approve/reject.
+**Профилактика:** Показывать confidence score, позволять вручную исправить / сообщить об ошибке. Не использовать ML для модерации.
 
-**Phase:** 3
-
-### 9. Deleting a Product with Reviews (LOW)
-
-**Prevention:** Cascade или soft delete на Review.
-
-**Phase:** 1 (Prisma schema)
-
-### 10. Not Indexing Review Queries (LOW)
-
-**Warning Signs:**
-- Медленные запросы при загрузке отзывов
-- Full table scan на `WHERE productId = ?`
-
-**Prevention Strategy:**
-- Индексы на: `productId`, `userId`, `orderItemId`, `status`
-- Композитный индекс: `[productId, status]`
-
-**Phase:** 1 (schema design)
-
----
-*Last updated: 2026-04-04*
+**Фаза:** Фаза 4 (Фронтенд)

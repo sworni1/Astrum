@@ -1,33 +1,88 @@
-# Roadmap: Система отзывов товаров
+# Roadmap: Astrum ML-анализ отзывов
 
-**Milestone:** Reviews MVP
-**Created:** 2026-04-04
-**Progress:** 0%
+**Created:** 2026-04-08
+**Mode:** YOLO | **Granularity:** Fine | **Parallelization:** True
+**Research:** Yes | **Plan Check:** Yes | **Verifier:** Yes
 
-## Phases
+## Overview
 
-| # | Name | Status | Summary |
-|---|------|--------|---------|
-| 1 | Prisma Schema & Core CRUD | executing | ✅ Схема Review/ReviewResponse, ✅ CRUD эндпоинты, ✅ валидация OrderItem |
-| 2 | Photo Upload & S3 Storage | not-started | MinIO dev, presigned URLs, sharp обработка, multer интеграция |
-| 3 | Moderation Workflow | not-started | State machine PENDING→APPROVED/REJECTED, ML stub, агрегаты Product |
-| 4 | ML Service (Python/FastAPI) | not-started | docker-сервис ml-astrum, scikit-learn TF-IDF + Naive Bayes |
-| 5 | Frontend UI (Customer) | not-started | Форма отзыва, отображение отзывов, распределение рейтингов |
-| 6 | Reply System & Enhancements | not-started | Ответы продавцов, голосование «Полезно», фильтры и сортировка |
+4 фазы | 12 требований | 100% покрытие
 
-## Dependencies
+| # | Фаза | Цель | Требования | Критерии успеха |
+|---|------|------|------------|-----------------|
+| 1 | Схема БД | Добавить поля sentiment в Review | INT-02 | 3 |
+| 2 | Модель ML | Python-сервис + TF-IDF модель | MLE-01, MLE-02, MLE-03 | 3 |
+| 3 | Интеграция + Frontend | Async классификация + секция отзывов в UI | UI-01, UI-02, UI-03, INT-01, INT-04 | 5 |
+| 4 | Финализация | Docker + бэкфил + фильтрация | MLE-04, INT-03, UI-04 | 3 |
 
-```
-Phase 1 (CRUD) → Phase 2 (Photo) → Phase 5 (Frontend) → Phase 6 (Replies)
-       ↘          ↗
-    Phase 3 (Moderation)
+---
 
-Phase 4 (ML Service) — independent, can run in parallel
-```
+## Фаза 1: Схема БД
 
-## Phase Order: 1 → (2, 3 parallel) → 4 → 5 → 6
+**Цель:** Добавить поля тональности в модель Review, миграция готова к использованию.
 
-## Phase 1 Plans
+**Требования:**
+- INT-02: Поля `sentiment` и `sentimentScore` добавлены в модель Review (Prisma)
 
-**Plans:** 1 plan
-- [x] 01-prisma-schema-core-crud-01-PLAN.md — Prisma schema + Reviews module (CRUD, purchase validation, cursor pagination, aggregates) ✅ Complete
+**Success Criteria:**
+1. `prisma/schema.prisma` содержит поля `sentiment String?` и `sentimentScore Float?` на модели Review
+2. `prisma migrate dev` выполняется без ошибок
+3. TypeScript-тип Review из generated client содержит новые поля
+
+---
+
+## Фаза 2: Модель ML
+
+**Цель:** Python-сервис на FastAPI с endpoint `/api/sentiment` и обученной TF-IDF + Naive Bayes моделью.
+
+**Требования:**
+- MLE-01: Python-сервис на FastAPI с endpoint `/api/sentiment` для классификации текста
+- MLE-02: Обученная TF-IDF + Naive Bayes модель для анализа тональности
+- MLE-03: Модель сериализована через joblib, загружается при старте сервиса
+
+**Success Criteria:**
+1. `POST /api/sentiment` принимает `{ text: string }`, возвращает `{ sentiment: "positive" | "negative" | "neutral", confidence: number }`
+2. Модель обучена на датасете (IMDB / русскоязычные отзывы) с accuracy > 70%
+3. При запуске сервиса модель загружается из joblib и endpoint работает
+4. Сервис можно запустить локально через `uvicorn`
+
+---
+
+## Фаза 3: Интеграция + Frontend
+
+**Цель:** Express вызывает ML-сервис при создании отзыва, секция отзывов отображается на странице товара с бейджами тональности и агрегированной статистикой.
+
+**Требования:**
+- UI-01: Секция отзывов отображается на странице товара
+- UI-02: Бейдж тональности (👍/👎) рядом с каждым отзывом
+- UI-03: Агрегированная статистика: процент положительных/отрицательных отзывов по товару
+- INT-01: Express вызывает ML-сервис при создании отзыва (async)
+- INT-04: Graceful degradation при недоступности ML-сервиса
+
+**Success Criteria:**
+1. На странице товара (/product/:id) видна секция с отзывами, включая новые
+2. Каждый отзыв с анализом имеет визуальный бейдж тональности
+3. Над отзывами показывается сводка: X% положительных, Y% отрицательных
+4. Новый сохранённый отзыв асинхронно классифицируется и обновляется в БД
+5. Если ML-сервис недоступен, отзыв создаётся без ошибки, sentiment = null
+
+---
+
+## Фаза 4: Финализация
+
+**Цель:** Docker-контейнер для ML-сервиса, бэкфил существующих отзывов, фильтрация по тональности.
+
+**Требования:**
+- MLE-04: Docker-контейнер для Python-сервиса в docker-compose
+- INT-03: Бэкфил-скрипт для анализа существующих отзывов без sentiment
+- UI-04: Фильтрация отзывов по тональности (положительные / отрицательные / все)
+
+**Success Criteria:**
+1. `docker compose up` запускает все 4 сервиса включая ML
+2. Скрипт бэкфила обрабатывает все Review без sentiment и классифицирует
+3. В секции отзывов на странице товара есть toggle: Все / Положительные / Отрицательные
+4. Фильтрация работает на сервере (query param) или на клиенте
+
+---
+
+**UI hint:** yes — Фаза 3 и 4 включают UI-работу на Next.js-фронтенде.

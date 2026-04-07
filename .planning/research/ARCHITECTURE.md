@@ -1,180 +1,77 @@
-# Architecture — Система отзывов товаров
+# ARCHITECTURE: ML-анализ отзывов
 
-**Project:** Astrum Reviews + ML Sentiment Analysis
-**Mode:** Architecture dimension
-**Confidence:** HIGH
+**Date:** 2026-04-08
 
-## Component Boundaries
-
-| Компонент | Ответственность | Где размещён |
-|-----------|----------------|-------------|
-| Review Module | CRUD отзывов, проверка покупки | `api-astrum/src/reviews/` |
-| Moderation Module | State machine PENDING → APPROVED/REJECTED | `api-astrum/src/reviews/moderation.*` |
-| Photo Module | Загрузка/хранение фото отзывов | `api-astrum/src/reviews/photo.*` |
-| Reply Module | Ответы продавца на отзывы | `api-astrum/src/reviews/reply.*` |
-| ML Client | Отправка на ML-анализ, фоллбэк заглушка | `api-astrum/src/reviews/ml-client.service.ts` |
-| ML Service | Python FastAPI: POST /sentiment | `services/ml-astrum/` (новый воркспейс) |
-
-## Data Flow: Submission → ML → Moderation → Publication
-
-**Ключевое решение: Async ML, не блокирует создание отзыва.**
+## Компоненты
 
 ```
-User POST /api/reviews
-  → verify purchased (OrderItem exists + DELIVERED)
-  → create Review (status = PENDING_MODERATION)
-  → fire-and-forget ML analysis
-  → return 201 Created
+┌──────────────────────────────────────────────────────┐
+│ Next.js Frontend (страница товара)                   │
+│  ├── Секция отзывов (компонент ReviewSection)         │
+│  ├── Форма создания отзыва                            │
+│  └── Визуализация тональности                         │
+└───────────────────┬──────────────────────────────────┘
+                    │ HTTP
+┌───────────────────▼──────────────────────────────────┐
+│ Express API (/api/reviews)                           │
+│  ├── POST /api/reviews         → создание отзыва      │
+│  │   ├── Сохранить в БД через Prisma                   │
+│  │   └── Отправить текст в ML-сервис (async)          │
+│  │       └── POST ml-service:8500/api/sentiment       │
+│  │           └── Обновить Review.sentiment            │
+│  └── GET /api/reviews?productId=X  → список отзывов   │
+│      └── Включая sentiment из БД                     │
+└───────────────────┬──────────────────────────────────┐
+                    │ HTTP (или напрямую к БД через pg)  │
+┌───────────────────▼──────────────────────────────────┐
+│ Python ML-сервис (FastAPI:8500)                      │
+│  ├── POST /api/sentiment { text } → { sentiment }    │
+│  ├── POST /api/train   → переобучение модели          │
+│  │   └── Читает отзывы напрямую из PostgreSQL         │
+│  ├── GET /api/status   → статус модели               │
+│  └── Joblib-модель: TF-IDF + Naive Bayes             │
+└──────────────────────────────────────────────────────┘
 
-ML service (async)
-  → analyze text → UPDATE review SET sentiment, sentimentScore
-
-Moderator
-  → GET pending reviews → approve/reject
-  → if APPROVED: recalculate Product.aggregate (stars, reviewCount)
-  → review visible on product page
+┌──────────────────────────────────────────────────────┐
+│ PostgreSQL (Prisma)                                  │
+│  ├── Review: добавлены поля sentiment, sentimentScore │
+│  └── Миграция: 20260407_add_review_sentiment         │
+└──────────────────────────────────────────────────────┘
 ```
 
-**Почему async, не sync:**
-- Python ML-сервис — внешний процесс
-- Синхронный вызов: 200-2000ms latency + точка отказа
-- При async: отзыв проходит модерацию даже при сбое ML
+## Поток данных
 
-## Database Schema Pattern
+### Создание отзыва
+1. Пользователь отправляет отзыв через фронтенд
+2. POST /api/reviews → Express сохраняет в БД (статус: PENDING, sentiment: null)
+3. Express отправляет POST к ML-сервису с текстом отзыва
+4. ML-сервис: TF-IDF → предсказание → `{ sentiment, confidence }`
+5. Express обновляет Review.sentiment = результат
+6. Фронтенд получает обновлённый отзыв с тональностью
 
-**Критически важно: `Review → OrderItem`, а не `Review → Product`.**
+### Получение отзывов
+1. GET /api/reviews?productId=X → Express читает из Prisma
+2. Ответ включает sentiment каждого отзыва
+3. Фронтенд отображает бейджи тональности
 
-Это гарантирует, что пользователь действительно покупал этот конкретный товар.
+### Переобучение модели
+1. Admin POST /api/train (ML-сервис)
+2. Прямое чтение Reviews из PostgreSQL
+3. Обучение TF-IDF + модель на размеченных данных (rating >= 4 → positive, rating <= 2 → negative)
+4. Сохранение новой модели через joblib
+5. Перезагрузка модели в памяти
 
-**Ключевые поля:**
-```prisma
-enum ReviewStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
+### Ошибки ML-сервиса
+- При недоступности ML-сервиса: отзыв сохраняется, sentiment = null
+- Фон-задача (cron/worker) повторно анализирует отзывы без sentiment
+- Graceful degradation: отзывы без sentiment показываются без бейджа
 
-enum ReviewSentiment {
-  NOT_ANALYZED
-  POSITIVE
-  NEGATIVE
-  NEUTRAL
-}
+## Сuggested Build Order
 
-model Review {
-  id              String    @id @default(uuid())
-  orderItemId     String    // связь с заказом, НЕ с Product
-  userId          String
-  productId       String    // денормализация для удобства запросов
-  rating          Int
-  qualityRating   Int
-  deliveryRating  Int
-  accuracyRating  Int
-  text            String
-  status          ReviewStatus @default(PENDING)
-  sentiment       ReviewSentiment @default(NOT_ANALYZED)
-  sentimentScore  Float?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-}
-```
-
-**Кэшированные агрегаты на Product:**
-- `reviewCount` — Int
-- `stars` — Float
-- `ratingDistribution` — JSON {1: N, 2: N, 3: N, 4: N, 5: N}
-
-## ML Integration Pattern: Stub → Real Model Swap
-
-**Strategy / Dependency Injection:**
-
-```typescript
-interface SentimentAnalyzer {
-  analyze(text: string): Promise<{ sentiment: string; confidence: number }>;
-}
-
-// Сейчас: заглушка на ключевых словах
-class StubSentimentAnalyzer implements SentimentAnalyzer {
-  analyze(text: string) {
-    const positiveWords = ['отличный', 'хороший', 'нравится', 'доволен'];
-    const negativeWords = ['плохой', 'ужасный', 'разочарован', 'брак'];
-    // simple keyword counting → sentiment
-    return { sentiment: 'POSITIVE', confidence: 0.8 };
-  }
-}
-
-// Позже: HTTP-вызов Python сервиса
-class MlSentimentAnalyzer implements SentimentAnalyzer {
-  async analyze(text: string) {
-    const res = await fetch(`${ML_SERVICE_URL}/sentiment`, {
-      method: 'POST',
-      body: JSON.stringify({ text }),
-    });
-    return res.json();
-  }
-}
-
-// Выбор через env flag
-const analyzer = process.env.ML_SERVICE_URL
-  ? new MlSentimentAnalyzer()
-  : new StubSentimentAnalyzer();
-```
-
-## ML Service Architecture (Python/FastAPI)
-
-```python
-# services/ml-astrum/main.py
-from fastapi import FastAPI
-from pydantic import BaseModel
-import joblib
-
-app = FastAPI()
-model = joblib.load("models/sentiment_model.pkl")
-vectorizer = joblib.load("models/vectorizer.pkl")
-
-class AnalyzeRequest(BaseModel):
-    text: str
-
-@app.post("/sentiment")
-def analyze(req: AnalyzeRequest):
-    features = vectorizer.transform([req.text])
-    prediction = model.predict(features)[0]
-    confidence = model.predict_proba(features)[0].max()
-    return {
-        "sentiment": "POSITIVE" if prediction > 0 else "NEGATIVE",
-        "confidence": float(confidence),
-    }
-```
-
-## Build Order — 7 фаз
-
-| # | Фаза | Зависимости | Параллельно с |
-|---|------|-------------|---------------|
-| 1 | Prisma schema + CRUD | — | — |
-| 2 | Photo upload | Требует storage | 3 (не зависит) |
-| 3 | Moderation workflow | Требует CRUD | 2 (не зависит) |
-| 4 | ML stub | Внутри API, без внешних | 3 |
-| 5 | Python ML service | Инфраструктура, Docker | 3 (не зависит) |
-| 6 | Frontend UI | Требует готовый API | 6 (не зависит) |
-| 7 | Reply system | Дополнительная | 6 (не зависит) |
-
-**Build order:** `ml-astrum` не зависит от других воркспейсов — параллельная сборка с остальными сервисами.
-
-## Anti-Patterns to Avoid
-
-- **Sync ML в цепочке создания** — блокирует пользователя, непредсказуемая latency
-- **Compute aggregates on the fly** — N+1 проблема, кэшируйте на Product
-- **Review → Product без связи с OrderItem** — нет верификации покупки
-- **DELETE вместо REJECT** — теряется audit trail, невозможно аналитики
-- **Review без проверки покупки** — открыто для спама
-
-## Open Questions
-
-1. **Storage для фото** — текущий проект не имеет S3. Нужна отдельная фаза проектирования.
-2. **ML model selection** — stub vs готовые библиотеки (sentiment-ru для русского).
-3. **Admin moderation UI** — существующий frontend не имеет admin surface.
-4. **Rate limiting на отзывы** — как ограничить спам?
-5. **Multi-language sentiment** — автодетекция языка для ML.
-
----
-*Last updated: 2026-04-04*
+1. Schema-миграция: добавить sentiment поля в Review
+2. Python ML-сервис: FastAPI + базовая модель + /api/sentiment
+3. Интеграция: Express → ML-сервис при создании отзыва
+4. Фронтенд: секция отзывов на странице товара
+5. Фронтенд: визуализация тональности в UI
+6. Агрегация: статистика по товару
+7. Admin: переобучение модели, аналитика
