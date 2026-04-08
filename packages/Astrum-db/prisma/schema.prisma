@@ -67,32 +67,32 @@ model CartItem {
 }
 
 model Product {
-  id           String            @id @default(uuid())
-  businessId   String
-  createdAt    DateTime          @default(now())
-  name         String
-  quantity     Int
-  description  String?
-  price        Float
-  discount     Float?
-  stars        Float             @default(0)
-  popularity   Float             @default(0)
-  category     ProductCategory
-  subcategory  String?
-  currency     Currency
-  isDeleted    Boolean           @default(false)
-  isOutOfStock Boolean           @default(false)
-  visibility   ProductVisibility @default(Draft)
-  status       ProductStatus     @default(Draft)
-  images       String[]
-  previewImage String
-  sales        Int               @default(0)
-  views        Int               @default(0)
-  impressions  Impression[]
-  properties   ProductProperty[]
-  reviews      Review[]
-  reviewCount  Int      @default(0)
-  averageRating Float   @default(0)
+  id            String            @id @default(uuid())
+  businessId    String
+  createdAt     DateTime          @default(now())
+  name          String
+  quantity      Int
+  description   String?
+  price         Float
+  discount      Float?
+  stars         Float             @default(0)
+  popularity    Float             @default(0)
+  category      ProductCategory
+  subcategory   String?
+  currency      Currency
+  isDeleted     Boolean           @default(false)
+  isOutOfStock  Boolean           @default(false)
+  visibility    ProductVisibility @default(Draft)
+  status        ProductStatus     @default(Draft)
+  images        String[]
+  previewImage  String
+  sales         Int               @default(0)
+  views         Int               @default(0)
+  impressions   Impression[]
+  properties    ProductProperty[]
+  reviews       Review[]
+  reviewCount   Int               @default(0)
+  averageRating Float             @default(0)
 }
 
 model ProductProperty {
@@ -252,23 +252,24 @@ enum ReviewStatus {
 }
 
 model Review {
-  id               String        @id @default(uuid())
-  userId           String
-  productId        String
-  orderItemId      String        @unique
-  rating           Int           @db.SmallInt
-  qualityRating    Int           @db.SmallInt
-  deliveryRating   Int           @db.SmallInt
-  accuracyRating   Int           @db.SmallInt
-  comment          String
-  photos           String[]      @default([])
-  status           ReviewStatus  @default(PENDING)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id             String       @id @default(uuid())
+  userId         String
+  productId      String
+  orderItemId    String       @unique
+  rating         Int          @db.SmallInt
+  qualityRating  Int          @db.SmallInt
+  deliveryRating Int          @db.SmallInt
+  accuracyRating Int          @db.SmallInt
+  comment        String
+  photos         String[]     @default([])
+  status         ReviewStatus @default(PENDING)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
-  Product          Product       @relation(fields: [productId], references: [id])
-  User             User          @relation(fields: [userId], references: [id])
-  OrderItem        OrderItem     @relation(fields: [orderItemId], references: [id])
+  Product         Product          @relation(fields: [productId], references: [id])
+  User            User             @relation(fields: [userId], references: [id])
+  OrderItem       OrderItem        @relation(fields: [orderItemId], references: [id])
+  reviewResponses ReviewResponse[]
 
   @@index([productId, status])
   @@index([userId])
@@ -278,6 +279,7 @@ model Review {
 model ReviewResponse {
   id         String   @id @default(uuid())
   reviewId   String
+  Review     Review   @relation(fields: [reviewId], references: [id])
   businessId String
   comment    String
   createdAt  DateTime @default(now())
