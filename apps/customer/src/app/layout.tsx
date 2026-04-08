@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { ProgressBarProvider, ThemeProvider } from "../components/providers";
 import { Toaster } from "@/components/ui/sonner";
 import "./index.css";
+import { Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "Astrum",
@@ -13,7 +17,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
       <body>
         <ThemeProvider
           attribute="class"
