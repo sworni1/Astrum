@@ -22,6 +22,7 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
 app.use('/api/auth', proxyOptions(process.env.AUTH_SERVICE_URL!));
+app.use('/api/sentiment', proxyOptions(process.env.SENTIMENT_SERVICE_URL!));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(

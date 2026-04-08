@@ -140,7 +140,7 @@ model ShippingMethod {
 }
 
 model Review {
-  id             String           @id
+  id             String           @id @default(uuid())
   userId         String
   productId      String
   orderItemId    String           @unique
@@ -152,7 +152,7 @@ model Review {
   photos         String[]         @default([])
   status         ReviewStatus     @default(PENDING)
   createdAt      DateTime         @default(now())
-  updatedAt      DateTime
+  updatedAt      DateTime         @updatedAt 
   OrderItem      OrderItem        @relation(fields: [orderItemId], references: [id])
   Product        Product          @relation(fields: [productId], references: [id])
   User           User             @relation(fields: [userId], references: [id])
@@ -164,12 +164,12 @@ model Review {
 }
 
 model ReviewResponse {
-  id         String   @id
+  id         String   @id @default(uuid())
   reviewId   String
   businessId String
   comment    String
   createdAt  DateTime @default(now())
-  updatedAt  DateTime
+  updatedAt  DateTime @updatedAt
   Review     Review   @relation(fields: [reviewId], references: [id])
 
   @@index([reviewId])

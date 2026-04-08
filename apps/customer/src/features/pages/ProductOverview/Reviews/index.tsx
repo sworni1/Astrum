@@ -1,12 +1,15 @@
 'use client';
 
-import { FormEvent, useState, useMemo } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import { Star, ThumbsUp, MessageCircle, Calendar, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { showToast } from '../../../../common';
+import { useReviewSentiment } from '@/hooks/reviews/useReviewSentiment';
 import {
   Card,
   CardContent,
@@ -29,6 +32,8 @@ interface FormState {
   email: string;
   review: string;
 }
+
+type SentimentLabel = 'POSITIVE' | 'NEGATIVE' | 'UNKNOWN';
 
 interface Review {
   id: number;
@@ -121,13 +126,37 @@ const storeData: StoreData = {
   ],
 };
 
-interface FormState {
-  name: string;
-  email: string;
-  review: string;
+function getSentimentUi(label: SentimentLabel): {
+  labelText: string;
+  badgeClassName: string;
+  cardBorderClassName: string;
+} {
+  if (label === 'POSITIVE') {
+    return {
+      labelText: 'Положительный',
+      badgeClassName: 'bg-green-600 text-white hover:bg-green-600',
+      cardBorderClassName: 'border-green-500',
+    };
+  }
+  if (label === 'NEGATIVE') {
+    return {
+      labelText: 'Отрицательный',
+      badgeClassName: 'bg-red-600 text-white hover:bg-red-600',
+      cardBorderClassName: 'border-red-500',
+    };
+  }
+  return {
+    labelText: 'Не определён',
+    badgeClassName: 'bg-muted text-foreground hover:bg-muted',
+    cardBorderClassName: 'border-border',
+  };
 }
 
-const Reviews = () => {
+interface ReviewsProps {
+  productId: string;
+}
+
+const Reviews = ({ productId }: ReviewsProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLiked, setIsLiked] = useState<Record<number, boolean>>({});
@@ -138,6 +167,8 @@ const Reviews = () => {
     email: '',
     review: '',
   });
+  const { sentiment, isPredicting, predictSentiment, resetSentiment } =
+    useReviewSentiment();
   const reviewsPerPage = 2; // Show only 2 reviews per page
 
   // Calculate pagination
@@ -148,15 +179,30 @@ const Reviews = () => {
     return storeData.reviews.slice(startIndex, endIndex);
   }, [currentPage, reviewsPerPage]);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const sentimentUi = sentiment ? getSentimentUi(sentiment.label) : null;
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!productId) {
+      showToast({
+        title: 'Ошибка',
+        type: 'error',
+        description: 'Не удалось определить продукт',
+      });
+      return;
+    }
+    if (rating < 1) {
+      showToast({
+        title: 'Ошибка',
+        type: 'error',
+        description: 'Поставьте рейтинг перед отправкой',
+      });
+      return;
+    }
     setIsSubmitting(true);
-    // Simulate form submission
-    setTimeout(() => {
-      setRating(0);
-      setFormData({ name: '', email: '', review: '' });
-      setIsSubmitting(false);
-    }, 1000);
+    resetSentiment();
+    await predictSentiment(formData.review);
+    setIsSubmitting(false);
   };
 
   return (
@@ -296,7 +342,12 @@ const Reviews = () => {
         </div>
 
         <div className='lg:sticky lg:top-8 lg:h-fit'>
-          <Card>
+          <Card
+            className={cn(
+              'border-2 transition-colors',
+              sentimentUi?.cardBorderClassName,
+            )}
+          >
             <CardHeader>
               <CardTitle id='review-form-heading'>
                 {storeData.formTitle}
@@ -304,6 +355,16 @@ const Reviews = () => {
               <CardDescription>{storeData.formDescription}</CardDescription>
             </CardHeader>
             <CardContent>
+              {sentimentUi ? (
+                <div className='mb-4 flex items-center justify-between gap-2'>
+                  <div className='text-sm text-muted-foreground'>
+                    Характер отзыва
+                  </div>
+                  <Badge className={sentimentUi.badgeClassName}>
+                    {sentimentUi.labelText}
+                  </Badge>
+                </div>
+              ) : null}
               <form onSubmit={handleSubmit} className='flex flex-col gap-6'>
                 <div className='flex flex-col gap-2'>
                   <div
@@ -384,7 +445,7 @@ const Reviews = () => {
                 <Button
                   type='submit'
                   className='h-9 px-4 py-2 w-full cursor-pointer'
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isPredicting || rating < 1}
                 >
                   {isSubmitting
                     ? storeData.submittingButtonText

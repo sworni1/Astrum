@@ -117,7 +117,7 @@ export default function ProductOverview() {
           </div>
         </div>
       </div>
-      <Reviews />
+      <Reviews productId={productId} />
     </>
   );
 }
