@@ -1,7 +1,19 @@
 import type { NextConfig } from "next";
 
+const apiGatewayInternal = (
+  process.env.API_GATEWAY_INTERNAL_URL ?? "http://127.0.0.1:3580"
+).replace(/\/+$/, "");
+
 const nextConfig: NextConfig = {
   output: "standalone",
+  async rewrites() {
+    return [
+      {
+        source: "/api-gateway/:path*",
+        destination: `${apiGatewayInternal}/api/:path*`,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       new URL("https://flowbite.s3.amazonaws.com/docs/gallery/**"),

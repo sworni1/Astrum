@@ -2,9 +2,10 @@ export interface SentimentResult {
   readonly label: 'POSITIVE' | 'NEGATIVE' | 'UNKNOWN'
   readonly score: number
   readonly detectedLanguage?: 'ru' | 'en' | 'unknown'
+  readonly translate_error?: string
 }
 
-const DEFAULT_TIMEOUT_MS = 2_000
+const DEFAULT_TIMEOUT_MS = 30_000
 
 function getSentimentServiceUrl(): string | null {
   const raw = process.env.SENTIMENT_SERVICE_URL
@@ -30,7 +31,7 @@ export async function predictSentiment(
     const payload = (await response.json()) as {
       label?: string
       score?: number
-      meta?: { detectedLanguage?: string }
+      meta?: { detectedLanguage?: string; translate_error?: string }
     }
     const label =
       payload.label === 'POSITIVE' || payload.label === 'NEGATIVE'
@@ -44,7 +45,11 @@ export async function predictSentiment(
       detectedLanguageRaw === 'unknown'
         ? detectedLanguageRaw
         : undefined
-    return { label, score, detectedLanguage }
+    const translate_error =
+      typeof payload.meta?.translate_error === 'string'
+        ? payload.meta.translate_error
+        : undefined
+    return { label, score, detectedLanguage, translate_error }
   } catch {
     return { label: 'UNKNOWN', score: 0 }
   } finally {

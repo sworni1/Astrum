@@ -356,13 +356,20 @@ const Reviews = ({ productId }: ReviewsProps) => {
             </CardHeader>
             <CardContent>
               {sentimentUi ? (
-                <div className='mb-4 flex items-center justify-between gap-2'>
-                  <div className='text-sm text-muted-foreground'>
-                    Характер отзыва
+                <div className='mb-4 space-y-2'>
+                  <div className='flex items-center justify-between gap-2'>
+                    <div className='text-sm text-muted-foreground'>
+                      Характер отзыва
+                    </div>
+                    <Badge className={sentimentUi.badgeClassName}>
+                      {sentimentUi.labelText}
+                    </Badge>
                   </div>
-                  <Badge className={sentimentUi.badgeClassName}>
-                    {sentimentUi.labelText}
-                  </Badge>
+                  {sentiment?.meta?.translate_error ? (
+                    <p className='text-xs text-destructive break-words'>
+                      Перевод: {sentiment.meta.translate_error}
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
               <form onSubmit={handleSubmit} className='flex flex-col gap-6'>

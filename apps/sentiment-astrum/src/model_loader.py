@@ -1,7 +1,10 @@
 import os
-from functools import lru_cache
+import threading
 
 from transformers import pipeline
+
+_predictor_lock = threading.Lock()
+_predictor = None
 
 
 def get_model_dir() -> str | None:
@@ -14,10 +17,28 @@ def get_model_dir() -> str | None:
     return None
 
 
-@lru_cache(maxsize=1)
 def get_predictor():
-    model_dir = get_model_dir()
-    if model_dir:
-        return pipeline("text-classification", model=model_dir, tokenizer=model_dir)
-    return pipeline("sentiment-analysis")
+    global _predictor
+    if _predictor is not None:
+        return _predictor
+    with _predictor_lock:
+        if _predictor is not None:
+            return _predictor
+        model_dir = get_model_dir()
+        if model_dir:
+            _predictor = pipeline(
+                "text-classification",
+                model=model_dir,
+                tokenizer=model_dir,
+                model_kwargs={"low_cpu_mem_usage": False},
+            )
+        else:
+            _predictor = pipeline(
+                "sentiment-analysis",
+                model_kwargs={"low_cpu_mem_usage": False},
+            )
+        return _predictor
 
+
+def warmup_predictor() -> None:
+    get_predictor()

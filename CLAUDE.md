@@ -8,8 +8,10 @@ Monorepo managed by **Turborepo + pnpm workspaces**. PostgreSQL database via Doc
 | -------------------- | ------------------ | ---------------------------------------------------------- | --------------------------------------- |
 | `apps/api-astrum`    | `@astrum/api`      | Express + TypeScript                                       | Main backend API (port 3580)            |
 | `apps/auth-astrum`   | `@astrum/auth`     | NestJS + TypeScript                                        | Auth service (port 4580)                |
-| `apps/customer`      | `@astrum/customer` | Next.js 15 + React 19 + shadcn/ui + Radix UI + TailwindCSS | Customer-facing frontend (port 3000)    |
-| `packages/Astrum-db` | `@astrum/db`       | Prisma 7.5                                                 | Database owns the schema and migrations |
+| `apps/customer`        | `@astrum/customer` | Next.js 15 + React 19 + shadcn/ui + Radix UI + TailwindCSS | Customer-facing frontend (port 3000)    |
+| `apps/sentiment-astrum` | —                | FastAPI + Transformers                                   | Тональность отзывов; перевод через translate-backend |
+| `apps/translate-astrum` | —                 | Bun + Elysia (образ: upstream FOSWLY/translate-backend)   | Сервис перевода, порт 3313              |
+| `packages/Astrum-db`   | `@astrum/db`       | Prisma 7.5                                                 | Database owns the schema and migrations |
 
 ## Правила коммуникации
 

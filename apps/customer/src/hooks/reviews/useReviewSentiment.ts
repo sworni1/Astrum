@@ -5,15 +5,16 @@ export type SentimentLabel = 'POSITIVE' | 'NEGATIVE' | 'UNKNOWN'
 export interface SentimentResult {
   label: SentimentLabel
   score: number
-  meta?: { detectedLanguage?: 'ru' | 'en' | 'unknown' }
+  meta?: {
+    detectedLanguage?: 'ru' | 'en' | 'unknown'
+    translate_error?: string
+  }
 }
 
-const SENTIMENT_TIMEOUT_MS = 2_000
+const SENTIMENT_TIMEOUT_MS = 30_000
 
-function getApiBaseUrl(): string | null {
-  const raw = process.env.NEXT_PUBLIC_API_GATEWAY_URL
-  if (!raw) return null
-  return raw.replace(/\/+$/, '')
+function getSentimentPredictUrl(): string {
+  return '/api-gateway/sentiment/predict'
 }
 
 export function useReviewSentiment(): {
@@ -30,21 +31,17 @@ export function useReviewSentiment(): {
   }, [])
 
   const predictSentiment = useCallback(async (text: string) => {
-    const baseUrl = getApiBaseUrl()
-    if (!baseUrl) {
-      const fallback: SentimentResult = { label: 'UNKNOWN', score: 0 }
-      setSentiment(fallback)
-      return fallback
-    }
+    const predictUrl = getSentimentPredictUrl()
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), SENTIMENT_TIMEOUT_MS)
     setIsPredicting(true)
     try {
-      const response = await fetch(`${baseUrl}/sentiment/predict`, {
+      const response = await fetch(predictUrl, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ text }),
         signal: controller.signal,
+        credentials: 'include',
       })
       if (!response.ok) {
         const fallback: SentimentResult = { label: 'UNKNOWN', score: 0 }

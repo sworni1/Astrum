@@ -7,6 +7,7 @@ class PredictRequest(BaseModel):
 
 class PredictMeta(BaseModel):
     detectedLanguage: str
+    translate_error: str | None = None
 
 
 class PredictResponse(BaseModel):

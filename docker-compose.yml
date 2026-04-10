@@ -38,10 +38,24 @@ services:
     build:
       context: .
       dockerfile: apps/customer/Dockerfile
+      args:
+        API_GATEWAY_INTERNAL_URL: http://astrum-api:3580
     ports:
       - 3000:3000
     env_file:
       - apps/customer/.env.production
+    networks:
+      - astrumnetwork
+
+  astrum-translate:
+    container_name: astrum-translate
+    build:
+      context: ./apps/translate-astrum
+      dockerfile: Dockerfile
+    ports:
+      - 3313:3313
+    env_file:
+      - apps/translate-astrum/.env
     networks:
       - astrumnetwork
 
