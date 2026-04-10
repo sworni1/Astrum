@@ -7,7 +7,6 @@ datasource db {
   provider = "postgresql"
 }
 
-// User model
 model User {
   id                  String              @id @default(uuid())
   createdAt           DateTime            @default(now())
@@ -20,18 +19,17 @@ model User {
   preferredCategories String[]
   dateOfBirth         DateTime
   lastViewedProduct   LastViewedProduct[]
+  Review              Review[]
 }
 
 model LastViewedProduct {
-  id          String @id @default(uuid())
+  id          String  @id @default(uuid())
   viewingTime Int
   productId   String
-
-  User   User?   @relation(fields: [userId], references: [id])
-  userId String?
+  userId      String?
+  User        User?   @relation(fields: [userId], references: [id])
 }
 
-// Product models
 model Impression {
   id        String   @id @unique @default(uuid())
   stars     Float    @default(0)
@@ -58,7 +56,7 @@ model CartItem {
   createdAt DateTime @default(now())
   userId    String
   productId String
-  quantity  Int      @default(1) @db.Integer
+  quantity  Int      @default(1)
 
   @@unique([userId, productId])
   @@index([userId])
@@ -66,29 +64,32 @@ model CartItem {
 }
 
 model Product {
-  id           String            @id @default(uuid())
-  businessId   String
-  createdAt    DateTime          @default(now())
-  name         String
-  quantity     Int
-  description  String?
-  price        Float
-  discount     Float?
-  stars        Float             @default(0)
-  popularity   Float             @default(0)
-  category     ProductCategory
-  subcategory  String?
-  currency     Currency
-  isDeleted    Boolean           @default(false)
-  isOutOfStock Boolean           @default(false)
-  visibility   ProductVisibility @default(Draft)
-  status       ProductStatus     @default(Draft)
-  images       String[]
-  previewImage String
-  sales        Int               @default(0)
-  views        Int               @default(0)
-  impressions  Impression[]
-  properties   ProductProperty[]
+  id            String            @id @default(uuid())
+  businessId    String
+  createdAt     DateTime          @default(now())
+  name          String
+  quantity      Int
+  description   String?
+  price         Float
+  discount      Float?
+  stars         Float             @default(0)
+  popularity    Float             @default(0)
+  category      ProductCategory
+  subcategory   String?
+  currency      Currency
+  isDeleted     Boolean           @default(false)
+  isOutOfStock  Boolean           @default(false)
+  visibility    ProductVisibility @default(Draft)
+  status        ProductStatus     @default(Draft)
+  images        String[]
+  previewImage  String
+  sales         Int               @default(0)
+  views         Int               @default(0)
+  reviewCount   Int               @default(0)
+  averageRating Float             @default(0)
+  impressions   Impression[]
+  properties    ProductProperty[]
+  Review        Review[]
 }
 
 model ProductProperty {
@@ -99,7 +100,6 @@ model ProductProperty {
   Product   Product       @relation(fields: [productId], references: [id])
 }
 
-// Order models
 model Order {
   id               String         @id @default(cuid())
   userId           String
@@ -110,11 +110,11 @@ model Order {
   status           OrderStatus    @default(PENDING)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
-  shippingMethod   ShippingMethod @relation(fields: [shippingMethodId], references: [id])
   deliveryAddress  String
   deliveryDate     DateTime
-  OrderItem        OrderItem[]
   shippingMethodId String
+  shippingMethod   ShippingMethod @relation(fields: [shippingMethodId], references: [id])
+  OrderItem        OrderItem[]
 }
 
 model OrderItem {
@@ -129,6 +129,7 @@ model OrderItem {
   status       OrderItemStatus @default(PENDING)
   userId       String
   order        Order           @relation(fields: [orderId], references: [id])
+  Review       Review?
 }
 
 model ShippingMethod {
@@ -136,6 +137,42 @@ model ShippingMethod {
   name  String  @unique
   price Float
   Order Order[]
+}
+
+model Review {
+  id             String           @id @default(uuid())
+  userId         String
+  productId      String
+  orderItemId    String           @unique
+  rating         Int              @db.SmallInt
+  qualityRating  Int              @db.SmallInt
+  deliveryRating Int              @db.SmallInt
+  accuracyRating Int              @db.SmallInt
+  comment        String
+  photos         String[]         @default([])
+  status         ReviewStatus     @default(PENDING)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt 
+  OrderItem      OrderItem        @relation(fields: [orderItemId], references: [id])
+  Product        Product          @relation(fields: [productId], references: [id])
+  User           User             @relation(fields: [userId], references: [id])
+  ReviewResponse ReviewResponse[]
+
+  @@index([createdAt])
+  @@index([productId, status])
+  @@index([userId])
+}
+
+model ReviewResponse {
+  id         String   @id @default(uuid())
+  reviewId   String
+  businessId String
+  comment    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  Review     Review   @relation(fields: [reviewId], references: [id])
+
+  @@index([reviewId])
 }
 
 enum PaymentMethod {
@@ -238,4 +275,10 @@ enum ProductVisibility {
 enum Gender {
   Male
   Female
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

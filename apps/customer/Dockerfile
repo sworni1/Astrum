@@ -11,6 +11,9 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps ./apps
 COPY packages ./packages
 
+ARG API_GATEWAY_INTERNAL_URL=http://astrum-api:3580
+ENV API_GATEWAY_INTERNAL_URL=$API_GATEWAY_INTERNAL_URL
+
 RUN pnpm install --filter @astrum/customer...
 RUN pnpm --filter @astrum/customer build
 

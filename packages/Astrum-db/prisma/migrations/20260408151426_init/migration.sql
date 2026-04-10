@@ -11,10 +11,10 @@ CREATE TYPE "OrderItemStatus" AS ENUM ('PENDING', 'CONFIRMED', 'OUT_OF_STOCK', '
 CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELED');
 
 -- CreateEnum
-CREATE TYPE "PropertyLabel" AS ENUM ('Color', 'Size', 'Material', 'Brand', 'Weight', 'Dimensions', 'Warranty', 'EnergyEfficiency', 'StorageCapacity', 'OperatingSystem', 'Processor', 'GraphicsCard', 'ScreenSize', 'BatteryLife');
+CREATE TYPE "PropertyLabel" AS ENUM ('Color', 'Size', 'Material', 'Brand', 'Weight', 'Dimensions', 'Warranty', 'EnergyEfficiency', 'StorageCapacity', 'OperatingSystem', 'Processor', 'GraphicsCard', 'ScreenSize', 'BatteryLife', 'Type', 'Power', 'Features', 'Control', 'NoiseLevel', 'PowerSource', 'Display', 'Capacity', 'Installation', 'Speed', 'Construction', 'RAM', 'Connectivity');
 
 -- CreateEnum
-CREATE TYPE "ProductCategory" AS ENUM ('Electronics', 'Fashion', 'Home', 'Food', 'Beauty', 'Books', 'Sports', 'Toys', 'Automotive');
+CREATE TYPE "ProductCategory" AS ENUM ('Electronics', 'Fashion', 'Home', 'Food', 'Beauty', 'Books', 'Sports', 'Toys', 'Automotive', 'Office');
 
 -- CreateEnum
 CREATE TYPE "Currency" AS ENUM ('RUB', 'USD');
@@ -27,6 +27,9 @@ CREATE TYPE "ProductVisibility" AS ENUM ('Public', 'Private', 'Archived', 'Draft
 
 -- CreateEnum
 CREATE TYPE "Gender" AS ENUM ('Male', 'Female');
+
+-- CreateEnum
+CREATE TYPE "ReviewStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 
 -- CreateTable
 CREATE TABLE "User" (
@@ -100,6 +103,7 @@ CREATE TABLE "Product" (
     "stars" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "popularity" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "category" "ProductCategory" NOT NULL,
+    "subcategory" TEXT,
     "currency" "Currency" NOT NULL,
     "isDeleted" BOOLEAN NOT NULL DEFAULT false,
     "isOutOfStock" BOOLEAN NOT NULL DEFAULT false,
@@ -109,6 +113,8 @@ CREATE TABLE "Product" (
     "previewImage" TEXT NOT NULL,
     "sales" INTEGER NOT NULL DEFAULT 0,
     "views" INTEGER NOT NULL DEFAULT 0,
+    "reviewCount" INTEGER NOT NULL DEFAULT 0,
+    "averageRating" DOUBLE PRECISION NOT NULL DEFAULT 0,
 
     CONSTRAINT "Product_pkey" PRIMARY KEY ("id")
 );
@@ -166,6 +172,37 @@ CREATE TABLE "ShippingMethod" (
     CONSTRAINT "ShippingMethod_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "Review" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "productId" TEXT NOT NULL,
+    "orderItemId" TEXT NOT NULL,
+    "rating" SMALLINT NOT NULL,
+    "qualityRating" SMALLINT NOT NULL,
+    "deliveryRating" SMALLINT NOT NULL,
+    "accuracyRating" SMALLINT NOT NULL,
+    "comment" TEXT NOT NULL,
+    "photos" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "status" "ReviewStatus" NOT NULL DEFAULT 'PENDING',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Review_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ReviewResponse" (
+    "id" TEXT NOT NULL,
+    "reviewId" TEXT NOT NULL,
+    "businessId" TEXT NOT NULL,
+    "comment" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ReviewResponse_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -193,6 +230,21 @@ CREATE UNIQUE INDEX "CartItem_userId_productId_key" ON "CartItem"("userId", "pro
 -- CreateIndex
 CREATE UNIQUE INDEX "ShippingMethod_name_key" ON "ShippingMethod"("name");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "Review_orderItemId_key" ON "Review"("orderItemId");
+
+-- CreateIndex
+CREATE INDEX "Review_productId_status_idx" ON "Review"("productId", "status");
+
+-- CreateIndex
+CREATE INDEX "Review_userId_idx" ON "Review"("userId");
+
+-- CreateIndex
+CREATE INDEX "Review_createdAt_idx" ON "Review"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "ReviewResponse_reviewId_idx" ON "ReviewResponse"("reviewId");
+
 -- AddForeignKey
 ALTER TABLE "LastViewedProduct" ADD CONSTRAINT "LastViewedProduct_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
@@ -207,3 +259,15 @@ ALTER TABLE "Order" ADD CONSTRAINT "Order_shippingMethodId_fkey" FOREIGN KEY ("s
 
 -- AddForeignKey
 ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Review" ADD CONSTRAINT "Review_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Review" ADD CONSTRAINT "Review_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Review" ADD CONSTRAINT "Review_orderItemId_fkey" FOREIGN KEY ("orderItemId") REFERENCES "OrderItem"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ReviewResponse" ADD CONSTRAINT "ReviewResponse_reviewId_fkey" FOREIGN KEY ("reviewId") REFERENCES "Review"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
