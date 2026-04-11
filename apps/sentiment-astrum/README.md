@@ -4,7 +4,18 @@ FastAPI-сервис для определения характера отзыв
 
 ## Требования
 
-Используй **Python 3.12 или 3.13**. На Python 3.14 сейчас падает установка `pydantic-core` (ограничение PyO3), поэтому зависимости не поставятся.
+Используй **Python 3.12 или 3.13**.
+
+## Стек модели
+
+Сервис соответствует учебному стеку:
+
+- `scikit-learn`
+- `pandas`
+- `nltk`
+- методы: `TF-IDF` + `LogisticRegression`
+
+Модель обучается локально, сохраняется в `apps/sentiment-astrum/model/sentiment_model.joblib` и затем используется FastAPI-сервисом для предсказаний.
 
 ## Перевод русских отзывов
 
@@ -38,13 +49,37 @@ uvicorn src.app:app --reload --port 8088 --app-dir .
 
 ## Обучение (Amazon Reviews / amazon_polarity)
 
-Скачивание датасета произойдёт автоматически при первом запуске и может занять время/диск.
+Скачивание датасета `amazon_polarity` произойдёт автоматически при первом запуске и может занять время/диск.
 
 ```bash
 .\.venv\Scripts\activate
 pip install -r requirements.txt
 python scripts/train.py
 ```
+
+Опциональные env-параметры обучения:
+
+- `SENTIMENT_TRAIN_SAMPLES` по умолчанию `10000`
+- `SENTIMENT_EVAL_SAMPLES` по умолчанию `2000`
+- `SENTIMENT_MAX_FEATURES` по умолчанию `20000`
+- `SENTIMENT_NGRAM_MAX` по умолчанию `2`
+- `SENTIMENT_MAX_ITER` по умолчанию `200`
+
+Быстрый smoke-режим для проверки пайплайна обучения:
+
+```bash
+$env:SENTIMENT_QUICK_TRAIN="1"
+python scripts/train.py
+```
+
+В `quick mode` используются более лёгкие параметры:
+
+- `SENTIMENT_TRAIN_SAMPLES=1000`
+- `SENTIMENT_EVAL_SAMPLES=200`
+- `SENTIMENT_MAX_FEATURES=5000`
+- `SENTIMENT_MAX_ITER=100`
+
+Если нужно, их всё равно можно переопределить обычными env-переменными.
 
 Оценка качества:
 
@@ -56,4 +91,3 @@ python scripts/evaluate.py
 
 - `GET /health`
 - `POST /predict` `{ "text": "..." }`
-

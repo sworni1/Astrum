@@ -1,47 +1,38 @@
 import os
+from pathlib import Path
+
+try:
+    from bootstrap import ensure_project_root_on_path
+except ModuleNotFoundError:
+    from scripts.bootstrap import ensure_project_root_on_path
+
+ensure_project_root_on_path()
 
 import numpy as np
 from datasets import load_dataset
+from joblib import load
+import pandas as pd
 from sklearn.metrics import accuracy_score, f1_score
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+from src.model_paths import MODEL_ARTIFACT_PATH
 
 
 def main() -> None:
-    model_dir = os.environ.get(
-        "SENTIMENT_MODEL_DIR",
-        os.path.join("apps", "sentiment-astrum", "model"),
-    )
+    model_dir = Path(os.environ.get("SENTIMENT_MODEL_DIR") or MODEL_ARTIFACT_PATH.parent)
+    model_path = model_dir / MODEL_ARTIFACT_PATH.name
 
-    if not os.path.exists(model_dir):
-        raise RuntimeError(f"Model dir not found: {model_dir}")
+    if not model_path.exists():
+        raise RuntimeError(f"Model artifact not found: {model_path}")
 
     dataset = load_dataset("amazon_polarity")
-    tokenizer = AutoTokenizer.from_pretrained(model_dir)
-    model = AutoModelForSequenceClassification.from_pretrained(model_dir)
-    model.eval()
+    pipeline = load(model_path)
 
     eval_samples = int(os.environ.get("SENTIMENT_EVAL_SAMPLES", "5000"))
-    max_length = int(os.environ.get("SENTIMENT_MAX_LENGTH", "256"))
-
-    split = dataset["test"].shuffle(seed=42).select(range(eval_samples))
-    texts = split["content"]
-    labels = np.array(split["label"])
-
-    batch_size = int(os.environ.get("SENTIMENT_EVAL_BATCH", "32"))
-    preds: list[int] = []
-    for i in range(0, len(texts), batch_size):
-        batch = texts[i : i + batch_size]
-        encoded = tokenizer(
-            batch,
-            truncation=True,
-            padding=True,
-            max_length=max_length,
-            return_tensors="pt",
-        )
-        with torch.no_grad():
-            out = model(**encoded)
-        batch_preds = out.logits.argmax(dim=-1).cpu().numpy().tolist()
-        preds.extend(batch_preds)
+    split_df = pd.DataFrame(
+        dataset["test"].shuffle(seed=42).select(range(eval_samples))
+    )[["content", "label"]]
+    labels = np.array(split_df["label"])
+    preds = pipeline.predict(split_df["content"])
 
     accuracy = float(accuracy_score(labels, preds))
     f1 = float(f1_score(labels, preds, average="macro"))
@@ -49,7 +40,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    import torch
-
     main()
-
