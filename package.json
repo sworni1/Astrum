@@ -24,7 +24,8 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "prepare": "husky",
-    "mcp:check": "pwsh ./scripts/mcp-health-check.ps1"
+    "mcp:check": "pwsh ./scripts/mcp-health-check.ps1",
+    "dev:sentiment": "pwsh -NoProfile -File ./scripts/dev-sentiment.ps1"
   },
   "lint-staged": {
     "*.json": "node -e \"try { JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')); console.log('Valid JSON'); } catch(e) { process.exit(1); }\""

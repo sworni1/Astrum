@@ -1,3 +1,24 @@
+# customer (Astrum)
+
+Фронтенд на **Next.js** для монорепозитория Astrum.
+
+## Как запускать в этом репозитории
+
+Из **корня** монорепозитория (не из `apps/customer` в первую очередь):
+
+```bash
+pnpm install
+pnpm dev:customer
+```
+
+Открой в браузере [http://localhost:3000](http://localhost:3000).
+
+Переменные окружения и прокси к API настраиваются в `apps/customer` (см. `next.config.ts` и документацию проекта в корневом `README.md`).
+
+---
+
+Ниже — стандартный текст шаблона `create-next-app` (справочно по Next.js).
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
@@ -33,4 +54,4 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Check out [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

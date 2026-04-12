@@ -1,3 +1,22 @@
+# auth-astrum (Astrum)
+
+Сервис аутентификации на **NestJS** для монорепозитория Astrum (порт по умолчанию **4580**).
+
+## Как запускать в этом репозитории
+
+Из **корня** монорепозитория:
+
+```bash
+pnpm install
+pnpm dev:auth
+```
+
+Переменные окружения: `apps/auth-astrum/.env` (см. также корневой `README.md` про `DATABASE_URL` и связку с `packages/Astrum-db`).
+
+---
+
+Ниже — стандартный README шаблона NestJS (справочно).
+
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
 </p>
