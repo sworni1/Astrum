@@ -1,59 +1,86 @@
 # sentiment-astrum
 
-FastAPI-сервис для определения характера отзыва.
+Сервис тональности отзывов: **FastAPI**, инференс и (опционально) обучение на `amazon_polarity`.
 
 ## Требования
 
-Используй **Python 3.12 или 3.13**. На Python 3.14 сейчас падает установка `pydantic-core` (ограничение PyO3), поэтому зависимости не поставятся.
+- **Python 3.12 или 3.13** (на 3.14 сборка `pydantic-core` часто ломается).
+- Зависимости: `pip install -r requirements.txt` в виртуальном окружении.
 
-## Перевод русских отзывов
+**Docker для обучения не обязателен** — достаточно venv на машине. Docker удобен для translate и общей инфраструктуры монорепо, но не для самого `train.py`.
 
-Тональность считается по **английскому** тексту. Русский текст сначала уходит в **[FOSWLY translate-backend](https://github.com/FOSWLY/translate-backend)** (отдельный сервис).
+## Установка
 
-1. Подними translate (из корня монорепо):
-
-   ```bash
-   docker compose up astrum-translate -d
-   ```
-
-   Либо клонируй репозиторий и `bun install && bun start` (порт по умолчанию `3313`).
-
-2. Скопируй `apps/sentiment-astrum/.env.example` в `.env` в этой папке и задай `TRANSLATE_SERVICE_URL`. Файл `.env` подхватывается при старте (`python-dotenv`). Для исходящих запросов **нельзя** использовать `0.0.0.0` — только `127.0.0.1` / `localhost` (локально) или `http://astrum-translate:3313` из другого контейнера.
-
-Опционально: `TRANSLATE_LANG_PAIR` (по умолчанию `ru-en`), `TRANSLATE_PROVIDER` (по умолчанию `msedge`). Если `TRANSLATE_SERVICE_URL` не задан, используется `http://127.0.0.1:3313` (локально; **в Docker** — `http://astrum-translate:3313`). Запросы к translate идут с `trust_env=False`, чтобы не подмешивался системный прокси из `HTTP_PROXY` (иначе при VPN/прокси возможны ложные ошибки к `localhost`).
-
-## Customer (Next.js) и прокси тональности
-
-Форма отзыва ходит на **`/api-gateway/sentiment/predict`** на том же origin, что и фронт; Next.js проксирует на API (`rewrites` в `next.config.ts`). Локально цель по умолчанию `http://127.0.0.1:3580`. В Docker при сборке образа customer задай **`API_GATEWAY_INTERNAL_URL`** (в compose уже передаётся `http://astrum-api:3580`).
-
-## Запуск (dev)
+Из корня репозитория:
 
 ```bash
 cd apps/sentiment-astrum
 py -3.12 -m venv .venv
 .\.venv\Scripts\activate
 pip install -r requirements.txt
+```
+
+Скопируй `.env.example` в `.env` при необходимости (translate и параметры обучения).
+
+## Запуск API (dev)
+
+Рабочая директория должна быть **`apps/sentiment-astrum`**, иначе импорт `src` не найдётся. Обязательно **`--app-dir .`**:
+
+```bash
+cd apps/sentiment-astrum
+.\.venv\Scripts\activate
 uvicorn src.app:app --reload --port 8088 --app-dir .
 ```
 
-## Обучение (Amazon Reviews / amazon_polarity)
+Проверка: `GET http://127.0.0.1:8088/health`, `POST http://127.0.0.1:8088/predict` с телом `{"text":"..."}`.
 
-Скачивание датасета произойдёт автоматически при первом запуске и может занять время/диск.
+- Русский текст без перевода: ответ **`UNKNOWN`** (политика до офлайн-перевода).
+- Английский: **`POSITIVE` / `NEGATIVE`** и `score`.
 
-```bash
-.\.venv\Scripts\activate
-pip install -r requirements.txt
+## Обучение (`scripts/train.py`)
+
+Датасет `amazon_polarity` скачивается при первом запуске (долго и много места на диске).
+
+**По умолчанию в скрипте** включено полное обучение по всему train и всему test (`SENTIMENT_FULL_DATASET` по умолчанию `1`). На CPU это может занять много часов.
+
+Быстрый урезанный прогон (без смены кода):
+
+```powershell
+$env:SENTIMENT_FULL_DATASET="0"
+$env:SENTIMENT_TRAIN_SAMPLES="10000"
+$env:SENTIMENT_EVAL_SAMPLES="2000"
 python scripts/train.py
 ```
 
-Оценка качества:
+Оценка после обучения (нужна папка модели, путь см. `SENTIMENT_MODEL_DIR` в `.env.example`):
 
 ```bash
 python scripts/evaluate.py
 ```
 
-## API
+Артефакты модели по умолчанию: `apps/sentiment-astrum/model` (в `.gitignore`).
 
-- `GET /health`
-- `POST /predict` `{ "text": "..." }`
+## Перевод русских отзывов (опционально)
 
+Тональность считается по английскому тексту. Русский можно прогонять через **translate-backend** (см. `docker compose` и переменные `TRANSLATE_*` в `.env.example`). Подробности поведения — в коде сервиса и в `docker-compose` монорепо.
+
+## Интеграция с backend
+
+В **`apps/api-astrum`** задай:
+
+```env
+SENTIMENT_SERVICE_URL=http://127.0.0.1:8088
+```
+
+Тогда при создании отзыва в JSON ответа добавляется поле **`sentiment`**.
+
+## Customer (Next.js)
+
+Прокси к API настраивается в `apps/customer` (`rewrites` / gateway). Локально цель API часто `http://127.0.0.1:3580`.
+
+## Эндпоинты
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| GET | `/health` | Проверка живости |
+| POST | `/predict` | Тело: `{"text":"..."}` |

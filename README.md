@@ -4,9 +4,10 @@
 
 ### Структура
 
-- **Frontend (customer)**: `apps/customer`
-- **Backend API (api-astrum)**: `apps/api-astrum`
-- **Auth service (auth-astrum)**: `apps/auth-astrum`
+- **Frontend (customer)**: `apps/customer` — см. `apps/customer/README.md`
+- **Backend API (api-astrum)**: `apps/api-astrum` — см. `apps/api-astrum/README.md`
+- **Auth service (auth-astrum)**: `apps/auth-astrum` — см. `apps/auth-astrum/README.md`
+- **Тональность отзывов (Python, FastAPI)**: `apps/sentiment-astrum` — см. `apps/sentiment-astrum/README.md`
 - **Database / Prisma**: `packages/Astrum-db`
 - **Прочие общие пакеты**: `packages/*`
 
@@ -98,8 +99,9 @@ pnpm dev:business
 
 Расположение основных `.env`:
 
-- `apps/api-astrum/.env`, `apps/api-astrum/.env.prod`
+- `apps/api-astrum/.env`, `apps/api-astrum/.env.prod` — пример: `apps/api-astrum/.env.example` (в т.ч. `SENTIMENT_SERVICE_URL` для сервиса тональности)
 - `apps/auth-astrum/.env`, `apps/auth-astrum/.env.prod`
 - `packages/Astrum-db/.env` (PostgreSQL‑переменные + `DATABASE_URL`)
+- `apps/sentiment-astrum/.env` — опционально, см. `apps/sentiment-astrum/.env.example`
 
 `DATABASE_URL` и связанные переменные для БД должны соответствовать значениям, которые использует пакет `packages/Astrum-db` (см. `packages/Astrum-db/prisma.config.ts` и `.env` в этом пакете).

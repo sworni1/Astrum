@@ -47,28 +47,6 @@ export const getCartItem = async (userId: string, productId: Product['id']) => {
   }
 };
 
-export const getWishlistAndCartProductIds = async (userId: string) => {
-  try {
-    const [cartItems, wishlistItems] = await Promise.all([
-      prisma.cartItem.findMany({
-        where: { userId },
-        select: { productId: true },
-      }),
-      prisma.wishlistItem.findMany({
-        where: { userId },
-        select: { productId: true },
-      }),
-    ]);
-
-    return {
-      wishlistProductIds: wishlistItems.map((item) => item.productId),
-      cartProductIds: cartItems.map((item) => item.productId),
-    };
-  } catch (error) {
-    throw new Error('getWishlistAndCartProductIds error');
-  }
-};
-
 export const getWishlistProductIds = async (userId: string) => {
   try {
     const wishlistItems = await prisma.wishlistItem.findMany({
