@@ -18,4 +18,6 @@ EXPOSE 4580
 
 ENV NODE_ENV=production
 
-CMD ["pnpm", "--filter", "@astrum/auth", "start:prod"]
+WORKDIR /app/apps/auth-astrum
+
+CMD ["node", "dist/src/main.js"]

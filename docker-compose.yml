@@ -1,11 +1,13 @@
 services:
   astrum-db:
-    image: postgres:13
+    image: postgres:16
     container_name: astrum-db
     ports:
       - 5432:5432
     env_file:
       - packages/Astrum-db/.env
+    volumes:
+      - astrum-db-data:/var/lib/postgresql/data
     networks:
       - astrumnetwork
 
@@ -14,6 +16,10 @@ services:
     build:
       context: .
       dockerfile: apps/api-astrum/Dockerfile
+    depends_on:
+      - astrum-db
+      - astrum-auth
+      - astrum-sentiment
     ports:
       - 3580:3580
     env_file:
@@ -26,6 +32,8 @@ services:
     build:
       context: .
       dockerfile: apps/auth-astrum/Dockerfile
+    depends_on:
+      - astrum-db
     ports:
       - 4580:4580
     env_file:
@@ -38,8 +46,8 @@ services:
     build:
       context: .
       dockerfile: apps/customer/Dockerfile
-      args:
-        API_GATEWAY_INTERNAL_URL: http://astrum-api:3580
+    depends_on:
+      - astrum-api
     ports:
       - 3000:3000
     env_file:
@@ -59,6 +67,28 @@ services:
     networks:
       - astrumnetwork
 
+  astrum-sentiment:
+    container_name: astrum-sentiment
+    build:
+      context: .
+      dockerfile: apps/sentiment-astrum/Dockerfile
+    depends_on:
+      - astrum-translate
+    ports:
+      - 8088:8088
+    env_file:
+      - apps/sentiment-astrum/.env
+    environment:
+      SENTIMENT_MODEL_DIR: /app/model
+    volumes:
+      - astrum-sentiment-model:/app/model
+    networks:
+      - astrumnetwork
+
 networks:
   astrumnetwork:
     external: true
+
+volumes:
+  astrum-db-data:
+  astrum-sentiment-model:

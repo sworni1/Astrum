@@ -24,7 +24,6 @@
     "prisma:generate": "prisma generate",
     "build": "prisma generate",
     "prisma:deploy": "prisma migrate deploy && prisma generate",
-    "seed": "tsx prisma/productSeeds.js",
     "seed:excel": "node --max-old-space-size=8192 ./node_modules/tsx/dist/cli.mjs prisma/seedFromExcel.ts"
   },
   "dependencies": {
