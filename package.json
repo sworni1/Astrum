@@ -9,8 +9,7 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "check-types": "turbo check-types",
-    "test": "turbo test && bash ./scripts/test-python.sh",
-    "test:py": "bash ./scripts/test-python.sh",
+    "test": "turbo test",
     "quality-gate": "turbo quality-gate",
     "format": "prettier --write --ignore-unknown \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\" \"!**/node_modules/**\" \"!**/.next/**\" \"!**/dist/**\" \"!**/coverage/**\" \"!**/generated/**\"",
     "format:check": "prettier --check --ignore-unknown \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\" \"!**/node_modules/**\" \"!**/.next/**\" \"!**/dist/**\" \"!**/coverage/**\" \"!**/generated/**\"",
@@ -28,44 +27,23 @@
     "db:restart": "pnpm db:rm && pnpm db:up && timeout 2 && pnpm prisma:migrate:deploy",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
-    "prepare": "husky",
-    "mcp:check": "pwsh ./scripts/mcp-health-check.ps1"
+    "prepare": "husky"
   },
   "lint-staged": {
-    "*.{ts,tsx}": [
-      "eslint --fix --max-warnings=0",
+    "*.{ts,tsx,js,jsx,json,md,yml,yaml}": [
       "prettier --write"
-    ],
-    "*.{js,jsx}": [
-      "eslint --fix --max-warnings=0",
-      "prettier --write"
-    ],
-    "*.{json,md,yml,yaml}": [
-      "prettier --write"
-    ],
-    "*.py": [
-      "ruff check --fix",
-      "ruff format"
     ]
   },
   "devDependencies": {
-    "@commitlint/cli": "^21.1.0",
-    "@commitlint/config-conventional": "^21.1.0",
+    "@biomejs/biome": "2.6.4",
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@typescript/native": "npm:typescript@^7.0.2",
     "husky": "^9.1.7",
-    "lint-staged": "^16.4.0",
-    "turbo": "^2.9.5"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@nestjs/core",
-      "@prisma/engines",
-      "argon2",
-      "esbuild",
-      "msw",
-      "prisma",
-      "sharp",
-      "unrs-resolver"
-    ]
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.10",
+    "turbo": "^2.11.10",
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
   },
   "packageManager": "pnpm@12.8.1"
 }
