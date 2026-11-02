@@ -1,107 +1,105 @@
-## Astrum
+# Astrum
 
-Монорепозиторий с фронтендом и бэкендом на базе Turborepo + pnpm workspaces.
+Монорепо интернет-магазина **Astrum**. Turborepo + pnpm 10.
 
-### Структура
+## 📦 Приложения
 
-- **Frontend (customer)**: `apps/customer` — см. `apps/customer/README.md`
-- **Backend API (api-astrum)**: `apps/api-astrum` — см. `apps/api-astrum/README.md`
-- **Auth service (auth-astrum)**: `apps/auth-astrum` — см. `apps/auth-astrum/README.md`
-- **Тональность отзывов (Python, FastAPI)**: `apps/sentiment-astrum` — см. `apps/sentiment-astrum/README.md`
-- **Database / Prisma**: `packages/Astrum-db`
-- **Прочие общие пакеты**: `packages/*`
+| Приложение              | Стек                | Порт  | Назначение                          |
+| ----------------------- | ------------------- | ----- | ----------------------------------- |
+| `apps/customer`         | Next.js 15          | 3000  | Клиентский фронтенд (B2C)          |
+| `apps/api-astrum`       | Express + Prisma    | 3580  | API-шлюз (оркестратор)              |
+| `apps/auth-astrum`      | NestJS + Prisma     | 4580  | Аутентификация и пользователи       |
+| `packages/Astrum-db`    | Prisma client + zod | —     | Общая БД-схема и обёртки моделей    |
 
-### Требования
-
-- Node.js (рекомендуется LTS)
-- pnpm (см. версию в `package.json`, поле `packageManager`)
-- Docker и Docker Compose (для локальной БД и инфраструктуры)
-
-### Установка и быстрый старт
-
-Все команды выполняются из корня монорепозитория.
-
-1. **Установка зависимостей**
+## 🚀 Быстрый старт
 
 ```bash
+# 1. Установить зависимости
 pnpm install
-```
 
-2. **База данных и Prisma (dev)**
+# 2. Скопировать переменные окружения
+cp .env.example .env
+# (отредактируйте JWT_SECRET и пароли перед запуском)
 
-```bash
-# поднять контейнер с БД
-pnpm db:up
-
-# применить миграции (dev)
-pnpm prisma:migrate:dev
-```
-
-3. **Запуск в режиме разработки**
-
-```bash
-# запустить все основные приложения через Turborepo
+# 3. Поднять Postgres + dev-серверы (Turbo)
 pnpm dev
 
-# либо по отдельности
-pnpm dev:customer
-pnpm dev:api
-pnpm dev:auth
-pnpm dev:business
+# Альтернатива: только customer в prod-режиме + остальные в dev
+pnpm dev:prod-fe
 ```
 
-### Скрипты (корень репозитория)
+После старта:
 
-Основные скрипты из корневого `package.json`:
+- Customer: <http://localhost:3000>
+- API: <http://localhost:3580>
+- Auth: <http://localhost:4580>
 
-- **Разработка**
-  - **`pnpm dev`**: общий dev‑режим через Turborepo.
-  - **`pnpm dev:customer`**: dev только для `apps/customer`.
-  - **`pnpm dev:api`**: dev только для `apps/api-astrum`.
-  - **`pnpm dev:auth`**: dev только для `apps/auth-astrum`.
-  - **`pnpm dev:business`**: dev только для `apps/business`.
+## ✅ Качество кода
 
-- **Сборка и проверка**
-  - **`pnpm build`**: сборка всех приложений/пакетов через Turborepo.
-  - **`pnpm lint`**: запуск линтеров во всех пакетах.
-  - **`pnpm check-types`**: проверка типов во всех пакетах.
+| Скрипт                  | Назначение                                                  |
+| ----------------------- | ----------------------------------------------------------- |
+| `pnpm lint`             | ESLint по всем пакетам                                      |
+| `pnpm check-types`      | `tsc --noEmit` по всем пакетам                              |
+| `pnpm test`             | unit-тесты (Jest/Vitest) + pytest для Python-пакетов         |
+| `pnpm test:py`          | только pytest (`scripts/test-python.sh`)                    |
+| `pnpm quality-gate`     | Полный Quality Gates: lint + check-types + test             |
+| `pnpm format`           | Prettier авто-формат                                        |
+| `pnpm format:check`     | Prettier проверка (без записи)                              |
 
-- **Prisma / БД (пакет `packages/Astrum-db`)**
-  - **`pnpm db:generate`**: генерация клиента БД (использует `@astrum/db`).
-  - **`pnpm prisma:generate`**: `prisma generate` для `packages/Astrum-db`.
-  - **`pnpm prisma:migrate:dev`**: `prisma migrate dev` (dev‑миграции).
-  - **`pnpm prisma:migrate:deploy`**: `prisma migrate deploy` (prod‑миграции).
-  - **`pnpm prisma:studio`**: запуск Prisma Studio.
-  - **`pnpm prisma:seed`**: сидинг данных.
+Pre-commit и pre-push хуки (через husky) гоняют Quality Gates автоматически:
 
-- **Docker / инфраструктура**
-  - **`pnpm db:up`**: поднять контейнер `astrum-db` в Docker.
-  - **`pnpm db:rm`**: удалить контейнер `astrum-db` с томами.
-  - **`pnpm db:restart`**: пересоздать БД и применить миграции (`db:rm` → `db:up` → `prisma:migrate:deploy`).
-  - **`pnpm docker:up`**: поднять все сервисы из `docker-compose`.
-  - **`pnpm docker:down`**: остановить и удалить все сервисы из `docker-compose`.
+- **pre-commit** — `lint-staged` + `pnpm check-types` + `ruff check` (Python).
+- **pre-push** — `pnpm quality-gate` (полный прогон).
 
-Отдельные приложения (`apps/*`) могут иметь свои специфические скрипты (Next.js, NestJS и т.д.) — подробности см. в `package.json` соответствующего приложения. Как правило, dev‑запуск удобнее делать через корневые Turborepo‑скрипты, описанные выше.
+См. `.husky/` и `commitlint.config.js`.
 
-### Database / Prisma
+## 📐 Архитектурные решения (ADR)
 
-- Основная схема Prisma и конфигурация БД находятся в пакете `packages/Astrum-db`.
-- Файл схемы: `packages/Astrum-db/prisma/schema.prisma`.
-- Конфигурация Prisma: `packages/Astrum-db/prisma.config.ts`.
-- Для работы с БД используются корневые скрипты `pnpm db:*` и `pnpm prisma:*` (см. выше).
+Все значимые решения — в [`docs/adr/`](./docs/adr/). Список и шаблон:
 
-### Переменные окружения
+- [`docs/adr/README.md`](./docs/adr/README.md) — индекс
+- [`docs/adr/TEMPLATE.md`](./docs/adr/TEMPLATE.md) — шаблон новой записи
 
-Бэкенд и сервисы аутентификации используют файлы:
+## 📋 Журнал изменений
 
-- **`.env`** для dev
-- **`.env.prod`** для prod
+- [`docs/changelog/`](./docs/changelog/) — журнал по датам (Conventional Commits на русском)
+- [`CHANGELOG.md`](./CHANGELOG.md) — Keep a Changelog-совместимый
 
-Расположение основных `.env`:
+## 📚 Obsidian-наблюдения
 
-- `apps/api-astrum/.env`, `apps/api-astrum/.env.prod` — пример: `apps/api-astrum/.env.example` (в т.ч. `SENTIMENT_SERVICE_URL` для сервиса тональности)
-- `apps/auth-astrum/.env`, `apps/auth-astrum/.env.prod`
-- `packages/Astrum-db/.env` (PostgreSQL‑переменные + `DATABASE_URL`)
-- `apps/sentiment-astrum/.env` — опционально, см. `apps/sentiment-astrum/.env.example`
+Зеркало заметок живёт в `~/Documents/Obsidian Vault/Astrum/` (`Change Logs/`, `decisions/`, `notes/`). Используйте `[[WikiLinks]]` для связей.
 
-`DATABASE_URL` и связанные переменные для БД должны соответствовать значениям, которые использует пакет `packages/Astrum-db` (см. `packages/Astrum-db/prisma.config.ts` и `.env` в этом пакете).
+## 🔐 Переменные окружения
+
+Корневой шаблон — [`.env.example`](./.env.example). По каждому приложению:
+
+- [`apps/api-astrum/.env.example`](./apps/api-astrum/.env.example)
+- [`apps/auth-astrum/.env.example`](./apps/auth-astrum/.env.example)
+- [`apps/customer/.env.example`](./apps/customer/.env.example)
+
+## 📝 Конвенция коммитов
+
+Conventional Commits, типы: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`, `build`, `revert`. Тело коммита — **на русском**.
+
+Примеры:
+
+```
+feat(api): добавить эндпоинт пользователя
+fix(auth): исправить обработку просроченного токена
+docs: обновить README
+```
+
+Валидация — commitlint (см. `.husky/commit-msg`).
+
+## 🛠️ Полезные команды
+
+```bash
+pnpm prisma:generate   # перегенерировать Prisma Client
+pnpm prisma:migrate:dev  # создать миграцию (dev)
+pnpm prisma:migrate:deploy  # применить миграции (prod)
+pnpm prisma:studio     # открыть Prisma Studio
+pnpm prisma:seed       # сидирование БД
+pnpm db:up             # поднять Postgres в docker
+pnpm db:restart        # пересоздать БД с нуля
+pnpm mcp:check         # health-check MCP-серверов (PowerShell)
+```

@@ -5,7 +5,7 @@ import { AddProductToWishlistDto } from "./dto/add-product.dto";
 
 const wishlistController = new WishlistController();
 
-const wishlistRoutes = Router();
+const wishlistRoutes: Router = Router();
 
 wishlistRoutes.get("/", wishlistController.getWishlist);
 wishlistRoutes.delete(

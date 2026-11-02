@@ -1,26 +1,38 @@
-import { Secret, verify } from "jsonwebtoken";
-import { JwtData } from "../common/types/jwt.payload";
+import type { NextFunction, Request, Response } from "express";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
+import { verify } from "jsonwebtoken";
 
-const authenticateToken = (req: any, res: any, next: any) => {
-  const authHeader = req.cookies;
+import { JwtData } from "../common/types/jwt.payload";
+
+type RequestWithUser = Request & { userId?: string };
+
+const authenticateToken = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  const authHeader = req.cookies as { __auth?: string } | undefined;
 
   if (!authHeader || !authHeader.__auth) {
-    return res
+    res
       .status(StatusCodes.UNAUTHORIZED)
       .json({ message: ReasonPhrases.UNAUTHORIZED });
+    return;
   }
 
   const token = authHeader.__auth;
 
   try {
-    const decoded = verify(token, process.env.JWT_SECRET as Secret) as JwtData;
+    const decoded = verify(
+      token,
+      process.env.JWT_SECRET as string
+    ) as JwtData;
 
-    (req as any).userId = decoded.userId;
+    (req as RequestWithUser).userId = decoded.userId;
 
     next();
-  } catch (err) {
-    return res
+  } catch {
+    res
       .status(StatusCodes.UNAUTHORIZED)
       .json({ message: "Invalid or expired token" });
   }

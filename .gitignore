@@ -6,6 +6,9 @@ dist/
 .env
 .env.*
 *.log
+# В корневом .gitignore
+!.env.example
+!.env.*.example
 
 # OMC / agent state
 .agents/
@@ -20,4 +23,25 @@ plugins/
 
 # package manager artifacts
 package-lock.json
-docs/
+
+# Project documentation lives in docs/ — keep it tracked
+!docs/
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Тесты и сборка
+coverage/
+.nyc_output/
+*.tsbuildinfo
+
+# ОС и IDE
+.DS_Store
+Thumbs.db
+.idea/
+
+# Локальные worktree
+.worktrees/

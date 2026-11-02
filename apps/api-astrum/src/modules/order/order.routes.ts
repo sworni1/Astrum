@@ -6,7 +6,7 @@ import authenticateToken from "../../middlewares/authenticateToken";
 
 const orderController = new OrderController();
 
-const orderRoutes = Router();
+const orderRoutes: Router = Router();
 
 orderRoutes.get("/", authenticateToken, orderController.getOrdersByUserId);
 orderRoutes.get("/:orderId", authenticateToken, orderController.getOrderById);

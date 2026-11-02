@@ -6,7 +6,7 @@ import { AddProductToCartDto } from "./dto/add-product.dto";
 
 const cartController = new CartController();
 
-const cartRoutes = Router();
+const cartRoutes: Router = Router();
 
 cartRoutes.get("/", cartController.getCart);
 cartRoutes.delete("/:productId", cartController.deleteProductFromCart);

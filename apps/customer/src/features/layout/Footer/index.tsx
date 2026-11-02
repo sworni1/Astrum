@@ -3,7 +3,7 @@ import { AcmeLogo } from "../../general/AcmeLogo";
 
 const Footer = () => {
   return (
-    <footer className="border-t border-divider">
+    <footer className="border-t border-border">
       <div className="w-full max-w-screen-xl mx-auto p-4 md:py-8">
         <div className="sm:flex items-center sm:justify-between flex-row">
           <div className="flex items-center space-x-4">
@@ -16,7 +16,6 @@ const Footer = () => {
             <li>
               <Link
                 href="/about"
-                color="foreground"
                 className="hover:underline me-4 md:me-6"
               >
                 About
@@ -25,7 +24,6 @@ const Footer = () => {
             <li>
               <Link
                 href="/privacy"
-                color="foreground"
                 className="hover:underline me-4 md:me-6"
               >
                 Privacy Policy
@@ -34,7 +32,6 @@ const Footer = () => {
             <li>
               <Link
                 href="/licensing"
-                color="foreground"
                 className="hover:underline me-4 md:me-6"
               >
                 Licensing
@@ -43,7 +40,6 @@ const Footer = () => {
             <li>
               <Link
                 href="/contact"
-                color="foreground"
                 className="hover:underline"
               >
                 Contact
@@ -51,7 +47,7 @@ const Footer = () => {
             </li>
           </ul>
         </div>
-        <hr className="my-6 border-divider sm:mx-auto lg:my-8" />
+        <hr className="my-6 border-border sm:mx-auto lg:my-8" />
         <span className="block text-sm text-gray-500 text-center dark:text-gray-400">
           © 2025{" "}
           <Link
