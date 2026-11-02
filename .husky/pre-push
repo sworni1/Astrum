@@ -1,0 +1,8 @@
+#!/bin/sh
+# .husky/pre-push — full gate: check-types, lint and tests for every package.
+
+pnpm quality-gate || {
+  echo ""
+  echo "❌ Quality gate не прошёл. Исправь до push: pnpm quality-gate"
+  exit 1
+}

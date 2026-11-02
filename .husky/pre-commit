@@ -1,0 +1,16 @@
+#!/bin/sh
+# .husky/pre-commit — fast gate: format staged files, then type check.
+# ESLint is deliberately not here: it lives in the apps and needs each
+# package eslint config, so the full lint runs in pre-push instead.
+
+pnpm exec lint-staged || {
+  echo ""
+  echo "❌ lint-staged не смог отформатировать staged файлы."
+  exit 1
+}
+
+pnpm check-types || {
+  echo ""
+  echo "❌ Ошибка типов. Исправь до коммита: pnpm check-types"
+  exit 1
+}

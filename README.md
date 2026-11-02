@@ -4,12 +4,12 @@
 
 ## 📦 Приложения
 
-| Приложение              | Стек                | Порт  | Назначение                          |
-| ----------------------- | ------------------- | ----- | ----------------------------------- |
-| `apps/customer`         | Next.js 15          | 3000  | Клиентский фронтенд (B2C)          |
-| `apps/api-astrum`       | Express + Prisma    | 3580  | API-шлюз (оркестратор)              |
-| `apps/auth-astrum`      | NestJS + Prisma     | 4580  | Аутентификация и пользователи       |
-| `packages/Astrum-db`    | Prisma client + zod | —     | Общая БД-схема и обёртки моделей    |
+| Приложение           | Стек                | Порт | Назначение                       |
+| -------------------- | ------------------- | ---- | -------------------------------- |
+| `apps/customer`      | Next.js 15          | 3000 | Клиентский фронтенд (B2C)        |
+| `apps/api-astrum`    | Express + Prisma    | 3580 | API-шлюз (оркестратор)           |
+| `apps/auth-astrum`   | NestJS + Prisma     | 4580 | Аутентификация и пользователи    |
+| `packages/Astrum-db` | Prisma client + zod | —    | Общая БД-схема и обёртки моделей |
 
 ## 🚀 Быстрый старт
 
@@ -23,9 +23,6 @@ cp .env.example .env
 
 # 3. Поднять Postgres + dev-серверы (Turbo)
 pnpm dev
-
-# Альтернатива: только customer в prod-режиме + остальные в dev
-pnpm dev:prod-fe
 ```
 
 После старта:
@@ -36,20 +33,19 @@ pnpm dev:prod-fe
 
 ## ✅ Качество кода
 
-| Скрипт                  | Назначение                                                  |
-| ----------------------- | ----------------------------------------------------------- |
-| `pnpm lint`             | ESLint по всем пакетам                                      |
-| `pnpm check-types`      | `tsc --noEmit` по всем пакетам                              |
-| `pnpm test`             | unit-тесты (Jest/Vitest) + pytest для Python-пакетов         |
-| `pnpm test:py`          | только pytest (`scripts/test-python.sh`)                    |
-| `pnpm quality-gate`     | Полный Quality Gates: lint + check-types + test             |
-| `pnpm format`           | Prettier авто-формат                                        |
-| `pnpm format:check`     | Prettier проверка (без записи)                              |
+| Скрипт              | Назначение                                      |
+| ------------------- | ----------------------------------------------- |
+| `pnpm lint`         | ESLint по всем пакетам                          |
+| `pnpm check-types`  | `tsc --noEmit` по всем пакетам                  |
+| `pnpm test`         | unit-тесты (Jest/Vitest) по всем пакетам        |
+| `pnpm quality-gate` | Полный Quality Gates: lint + check-types + test |
+| `pnpm format`       | Prettier авто-формат                            |
+| `pnpm format:check` | Prettier проверка (без записи)                  |
 
 Pre-commit и pre-push хуки (через husky) гоняют Quality Gates автоматически:
 
-- **pre-commit** — `lint-staged` + `pnpm check-types` + `ruff check` (Python).
-- **pre-push** — `pnpm quality-gate` (полный прогон).
+- **pre-commit** — prettier по staged файлам + `pnpm check-types`.
+- **pre-push** — `pnpm quality-gate` (check-types + lint + test).
 
 См. `.husky/` и `commitlint.config.js`.
 
@@ -63,7 +59,6 @@ Pre-commit и pre-push хуки (через husky) гоняют Quality Gates а
 ## 📋 Журнал изменений
 
 - [`docs/changelog/`](./docs/changelog/) — журнал по датам (Conventional Commits на русском)
-- [`CHANGELOG.md`](./CHANGELOG.md) — Keep a Changelog-совместимый
 
 ## 📚 Obsidian-наблюдения
 
@@ -101,5 +96,4 @@ pnpm prisma:studio     # открыть Prisma Studio
 pnpm prisma:seed       # сидирование БД
 pnpm db:up             # поднять Postgres в docker
 pnpm db:restart        # пересоздать БД с нуля
-pnpm mcp:check         # health-check MCP-серверов (PowerShell)
 ```
