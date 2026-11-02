@@ -1,0 +1,55 @@
+#!/bin/sh
+# .husky/commit-msg — commitlint first, grep as fallback.
+# Error text is Russian on purpose: the engineer reads it in the terminal.
+#
+# commitlint is the single source of truth when it is available. Never fall
+# back to grep after commitlint returned non zero, otherwise a broken
+# commitlint setup silently lets every message through.
+
+set +e
+
+VALID_RE='^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\(.+\))?!?: .+'
+
+if [ -f "commitlint.config.js" ]; then
+  if command -v pnpm >/dev/null 2>&1; then
+    pnpm exec commitlint --edit "$1" 2>/dev/null
+    rc=$?
+  elif command -v npx >/dev/null 2>&1; then
+    npx --no -- commitlint --edit "$1" 2>/dev/null
+    rc=$?
+  else
+    rc=127
+  fi
+
+  if [ "$rc" -eq 0 ]; then
+    exit 0
+  fi
+
+  if [ "$rc" -eq 127 ]; then
+    echo "⚠️  commitlint не найден, проверяю формат вручную."
+  else
+    echo ""
+    echo "❌ commitlint отклонил сообщение коммита (код $rc)."
+    echo "   Формат: <тип>(<область>): <описание>"
+    echo "   Пример: feat(api): добавить эндпоинт пользователя"
+    exit 1
+  fi
+fi
+
+if ! grep -qE "$VALID_RE" "$1"; then
+  echo ""
+  echo "❌ Неверный формат коммита!"
+  echo ""
+  echo "   Формат: <тип>(<область>): <описание>"
+  echo ""
+  echo "   Типы: feat, fix, docs, style, refactor, perf, test, chore, ci, build, revert"
+  echo ""
+  echo "   Примеры:"
+  echo "     feat(api): добавить эндпоинт пользователя"
+  echo "     fix(auth): исправить обработку токена"
+  echo "     docs: обновить README"
+  echo ""
+  exit 1
+fi
+
+exit 0

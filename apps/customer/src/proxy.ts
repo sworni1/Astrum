@@ -3,7 +3,7 @@ import { decrypt } from "./common/helpers/session";
 
 const publicRoutes = ["/auth/signin", "/auth/register"];
 
-export default async function middleware(req: NextRequest) {
+export default async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
   const isPublicRoute = publicRoutes.includes(path);
 

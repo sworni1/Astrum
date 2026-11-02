@@ -230,7 +230,6 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
                           date < new Date() || date < new Date("1900-01-01")
                         }
                         className="rounded-md border-0"
-                        initialFocus
                       />
                     </PopoverContent>
                   </Popover>

@@ -1,10 +1,7 @@
 import { z } from "zod";
 
 export const signInFormSchema = z.object({
-  email: z
-    .string()
-    .email("Invalid email address")
-    .nonempty("Email is required"),
+  email: z.email("Invalid email address").min(1, "Email is required"),
   password: z
     .string()
     .min(8, "Password must be at least 8 characters")
@@ -26,6 +23,6 @@ export const registerFormSchema = z.object({
     .optional(),
   dateOfBirth: z.date(),
   gender: z.enum(["Male", "Female"], {
-    required_error: "Gender is required",
+    error: "Gender is required",
   }),
 });
