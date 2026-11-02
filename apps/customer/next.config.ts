@@ -15,6 +15,8 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
+    // Next 16 narrowed the default qualities to [75]; OptimizedImage requests 85.
+    qualities: [75, 85],
     remotePatterns: [
       new URL("https://flowbite.s3.amazonaws.com/docs/gallery/**"),
       new URL("https://bundui-images.netlify.app/**"),
@@ -24,9 +26,6 @@ const nextConfig: NextConfig = {
       new URL("http://mzimg.com/**"),
       new URL("https://mzimg.com/**"),
     ],
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
   },
 };
 
