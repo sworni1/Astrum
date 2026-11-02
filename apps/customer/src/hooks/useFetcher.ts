@@ -1,7 +1,7 @@
 "use client";
 
 import axios, { AxiosInstance } from "axios";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 const authServiceUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL;
 
@@ -17,13 +17,7 @@ const createAxiosInstance = (): AxiosInstance => {
 };
 
 export const useFetcher = () => {
-  const fetcherRef = useRef<AxiosInstance | null>(null);
-
-  if (!fetcherRef.current) {
-    fetcherRef.current = createAxiosInstance();
-  }
-
-  const fetcher = fetcherRef.current;
+  const [fetcher] = useState<AxiosInstance>(createAxiosInstance);
   const getData = useCallback(
     async (url: string) => {
       try {
