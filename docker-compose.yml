@@ -19,7 +19,6 @@ services:
     depends_on:
       - astrum-db
       - astrum-auth
-      - astrum-sentiment
     ports:
       - 3580:3580
     env_file:
@@ -55,40 +54,9 @@ services:
     networks:
       - astrumnetwork
 
-  astrum-translate:
-    container_name: astrum-translate
-    build:
-      context: ./apps/translate-astrum
-      dockerfile: Dockerfile
-    ports:
-      - 3313:3313
-    env_file:
-      - apps/translate-astrum/.env
-    networks:
-      - astrumnetwork
-
-  astrum-sentiment:
-    container_name: astrum-sentiment
-    build:
-      context: .
-      dockerfile: apps/sentiment-astrum/Dockerfile
-    depends_on:
-      - astrum-translate
-    ports:
-      - 8088:8088
-    env_file:
-      - apps/sentiment-astrum/.env
-    environment:
-      SENTIMENT_MODEL_DIR: /app/model
-    volumes:
-      - astrum-sentiment-model:/app/model
-    networks:
-      - astrumnetwork
-
 networks:
   astrumnetwork:
     external: true
 
 volumes:
   astrum-db-data:
-  astrum-sentiment-model:

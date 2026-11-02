@@ -2,13 +2,18 @@
   "name": "astrum",
   "version": "1.0.0",
   "description": "astrum project",
-  "author": "iona1l",
+  "author": "sworni",
   "scripts": {
     "dev": "docker start astrum-db && turbo dev",
     "db:generate": "pnpm --filter @astrum/db db:generate",
     "build": "turbo build",
     "lint": "turbo lint",
     "check-types": "turbo check-types",
+    "test": "turbo test && bash ./scripts/test-python.sh",
+    "test:py": "bash ./scripts/test-python.sh",
+    "quality-gate": "turbo quality-gate",
+    "format": "prettier --write --ignore-unknown \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\" \"!**/node_modules/**\" \"!**/.next/**\" \"!**/dist/**\" \"!**/coverage/**\" \"!**/generated/**\"",
+    "format:check": "prettier --check --ignore-unknown \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\" \"!**/node_modules/**\" \"!**/.next/**\" \"!**/dist/**\" \"!**/coverage/**\" \"!**/generated/**\"",
     "dev:customer": "turbo dev --filter=@astrum/customer",
     "dev:api": "turbo dev --filter=@astrum/api",
     "dev:auth": "turbo dev --filter=@astrum/auth",
@@ -24,13 +29,28 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "prepare": "husky",
-    "mcp:check": "pwsh ./scripts/mcp-health-check.ps1",
-    "dev:sentiment": "pwsh -NoProfile -File ./scripts/dev-sentiment.ps1"
+    "mcp:check": "pwsh ./scripts/mcp-health-check.ps1"
   },
   "lint-staged": {
-    "*.json": "node -e \"try { JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')); console.log('Valid JSON'); } catch(e) { process.exit(1); }\""
+    "*.{ts,tsx}": [
+      "eslint --fix --max-warnings=0",
+      "prettier --write"
+    ],
+    "*.{js,jsx}": [
+      "eslint --fix --max-warnings=0",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ],
+    "*.py": [
+      "ruff check --fix",
+      "ruff format"
+    ]
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.1.0",
+    "@commitlint/config-conventional": "^21.1.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "turbo": "^2.9.5"
@@ -47,5 +67,5 @@
       "unrs-resolver"
     ]
   },
-  "packageManager": "pnpm@10.4.0"
+  "packageManager": "pnpm@12.8.1"
 }

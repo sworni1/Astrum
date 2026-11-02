@@ -10,7 +10,7 @@ type Props = {
 
 const NavItem = ({ icon, count, href, loading }: Props) => {
   return (
-    <Link href={href} color="foreground">
+    <Link href={href}>
       <div className="relative inline-flex align-middle">
         {icon}
         {loading

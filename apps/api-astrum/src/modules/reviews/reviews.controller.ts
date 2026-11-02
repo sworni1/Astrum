@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { ReviewsService } from './reviews.service';
 import { StatusCodes } from 'http-status-codes';
 import { handleErrors } from '../../common/helpers/errorHandler';
-import { predictSentiment } from '../../lib/sentimentClient';
 
 const reviewsService = new ReviewsService();
 
@@ -15,9 +14,7 @@ export class ReviewsController {
 
       const review = await reviewsService.createReview(userId, productId, dto);
 
-      const sentiment = await predictSentiment(String(review.comment ?? ''))
-
-      res.status(StatusCodes.CREATED).json({ ...review, sentiment });
+      res.status(StatusCodes.CREATED).json(review);
     } catch (err) {
       handleErrors(res, err);
     }

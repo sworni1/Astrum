@@ -1,155 +1,105 @@
-## Astrum
+# Astrum
 
-Монорепозиторий с фронтендом и бэкендом на базе Turborepo + pnpm workspaces.
+Монорепо интернет-магазина **Astrum**. Turborepo + pnpm 10.
 
-### Структура
+## 📦 Приложения
 
-- **Frontend (customer)**: `apps/customer` — см. `apps/customer/README.md`
-- **Backend API (api-astrum)**: `apps/api-astrum` — см. `apps/api-astrum/README.md`
-- **Auth service (auth-astrum)**: `apps/auth-astrum` — см. `apps/auth-astrum/README.md`
-- **Тональность отзывов (Python, FastAPI)**: `apps/sentiment-astrum` — см. `apps/sentiment-astrum/README.md`
-- **Database / Prisma**: `packages/Astrum-db`
-- **Прочие общие пакеты**: `packages/*`
+| Приложение              | Стек                | Порт  | Назначение                          |
+| ----------------------- | ------------------- | ----- | ----------------------------------- |
+| `apps/customer`         | Next.js 15          | 3000  | Клиентский фронтенд (B2C)          |
+| `apps/api-astrum`       | Express + Prisma    | 3580  | API-шлюз (оркестратор)              |
+| `apps/auth-astrum`      | NestJS + Prisma     | 4580  | Аутентификация и пользователи       |
+| `packages/Astrum-db`    | Prisma client + zod | —     | Общая БД-схема и обёртки моделей    |
 
-### Требования
-
-- Node.js (рекомендуется LTS)
-- pnpm (см. версию в `package.json`, поле `packageManager`)
-- Docker и Docker Compose (для локальной БД и инфраструктуры)
-
-### Установка и быстрый старт
-
-Все команды выполняются из корня монорепозитория.
-
-1. **Установка зависимостей**
+## 🚀 Быстрый старт
 
 ```bash
+# 1. Установить зависимости
 pnpm install
-```
 
-2. **База данных и Prisma (dev)**
+# 2. Скопировать переменные окружения
+cp .env.example .env
+# (отредактируйте JWT_SECRET и пароли перед запуском)
 
-```bash
-# поднять контейнер с БД
-pnpm db:up
-
-# применить миграции (dev)
-pnpm prisma:migrate:dev
-```
-
-3. **Запуск в режиме разработки**
-
-```bash
-# запустить все основные приложения через Turborepo
+# 3. Поднять Postgres + dev-серверы (Turbo)
 pnpm dev
 
-# либо по отдельности
-pnpm dev:customer
-pnpm dev:api
-pnpm dev:auth
-pnpm dev:business
+# Альтернатива: только customer в prod-режиме + остальные в dev
+pnpm dev:prod-fe
 ```
 
-### Примеры запросов
+После старта:
 
----
+- Customer: <http://localhost:3000>
+- API: <http://localhost:3580>
+- Auth: <http://localhost:4580>
 
-## ✅ Положительные
+## ✅ Качество кода
 
-**Review 1**
-> Bought these three weeks ago and haven't touched my old pair since. Sound is clear across the range, bass doesn't bleed into mids, and the fit stays put during runs. Battery lasts me two full days on a charge. Worth every cent.
+| Скрипт                  | Назначение                                                  |
+| ----------------------- | ----------------------------------------------------------- |
+| `pnpm lint`             | ESLint по всем пакетам                                      |
+| `pnpm check-types`      | `tsc --noEmit` по всем пакетам                              |
+| `pnpm test`             | unit-тесты (Jest/Vitest) + pytest для Python-пакетов         |
+| `pnpm test:py`          | только pytest (`scripts/test-python.sh`)                    |
+| `pnpm quality-gate`     | Полный Quality Gates: lint + check-types + test             |
+| `pnpm format`           | Prettier авто-формат                                        |
+| `pnpm format:check`     | Prettier проверка (без записи)                              |
 
-**Перевод:** Купил три недели назад и с тех пор не прикасался к старым наушникам. Звук чистый на всём диапазоне, бас не перекрывает средние частоты, во время пробежки не слетают. Заряда хватает на два полных дня. Деньги потрачены не зря.
+Pre-commit и pre-push хуки (через husky) гоняют Quality Gates автоматически:
 
----
+- **pre-commit** — `lint-staged` + `pnpm check-types` + `ruff check` (Python).
+- **pre-push** — `pnpm quality-gate` (полный прогон).
 
-**Review 2**
-> Called customer support about a crackling issue in the left ear. They shipped a replacement the next morning, no questions. The new pair has been perfect for four months. That kind of service earns repeat customers.
+См. `.husky/` и `commitlint.config.js`.
 
-**Перевод:** Написал в поддержку из-за треска в левом ухе. На следующее утро прислали замену, без лишних вопросов. Новые наушники работают идеально уже четыре месяца. Такой сервис возвращает клиентов.
+## 📐 Архитектурные решения (ADR)
 
----
+Все значимые решения — в [`docs/adr/`](./docs/adr/). Список и шаблон:
 
-**Review 3**
-> Noise cancellation actually works. On a packed commuter train I can hold a call without raising my voice. Mic picks up cleanly, callers stop asking me to repeat myself. Compact case fits in a jacket pocket.
+- [`docs/adr/README.md`](./docs/adr/README.md) — индекс
+- [`docs/adr/TEMPLATE.md`](./docs/adr/TEMPLATE.md) — шаблон новой записи
 
-**Перевод:** Шумоподавление реально работает. В переполненной электричке я веду звонок, не повышая голос. Микрофон пишет чисто, собеседники перестали переспрашивать. Кейс компактный, влезает в карман куртки.
+## 📋 Журнал изменений
 
----
+- [`docs/changelog/`](./docs/changelog/) — журнал по датам (Conventional Commits на русском)
+- [`CHANGELOG.md`](./CHANGELOG.md) — Keep a Changelog-совместимый
 
-## ❌ Отрицательные
+## 📚 Obsidian-наблюдения
 
-**Review 1**
-> Pairing breaks every time I switch between my phone and laptop. I have to forget the device and reconnect from scratch. Happens daily. Firmware update didn't fix it. Returning after two weeks.
+Зеркало заметок живёт в `~/Documents/Obsidian Vault/Astrum/` (`Change Logs/`, `decisions/`, `notes/`). Используйте `[[WikiLinks]]` для связей.
 
-**Перевод:** Соединение рвётся каждый раз, когда переключаюсь между телефоном и ноутбуком. Приходится удалять устройство и подключать заново. Каждый день. Обновление прошивки не помогло. Возвращаю через две недели.
+## 🔐 Переменные окружения
 
----
+Корневой шаблон — [`.env.example`](./.env.example). По каждому приложению:
 
-**Review 2**
-> Headband cracked at the hinge after three months of normal use. I store them in the case, never drop them. The plastic feels like it was designed to fail just outside the 90-day return window. Paid premium price for budget build quality.
+- [`apps/api-astrum/.env.example`](./apps/api-astrum/.env.example)
+- [`apps/auth-astrum/.env.example`](./apps/auth-astrum/.env.example)
+- [`apps/customer/.env.example`](./apps/customer/.env.example)
 
-**Перевод:** Оголовье треснуло в шарнире через три месяца обычного использования. Я храню их в кейсе, не роняю. Пластик ощущается так, будто его специально сделали ломаться сразу после окна возврата. Заплатил как за премиум, получил дешёвую сборку.
+## 📝 Конвенция коммитов
 
----
+Conventional Commits, типы: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`, `build`, `revert`. Тело коммита — **на русском**.
 
-**Review 3**
-> Touch controls are too sensitive. Adjusting fit triggers skip, pause, volume change all at once. I disabled them in the app, but then I lose all control while the phone is in my bag. Pick your inconvenience.
+Примеры:
 
-**Перевод:** Сенсорное управление слишком чувствительное. При поправлении наушников срабатывает пропуск трека, пауза и громкость одновременно. Отключил в приложении, но тогда теряю управление, пока телефон в сумке. Выбирай неудобство.
+```
+feat(api): добавить эндпоинт пользователя
+fix(auth): исправить обработку просроченного токена
+docs: обновить README
+```
 
-### Скрипты (корень репозитория)
+Валидация — commitlint (см. `.husky/commit-msg`).
 
-Основные скрипты из корневого `package.json`:
+## 🛠️ Полезные команды
 
-- **Разработка**
-  - **`pnpm dev`**: общий dev‑режим через Turborepo.
-  - **`pnpm dev:customer`**: dev только для `apps/customer`.
-  - **`pnpm dev:api`**: dev только для `apps/api-astrum`.
-  - **`pnpm dev:auth`**: dev только для `apps/auth-astrum`.
-  - **`pnpm dev:business`**: dev только для `apps/business`.
-
-- **Сборка и проверка**
-  - **`pnpm build`**: сборка всех приложений/пакетов через Turborepo.
-  - **`pnpm lint`**: запуск линтеров во всех пакетах.
-  - **`pnpm check-types`**: проверка типов во всех пакетах.
-
-- **Prisma / БД (пакет `packages/Astrum-db`)**
-  - **`pnpm db:generate`**: генерация клиента БД (использует `@astrum/db`).
-  - **`pnpm prisma:generate`**: `prisma generate` для `packages/Astrum-db`.
-  - **`pnpm prisma:migrate:dev`**: `prisma migrate dev` (dev‑миграции).
-  - **`pnpm prisma:migrate:deploy`**: `prisma migrate deploy` (prod‑миграции).
-  - **`pnpm prisma:studio`**: запуск Prisma Studio.
-  - **`pnpm prisma:seed`**: сидинг данных.
-
-- **Docker / инфраструктура**
-  - **`pnpm db:up`**: поднять контейнер `astrum-db` в Docker.
-  - **`pnpm db:rm`**: удалить контейнер `astrum-db` с томами.
-  - **`pnpm db:restart`**: пересоздать БД и применить миграции (`db:rm` → `db:up` → `prisma:migrate:deploy`).
-  - **`pnpm docker:up`**: поднять все сервисы из `docker-compose`.
-  - **`pnpm docker:down`**: остановить и удалить все сервисы из `docker-compose`.
-
-Отдельные приложения (`apps/*`) могут иметь свои специфические скрипты (Next.js, NestJS и т.д.) — подробности см. в `package.json` соответствующего приложения. Как правило, dev‑запуск удобнее делать через корневые Turborepo‑скрипты, описанные выше.
-
-### Database / Prisma
-
-- Основная схема Prisma и конфигурация БД находятся в пакете `packages/Astrum-db`.
-- Файл схемы: `packages/Astrum-db/prisma/schema.prisma`.
-- Конфигурация Prisma: `packages/Astrum-db/prisma.config.ts`.
-- Для работы с БД используются корневые скрипты `pnpm db:*` и `pnpm prisma:*` (см. выше).
-
-### Переменные окружения
-
-Бэкенд и сервисы аутентификации используют файлы:
-
-- **`.env`** для dev
-- **`.env.prod`** для prod
-
-Расположение основных `.env`:
-
-- `apps/api-astrum/.env`, `apps/api-astrum/.env.prod` — пример: `apps/api-astrum/.env.example` (в т.ч. `SENTIMENT_SERVICE_URL` для сервиса тональности)
-- `apps/auth-astrum/.env`, `apps/auth-astrum/.env.prod`
-- `packages/Astrum-db/.env` (PostgreSQL‑переменные + `DATABASE_URL`)
-- `apps/sentiment-astrum/.env` — опционально, см. `apps/sentiment-astrum/.env.example`
-
-`DATABASE_URL` и связанные переменные для БД должны соответствовать значениям, которые использует пакет `packages/Astrum-db` (см. `packages/Astrum-db/prisma.config.ts` и `.env` в этом пакете).
+```bash
+pnpm prisma:generate   # перегенерировать Prisma Client
+pnpm prisma:migrate:dev  # создать миграцию (dev)
+pnpm prisma:migrate:deploy  # применить миграции (prod)
+pnpm prisma:studio     # открыть Prisma Studio
+pnpm prisma:seed       # сидирование БД
+pnpm db:up             # поднять Postgres в docker
+pnpm db:restart        # пересоздать БД с нуля
+pnpm mcp:check         # health-check MCP-серверов (PowerShell)
+```

@@ -21,7 +21,14 @@
       "dependsOn": ["^build"]
     },
     "check-types": {
-      "dependsOn": ["^check-types"]
+      "dependsOn": ["^db:generate", "^check-types"]
+    },
+    "test": {
+      "dependsOn": ["^build"]
+    },
+    "quality-gate": {
+      "dependsOn": ["check-types", "lint", "test"],
+      "cache": false
     },
     "start": {
       "dependsOn": ["build"]

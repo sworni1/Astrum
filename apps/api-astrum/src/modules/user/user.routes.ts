@@ -5,7 +5,7 @@ import { UpdateUserDto, updateUserPasswordDto } from "./dto/update-user.dto";
 
 const userController = new UserController();
 
-const userRoutes = Router();
+const userRoutes: Router = Router();
 
 userRoutes.get("/me", userController.userInfo);
 userRoutes.delete("/me", userController.deleteUser);

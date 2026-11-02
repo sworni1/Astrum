@@ -7,7 +7,7 @@ import authenticateToken from '../../middlewares/authenticateToken';
 const reviewsController = new ReviewsController();
 
 // productReviewsRouter — монтируется как /products/:id/reviews/*
-export const productReviewsRouter = Router();
+export const productReviewsRouter: Router = Router();
 productReviewsRouter.get('/', reviewsController.getProductReviews);
 productReviewsRouter.post(
   '/',
@@ -17,5 +17,5 @@ productReviewsRouter.post(
 );
 
 // reviewsRouter — монтируется как /reviews/*
-export const reviewsRouter = Router();
+export const reviewsRouter: Router = Router();
 reviewsRouter.get('/:reviewId', reviewsController.getReviewById);

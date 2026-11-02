@@ -17,9 +17,6 @@ pnpm dev:api
 | `DATABASE_URL` | PostgreSQL |
 | `JWT_SECRET` | Подпись JWT |
 | `AUTH_SERVICE_URL` | URL сервиса auth (например `http://localhost:4580`) |
-| `SENTIMENT_SERVICE_URL` | URL сервиса тональности (`http://127.0.0.1:8088`), см. `apps/sentiment-astrum` |
-
-Если `SENTIMENT_SERVICE_URL` не задан, при создании отзыва поле `sentiment` в ответе будет с меткой `UNKNOWN`.
 
 ## Связанные пакеты
 

@@ -24,11 +24,6 @@ input:-webkit-autofill:focus {
     color 0s 600000000000000s !important;
 }
 
-#root {
-  display: flex;
-  flex-direction: column;
-}
-
 ::-webkit-scrollbar {
   width: 7px;
 }
@@ -107,15 +102,6 @@ input:-webkit-autofill:focus {
   }
   html {
     @apply font-sans;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
   }
 }
 
@@ -229,13 +215,4 @@ input:-webkit-autofill:focus {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
 }

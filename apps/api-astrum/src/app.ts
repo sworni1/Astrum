@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -14,7 +14,7 @@ import cartRoutes from './modules/cart/cart.routes';
 import orderRoutes from './modules/order/order.routes';
 import { reviewsRouter } from './modules/reviews/reviews.routes';
 
-const app = express();
+const app: Express = express();
 
 app.use(helmet.crossOriginResourcePolicy({ policy: 'cross-origin' }));
 app.use(morgan('dev'));
@@ -22,7 +22,6 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
 app.use('/api/auth', proxyOptions(process.env.AUTH_SERVICE_URL!));
-app.use('/api/sentiment', proxyOptions(process.env.SENTIMENT_SERVICE_URL!));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(
@@ -37,7 +36,7 @@ app.use('/api/cart', authenticateToken, cartRoutes);
 app.use('/api/orders', authenticateToken, orderRoutes);
 app.use('/api/reviews', authenticateToken, reviewsRouter);
 
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.send('Astrum backend is running...');
 });
 

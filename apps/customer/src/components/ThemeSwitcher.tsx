@@ -17,7 +17,7 @@ export default function ThemeSwitcher({ size = 26, onClick }: Props) {
   return (
     <MdInvertColors
       size={size}
-      className="cursor-pointer text-foreground hover:text-foreground-600 transition-opacity"
+      className="cursor-pointer text-foreground hover:text-foreground/60 transition-opacity"
       onClick={handleChangeTheme}
     />
   );

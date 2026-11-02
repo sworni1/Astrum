@@ -4,7 +4,7 @@ import { productReviewsRouter } from "../reviews/reviews.routes";
 
 const productController = new ProductController();
 
-const productRoutes = Router();
+const productRoutes: Router = Router();
 
 productRoutes.get("/recommendations", productController.getRecommendations);
 productRoutes.get(

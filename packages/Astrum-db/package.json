@@ -23,6 +23,12 @@
     "db:generate": "prisma generate",
     "prisma:generate": "prisma generate",
     "build": "prisma generate",
+    "lint": "echo \"[astrum-db] no ESLint configured — skipping\" && exit 0",
+    "format": "echo \"[astrum-db] no Prettier configured — skipping\" && exit 0",
+    "format:check": "echo \"[astrum-db] no Prettier configured — skipping\" && exit 0",
+    "check-types": "tsc --noEmit",
+    "test": "tsx --test src/**/*.test.ts",
+    "quality-gate": "pnpm check-types && pnpm test",
     "prisma:deploy": "prisma migrate deploy && prisma generate",
     "seed:excel": "node --max-old-space-size=8192 ./node_modules/tsx/dist/cli.mjs prisma/seedFromExcel.ts"
   },
