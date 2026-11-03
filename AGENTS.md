@@ -25,7 +25,28 @@ pnpm quality-gate           # check-types, lint and test
 pnpm db:generate            # prisma generate into packages/Astrum-db/generated
 pnpm prisma:migrate:dev     # create a migration
 pnpm db:up                  # Postgres container only
+pnpm docker:prod:up         # full stack in replicas behind Caddy (ports 80/443)
+pnpm docker:prod:down       # stop the stack
+pnpm docker:prod:logs       # follow every service log
+pnpm docker:prod:scale      # rebuild and restart the api replicas only
 ```
+
+## Deployment topology
+
+`docker-compose.prod.yml` + `Caddyfile` are the deployable shape; `docker-compose.yml` stays the dev-only Postgres.
+
+```
+browser -> proxy:80/443 -> customer x2
+customer -> proxy:3580  -> api x3 -> auth x1 -> db
+```
+
+- Runtime configuration comes from `.env.prod` (template: `.env.prod.example`); service hostnames inside the network are `db`, `auth`, `api`, `proxy`.
+- Only the proxy publishes ports. `api:3580` and `auth:4580` are reachable inside the `astrum` network only.
+- `migrate` is a one-shot service that runs before anything else starts.
+- Replicas are discovered by Caddy through `dynamic a <service> <port>`; plain `reverse_proxy service:port` balances nothing.
+- `GET /health` exists on all three services and is the only probe URL.
+- The stack shares the Postgres volume `astrum_astrum-db-data` with the dev container (`POSTGRES_VOLUME` in `.env`). Never run `pnpm dev` and `pnpm docker:prod:up` at the same time — two postmasters on one data directory.
+- See `docs/adr/0003-container-topology-and-load-balancing.md`.
 
 ## Rules
 
