@@ -1,99 +1,80 @@
 # Astrum
 
-Монорепо интернет-магазина **Astrum**. Turborepo + pnpm 10.
+E-commerce платформа в монорепо: витрина на Next.js, API-шлюз на Express, отдельный сервис аутентификации на NestJS и общая схема данных на Prisma + PostgreSQL.
 
-## 📦 Приложения
+> **Стадия: MVP в разработке.** Каталог, корзина и аккаунт работают. Сквозной сценарий заказа — от оформления до получения покупателем — в работе: серверный пересчёт цены и остатков, статусы, панель продавца, выдача и оплата.
 
-| Приложение           | Стек                | Порт | Назначение                       |
-| -------------------- | ------------------- | ---- | -------------------------------- |
-| `apps/customer`      | Next.js 15          | 3000 | Клиентский фронтенд (B2C)        |
-| `apps/api-astrum`    | Express + Prisma    | 3580 | API-шлюз (оркестратор)           |
-| `apps/auth-astrum`   | NestJS + Prisma     | 4580 | Аутентификация и пользователи    |
-| `packages/Astrum-db` | Prisma client + zod | —    | Общая БД-схема и обёртки моделей |
+## Что работает
 
-## 🚀 Быстрый старт
+- **Каталог** — 4,7 тыс. товаров (демо-данные), 10 категорий, карточка с характеристиками, рекомендации, курсорная пагинация, поиск внутри категории
+- **Аккаунт** — регистрация и вход (argon2), сессия в HttpOnly-cookie, защищённые маршруты на витрине и на API
+- **Профиль** — редактирование данных, смена пароля, удаление аккаунта
+- **Корзина и вишлист** — добавление, изменение количества с контролем остатка, удаление, выбор позиций для оформления
+- **Заказы** — схема данных, API создания, списка и карточки, экраны заказа; смена статусов и выдача ещё не реализованы
+- **Отзывы** — API с проверкой покупки (только после `DELIVERED`), уникальностью на позицию и модерацией; экран отзывов пока на моках
+
+## Архитектура
+
+```
+браузер
+  │  HttpOnly cookie __auth
+  ▼
+apps/customer        Next.js 16 · :3000
+  │  /api-gateway/*  (rewrite)
+  ▼
+apps/api-astrum      Express 5 · :3580  ─── /api/auth ───▶  apps/auth-astrum   NestJS 11 · :4580
+  │                                                              │
+  └───────────────────────────┬──────────────────────────────────┘
+                              ▼
+                     PostgreSQL 16 · Prisma 7
+                      packages/Astrum-db
+```
+
+Браузер обращается только к витрине. Витрина проксирует запросы через `/api-gateway/*`, шлюз проверяет JWT из cookie и отправляет аутентификацию в отдельный сервис. Схема БД и Prisma-клиент живут в общем пакете, его импортируют оба сервиса.
+
+## Стек
+
+| Слой           | Технологии                                                             |
+| -------------- | ---------------------------------------------------------------------- |
+| Витрина        | Next.js 16 (App Router), React 19, TypeScript 7, Tailwind 4, shadcn/ui |
+| Данные на UI   | SWR, React Hook Form + Zod                                             |
+| API-шлюз       | Express 5, Prisma 7, class-validator                                   |
+| Аутентификация | NestJS 11, Passport JWT, argon2, Swagger                               |
+| База данных    | PostgreSQL 16, Prisma 7                                                |
+| Инфраструктура | pnpm workspaces, Turborepo, Docker, husky + commitlint                 |
+
+## Дорожная карта
+
+- [x] Каталог, карточка товара, поиск, рекомендации
+- [x] Аккаунт, профиль, сессия
+- [x] Корзина и вишлист
+- [ ] Сквозной заказ: серверный пересчёт цены и остатков, очистка корзины, идемпотентность
+- [ ] Статусы заказа и панель продавца
+- [ ] Выдача покупателю: самовывоз или подтверждение получения
+- [ ] Оплата через тестовый провайдер и письма о заказе
+- [ ] Отзывы в UI, e2e-тесты сценария заказа, CI
+
+## Быстрый старт
+
+Нужны Node 24+, pnpm 12.8+ и Docker.
 
 ```bash
-# 1. Установить зависимости
 pnpm install
-
-# 2. Скопировать переменные окружения
-cp .env.example .env
-# (отредактируйте JWT_SECRET и пароли перед запуском)
-
-# 3. Поднять Postgres + dev-серверы (Turbo)
-pnpm dev
+cp .env.example .env     # заполните JWT_SECRET и пароль БД
+pnpm db:up               # Postgres 16 в Docker
+pnpm prisma:migrate:deploy
+pnpm db:generate
+pnpm dev                 # витрина :3000 · API :3580 · auth :4580
 ```
 
-После старта:
+Демо-каталог загружается из xlsx скриптом `seed:excel`; сами файлы базы в репозиторий не входят, поэтому после чистого клона магазин пустой.
 
-- Customer: <http://localhost:3000>
-- API: <http://localhost:3580>
-- Auth: <http://localhost:4580>
+## Документация
 
-## ✅ Качество кода
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) — разработка: скрипты, хуки, конвенции, переменные окружения, чеклист готовности к MVP
+- [docs/adr/](docs/adr/README.md) — архитектурные решения и их обоснование
+- [docs/changelog/](docs/changelog/) — журнал изменений по датам
 
-| Скрипт              | Назначение                                      |
-| ------------------- | ----------------------------------------------- |
-| `pnpm lint`         | ESLint по всем пакетам                          |
-| `pnpm check-types`  | `tsc --noEmit` по всем пакетам                  |
-| `pnpm test`         | unit-тесты (Jest/Vitest) по всем пакетам        |
-| `pnpm quality-gate` | Полный Quality Gates: lint + check-types + test |
-| `pnpm format`       | Prettier авто-формат                            |
-| `pnpm format:check` | Prettier проверка (без записи)                  |
+## Автор
 
-Pre-commit и pre-push хуки (через husky) гоняют Quality Gates автоматически:
-
-- **pre-commit** — prettier по staged файлам + `pnpm check-types`.
-- **pre-push** — `pnpm quality-gate` (check-types + lint + test).
-
-См. `.husky/` и `commitlint.config.js`.
-
-## 📐 Архитектурные решения (ADR)
-
-Все значимые решения — в [`docs/adr/`](./docs/adr/). Список и шаблон:
-
-- [`docs/adr/README.md`](./docs/adr/README.md) — индекс
-- [`docs/adr/TEMPLATE.md`](./docs/adr/TEMPLATE.md) — шаблон новой записи
-
-## 📋 Журнал изменений
-
-- [`docs/changelog/`](./docs/changelog/) — журнал по датам (Conventional Commits на русском)
-
-## 📚 Obsidian-наблюдения
-
-Зеркало заметок живёт в `~/Documents/Obsidian Vault/Astrum/` (`Change Logs/`, `decisions/`, `notes/`). Используйте `[[WikiLinks]]` для связей.
-
-## 🔐 Переменные окружения
-
-Корневой шаблон — [`.env.example`](./.env.example). По каждому приложению:
-
-- [`apps/api-astrum/.env.example`](./apps/api-astrum/.env.example)
-- [`apps/auth-astrum/.env.example`](./apps/auth-astrum/.env.example)
-- [`apps/customer/.env.example`](./apps/customer/.env.example)
-
-## 📝 Конвенция коммитов
-
-Conventional Commits, типы: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`, `build`, `revert`. Тело коммита — **на русском**.
-
-Примеры:
-
-```
-feat(api): добавить эндпоинт пользователя
-fix(auth): исправить обработку просроченного токена
-docs: обновить README
-```
-
-Валидация — commitlint (см. `.husky/commit-msg`).
-
-## 🛠️ Полезные команды
-
-```bash
-pnpm prisma:generate   # перегенерировать Prisma Client
-pnpm prisma:migrate:dev  # создать миграцию (dev)
-pnpm prisma:migrate:deploy  # применить миграции (prod)
-pnpm prisma:studio     # открыть Prisma Studio
-pnpm prisma:seed       # сидирование БД
-pnpm db:up             # поднять Postgres в docker
-pnpm db:restart        # пересоздать БД с нуля
-```
+Иван Никитин · [github.com/la7ency](https://github.com/la7ency)
