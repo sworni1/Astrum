@@ -4,10 +4,11 @@ One file per decision that is expensive to reverse: `NNNN-kebab-title.md`.
 
 ## Index
 
-| ADR                                           | Title                                                                          | Status   |
-| --------------------------------------------- | ------------------------------------------------------------------------------ | -------- |
-| [0001](./0001-monorepo-service-boundaries.md) | Monorepo with a gateway and a separate auth service                            | Accepted |
-| [0002](./0002-toolchain-baseline.md)          | Toolchain baseline — TypeScript 7 with a TypeScript 6 API, NestJS 11, Prisma 7 | Accepted |
+| ADR                                                     | Title                                                                          | Status   |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------ | -------- |
+| [0001](./0001-monorepo-service-boundaries.md)           | Monorepo with a gateway and a separate auth service                            | Accepted |
+| [0002](./0002-toolchain-baseline.md)                    | Toolchain baseline — TypeScript 7 with a TypeScript 6 API, NestJS 11, Prisma 7 | Accepted |
+| [0003](./0003-container-topology-and-load-balancing.md) | Container topology for replicated services behind Caddy                        | Accepted |
 
 ## When to write one
 

@@ -2,14 +2,14 @@ import type { NextFunction, Request, Response } from "express";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
 import { verify } from "jsonwebtoken";
 
-import { JwtData } from "../common/types/jwt.payload";
+import type { JwtData } from "../common/types/jwt.payload";
 
 type RequestWithUser = Request & { userId?: string };
 
 const authenticateToken = (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void => {
   const authHeader = req.cookies as { __auth?: string } | undefined;
 
@@ -23,10 +23,7 @@ const authenticateToken = (
   const token = authHeader.__auth;
 
   try {
-    const decoded = verify(
-      token,
-      process.env.JWT_SECRET as string
-    ) as JwtData;
+    const decoded = verify(token, process.env.JWT_SECRET as string) as JwtData;
 
     (req as RequestWithUser).userId = decoded.userId;
 

@@ -1,8 +1,8 @@
 "use client";
 
 import useSWR from "swr";
+import type { Order } from "../../common/types/order.types";
 import { useFetcher } from "../useFetcher";
-import { Order } from "../../common/types/order.types";
 
 export type GetOrdersError = {
   message: string;

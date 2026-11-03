@@ -1,12 +1,12 @@
+import { Expose } from "class-transformer";
 import {
   IsEmail,
-  IsString,
-  IsOptional,
   IsNotEmpty,
+  IsOptional,
+  IsString,
   MaxLength,
   MinLength,
 } from "class-validator";
-import { Expose } from "class-transformer";
 
 export class UpdateUserDto {
   @IsString()

@@ -1,20 +1,16 @@
-import { prisma } from '../../../lib/prisma';
-import { ReviewStatus } from '../../../generated/prisma/enums';
-import { CreateReviewDto } from './dto/create-review.dto';
+import { ReviewStatus } from "../../../generated/prisma/enums";
+import { prisma } from "../../../lib/prisma";
+import type { CreateReviewDto } from "./dto/create-review.dto";
 
 export class ReviewsService {
-  async createReview(
-    userId: string,
-    productId: string,
-    dto: CreateReviewDto,
-  ) {
+  async createReview(userId: string, productId: string, dto: CreateReviewDto) {
     // D-06: Проверка покупки — OrderItem должен быть DELIVERED
     const orderItem = await prisma.orderItem.findUnique({
       where: { id: dto.orderItemId },
     });
 
     if (!orderItem) {
-      throw new Error('404: Order item not found');
+      throw new Error("404: Order item not found");
     }
 
     const purchaseCheck = await prisma.orderItem.findFirst({
@@ -22,13 +18,13 @@ export class ReviewsService {
         id: dto.orderItemId,
         userId,
         productId,
-        status: 'DELIVERED',
+        status: "DELIVERED",
       },
     });
 
     if (!purchaseCheck) {
       throw new Error(
-        '403: Review can only be created for delivered purchases',
+        "403: Review can only be created for delivered purchases",
       );
     }
 
@@ -38,7 +34,7 @@ export class ReviewsService {
     });
 
     if (existing) {
-      throw new Error('409: Review already exists for this order item');
+      throw new Error("409: Review already exists for this order item");
     }
 
     // Создание отзыва со статусом PENDING (D-15)
@@ -70,7 +66,7 @@ export class ReviewsService {
       take: query.limit || 20,
       skip: query.after ? 1 : 0,
       cursor: query.after ? { id: query.after } : undefined,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     let nextCursor: string | null = null;
@@ -102,7 +98,7 @@ export class ReviewsService {
     });
 
     if (!review) {
-      throw new Error('404: Review not found');
+      throw new Error("404: Review not found");
     }
 
     return review;

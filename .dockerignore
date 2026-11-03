@@ -1,8 +1,36 @@
 node_modules
-.turbo
-.next
-dist
-.pnpm-store
-.git
-*.log
+**/node_modules
 
+.turbo
+**/.turbo
+.next
+**/.next
+dist
+**/dist
+coverage
+**/coverage
+.pnpm-store
+**/.pnpm-store
+
+.git
+**/.git
+.github
+
+# Prisma clients are generated inside the image, never copied from the host
+**/generated/prisma
+
+# Secrets stay out of build layers; containers read them from env_file at runtime
+.env
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+
+# Seed source data is not needed to build or run a service
+packages/Astrum-db/Бесплатная база товаров 2018
+
+# Leftover of a bad absolute path created inside the customer app
+apps/customer/e:
+
+*.log
+**/*.log

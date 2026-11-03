@@ -1,18 +1,19 @@
 "use client";
 
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { format } from "date-fns";
+import { CalendarIcon, CreditCard, Loader2, MapPin } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { PaymentMethod } from "@/common/types/order.types";
+import type { ProductCartProps } from "@/common/types/product.types";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+  type CheckoutFormData,
+  checkoutFormSchema,
+} from "@/common/zodSchemes/checkout.scheme";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -21,23 +22,22 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Loader2, CreditCard, MapPin, CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import { useCheckout } from "@/hooks";
-import { PaymentMethod } from "@/common/types/order.types";
-import { ProductCartProps } from "@/common/types/product.types";
 import {
-  checkoutFormSchema,
-  CheckoutFormData,
-} from "@/common/zodSchemes/checkout.scheme";
-import { useState } from "react";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useCheckout } from "@/hooks";
+import { cn } from "@/lib/utils";
 
 type Props = {
   cartItems: ProductCartProps[];

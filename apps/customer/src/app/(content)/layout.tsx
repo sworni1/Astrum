@@ -1,7 +1,7 @@
 import "@/app/index.css";
-import Navbar from "../../features/layout/Navbar";
-import Footer from "../../features/layout/Footer";
 import { verifySession } from "../../common/helpers/session";
+import Footer from "../../features/layout/Footer";
+import Navbar from "../../features/layout/Navbar";
 
 export default async function ContentLayout({
   children,

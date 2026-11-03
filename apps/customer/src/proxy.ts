@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { decrypt } from "./common/helpers/session";
 
 const publicRoutes = ["/auth/signin", "/auth/register"];
@@ -19,5 +19,5 @@ export default async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|.*\\.png$).*)"],
+  matcher: ["/((?!api|health|_next/static|_next/image|.*\\.png$).*)"],
 };

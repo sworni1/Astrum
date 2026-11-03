@@ -1,23 +1,23 @@
+import { Expose } from "class-transformer";
 import {
-  IsString,
+  IsArray,
+  IsBoolean,
+  IsEnum,
   IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+  IsUrl,
   MaxLength,
   MinLength,
-  IsNumber,
-  IsPositive,
-  IsOptional,
-  IsEnum,
-  IsArray,
-  IsUrl,
-  IsBoolean,
-} from 'class-validator';
-import { Expose } from 'class-transformer';
+} from "class-validator";
 import {
-  ProductCategory,
   Currency,
+  ProductCategory,
   ProductVisibility,
   PropertyLabel,
-} from '../../../../generated/prisma/enums';
+} from "../../../../generated/prisma/enums";
 
 export class CreateProductDto {
   @Expose()

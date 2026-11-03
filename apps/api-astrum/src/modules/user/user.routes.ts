@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { UserController } from "./user.controller";
 import { validateDto } from "../../middlewares/validateDto";
 import { UpdateUserDto, updateUserPasswordDto } from "./dto/update-user.dto";
+import { UserController } from "./user.controller";
 
 const userController = new UserController();
 
@@ -13,7 +13,7 @@ userRoutes.patch("/me", validateDto(UpdateUserDto), userController.updateUser);
 userRoutes.patch(
   "/me/password",
   validateDto(updateUserPasswordDto),
-  userController.updateUserPassword
+  userController.updateUserPassword,
 );
 
 export default userRoutes;

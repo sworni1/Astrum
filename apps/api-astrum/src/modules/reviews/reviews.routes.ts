@@ -1,16 +1,16 @@
-import { Router } from 'express';
-import { validateDto } from '../../middlewares/validateDto';
-import { CreateReviewDto } from './dto/create-review.dto';
-import { ReviewsController } from './reviews.controller';
-import authenticateToken from '../../middlewares/authenticateToken';
+import { Router } from "express";
+import authenticateToken from "../../middlewares/authenticateToken";
+import { validateDto } from "../../middlewares/validateDto";
+import { CreateReviewDto } from "./dto/create-review.dto";
+import { ReviewsController } from "./reviews.controller";
 
 const reviewsController = new ReviewsController();
 
 // productReviewsRouter — монтируется как /products/:id/reviews/*
 export const productReviewsRouter: Router = Router();
-productReviewsRouter.get('/', reviewsController.getProductReviews);
+productReviewsRouter.get("/", reviewsController.getProductReviews);
 productReviewsRouter.post(
-  '/',
+  "/",
   authenticateToken,
   validateDto(CreateReviewDto),
   reviewsController.createReview,
@@ -18,4 +18,4 @@ productReviewsRouter.post(
 
 // reviewsRouter — монтируется как /reviews/*
 export const reviewsRouter: Router = Router();
-reviewsRouter.get('/:reviewId', reviewsController.getReviewById);
+reviewsRouter.get("/:reviewId", reviewsController.getReviewById);

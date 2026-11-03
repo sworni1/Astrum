@@ -1,20 +1,20 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { AcmeLogo } from "../../general/AcmeLogo";
-import { MdFavoriteBorder, MdOutlineShoppingCart } from "react-icons/md";
-import { FiPackage } from "react-icons/fi";
-import { LuMenu } from "react-icons/lu";
-import { TbCategory } from "react-icons/tb";
 import Link from "next/link";
 import { useState } from "react";
+import { FiPackage } from "react-icons/fi";
+import { LuMenu } from "react-icons/lu";
+import { MdFavoriteBorder, MdOutlineShoppingCart } from "react-icons/md";
+import { TbCategory } from "react-icons/tb";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { showToast } from "../../../common";
 import ThemeSwitcher from "../../../components/ThemeSwitcher";
+import { useGetCart, useGetOrders, useGetWishlist } from "../../../hooks";
+import { AcmeLogo } from "../../general/AcmeLogo";
 import { MobileMenuSheet } from "./MobileMenuSheet";
 import NavItem from "./NavItem";
 import Searchbar from "./Searchbar";
-import { useGetCart, useGetOrders, useGetWishlist } from "../../../hooks";
-import { showToast } from "../../../common";
 
 export default function Navbar() {
   const [sheetOpen, setSheetOpen] = useState(false);

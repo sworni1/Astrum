@@ -1,5 +1,10 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { editPasswordFormSchema, showToast } from "../../../../../common";
+import type { updatePasswordUserDto } from "../../../../../common/dto/update-user.dto";
 import { Button } from "../../../../../components/ui/button";
 import {
   Dialog,
@@ -11,9 +16,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../../../../components/ui/dialog";
-import { Input } from "../../../../../components/ui/input";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
   FormControl,
@@ -22,10 +24,8 @@ import {
   FormLabel,
   FormMessage,
 } from "../../../../../components/ui/form";
-import { updatePasswordUserDto } from "../../../../../common/dto/update-user.dto";
+import { Input } from "../../../../../components/ui/input";
 import { useUser } from "../../../../../hooks/user";
-import { useState } from "react";
-import { editPasswordFormSchema, showToast } from "../../../../../common";
 
 const ChangePasswordForm = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -86,7 +86,8 @@ const ChangePasswordForm = () => {
           <DialogHeader>
             <DialogTitle>Update password</DialogTitle>
             <DialogDescription>
-              Make changes to your profile here. Click save when you&apos;re done.
+              Make changes to your profile here. Click save when you&apos;re
+              done.
             </DialogDescription>
           </DialogHeader>
 

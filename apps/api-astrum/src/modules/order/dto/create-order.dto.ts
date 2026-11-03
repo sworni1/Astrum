@@ -1,3 +1,4 @@
+import { Expose, Type } from "class-transformer";
 import {
   IsDateString,
   IsEnum,
@@ -7,9 +8,8 @@ import {
   MaxLength,
   MinLength,
   ValidateNested,
-} from 'class-validator';
-import { Type, Expose } from 'class-transformer';
-import { PaymentMethod } from '../../../../generated/prisma/enums';
+} from "class-validator";
+import { PaymentMethod } from "../../../../generated/prisma/enums";
 
 class OrderItemDto {
   @Expose()

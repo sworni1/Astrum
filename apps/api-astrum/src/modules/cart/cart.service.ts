@@ -1,17 +1,17 @@
-import { AddProductToCartDto } from './dto/add-product.dto';
-import {
-  cartActionsPublicSelect,
-  cartPublicSelect,
-} from '../../common/prisma-selects/product.select';
-import { ProductService } from '../product/product.service';
-import { ChangeQuantityDto } from './dto/change-quantity.dto';
+import type { Product } from "../../../generated/prisma/client";
+import { prisma } from "../../../lib/prisma";
 import {
   getCartProductIds,
   getWishlistAndCartItem,
   getWishlistItem,
-} from '../../common/helpers/getWishlistAndCart';
-import { prisma } from '../../../lib/prisma';
-import { Product } from '../../../generated/prisma/client';
+} from "../../common/helpers/getWishlistAndCart";
+import {
+  cartActionsPublicSelect,
+  cartPublicSelect,
+} from "../../common/prisma-selects/product.select";
+import { ProductService } from "../product/product.service";
+import type { AddProductToCartDto } from "./dto/add-product.dto";
+import type { ChangeQuantityDto } from "./dto/change-quantity.dto";
 
 export class CartService {
   private productService = new ProductService();
@@ -30,7 +30,7 @@ export class CartService {
         });
 
         if (!cartItem) {
-          throw new Error('addProductToCart error');
+          throw new Error("addProductToCart error");
         }
 
         return {
@@ -41,7 +41,7 @@ export class CartService {
       } else {
         throw new Error(`Product quantity limit`);
       }
-    } catch (error) {
+    } catch (_error) {
       throw new Error(`addProductToCart error`);
     }
   }
@@ -65,7 +65,7 @@ export class CartService {
           });
 
           if (!cartItem) {
-            throw new Error('changeProductCartQuantity error');
+            throw new Error("changeProductCartQuantity error");
           }
 
           return {
@@ -79,7 +79,7 @@ export class CartService {
       } else {
         return this.deleteProductFromCart(userId, productId);
       }
-    } catch (error) {
+    } catch (_error) {
       throw new Error(`changeProductCartQuantity error`);
     }
   }
@@ -92,8 +92,8 @@ export class CartService {
         where: {
           id: { in: cartProductIds },
           isDeleted: false,
-          visibility: 'Public',
-          status: 'Published',
+          visibility: "Public",
+          status: "Published",
         },
         select: cartPublicSelect,
       });
@@ -114,12 +114,12 @@ export class CartService {
       );
 
       return cartWithData;
-    } catch (error) {
+    } catch (_error) {
       throw new Error(`getWishlist error`);
     }
   }
 
-  async deleteProductFromCart(userId: string, productId: Product['id']) {
+  async deleteProductFromCart(userId: string, productId: Product["id"]) {
     try {
       const wishlistItem = getWishlistItem(userId, productId);
 
@@ -131,7 +131,7 @@ export class CartService {
         isWishlisted: !!wishlistItem,
         quantityInCart: 0,
       };
-    } catch (error) {
+    } catch (_error) {
       throw new Error(`deleteProductFromCart error`);
     }
   }

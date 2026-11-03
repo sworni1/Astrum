@@ -1,8 +1,8 @@
 "use client";
 
 import useSWR from "swr";
+import type { ProductOverview } from "../../../common/types/product.types";
 import { useFetcher } from "../../useFetcher";
-import { ProductOverview } from "../../../common/types/product.types";
 
 export const useGetProduct = (productId: string) => {
   const { getData } = useFetcher();

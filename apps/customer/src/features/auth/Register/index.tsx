@@ -1,8 +1,9 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { format } from "date-fns";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
-import { registerFormSchema, SignUpCredentials } from "../../../common";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,7 +13,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-
+import { cn } from "@/lib/utils";
+import { registerFormSchema, type SignUpCredentials } from "../../../common";
+import { Calendar } from "../../../components/ui/calendar";
 import {
   Form,
   FormControl,
@@ -21,7 +24,11 @@ import {
   FormLabel,
   FormMessage,
 } from "../../../components/ui/form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../../../components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -29,15 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../../components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../../../components/ui/popover";
-import { Calendar } from "../../../components/ui/calendar";
-import { format } from "date-fns";
 import { useAuth } from "../../../hooks";
-import Link from "next/link";
 
 export default function Register() {
   const { handleRegister } = useAuth();

@@ -1,23 +1,36 @@
-FROM node:18-alpine
+# syntax=docker/dockerfile:1
 
+FROM node:24-bookworm-slim AS base
+ENV CI=true \
+    NEXT_TELEMETRY_DISABLED=1
+RUN npm install --global pnpm@12.8.1
 WORKDIR /app
 
-ENV PNPM_HOME=/pnpm
-ENV PATH=$PNPM_HOME:$PATH
+# Cuts the workspace down to @astrum/auth and its dependency graph.
+FROM base AS pruner
+COPY . .
+RUN pnpm turbo prune @astrum/auth --docker --out-dir /pruned
 
-RUN corepack enable
+FROM base AS deps
+COPY --from=pruner /pruned/json/ ./
+COPY --from=pruner /pruned/pnpm-lock.yaml /pruned/pnpm-workspace.yaml ./
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps ./apps
-COPY packages ./packages
-
-RUN pnpm install --filter @astrum/auth...
+FROM deps AS builder
+# Placeholder only: prisma generate must never reach a real database.
+ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build?schema=public"
+COPY --from=pruner /pruned/full/ ./
+RUN pnpm --filter @astrum/auth prisma:generate
 RUN pnpm --filter @astrum/auth build
 
-EXPOSE 4580
-
+FROM base AS runner
 ENV NODE_ENV=production
+COPY --from=pruner /pruned/json/ ./
+COPY --from=pruner /pruned/pnpm-lock.yaml /pruned/pnpm-workspace.yaml ./
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --prod --frozen-lockfile --ignore-scripts
+COPY --from=builder /app/apps/auth-astrum/dist ./apps/auth-astrum/dist
 
-WORKDIR /app/apps/auth-astrum
-
-CMD ["node", "dist/src/main.js"]
+EXPOSE 4580
+CMD ["node", "apps/auth-astrum/dist/src/main.js"]

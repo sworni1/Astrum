@@ -11,8 +11,8 @@
     "check-types": "turbo check-types",
     "test": "turbo test",
     "quality-gate": "turbo quality-gate",
-    "format": "prettier --write --ignore-unknown \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\" \"!**/node_modules/**\" \"!**/.next/**\" \"!**/dist/**\" \"!**/coverage/**\" \"!**/generated/**\"",
-    "format:check": "prettier --check --ignore-unknown \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\" \"!**/node_modules/**\" \"!**/.next/**\" \"!**/dist/**\" \"!**/coverage/**\" \"!**/generated/**\"",
+    "format": "biome format --write --ignore-unknown \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\" \"!**/node_modules/**\" \"!**/.next/**\" \"!**/dist/**\" \"!**/coverage/**\" \"!**/generated/**\"",
+    "format:check": "biome format --check --ignore-unknown \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\" \"!**/node_modules/**\" \"!**/.next/**\" \"!**/dist/**\" \"!**/coverage/**\" \"!**/generated/**\"",
     "dev:customer": "turbo dev --filter=@astrum/customer",
     "dev:api": "turbo dev --filter=@astrum/api",
     "dev:auth": "turbo dev --filter=@astrum/auth",
@@ -27,12 +27,14 @@
     "db:restart": "pnpm db:rm && pnpm db:up && timeout 2 && pnpm prisma:migrate:deploy",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
+    "docker:prod:up": "docker compose -f docker-compose.prod.yml up -d --build",
+    "docker:prod:down": "docker compose -f docker-compose.prod.yml down",
+    "docker:prod:logs": "docker compose -f docker-compose.prod.yml logs -f --tail=100",
+    "docker:prod:scale": "docker compose -f docker-compose.prod.yml up -d --no-deps --scale api=3 api",
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,json,md,yml,yaml}": [
-      "prettier --write"
-    ]
+    "*.{ts,tsx,js,jsx,json,md,yml,yaml}": ["biome format --write"]
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.4",

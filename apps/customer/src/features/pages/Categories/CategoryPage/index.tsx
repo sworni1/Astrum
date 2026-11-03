@@ -1,11 +1,11 @@
 "use client";
 
 import { useParams, useSearchParams } from "next/navigation";
-import { useInfiniteScroll } from "../../../../hooks";
-import { ProductCardsSkeleton } from "../../../../components/skeletons";
-import ProductCard from "../../../general/ProductCard";
-import { useGetCategoryProducts } from "../../../../hooks/product/useProducts";
 import { showToast } from "../../../../common";
+import { ProductCardsSkeleton } from "../../../../components/skeletons";
+import { useInfiniteScroll } from "../../../../hooks";
+import { useGetCategoryProducts } from "../../../../hooks/product/useProducts";
+import ProductCard from "../../../general/ProductCard";
 
 export const CategoryPage = () => {
   const params = useParams<{ category: string }>();

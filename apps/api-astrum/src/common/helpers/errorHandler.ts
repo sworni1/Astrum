@@ -1,4 +1,4 @@
-import { Response } from "express";
+import type { Response } from "express";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
 
 export const handleErrors = (res: Response, err: unknown): void => {

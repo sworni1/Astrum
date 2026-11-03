@@ -1,6 +1,6 @@
 "use client";
 
-import axios, { AxiosInstance } from "axios";
+import axios, { type AxiosInstance } from "axios";
 import { useCallback, useMemo, useState } from "react";
 
 const authServiceUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL;

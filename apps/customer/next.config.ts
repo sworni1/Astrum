@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
 const apiGatewayInternal = (
@@ -6,6 +7,9 @@ const apiGatewayInternal = (
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Trace from the workspace root so the standalone bundle keeps the monorepo
+  // layout (apps/customer/server.js) instead of copying only this package.
+  outputFileTracingRoot: path.join(__dirname, "../../"),
   async rewrites() {
     return [
       {

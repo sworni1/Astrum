@@ -1,11 +1,11 @@
-import { PrismaClient } from '../generated/prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
+import { PrismaPg } from "@prisma/adapter-pg";
+import dotenv from "dotenv";
+import { fileURLToPath } from "url";
+import { PrismaClient } from "../generated/prisma/client";
 
 if (!process.env.DATABASE_URL) {
   dotenv.config({
-    path: fileURLToPath(new URL('../.env', import.meta.url)),
+    path: fileURLToPath(new URL("../.env", import.meta.url)),
   });
 }
 
@@ -21,4 +21,4 @@ export const prisma =
     adapter,
   });
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;

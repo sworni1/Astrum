@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
-import { showToast } from "../../common";
-import { useFetcher } from "../useFetcher";
 import { useRouter } from "next/navigation";
+import { useCallback, useMemo } from "react";
 import { useSWRConfig } from "swr";
-import { CheckoutFormData } from "../../common/zodSchemes/checkout.scheme";
-import { CreateOrderItemDto } from "../../common/types/order.types";
-import { ProductCartProps } from "../../common/types/product.types";
+import { showToast } from "../../common";
+import type { CreateOrderItemDto } from "../../common/types/order.types";
+import type { ProductCartProps } from "../../common/types/product.types";
+import type { CheckoutFormData } from "../../common/zodSchemes/checkout.scheme";
+import { useFetcher } from "../useFetcher";
 
 export const useCheckout = () => {
   const { postItem } = useFetcher();

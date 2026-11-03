@@ -1,20 +1,29 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import dayjs from "dayjs";
 import {
   ArrowLeft,
-  Printer,
-  Edit,
   Check,
-  Package,
-  Truck,
   CreditCard,
+  Edit,
   Loader2,
   MapPin,
+  Package,
+  Printer,
+  Truck,
 } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getCurrencyEmoji, showToast } from "../../../../common";
+import {
+  OrderStatus,
+  PaymentMethod,
+} from "../../../../common/types/order.types";
+import { Currency } from "../../../../common/types/product.types";
+import { Separator } from "../../../../components/ui/separator";
 import {
   Table,
   TableBody,
@@ -23,16 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "../../../../components/ui/table";
-import { Separator } from "../../../../components/ui/separator";
-import { useRouter } from "next/navigation";
 import { useGetOrderById, useUpdateOrderStatus } from "../../../../hooks/order";
-import {
-  OrderStatus,
-  PaymentMethod,
-} from "../../../../common/types/order.types";
-import { Currency } from "../../../../common/types/product.types";
-import { showToast, getCurrencyEmoji } from "../../../../common";
-import dayjs from "dayjs";
 
 const ICON_SIZE = "h-4 w-4";
 
@@ -121,8 +121,8 @@ export default function OrderPage({ orderId }: Props) {
       <div className="min-h-screen flex flex-col justify-center items-center">
         <h2 className="text-2xl font-bold mb-4">Order Not Found</h2>
         <p className="text-muted-foreground mb-4">
-          The order you&apos;re looking for doesn&apos;t exist or you don&apos;t have
-          permission to view it.
+          The order you&apos;re looking for doesn&apos;t exist or you don&apos;t
+          have permission to view it.
         </p>
         <Button onClick={() => router.push("/orders")}>Back to Orders</Button>
       </div>

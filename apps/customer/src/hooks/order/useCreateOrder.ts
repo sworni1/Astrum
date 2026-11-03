@@ -1,9 +1,9 @@
 "use client";
 
-import useSWRMutation from "swr/mutation";
-import { useFetcher } from "../useFetcher";
-import { CreateOrderDto, Order } from "../../common/types/order.types";
 import { useSWRConfig } from "swr";
+import useSWRMutation from "swr/mutation";
+import type { CreateOrderDto, Order } from "../../common/types/order.types";
+import { useFetcher } from "../useFetcher";
 import { useUser } from "../user";
 
 export type CreateOrderError = {
