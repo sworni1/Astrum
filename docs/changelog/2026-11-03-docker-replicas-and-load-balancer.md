@@ -47,6 +47,9 @@
 - Compose keeps `postgres:16` (Debian), not `-alpine`: the existing data volume was
   initialised by the Debian build and an Alpine server reports collation-version
   mismatches on it (`CREATE DATABASE` failed with a collation error).
+- `README.md`: the architecture section now shows the replica topology (one Caddy in two
+  roles, ports table, stateless-replica note), a «Весь стек в Docker» quick start, and a
+  checked line for containerisation in the roadmap.
 
 ## Fixed
 

@@ -1,6 +1,6 @@
 # Astrum
 
-E-commerce платформа в монорепо: витрина на Next.js, API-шлюз на Express, отдельный сервис аутентификации на NestJS и общая схема данных на Prisma + PostgreSQL.
+E-commerce платформа в монорепо: витрина на Next.js, API-шлюз на Express, отдельный сервис аутентификации на NestJS и общая схема данных на Prisma + PostgreSQL. Всё разворачивается одним `docker compose` — каждый слой, кроме БД, работает в нескольких репликах за одним балансировщиком.
 
 > **Стадия: MVP в разработке.** Каталог, корзина и аккаунт работают. Сквозной сценарий заказа — от оформления до получения покупателем — в работе: серверный пересчёт цены и остатков, статусы, панель продавца, выдача и оплата.
 
@@ -15,14 +15,20 @@ E-commerce платформа в монорепо: витрина на Next.js, 
 
 ## Архитектура
 
+Один Caddy выполняет две роли: публичный вход и внутренний балансировщик перед шлюзом. Между слоями нет прямых обращений «по одному адресу» — каждый переход идёт через него, поэтому реплики API тоже распределяются.
+
 ```
 браузер
   │  HttpOnly cookie __auth
   ▼
-apps/customer        Next.js 16 · :3000
-  │  /api-gateway/*  (rewrite)
+proxy (Caddy) · :80 / :443          публичный вход, TLS
   ▼
-apps/api-astrum      Express 5 · :3580  ─── /api/auth ───▶  apps/auth-astrum   NestJS 11 · :4580
+apps/customer ×2   Next.js 16 · :3000 (standalone)
+  │  /api-gateway/*  →  proxy:3580
+  ▼
+proxy (Caddy) · :3580               внутри сети, наружу не публикуется
+  ▼
+apps/api-astrum ×3   Express 5 · :3580 ─── /api/auth ───▶ apps/auth-astrum   NestJS 11 · :4580
   │                                                              │
   └───────────────────────────┬──────────────────────────────────┘
                               ▼
@@ -30,24 +36,35 @@ apps/api-astrum      Express 5 · :3580  ─── /api/auth ───▶  apps/
                       packages/Astrum-db
 ```
 
-Браузер обращается только к витрине. Витрина проксирует запросы через `/api-gateway/*`, шлюз проверяет JWT из cookie и отправляет аутентификацию в отдельный сервис. Схема БД и Prisma-клиент живут в общем пакете, его импортируют оба сервиса.
+Реплики stateless: сессия — JWT в cookie, состояния в процессе нет. Caddy находит реплики через DNS compose (`dynamic a`), проверяет каждую по `GET /health` и выводит из ротации упавшую; на время окна проверки включён ретрай на соседнюю реплику. Пул соединений Prisma ограничен переменной `DB_POOL_SIZE`, миграции накатывает отдельный одноразовый сервис до старта приложений.
+
+| Сервис     | Порт   | Доступ                       | Реплик |
+| ---------- | ------ | ---------------------------- | ------ |
+| `proxy`    | 80/443 | снаружи                      | 1      |
+| `customer` | 3000   | только внутри `astrum`       | 2      |
+| `api`      | 3580   | только внутри, через `proxy` | 3      |
+| `auth`     | 4580   | только внутри                | 1      |
+| `db`       | 5432   | только внутри                | 1      |
+
+Обоснование выбора и отвергнутые альтернативы (Swarm, nginx, Traefik) — в [ADR-0003](docs/adr/0003-container-topology-and-load-balancing.md).
 
 ## Стек
 
-| Слой           | Технологии                                                             |
-| -------------- | ---------------------------------------------------------------------- |
-| Витрина        | Next.js 16 (App Router), React 19, TypeScript 7, Tailwind 4, shadcn/ui |
-| Данные на UI   | SWR, React Hook Form + Zod                                             |
-| API-шлюз       | Express 5, Prisma 7, class-validator                                   |
-| Аутентификация | NestJS 11, Passport JWT, argon2, Swagger                               |
-| База данных    | PostgreSQL 16, Prisma 7                                                |
-| Инфраструктура | pnpm workspaces, Turborepo, Docker, husky + commitlint                 |
+| Слой           | Технологии                                                                          |
+| -------------- | ----------------------------------------------------------------------------------- |
+| Витрина        | Next.js 16 (App Router), React 19, TypeScript 7, Tailwind 4, shadcn/ui              |
+| Данные на UI   | SWR, React Hook Form + Zod                                                          |
+| API-шлюз       | Express 5, Prisma 7, class-validator                                                |
+| Аутентификация | NestJS 11, Passport JWT, argon2, Swagger                                            |
+| База данных    | PostgreSQL 16, Prisma 7                                                             |
+| Инфраструктура | pnpm workspaces, Turborepo, Docker Compose с репликами за Caddy, husky + commitlint |
 
 ## Дорожная карта
 
 - [x] Каталог, карточка товара, поиск, рекомендации
 - [x] Аккаунт, профиль, сессия
 - [x] Корзина и вишлист
+- [x] Контейнеризация: реплики за одним входом, health-check, graceful shutdown
 - [ ] Сквозной заказ: серверный пересчёт цены и остатков, очистка корзины, идемпотентность
 - [ ] Статусы заказа и панель продавца
 - [ ] Выдача покупателю: самовывоз или подтверждение получения
@@ -57,6 +74,8 @@ apps/api-astrum      Express 5 · :3580  ─── /api/auth ───▶  apps/
 ## Быстрый старт
 
 Нужны Node 24+, pnpm 12.8+ и Docker.
+
+### Разработка
 
 ```bash
 pnpm install
@@ -68,6 +87,20 @@ pnpm dev                 # витрина :3000 · API :3580 · auth :4580
 ```
 
 Демо-каталог загружается из xlsx скриптом `seed:excel`; сами файлы базы в репозиторий не входят, поэтому после чистого клона магазин пустой.
+
+### Весь стек в Docker
+
+```bash
+cp .env.prod.example .env.prod   # заполните пароль БД и JWT_SECRET
+pnpm docker:prod:up              # http://localhost
+pnpm docker:prod:logs            # логи всех сервисов
+pnpm docker:prod:down            # остановить
+```
+
+- Домен задаётся в **корневом `.env`** (`DOMAIN=http://localhost` локально, `DOMAIN=example.com` на хостинге → Caddy сам выпустит сертификат). Переменные контейнеров живут отдельно, в `.env.prod` — это разные слои подстановки.
+- Адреса сервисов внутри сети — имена compose (`db`, `auth`, `api`, `proxy`), не `localhost`.
+- Реплик больше: `docker compose -f docker-compose.prod.yml up -d --no-deps --scale api=5 api`.
+- `pnpm dev` и `docker:prod:up` делят один том Postgres (`POSTGRES_VOLUME`), одновременно их запускать нельзя.
 
 ## Документация
 
