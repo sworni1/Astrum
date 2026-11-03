@@ -1,4 +1,4 @@
-import { ValidationPipe } from "@nestjs/common";
+import { RequestMethod, ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import compression from "compression";
@@ -6,9 +6,16 @@ import { AppModule } from "./app.module";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const port = 4580;
+  const port = Number(process.env.AUTH_PORT ?? 4580);
+
+  app.enableShutdownHooks();
+  app.getHttpAdapter().getInstance().set("trust proxy", 1);
 
   app.use(compression());
+  app.use((_req, res, next) => {
+    res.setHeader("X-Instance", process.env.HOSTNAME ?? "unknown");
+    next();
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -22,7 +29,9 @@ async function bootstrap() {
     credentials: true,
   });
 
-  app.setGlobalPrefix("/api");
+  app.setGlobalPrefix("/api", {
+    exclude: [{ path: "health", method: RequestMethod.GET }],
+  });
 
   const config = new DocumentBuilder()
     .addBearerAuth()

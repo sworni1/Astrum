@@ -2,7 +2,9 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, { type Express } from "express";
 import helmet from "helmet";
+import { StatusCodes } from "http-status-codes";
 import morgan from "morgan";
+import { prisma } from "../lib/prisma";
 import proxyOptions from "./common/helpers/proxyOptions";
 import authenticateToken from "./middlewares/authenticateToken";
 import corsOptions from "./middlewares/corsOptions";
@@ -15,10 +17,18 @@ import wishlistRoutes from "./modules/wishlist/wishlist.routes";
 
 const app: Express = express();
 
+app.set("trust proxy", 1);
+app.disable("x-powered-by");
+
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 app.use(morgan("dev"));
 app.use(cors(corsOptions));
 app.options("/{*splat}", cors(corsOptions));
+
+app.use((_req, res, next) => {
+  res.setHeader("X-Instance", process.env.HOSTNAME ?? "unknown");
+  next();
+});
 
 app.use("/api/auth", proxyOptions(process.env.AUTH_SERVICE_URL!));
 
@@ -27,6 +37,18 @@ app.use(
   express.urlencoded({ extended: true, limit: "10mb", parameterLimit: 10000 }),
 );
 app.use(cookieParser());
+
+app.get("/health", async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(StatusCodes.OK).json({
+      status: "ok",
+      instance: process.env.HOSTNAME ?? "unknown",
+    });
+  } catch {
+    res.status(StatusCodes.SERVICE_UNAVAILABLE).json({ status: "unavailable" });
+  }
+});
 
 app.use("/api/users", authenticateToken, userRoutes);
 app.use("/api/products", authenticateToken, productRoutes);

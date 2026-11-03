@@ -1,0 +1,159 @@
+name: astrum
+
+# Replica topology:
+#   browser -> proxy:80/443 -> customer x2
+#   customer -> proxy:3580 -> api x3 -> auth x1 -> db
+#
+# Every runtime secret comes from .env.prod (see .env.prod.example).
+# The api/customer layers are reached only through Caddy, so no service port is
+# published except the proxy.
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    # Keep the Debian build: the data volume was initialised by postgres:16 and
+    # an Alpine (musl) server reports collation-version mismatches on it.
+    image: postgres:16
+    logging: *default-logging
+    env_file: .env.prod
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+    networks: [ astrum ]
+
+  migrate:
+    build:
+      context: .
+      dockerfile: packages/Astrum-db/Dockerfile
+    logging: *default-logging
+    env_file: .env.prod
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    networks: [ astrum ]
+
+  auth:
+    build:
+      context: .
+      dockerfile: apps/auth-astrum/Dockerfile
+    logging: *default-logging
+    env_file: .env.prod
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4580/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    stop_grace_period: 30s
+    restart: unless-stopped
+    networks: [ astrum ]
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api-astrum/Dockerfile
+    logging: *default-logging
+    env_file: .env.prod
+    depends_on:
+      auth:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3580/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      replicas: 3
+    stop_grace_period: 30s
+    restart: unless-stopped
+    networks: [ astrum ]
+
+  customer:
+    build:
+      context: .
+      dockerfile: apps/customer/Dockerfile
+      args:
+        API_GATEWAY_INTERNAL_URL: http://proxy:3580
+        NEXT_PUBLIC_API_GATEWAY_URL: /api-gateway
+    logging: *default-logging
+    env_file: .env.prod
+    depends_on:
+      api:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      replicas: 2
+    stop_grace_period: 30s
+    restart: unless-stopped
+    networks: [ astrum ]
+
+  proxy:
+    image: caddy:2
+    logging: *default-logging
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      customer:
+        condition: service_started
+      api:
+        condition: service_started
+    restart: unless-stopped
+    networks: [ astrum ]
+
+networks:
+  astrum:
+    name: astrum
+
+volumes:
+  # POSTGRES_VOLUME lets a machine reuse an existing data directory; hosting
+  # starts from the default fresh volume.
+  pgdata:
+    name: ${POSTGRES_VOLUME:-astrum-pgdata}
+  caddy_data:
+  caddy_config:
