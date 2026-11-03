@@ -1,4 +1,4 @@
-import { GetRecommendationsType } from "../types/product.types";
+import type { GetRecommendationsType } from "../types/product.types";
 
 export const getKeyProductsByCategory =
   (category: string, search_query?: string) =>

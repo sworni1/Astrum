@@ -1,7 +1,7 @@
-import { Request, Response } from "express";
-import { WishlistService } from "./wishlist.service";
+import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { handleErrors } from "../../common/helpers/errorHandler";
+import { WishlistService } from "./wishlist.service";
 
 const wishlistService = new WishlistService();
 
@@ -24,7 +24,7 @@ export class WishlistController {
 
       const wishlistItem = await wishlistService.addProductToWishlist(
         userId,
-        req.body
+        req.body,
       );
 
       res.status(StatusCodes.OK).json(wishlistItem);
@@ -40,7 +40,7 @@ export class WishlistController {
 
       const deletedProduct = await wishlistService.deleteProductFromWishlist(
         userId,
-        productId
+        productId,
       );
 
       res.status(StatusCodes.OK).json(deletedProduct);

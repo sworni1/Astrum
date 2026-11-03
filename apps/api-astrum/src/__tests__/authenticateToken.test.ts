@@ -1,5 +1,5 @@
-import type { Request, Response, NextFunction } from "express";
-import { StatusCodes, ReasonPhrases } from "http-status-codes";
+import type { NextFunction, Request, Response } from "express";
+import { ReasonPhrases, StatusCodes } from "http-status-codes";
 
 const verifyMock = jest.fn();
 
@@ -14,14 +14,10 @@ process.env.JWT_SECRET = "test-secret";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const authenticateToken = require("../middlewares/authenticateToken")
-  .default as (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => void;
+  .default as (req: Request, res: Response, next: NextFunction) => void;
 
 const createMockReq = (cookies: unknown): Request =>
-  ({ cookies } as unknown as Request);
+  ({ cookies }) as unknown as Request;
 
 const createMockRes = () => {
   const res = {

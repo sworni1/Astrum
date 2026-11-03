@@ -1,9 +1,9 @@
-import { Request, Response } from 'express';
-import { ProductService } from './product.service';
-import { StatusCodes } from 'http-status-codes';
-import { handleErrors } from '../../common/helpers/errorHandler';
-import { productCategoryMap } from '../../common/helpers/productCategoryMap';
-import { ProductCategory } from '../../../generated/prisma/enums';
+import type { Request, Response } from "express";
+import { StatusCodes } from "http-status-codes";
+import type { ProductCategory } from "../../../generated/prisma/enums";
+import { handleErrors } from "../../common/helpers/errorHandler";
+import { productCategoryMap } from "../../common/helpers/productCategoryMap";
+import { ProductService } from "./product.service";
 
 const productService = new ProductService();
 
@@ -11,7 +11,7 @@ export class ProductController {
   async getProduct(req: Request, res: Response) {
     try {
       const userId = (req as any).userId;
-      const productId = req.params['productId'] as string;
+      const productId = req.params["productId"] as string;
 
       const product = await productService.getProduct(userId, productId);
 
@@ -41,7 +41,7 @@ export class ProductController {
   async getCategoryProducts(req: Request, res: Response) {
     try {
       const userId = (req as any).userId;
-      const category = req.params['category'] as string;
+      const category = req.params["category"] as string;
 
       const { cursor, search_query } = req.query;
 

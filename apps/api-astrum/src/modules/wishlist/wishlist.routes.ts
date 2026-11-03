@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { WishlistController } from "./wishlist.controller";
 import { validateDto } from "../../middlewares/validateDto";
 import { AddProductToWishlistDto } from "./dto/add-product.dto";
+import { WishlistController } from "./wishlist.controller";
 
 const wishlistController = new WishlistController();
 
@@ -10,12 +10,12 @@ const wishlistRoutes: Router = Router();
 wishlistRoutes.get("/", wishlistController.getWishlist);
 wishlistRoutes.delete(
   "/:productId",
-  wishlistController.deleteProductFromWishlist
+  wishlistController.deleteProductFromWishlist,
 );
 wishlistRoutes.post(
   "/",
   validateDto(AddProductToWishlistDto),
-  wishlistController.addProductToWishlist
+  wishlistController.addProductToWishlist,
 );
 
 export default wishlistRoutes;

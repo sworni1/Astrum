@@ -5,10 +5,10 @@ import { EditProfileFormSkeleton } from "../../../components/skeletons";
 import { Separator } from "../../../components/ui/separator";
 import { useUser } from "../../../hooks/user";
 import {
-  EditProfileForm,
   ChangePasswordForm,
-  LogOutForm,
   DeleteAccountForm,
+  EditProfileForm,
+  LogOutForm,
 } from "./actions";
 
 export default function Profile() {

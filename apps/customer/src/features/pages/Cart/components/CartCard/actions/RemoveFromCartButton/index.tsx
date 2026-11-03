@@ -1,20 +1,20 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
-import { Button } from "../../../../../../../components/ui/button";
-import { useDeleteProductFromCart } from "../../../../../../../hooks";
 import { showToast } from "../../../../../../../common";
 import {
-  AlertDialogHeader,
-  AlertDialogFooter,
   AlertDialog,
-  AlertDialogTrigger,
-  AlertDialogContent,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogCancel,
   AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from "../../../../../../../components/ui/alert-dialog";
+import { Button } from "../../../../../../../components/ui/button";
+import { useDeleteProductFromCart } from "../../../../../../../hooks";
 
 type Props = {
   id: string;

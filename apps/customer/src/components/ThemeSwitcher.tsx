@@ -1,7 +1,7 @@
 "use client";
 
-import { MdInvertColors } from "react-icons/md";
 import { useTheme } from "next-themes";
+import { MdInvertColors } from "react-icons/md";
 
 type Props = {
   size?: number;

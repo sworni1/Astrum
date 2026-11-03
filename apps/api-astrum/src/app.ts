@@ -1,18 +1,17 @@
-import express, { Express } from "express";
+import cookieParser from "cookie-parser";
 import cors from "cors";
+import express, { type Express } from "express";
 import helmet from "helmet";
 import morgan from "morgan";
-
-import corsOptions from "./middlewares/corsOptions";
-import cookieParser from "cookie-parser";
 import proxyOptions from "./common/helpers/proxyOptions";
 import authenticateToken from "./middlewares/authenticateToken";
-import userRoutes from "./modules/user/user.routes";
-import productRoutes from "./modules/product/product.routes";
-import wishlistRoutes from "./modules/wishlist/wishlist.routes";
+import corsOptions from "./middlewares/corsOptions";
 import cartRoutes from "./modules/cart/cart.routes";
 import orderRoutes from "./modules/order/order.routes";
+import productRoutes from "./modules/product/product.routes";
 import { reviewsRouter } from "./modules/reviews/reviews.routes";
+import userRoutes from "./modules/user/user.routes";
+import wishlistRoutes from "./modules/wishlist/wishlist.routes";
 
 const app: Express = express();
 

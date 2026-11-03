@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import {
+import type {
   GetRecommendationsType,
   ProductCardProps,
 } from "../common/types/product.types";

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Alert } from "../../../components/ui/alert";
 import { categoryList } from "../../../common/constants/category.list";
+import { Alert } from "../../../components/ui/alert";
 
 const Categories = () => {
   return (

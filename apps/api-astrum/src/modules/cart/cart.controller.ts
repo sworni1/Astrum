@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { handleErrors } from "../../common/helpers/errorHandler";
 import { CartService } from "./cart.service";
@@ -38,7 +38,7 @@ export class CartController {
       const cartItem = await cartService.changeProductCartQuantity(
         userId,
         productId,
-        req.body
+        req.body,
       );
 
       res.status(StatusCodes.OK).json(cartItem);
@@ -54,7 +54,7 @@ export class CartController {
 
       const deletedProduct = await cartService.deleteProductFromCart(
         userId,
-        productId
+        productId,
       );
 
       res.status(StatusCodes.OK).json(deletedProduct);

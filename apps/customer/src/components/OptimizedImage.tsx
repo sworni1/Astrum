@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useCallback, useRef, useEffect } from "react";
-import Image, { ImageProps } from "next/image";
+import { AlertCircle, Download, Eye, ImageIcon, Maximize2 } from "lucide-react";
+import Image, { type ImageProps } from "next/image";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Eye, Download, Maximize2, AlertCircle, ImageIcon } from "lucide-react";
 import { Skeleton } from "./ui/skeleton";
 
 interface OptimizedImageProps extends Omit<ImageProps, "onLoad" | "onError"> {

@@ -1,8 +1,8 @@
 "use client";
 
+import { useSWRConfig } from "swr";
 import useSWRMutation from "swr/mutation";
 import { useFetcher } from "../../useFetcher";
-import { useSWRConfig } from "swr";
 
 export const useAddProductToWishlist = (productId: string) => {
   const { postItem } = useFetcher();

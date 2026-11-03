@@ -1,5 +1,5 @@
-import { PackageMinus, PackagePlus } from 'lucide-react';
-import { Button } from '../../../../../../../components/ui/button';
+import { PackageMinus, PackagePlus } from "lucide-react";
+import { Button } from "../../../../../../../components/ui/button";
 
 type Props = {
   onSelectionChange?: (checked: boolean) => void;

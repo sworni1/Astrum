@@ -1,12 +1,16 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
-import { showToast, SignInCredentials, SignUpCredentials } from "../../common";
-import { SubmitHandler } from "react-hook-form";
-import { useFetcher } from "../useFetcher";
-import { useRouter } from "next/navigation";
-import { createSession } from "../../common/helpers/session";
 import axios from "axios";
+import { useRouter } from "next/navigation";
+import { useCallback, useMemo } from "react";
+import type { SubmitHandler } from "react-hook-form";
+import {
+  type SignInCredentials,
+  type SignUpCredentials,
+  showToast,
+} from "../../common";
+import { createSession } from "../../common/helpers/session";
+import { useFetcher } from "../useFetcher";
 
 export const useAuth = () => {
   const { fetcher } = useFetcher();

@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useCallback, useMemo } from "react";
 import { deleteSession } from "../common/helpers/session";
 
 export const useLogOut = () => {

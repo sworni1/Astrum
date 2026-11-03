@@ -1,15 +1,15 @@
-import { Expose } from 'class-transformer';
+import { Expose } from "class-transformer";
 import {
-  IsString,
-  IsNotEmpty,
-  IsInt,
   IsArray,
-  IsUrl,
+  IsInt,
+  IsNotEmpty,
   IsOptional,
-  MinLength,
-  Min,
+  IsString,
+  IsUrl,
   Max,
-} from 'class-validator';
+  Min,
+  MinLength,
+} from "class-validator";
 
 export class CreateReviewDto {
   @Expose() @IsString() @IsNotEmpty() productId!: string;
@@ -26,6 +26,9 @@ export class CreateReviewDto {
 
   @Expose() @IsString() @IsNotEmpty() @MinLength(5) comment!: string;
 
-  @Expose() @IsOptional() @IsArray() @IsUrl({}, { each: true })
+  @Expose()
+  @IsOptional()
+  @IsArray()
+  @IsUrl({}, { each: true })
   photos?: string[];
 }

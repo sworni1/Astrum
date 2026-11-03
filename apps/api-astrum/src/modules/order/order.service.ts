@@ -1,6 +1,6 @@
-import { Order } from '../../../generated/prisma/client';
-import { prisma } from '../../../lib/prisma';
-import { CreateOrderDto } from './dto/create-order.dto';
+import type { Order } from "../../../generated/prisma/client";
+import { prisma } from "../../../lib/prisma";
+import type { CreateOrderDto } from "./dto/create-order.dto";
 
 export class OrderService {
   async createOrder(userId: string, dto: CreateOrderDto) {
@@ -39,7 +39,7 @@ export class OrderService {
     return order;
   }
 
-  async getOrderById(orderId: Order['id']) {
+  async getOrderById(orderId: Order["id"]) {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
@@ -48,7 +48,7 @@ export class OrderService {
     });
 
     if (!order) {
-      throw new Error('getOrderById error');
+      throw new Error("getOrderById error");
     }
 
     const shippingMethod = await prisma.shippingMethod.findUnique({
@@ -56,7 +56,7 @@ export class OrderService {
     });
 
     if (!shippingMethod) {
-      throw new Error('getOrderById error');
+      throw new Error("getOrderById error");
     }
 
     const orderData = {

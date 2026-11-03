@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { decrypt } from "./common/helpers/session";
 
 const publicRoutes = ["/auth/signin", "/auth/register"];

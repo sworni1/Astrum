@@ -1,11 +1,11 @@
-import { productPreviewPublicSelect } from '../../common/prisma-selects/product.select';
-import { AddProductToWishlistDto } from './dto/add-product.dto';
+import type { Product } from "../../../generated/prisma/client";
+import { prisma } from "../../../lib/prisma";
 import {
   getCartItem,
   getWishlistProductIds,
-} from '../../common/helpers/getWishlistAndCart';
-import { prisma } from '../../../lib/prisma';
-import { Product } from '../../../generated/prisma/client';
+} from "../../common/helpers/getWishlistAndCart";
+import { productPreviewPublicSelect } from "../../common/prisma-selects/product.select";
+import type { AddProductToWishlistDto } from "./dto/add-product.dto";
 
 export class WishlistService {
   async getWishlist(userId: string) {
@@ -16,8 +16,8 @@ export class WishlistService {
         where: {
           id: { in: wishlistProductIds },
           isDeleted: false,
-          visibility: 'Public',
-          status: 'Published',
+          visibility: "Public",
+          status: "Published",
         },
         select: productPreviewPublicSelect,
       });
@@ -58,7 +58,7 @@ export class WishlistService {
     }
   }
 
-  async deleteProductFromWishlist(userId: string, productId: Product['id']) {
+  async deleteProductFromWishlist(userId: string, productId: Product["id"]) {
     try {
       const cartItem = await getCartItem(userId, productId);
 

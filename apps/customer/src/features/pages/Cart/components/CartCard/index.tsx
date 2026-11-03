@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { Card, CardContent } from '../../../../../components/ui/card';
-import Image from 'next/image';
-import { ProductCartProps } from '../../../../../common/types/product.types';
-import { ToggleWishlistItemButton } from '../../../../general/ProductCard/actions';
-import AddToCartWithQuantity from './actions/AddToCartWithQuantity';
-import RemoveFromCartButton from './actions/RemoveFromCartButton';
-import Link from 'next/link';
-import SelectionButton from './actions/SelectionButton';
+import Image from "next/image";
+import Link from "next/link";
+import type { ProductCartProps } from "../../../../../common/types/product.types";
+import { Card, CardContent } from "../../../../../components/ui/card";
+import { ToggleWishlistItemButton } from "../../../../general/ProductCard/actions";
+import AddToCartWithQuantity from "./actions/AddToCartWithQuantity";
+import RemoveFromCartButton from "./actions/RemoveFromCartButton";
+import SelectionButton from "./actions/SelectionButton";
 
 const CartCard = ({
   id,
@@ -22,7 +22,7 @@ const CartCard = ({
 }: ProductCartProps) => {
   return (
     <Card
-      className={`overflow-hidden p-0 transition-all ${isSelected ? 'border-1 border-primary' : ''}`}
+      className={`overflow-hidden p-0 transition-all ${isSelected ? "border-1 border-primary" : ""}`}
     >
       <CardContent className="p-0">
         <div className="flex h-full flex-col md:flex-row">
@@ -47,7 +47,7 @@ const CartCard = ({
                 </Link>
 
                 <p className="text-muted-foreground text-sm">
-                  {'Grey'} • {15}
+                  {"Grey"} • {15}
                 </p>
                 <p className="text-sm font-medium mt-1">
                   ${price.toFixed(2)} each
@@ -71,7 +71,7 @@ const CartCard = ({
               <AddToCartWithQuantity
                 productId={id}
                 quantity={quantity}
-                size={'sm'}
+                size={"sm"}
                 quantityInCart={quantityInCart}
               />
             </div>

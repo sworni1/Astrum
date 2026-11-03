@@ -1,15 +1,18 @@
-import { CreateProductDto } from './dto/create-product.dto';
-import { randomUUID } from 'crypto';
+import { randomUUID } from "crypto";
+import type {
+  Product,
+  ProductCategory,
+} from "../../../generated/prisma/client";
+import { prisma } from "../../../lib/prisma";
+import { getWishlistAndCartItem } from "../../common/helpers/getWishlistAndCart";
 import {
   productPreviewPublicSelect,
   productPublicSelect,
-} from '../../common/prisma-selects/product.select';
-import { getWishlistAndCartItem } from '../../common/helpers/getWishlistAndCart';
-import { prisma } from '../../../lib/prisma';
-import { Product, ProductCategory } from '../../../generated/prisma/client';
+} from "../../common/prisma-selects/product.select";
+import type { CreateProductDto } from "./dto/create-product.dto";
 
 export class ProductService {
-  async getProduct(userId: string, productId: Product['id']) {
+  async getProduct(userId: string, productId: Product["id"]) {
     const { wishlistItem, cartItem } = await getWishlistAndCartItem(
       userId,
       productId,
@@ -19,14 +22,14 @@ export class ProductService {
       where: {
         id: productId,
         isDeleted: false,
-        visibility: 'Public',
-        status: 'Published',
+        visibility: "Public",
+        status: "Published",
       },
       select: productPublicSelect,
     });
 
     if (!product) {
-      throw new Error('Product not found');
+      throw new Error("Product not found");
     }
 
     const { impressions, properties, _count, ...rest } = product as any;
@@ -56,12 +59,12 @@ export class ProductService {
     const products = await prisma.product.findMany({
       where: {
         isDeleted: false,
-        visibility: 'Public',
-        status: 'Published',
+        visibility: "Public",
+        status: "Published",
         ...(filters?.category ? { category: filters.category } : {}),
         ...(filters?.search_query
           ? {
-              name: { contains: filters.search_query, mode: 'insensitive' },
+              name: { contains: filters.search_query, mode: "insensitive" },
             }
           : {}),
       },

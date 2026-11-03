@@ -1,13 +1,13 @@
 "use client";
 
-import { MdFavoriteBorder, MdFavorite } from "react-icons/md";
 import { useEffect, useState } from "react";
+import { MdFavorite, MdFavoriteBorder } from "react-icons/md";
+import { showToast } from "../../../../../common";
 import { Button } from "../../../../../components/ui/button";
 import {
   useAddProductToWishlist,
   useDeleteProductFromWishlist,
 } from "../../../../../hooks";
-import { showToast } from "../../../../../common";
 
 type Props = {
   productId: string;

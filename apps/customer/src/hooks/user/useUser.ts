@@ -3,8 +3,8 @@
 import { useMemo } from "react";
 import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
+import type { UserData } from "../../common";
 import { useFetcher } from "../useFetcher";
-import { UserData } from "../../common";
 import { useLogOut } from "../useLogOut";
 
 // Optimized SWR configuration for user data

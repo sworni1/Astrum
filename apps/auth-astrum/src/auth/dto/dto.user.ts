@@ -1,3 +1,4 @@
+import { ApiProperty } from "@nestjs/swagger";
 import {
   IsDateString,
   IsEmail,
@@ -7,36 +8,35 @@ import {
   IsString,
   MaxLength,
   MinLength,
-} from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
-import { Gender } from '../../../generated/prisma/enums';
+} from "class-validator";
+import { Gender } from "../../../generated/prisma/enums";
 
 export class RegisterUserDto {
   @IsNotEmpty()
   @IsEmail()
   @ApiProperty({
     required: true,
-    default: 'example@gmail.com',
+    default: "example@gmail.com",
     nullable: false,
-    description: 'Email',
+    description: "Email",
   })
   email: string;
 
   @IsNotEmpty()
   @IsString()
   @MinLength(8, {
-    message: 'Password must be at least 8 characters',
+    message: "Password must be at least 8 characters",
   })
   @MaxLength(25, {
-    message: 'Password cannot exceed 25 characters',
+    message: "Password cannot exceed 25 characters",
   })
   @ApiProperty({
     required: true,
-    default: 'qwertyuiop',
+    default: "qwertyuiop",
     minLength: 8,
     maxLength: 25,
     nullable: false,
-    description: 'Password',
+    description: "Password",
   })
   password: string;
 
@@ -44,9 +44,9 @@ export class RegisterUserDto {
   @IsEnum(Gender)
   @ApiProperty({
     required: true,
-    default: 'Male',
+    default: "Male",
     nullable: false,
-    description: 'Gender',
+    description: "Gender",
   })
   gender: Gender;
 
@@ -55,20 +55,20 @@ export class RegisterUserDto {
   @ApiProperty({
     required: true,
     nullable: false,
-    description: 'Date of birth',
+    description: "Date of birth",
   })
   dateOfBirth: Date;
 
   @IsString()
   @IsOptional()
   @MaxLength(25, {
-    message: 'Nickname cannot exceed 25 characters',
+    message: "Nickname cannot exceed 25 characters",
   })
   @ApiProperty({
     required: false,
-    default: 'Oleg228',
+    default: "Oleg228",
     nullable: true,
-    description: 'nick name',
+    description: "nick name",
   })
   nickName?: string;
 }
@@ -78,26 +78,26 @@ export class SignInUserDto {
   @IsEmail()
   @ApiProperty({
     required: true,
-    default: 'example@gmail.com',
+    default: "example@gmail.com",
     nullable: false,
-    description: 'Email',
+    description: "Email",
   })
   email: string;
 
   @IsNotEmpty()
   @IsString()
   @MinLength(8, {
-    message: 'Password must be at least 8 characters',
+    message: "Password must be at least 8 characters",
   })
   @MaxLength(25, {
-    message: 'Password cannot exceed 25 characters',
+    message: "Password cannot exceed 25 characters",
   })
   @ApiProperty({
     required: true,
-    default: 'qwertyuiop',
+    default: "qwertyuiop",
     minLength: 8,
     nullable: false,
-    description: 'Password',
+    description: "Password",
   })
   password: string;
 }

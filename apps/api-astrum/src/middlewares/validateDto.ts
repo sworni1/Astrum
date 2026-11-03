@@ -1,13 +1,13 @@
 import { plainToInstance } from "class-transformer";
-import { validate, ValidationError } from "class-validator";
-import { Request, Response, NextFunction } from "express";
+import { type ValidationError, validate } from "class-validator";
+import type { NextFunction, Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 
 export const validateDto = (dtoClass: any) => {
   return async (
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ): Promise<void> => {
     const dtoInstance = plainToInstance(dtoClass, req.body, {
       excludeExtraneousValues: true,

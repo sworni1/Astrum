@@ -1,10 +1,10 @@
 "use client";
 
 import useSWRInfinite from "swr/infinite";
-import { useFetcher } from "../../useFetcher";
-import { GetRecommendationsType } from "../../../common/types/product.types";
 import { getKeyRecommendations } from "../../../common";
 import { SWR_INFINITE_CONFIG } from "../../../common/constants/swr";
+import type { GetRecommendationsType } from "../../../common/types/product.types";
+import { useFetcher } from "../../useFetcher";
 
 export const useGetRecommendations = () => {
   const { getData } = useFetcher();

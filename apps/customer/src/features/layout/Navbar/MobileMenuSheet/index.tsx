@@ -1,5 +1,12 @@
 "use client";
 
+import Link from "next/link";
+import { useTheme } from "next-themes";
+import { FiPackage } from "react-icons/fi";
+import { MdFavoriteBorder, MdOutlineShoppingCart } from "react-icons/md";
+import { TbCategory } from "react-icons/tb";
+import ThemeSwitcher from "@/components/ThemeSwitcher";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Sheet,
   SheetContent,
@@ -7,13 +14,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { TbCategory } from "react-icons/tb";
-import { MdFavoriteBorder, MdOutlineShoppingCart } from "react-icons/md";
-import { FiPackage } from "react-icons/fi";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import Link from "next/link";
-import ThemeSwitcher from "@/components/ThemeSwitcher";
-import { useTheme } from "next-themes";
 
 interface MobileMenuSheetProps {
   open: boolean;

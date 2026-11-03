@@ -1,14 +1,14 @@
-import { Request, Response } from 'express';
-import { ReviewsService } from './reviews.service';
-import { StatusCodes } from 'http-status-codes';
-import { handleErrors } from '../../common/helpers/errorHandler';
+import type { Request, Response } from "express";
+import { StatusCodes } from "http-status-codes";
+import { handleErrors } from "../../common/helpers/errorHandler";
+import { ReviewsService } from "./reviews.service";
 
 const reviewsService = new ReviewsService();
 
 export class ReviewsController {
   async createReview(req: Request, res: Response) {
     try {
-      const productId = req.params['id'] as string;
+      const productId = req.params["id"] as string;
       const userId = (req as any).userId;
       const dto = req.body;
 
@@ -22,7 +22,7 @@ export class ReviewsController {
 
   async getProductReviews(req: Request, res: Response) {
     try {
-      const productId = req.params['id'] as string;
+      const productId = req.params["id"] as string;
       const { after, limit } = req.query;
 
       const result = await reviewsService.getReviewsForProduct(productId, {
@@ -38,7 +38,7 @@ export class ReviewsController {
 
   async getReviewById(req: Request, res: Response) {
     try {
-      const reviewId = req.params['reviewId'] as string;
+      const reviewId = req.params["reviewId"] as string;
 
       const review = await reviewsService.getReviewById(reviewId);
 

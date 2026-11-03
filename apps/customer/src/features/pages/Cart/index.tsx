@@ -1,5 +1,7 @@
 "use client";
 
+import { CreditCard, Loader2, Package, Shield, Truck } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,12 +11,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Package, CreditCard, Truck, Shield, Loader2 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { showToast } from "../../../common";
+import { useGetCart } from "../../../hooks/product/useCart";
 import CartCard from "./components/CartCard";
 import CheckoutForm from "./components/CheckoutForm";
-import { useGetCart } from "../../../hooks/product/useCart";
-import { showToast } from "../../../common";
 
 export default function Cart() {
   const { cart, cartIsLoading, cartError } = useGetCart();

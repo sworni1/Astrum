@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { OrderController } from "./order.controller";
+import authenticateToken from "../../middlewares/authenticateToken";
 import { validateDto } from "../../middlewares/validateDto";
 import { CreateOrderDto } from "./dto/create-order.dto";
-import authenticateToken from "../../middlewares/authenticateToken";
+import { OrderController } from "./order.controller";
 
 const orderController = new OrderController();
 
@@ -14,7 +14,7 @@ orderRoutes.post(
   "/",
   authenticateToken,
   validateDto(CreateOrderDto),
-  orderController.createOrder
+  orderController.createOrder,
 );
 
 export default orderRoutes;

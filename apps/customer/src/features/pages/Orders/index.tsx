@@ -1,9 +1,9 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
-import { useGetOrders } from "../../../hooks/order";
-import { showToast } from "../../../common";
 import { Loader2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { showToast } from "../../../common";
+import { useGetOrders } from "../../../hooks/order";
 import OrderCard from "./OrderCard";
 
 export default function Orders() {
@@ -44,8 +44,8 @@ export default function Orders() {
             <div className="text-center space-y-2">
               <h3 className="text-lg font-medium">No orders yet</h3>
               <p className="text-muted-foreground">
-                You haven&apos;t placed any orders yet. Start shopping to see your
-                orders here!
+                You haven&apos;t placed any orders yet. Start shopping to see
+                your orders here!
               </p>
             </div>
           </CardContent>

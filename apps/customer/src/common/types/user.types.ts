@@ -1,4 +1,4 @@
-import { Gender } from "./auth.types";
+import type { Gender } from "./auth.types";
 
 export type UserData = {
   email: string;

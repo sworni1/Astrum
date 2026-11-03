@@ -1,12 +1,12 @@
 "use client";
 
+import { useSWRConfig } from "swr";
 import useSWRMutation from "swr/mutation";
-import { useFetcher } from "../useFetcher";
-import {
+import type {
   OrderItem,
   UpdateOrderItemStatusDto,
 } from "../../common/types/order.types";
-import { useSWRConfig } from "swr";
+import { useFetcher } from "../useFetcher";
 
 export type UpdateOrderItemStatusError = {
   message: string;

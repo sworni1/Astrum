@@ -1,12 +1,12 @@
+import dayjs from "dayjs";
+import Image from "next/image";
 import Link from "next/link";
-import { Card, CardContent } from "../../../../components/ui/card";
+import { getCurrencyEmoji } from "../../../../common/helpers";
+import { type Order, OrderStatus } from "../../../../common/types/order.types";
+import { Currency } from "../../../../common/types/product.types";
 import { Badge } from "../../../../components/ui/badge";
 import { Button } from "../../../../components/ui/button";
-import Image from "next/image";
-import dayjs from "dayjs";
-import { Order, OrderStatus } from "../../../../common/types/order.types";
-import { Currency } from "../../../../common/types/product.types";
-import { getCurrencyEmoji } from "../../../../common/helpers";
+import { Card, CardContent } from "../../../../components/ui/card";
 
 type Props = {
   order: Order;

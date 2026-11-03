@@ -1,10 +1,10 @@
 "use client";
 
 import useSWRInfinite from "swr/infinite";
-import { useFetcher } from "../../useFetcher";
-import { GetRecommendationsType } from "../../../common/types/product.types";
-import { getKeyProductsByCategory } from "../../../common/helpers/getKeyProductsByCategory";
 import { SWR_INFINITE_CONFIG } from "../../../common/constants/swr";
+import { getKeyProductsByCategory } from "../../../common/helpers/getKeyProductsByCategory";
+import type { GetRecommendationsType } from "../../../common/types/product.types";
+import { useFetcher } from "../../useFetcher";
 
 export const useGetCategoryProducts = (
   category: string,

@@ -1,8 +1,8 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { ValidationPipe } from '@nestjs/common';
-import compression from 'compression';
+import { ValidationPipe } from "@nestjs/common";
+import { NestFactory } from "@nestjs/core";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import compression from "compression";
+import { AppModule } from "./app.module";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -17,24 +17,24 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: ['http://localhost:3000'],
-    allowedHeaders: 'Content-Type, Authorization, Access-Control-Allow-Origin',
+    origin: ["http://localhost:3000"],
+    allowedHeaders: "Content-Type, Authorization, Access-Control-Allow-Origin",
     credentials: true,
   });
 
-  app.setGlobalPrefix('/api');
+  app.setGlobalPrefix("/api");
 
   const config = new DocumentBuilder()
     .addBearerAuth()
-    .setTitle('Astrum auth API Documentation')
+    .setTitle("Astrum auth API Documentation")
     .setDescription(
       'Here are all the project endpoints. Register for your account and enter the token in the "Authorize" field. ',
     )
-    .setVersion('1.0')
+    .setVersion("1.0")
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('swagger', app, document);
+  SwaggerModule.setup("swagger", app, document);
 
   await app.listen(port);
 }

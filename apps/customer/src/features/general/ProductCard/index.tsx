@@ -1,21 +1,21 @@
+import Link from "next/link";
 import { memo } from "react";
+import { FaStar } from "react-icons/fa";
+import OptimizedImage from "@/components/OptimizedImage";
 import {
   Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
 } from "@/components/ui/card";
-import { FaStar } from "react-icons/fa";
-import Link from "next/link";
-import OptimizedImage from "@/components/OptimizedImage";
-import { AddToCartWithQuantity, ToggleWishlistItemButton } from "./actions";
-import {
+import { getCurrencyEmoji } from "../../../common";
+import type {
   Currency,
   ProductCardProps,
 } from "../../../common/types/product.types";
-import { getCurrencyEmoji } from "../../../common";
+import { AddToCartWithQuantity, ToggleWishlistItemButton } from "./actions";
 
 // Memoized star component to prevent unnecessary re-renders
 const StarRating = memo(

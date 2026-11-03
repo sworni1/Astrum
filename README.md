@@ -77,4 +77,4 @@ pnpm dev                 # витрина :3000 · API :3580 · auth :4580
 
 ## Автор
 
-Иван Никитин · [github.com/la7ency](https://github.com/la7ency)
+Иван Никитин · [github.com/sworni1](https://github.com/sworni1)
