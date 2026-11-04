@@ -1,4 +1,7 @@
+import { differenceInYears } from "date-fns";
 import { z } from "zod";
+
+export const MIN_AGE_YEARS = 14;
 
 export const signInFormSchema = z.object({
   email: z.email("Invalid email address").min(1, "Email is required"),
@@ -21,7 +24,11 @@ export const registerFormSchema = z.object({
     .string()
     .max(25, "Nickname cannot exceed 25 characters")
     .optional(),
-  dateOfBirth: z.date(),
+  dateOfBirth: z
+    .date({ error: "Date of birth is required" })
+    .refine((date) => differenceInYears(new Date(), date) >= MIN_AGE_YEARS, {
+      message: `You must be at least ${MIN_AGE_YEARS} years old`,
+    }),
   gender: z.enum(["Male", "Female"], {
     error: "Gender is required",
   }),

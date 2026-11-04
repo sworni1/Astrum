@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { registerFormSchema, type SignUpCredentials } from "../../../common";
-import { Calendar } from "../../../components/ui/calendar";
 import {
   Form,
   FormControl,
@@ -25,11 +23,6 @@ import {
   FormMessage,
 } from "../../../components/ui/form";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../../../components/ui/popover";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -37,6 +30,7 @@ import {
   SelectValue,
 } from "../../../components/ui/select";
 import { useAuth } from "../../../hooks";
+import { DateOfBirthField } from "./DateOfBirthField";
 
 export default function Register() {
   const { handleRegister } = useAuth();
@@ -131,35 +125,12 @@ export default function Register() {
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>Date of birth</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full justify-start font-normal",
-                                !field.value && "text-muted-foreground",
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                              date > new Date() || date < new Date("1900-01-01")
-                            }
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <DateOfBirthField
+                        name={field.name}
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -173,6 +144,7 @@ export default function Register() {
                       <FormLabel>Gender</FormLabel>
                       <FormControl>
                         <Select
+                          value={field.value ?? ""}
                           onValueChange={(value) =>
                             field.onChange(value as "Male" | "Female")
                           }
