@@ -11,7 +11,10 @@ set +e
 VALID_RE='^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\(.+\))?!?: .+'
 
 if [ -f "commitlint.config.js" ]; then
-  if command -v pnpm >/dev/null 2>&1; then
+  if [ -x "node_modules/.bin/commitlint" ]; then
+    node_modules/.bin/commitlint --edit "$1" 2>/dev/null
+    rc=$?
+  elif command -v pnpm >/dev/null 2>&1; then
     pnpm exec commitlint --edit "$1" 2>/dev/null
     rc=$?
   elif command -v npx >/dev/null 2>&1; then

@@ -15,6 +15,66 @@ Node 24+, pnpm 12.8+, Docker.
 | `apps/auth-astrum`   | NestJS 11 + Prisma 7 | 4580 | Аутентификация и пользователи    |
 | `packages/Astrum-db` | Prisma client + zod  | —    | Общая БД-схема и обёртки моделей |
 
+## Архитектура и сценарий заказа
+
+Production-топология из `docker-compose.prod.yml`. Публичный и внутренний узлы Caddy на схеме — два listener одного контейнера; только proxy публикует порты хоста. `customer` обращается к API через внутренний listener, а API и auth подключаются к PostgreSQL напрямую. Одноразовый сервис `migrate` применяет схему до запуска приложений.
+
+```mermaid
+flowchart LR
+    browser["Браузер"]
+
+    subgraph astrum["Docker-сеть astrum"]
+        caddyPublic["Caddy — вход сайта<br/>:80 / :443"]
+        customer["Витрина Next.js<br/>customer ×2"]
+        caddyApi["Caddy — балансировщик API<br/>:3580, внутренний"]
+        api["API-шлюз Express<br/>api ×3, :3580"]
+        auth["Сервис auth NestJS<br/>auth ×1, :4580"]
+        db[("PostgreSQL 16")]
+        migrate["Миграция Prisma<br/>одноразовый сервис"]
+
+        caddyPublic -->|"Балансировка сайта"| customer
+        customer -->|"/api-gateway/* → proxy:3580"| caddyApi
+        caddyApi -->|"Балансировка API"| api
+        api -->|"/api/auth/*"| auth
+        api -->|"Prisma"| db
+        auth -->|"Prisma"| db
+        migrate -->|"prisma migrate deploy"| db
+    end
+
+    browser -->|"HTTP :80 / HTTPS :443"| caddyPublic
+```
+
+Браузер вызывает API по относительному пути `/api-gateway`, поэтому cookie сессии `__auth` остаётся same-origin. Внутренние порты API `3580` и auth `4580` на хост не публикуются.
+
+Блок-схема показывает текущую реализацию `POST /api/orders`. Успешный путь возможен только при наличии указанного способа доставки в БД.
+
+```mermaid
+flowchart TD
+    buyer(["Покупатель подтверждает заказ"])
+    customer["Витрина отправляет POST /api-gateway/orders<br/>с cookie __auth"]
+    rewrite["Next.js rewrite<br/>/api-gateway/orders → proxy:3580/api/orders"]
+    api["API-шлюз Express"]
+    jwt{"Cookie __auth есть<br/>и JWT действителен?"}
+    unauthorized["Ответ 401 Unauthorized"]
+    dto{"Запрос соответствует CreateOrderDto?"}
+    invalid["Ответ 400 Bad Request"]
+    create["OrderService.createOrder<br/>сумма считается по присланным price × quantity"]
+    fk{"PostgreSQL проверяет внешний ключ<br/>shippingMethodId"}
+    fkError["Ошибка записи заказа<br/>способ доставки не найден"]
+    save[("Сохранить Order и OrderItem")]
+    success["Ответ 200 OK с заказом"]
+
+    buyer --> customer --> rewrite --> api --> jwt
+    jwt -->|Нет| unauthorized
+    jwt -->|Да| dto
+    dto -->|Нет| invalid
+    dto -->|Да| create --> fk
+    fk -->|Нет| fkError
+    fk -->|Да| save --> success
+```
+
+Сейчас таблица `ShippingMethod` пуста, поэтому создание заказа с указанным способом доставки завершается ошибкой внешнего ключа. Кроме того, сервер пока не перепроверяет цены и состав заказа по `Product`, не включает доставку в сумму, не списывает остатки и не очищает серверную корзину. Эти незавершённые части также перечислены в блокерах ниже.
+
 ## Запуск
 
 ```bash
@@ -111,7 +171,7 @@ docs: описать архитектуру заказа
 **Инфраструктура и качество**
 
 - [x] Монорепо: pnpm 12 + Turborepo 2, три приложения и общий пакет БД
-- [x] Postgres 16 в Docker, docker-compose для api и auth
+- [x] Postgres 16 в Docker, весь стек в Docker Compose: реплики api и customer за Caddy (ADR-0003)
 - [x] Husky-хуки `commit-msg` / `pre-commit` / `pre-push`, commitlint, quality gates
 - [x] ADR + журнал изменений, Swagger у auth-сервиса
 - [x] Unit-тесты: подпись JWT, JWT-guard, errorHandler, контроллер отзывов
