@@ -2,7 +2,7 @@
 
 id: 0003
 slug: idempotent-checkout-and-cart-clearing
-status: In Progress
+status: Accepted
 adrs: []
 date: 2026-11-04
 ---
@@ -154,9 +154,9 @@ Tracer Bullet: the first two tasks stand up the thin end to end thread (a header
 2. Gateway idempotency core: `order.constants.ts` gains `IDEMPOTENCY_REUSED`, `idempotency.ts` gains `readIdempotencyKey` and `canonicalOrderBody` (with the parsed delivery date), `order.routes.ts` calls the reader after `authenticateToken`, `order.service.ts` writes the key and the fingerprint, adds the fast path read, the index violation fallback with the fingerprint compare and the bounded re-read on a keyed refusal, `order.mapper.ts` drops both columns, `order.controller.ts` answers `200` or `201` and sets the header; satisfies **AC-1**, **AC-2**, **AC-3**, **AC-4**, **AC-6**, **AC-7**, **AC-9**, **AC-12** — done: `idempotency.ts` (reader, fingerprint, header middleware), the three replay paths in `order.service.ts`, `200`/`201` plus `Idempotent-Replay` in the controller, both columns dropped in `order.mapper.ts`; proved on the live database (repeat returns the first order, one row, stock taken once, `409` on another body)
 3. Cart clearing: `assertInCart` returns the rows it read, `buildOrder` deletes or decreases them after the order insert, the zero row case logs `cart.clear.skipped`, any other error aborts the transaction; satisfies **AC-5**, **AC-8** — done: `clearCart` inside the order transaction, the skipped case logged with the order id and product id, proved by three database specs
 4. CORS: `corsOptions.ts` allows `Idempotency-Key` and exposes `Idempotent-Replay`; satisfies **AC-11** — done: the preflight on the live gateway lists both headers
-5. Storefront: `postItem` takes an optional headers argument, `useCheckout` generates and holds the key in a ref, discards it after a `2xx` or a terminal `4xx`, sends it on every attempt, treats `200` and `201` alike and leaves a `409` to the customer; satisfies **AC-10** — done in code, with the key helpers under vitest in `apps/customer/src/hooks/order/idempotency.test.ts`; the browser walkthrough is still owed (see `verify.md`)
+5. Storefront: `postItem` takes an optional headers argument, `useCheckout` generates and holds the key in a ref, discards it after a `2xx` or a terminal `4xx`, sends it on every attempt, treats `200` and `201` alike and leaves a `409` to the customer; satisfies **AC-10** — done: the key helpers sit in `apps/customer/src/hooks/order/idempotency.ts` under vitest, and the five UI steps were confirmed on the running stack by the owner
 6. Tests: unit specs for `readIdempotencyKey` and `canonicalOrderBody` (including two equivalent date offsets), service specs for the replay, conflict and keyed refusal branches, mapper specs for the dropped columns, and database backed specs for the parallel pair and the cart clear behind `ORDER_DB_TESTS=1`; satisfies **AC-1** to **AC-9**, **AC-12** — done: 71 tests in the api package with `ORDER_DB_TESTS=1`, 10 in the customer package
-7. Docs: `verify.md` walked against the running stack, `docs/DEVELOPMENT.md` gains the header contract; satisfies **AC-10**, **AC-11** — done: the contract is in `docs/DEVELOPMENT.md`, `verify.md` carries the run log; the five manual UI steps are owed because the checkout form could not be driven from the automation harness
+7. Docs: `verify.md` walked against the running stack, `docs/DEVELOPMENT.md` gains the header contract; satisfies **AC-10**, **AC-11** — done: the contract is in `docs/DEVELOPMENT.md`, `verify.md` carries the run log of 19 command steps plus the five UI steps confirmed by the owner
 
 ## Consequences
 
