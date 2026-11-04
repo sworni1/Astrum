@@ -12,12 +12,13 @@ NestJS service for registration, sign in and token refresh. It serves everything
 
 ## Key files
 
-| File                | Owns                                                    |
-| ------------------- | ------------------------------------------------------- |
-| `src/main.ts`       | bootstrap, global prefix, ValidationPipe, CORS, Swagger |
-| `src/app.module.ts` | module wiring                                           |
-| `src/auth/`         | controller, service, JWT strategy and DTOs              |
-| `src/prisma/`       | Prisma service and module                               |
+| File                | Owns                                                                            |
+| ------------------- | ------------------------------------------------------------------------------- |
+| `src/main.ts`       | bootstrap, port from `AUTH_PORT`, ValidationPipe, CORS, Swagger, shutdown hooks |
+| `src/app.module.ts` | module wiring                                                                   |
+| `src/health/`       | `GET /health` probe with a database round trip, outside the `/api` prefix       |
+| `src/auth/`         | controller, service, JWT strategy and DTOs                                      |
+| `src/prisma/`       | Prisma service and module, pool size from `DB_POOL_SIZE`                        |
 
 ## Commands
 
@@ -32,13 +33,15 @@ pnpm --filter @astrum/auth check-types
 ## Conventions
 
 - The global `ValidationPipe` runs with `whitelist: true`, so DTO decorators are the contract for every body.
+- Never import an injectable class or a DTO with `import type`: TypeScript erases it, Nest cannot resolve the dependency and `design:paramtypes` loses the DTO, after which `whitelist` strips the whole body. `biome.json` disables `style.useImportType` for this reason.
+- `GET /health` is excluded from the `/api` global prefix through `setGlobalPrefix("/api", { exclude: [...] })`; it must answer the same path in every environment because the balancer probes it.
 - ts-jest runs with `diagnostics: false`, and reads the TypeScript 6 API through the `typescript` alias; `tsc` itself is TypeScript 7.
 - `nest build` emits `dist/src/main.js` because TypeScript 7 defaults `rootDir` to the project folder and the generated Prisma client lives outside `src`. `start:prod` and `nest-cli.json` `entryFile` follow that path.
 - Auth guards come from the Nest passport module; the gateway never re implements login logic.
 
 ## Gotchas
 
-- Port 4580 is hardcoded in `src/main.ts`; `AUTH_PORT` is not read.
+- The port comes from `AUTH_PORT` (default 4580). `app.enableShutdownHooks()` closes the Prisma pool on SIGTERM, which is what lets a replica leave the balancer without dropping requests.
 - CORS allows only `http://localhost:3000`, so another dev host needs an explicit entry there.
 - The refresh flow and the cookie name must stay in sync with customer `src/common/helpers/session.ts` and gateway `authenticateToken.ts`, all three read `__auth`.
 

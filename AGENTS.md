@@ -45,6 +45,7 @@ customer -> proxy:3580  -> api x3 -> auth x1 -> db
 - `migrate` is a one-shot service that runs before anything else starts.
 - Replicas are discovered by Caddy through `dynamic a <service> <port>`; plain `reverse_proxy service:port` balances nothing.
 - `GET /health` exists on all three services and is the only probe URL.
+- Two compose files, one meaning each: `docker-compose.yml` is the dev path (`pnpm dev` starts its `astrum-db` container, `pnpm db:up` uses it), `docker-compose.prod.yml` is the deployable stack. Do not run `docker compose up` from the dev file expecting the new topology.
 - The stack shares the Postgres volume `astrum_astrum-db-data` with the dev container (`POSTGRES_VOLUME` in `.env`). Never run `pnpm dev` and `pnpm docker:prod:up` at the same time — two postmasters on one data directory.
 - See `docs/adr/0003-container-topology-and-load-balancing.md`.
 
