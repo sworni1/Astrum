@@ -10,7 +10,13 @@ import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
 import { logger } from "../../common/helpers/logger";
 import type { CreateOrderDto, OrderItemDto } from "./dto/create-order.dto";
-import { MAX_LINE_QUANTITY, ORDER_ERROR_CODES } from "./order.constants";
+import { idempotencyOf, type Idempotency } from "./idempotency";
+import {
+  MAX_LINE_QUANTITY,
+  ORDER_ERROR_CODES,
+  REPLAY_ATTEMPTS,
+  REPLAY_RETRY_DELAY_MS,
+} from "./order.constants";
 
 type OrderLine = { productId: string; quantity: number };
 
@@ -29,11 +35,16 @@ type RefusalItem = {
   available: number;
 };
 
+type CartRow = { productId: string; quantity: number };
+
 /** What a create and a detail read answer with, in the shape the storefront reads. */
 export type OrderDetail = Omit<Order, "shippingMethod"> & {
   shippingMethod: { name: string; price: number };
   orderItems: OrderItem[];
 };
+
+/** A create answers with the order and whether it came from a replay (spec 0003). */
+export type CreateOrderResult = { order: OrderDetail; replay: boolean };
 
 const TRANSACTION_OPTIONS = {
   maxWait: 5000,
@@ -52,6 +63,18 @@ const orderNotFound = () =>
     ORDER_ERROR_CODES.notFound,
     "Order not found for this customer.",
   );
+
+const idempotencyReused = () =>
+  new AppError(
+    409,
+    ORDER_ERROR_CODES.idempotencyReused,
+    "This idempotency key was already used for a different order. Submit again with a new key.",
+  );
+
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 
 const PRODUCT_SELECT = {
   id: true,
@@ -147,27 +170,41 @@ const toOrderDetail = (
 };
 
 export class OrderService {
-  async createOrder(userId: string, dto: CreateOrderDto): Promise<OrderDetail> {
+  async createOrder(
+    userId: string,
+    dto: CreateOrderDto,
+    idempotencyKey?: string,
+  ): Promise<CreateOrderResult> {
     const lines = mergeOrderLines(dto.orderItems);
     const productIds = lines.map((line) => line.productId);
+    const idempotency =
+      idempotencyKey === undefined
+        ? undefined
+        : idempotencyOf(idempotencyKey, dto, lines);
 
     try {
-      const order = await prisma.$transaction(
-        (tx) => this.buildOrder(tx, userId, dto, lines),
+      const result = await prisma.$transaction(
+        (tx) => this.buildOrder(tx, userId, dto, lines, idempotency),
         TRANSACTION_OPTIONS,
       );
 
-      logger.info({
-        event: "order.created",
-        orderId: order.id,
-        userId,
-        lineCount: order.orderItems.length,
-        total: order.totalPrice.toFixed(2),
-        currency: order.currency,
-      });
+      this.logCreated(result, userId, idempotency);
 
-      return order;
+      return result;
     } catch (error) {
+      // A keyed failure is resolved against the key first, because the loser of a
+      // race is refused before it ever reaches the unique index (AC-6).
+      if (idempotency) {
+        const existing = await this.findOrderByKey(userId, idempotency.key);
+
+        if (existing) {
+          const replayed = this.replayAnswer(existing, idempotency);
+          this.logCreated(replayed, userId, idempotency);
+
+          return replayed;
+        }
+      }
+
       if (error instanceof StockShortfall) {
         throw await this.outOfStockError(error.items);
       }
@@ -190,6 +227,82 @@ export class OrderService {
 
       throw error;
     }
+  }
+
+  private logCreated(
+    result: CreateOrderResult,
+    userId: string,
+    idempotency?: Idempotency,
+  ): void {
+    if (result.replay) {
+      logger.info({
+        event: "order.replayed",
+        orderId: result.order.id,
+        userId,
+        key: idempotency?.key,
+      });
+      return;
+    }
+
+    logger.info({
+      event: "order.created",
+      orderId: result.order.id,
+      userId,
+      lineCount: result.order.orderItems.length,
+      total: result.order.totalPrice.toFixed(2),
+      currency: result.order.currency,
+    });
+  }
+
+  /**
+   * The winner commits before its index violation is visible, so a bounded
+   * re-read on the plain client is what turns a keyed refusal into an answer
+   * about the order that already exists (AC-6).
+   */
+  private async findOrderByKey(
+    userId: string,
+    key: string,
+  ): Promise<OrderDetail | null> {
+    for (let attempt = 0; attempt < REPLAY_ATTEMPTS; attempt += 1) {
+      const row = await prisma.order.findFirst({
+        where: { userId, idempotencyKey: key },
+        include: ORDER_DETAIL_INCLUDE,
+      });
+
+      if (row) {
+        return toOrderDetail(row);
+      }
+
+      if (attempt < REPLAY_ATTEMPTS - 1) {
+        await sleep(REPLAY_RETRY_DELAY_MS);
+      }
+    }
+
+    return null;
+  }
+
+  /** Every path that finds the key compares the fingerprint (AC-2, AC-3). */
+  private replayAnswer(
+    order: OrderDetail,
+    idempotency: Idempotency,
+  ): CreateOrderResult {
+    if (order.idempotencyHash === null) {
+      logger.error({
+        event: "order.replay.miss",
+        orderId: order.id,
+        key: idempotency.key,
+      });
+
+      throw new Error(
+        "An order exists under this idempotency key without a fingerprint.",
+      );
+    }
+
+    if (order.idempotencyHash !== idempotency.hash) {
+      throw idempotencyReused();
+    }
+
+    return { order, replay: true };
   }
 
   async getOrderById(orderId: string, userId: string): Promise<OrderDetail> {
@@ -318,7 +431,21 @@ export class OrderService {
     userId: string,
     dto: CreateOrderDto,
     lines: OrderLine[],
-  ): Promise<OrderDetail> {
+    idempotency?: Idempotency,
+  ): Promise<CreateOrderResult> {
+    // Fast path: an order already under this key answers before anything is read
+    // or written again (AC-2, AC-3).
+    if (idempotency) {
+      const existing = await tx.order.findFirst({
+        where: { userId, idempotencyKey: idempotency.key },
+        include: ORDER_DETAIL_INCLUDE,
+      });
+
+      if (existing) {
+        return this.replayAnswer(toOrderDetail(existing), idempotency);
+      }
+    }
+
     const products = await this.loadProducts(
       tx,
       lines.map((line) => line.productId),
@@ -330,7 +457,7 @@ export class OrderService {
     // Fixed precedence: visibility and stock, then cart, then currency,
     // then the delivery method (the first failing check decides the code).
     this.assertAvailable(products, lines);
-    await this.assertInCart(tx, userId, lines);
+    const cartRows = await this.assertInCart(tx, userId, lines);
 
     const priced = this.priceLines(products, lines);
     const currency = this.resolveCurrency(priced);
@@ -360,6 +487,8 @@ export class OrderService {
         deliveryAddress: dto.deliveryAddress,
         deliveryDate: new Date(dto.deliveryDate),
         shippingMethodId: dto.shippingMethodId,
+        idempotencyKey: idempotency?.key ?? null,
+        idempotencyHash: idempotency?.hash ?? null,
         OrderItem: {
           create: priced.map((line) => ({
             productId: line.productId,
@@ -375,7 +504,9 @@ export class OrderService {
       include: { OrderItem: true, shippingMethod: true },
     });
 
-    return toOrderDetail(created);
+    await this.clearCart(tx, created.id, userId, lines, cartRows);
+
+    return { order: toOrderDetail(created), replay: false };
   }
 
   private async loadProducts(
@@ -432,7 +563,7 @@ export class OrderService {
     tx: Prisma.TransactionClient,
     userId: string,
     lines: OrderLine[],
-  ): Promise<void> {
+  ): Promise<CartRow[]> {
     const cartRows = await tx.cartItem.findMany({
       where: { userId, productId: { in: lines.map((line) => line.productId) } },
       select: { productId: true, quantity: true },
@@ -448,7 +579,7 @@ export class OrderService {
       }));
 
     if (refused.length === 0) {
-      return;
+      return cartRows;
     }
 
     throw new AppError(
@@ -457,6 +588,55 @@ export class OrderService {
       "Your cart holds fewer units than this order asks for. Refresh the cart and try again.",
       { items: refused },
     );
+  }
+
+  /**
+   * The ordered lines leave the cart in the same commit that took the stock: a
+   * row at or below the ordered quantity is deleted, a larger row is decreased by
+   * exactly the ordered quantity, and a row another request already removed is
+   * logged instead of written (AC-5, AC-8).
+   */
+  private async clearCart(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+    userId: string,
+    lines: OrderLine[],
+    cartRows: CartRow[],
+  ): Promise<void> {
+    const before = new Map(cartRows.map((row) => [row.productId, row.quantity]));
+
+    for (const line of lines) {
+      const { count } = await tx.cartItem.deleteMany({
+        where: {
+          userId,
+          productId: line.productId,
+          quantity: { lte: line.quantity },
+        },
+      });
+
+      if (count > 0) {
+        continue;
+      }
+
+      const { count: decreased } = await tx.cartItem.updateMany({
+        where: {
+          userId,
+          productId: line.productId,
+          quantity: { gte: line.quantity },
+        },
+        data: { quantity: { decrement: line.quantity } },
+      });
+
+      if (decreased === 0) {
+        logger.warn({
+          event: "cart.clear.skipped",
+          orderId,
+          userId,
+          productId: line.productId,
+          quantityBefore: before.get(line.productId) ?? null,
+        });
+      }
+    }
   }
 
   private priceLines(

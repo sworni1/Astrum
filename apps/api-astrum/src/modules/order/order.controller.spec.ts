@@ -11,6 +11,8 @@ const createMockResponse = (): jest.Mocked<Response> => {
   const res = {
     status: jest.fn().mockReturnThis(),
     json: jest.fn().mockReturnThis(),
+    setHeader: jest.fn().mockReturnThis(),
+    locals: {},
   } as unknown as jest.Mocked<Response>;
   return res;
 };
@@ -45,7 +47,7 @@ describe("OrderController", () => {
   it("отвечает 201 и деньгами числом на создание заказа (AC-9)", async () => {
     jest
       .spyOn(OrderService.prototype, "createOrder")
-      .mockResolvedValue(orderDetail as never);
+      .mockResolvedValue({ order: orderDetail, replay: false } as never);
     const res = createMockResponse();
 
     await new OrderController().createOrder(createRequest(), res);
@@ -59,6 +61,36 @@ describe("OrderController", () => {
         orderItems: [expect.objectContaining({ price: 19.99 })],
       }),
     );
+  });
+
+  it("отдаёт 200 и заголовок Idempotent-Replay на повтор с тем же ключом (AC-2)", async () => {
+    jest
+      .spyOn(OrderService.prototype, "createOrder")
+      .mockResolvedValue({ order: orderDetail, replay: true } as never);
+    const res = createMockResponse();
+    res.locals.idempotencyKey = "key-abcdef";
+
+    await new OrderController().createOrder(createRequest(), res);
+
+    expect(OrderService.prototype.createOrder).toHaveBeenCalledWith(
+      "user-1",
+      {},
+      "key-abcdef",
+    );
+    expect(res.setHeader).toHaveBeenCalledWith("Idempotent-Replay", "true");
+    expect(res.status).toHaveBeenCalledWith(StatusCodes.OK);
+  });
+
+  it("не ставит заголовок повтора на новый заказ (AC-2)", async () => {
+    jest
+      .spyOn(OrderService.prototype, "createOrder")
+      .mockResolvedValue({ order: orderDetail, replay: false } as never);
+    const res = createMockResponse();
+
+    await new OrderController().createOrder(createRequest(), res);
+
+    expect(res.setHeader).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(StatusCodes.CREATED);
   });
 
   it("отдаёт 404 на чужой заказ через handleErrors (AC-8)", async () => {

@@ -64,7 +64,7 @@ describeWithDatabase("OrderService against a real database", () => {
   });
 
   it("игнорирует цену и имя из тела и пишет цену товара (AC-1)", async () => {
-    const order = await new OrderService().createOrder(
+    const { order } = await new OrderService().createOrder(
       userId,
       dtoFor({
         orderItems: [
@@ -150,7 +150,7 @@ describeWithDatabase("OrderService against a real database", () => {
     });
 
     const service = new OrderService();
-    const order = await service.createOrder(localUser, {
+    const { order } = await service.createOrder(localUser, {
       ...dtoFor(),
       orderItems: [{ productId: product.id, quantity: 3 }],
     } as CreateOrderDto);
@@ -185,5 +185,185 @@ describeWithDatabase("OrderService against a real database", () => {
     await prisma.order.deleteMany({ where: { userId: localUser } });
     await prisma.cartItem.deleteMany({ where: { userId: localUser } });
     await prisma.product.delete({ where: { id: product.id } });
+  }, 30000);
+});
+
+describeWithDatabase("Idempotent checkout against a real database", () => {
+  let shippingMethodId = "";
+
+  beforeAll(async () => {
+    const shipping = await prisma.shippingMethod.create({
+      data: { name: `Idem delivery ${Date.now()}`, price: 5.99 },
+    });
+    shippingMethodId = shipping.id;
+  });
+
+  afterAll(async () => {
+    await prisma.shippingMethod.deleteMany({ where: { id: shippingMethodId } });
+    await prisma.$disconnect();
+  });
+
+  const provision = async (options: {
+    stock: number;
+    cart: number;
+    orderQty: number;
+  }) => {
+    const owner = `idem-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const product = await prisma.product.create({
+      data: {
+        businessId: owner,
+        name: `Idem ${owner}`,
+        quantity: options.stock,
+        price: 10,
+        currency: "RUB",
+        category: "Home",
+        previewImage: "http://cdn/idem.png",
+        images: [],
+        visibility: "Public",
+        status: "Published",
+      },
+    });
+
+    if (options.cart > 0) {
+      await prisma.cartItem.create({
+        data: { userId: owner, productId: product.id, quantity: options.cart },
+      });
+    }
+
+    const dto = {
+      deliveryAddress: "Lenin 1",
+      deliveryDate: "2026-11-20T09:00:00.000Z",
+      shippingMethodId,
+      paymentMethod: "CASH",
+      paymentDetails: "Cash",
+      orderItems: [{ productId: product.id, quantity: options.orderQty }],
+    } as unknown as CreateOrderDto;
+
+    return { owner, product, dto };
+  };
+
+  const cleanup = async (owner: string, productId: string) => {
+    await prisma.orderItem.deleteMany({ where: { userId: owner } });
+    await prisma.order.deleteMany({ where: { userId: owner } });
+    await prisma.cartItem.deleteMany({ where: { userId: owner } });
+    await prisma.product.delete({ where: { id: productId } });
+  };
+
+  it("два запроса с одним ключом дают один заказ, одно списание и одну очистку (AC-2, AC-6, AC-5)", async () => {
+    const { owner, product, dto } = await provision({
+      stock: 5,
+      cart: 2,
+      orderQty: 2,
+    });
+    const key = `race-${Date.now()}`;
+
+    const [first, second] = await Promise.all([
+      new OrderService().createOrder(owner, dto, key),
+      new OrderService().createOrder(owner, dto, key),
+    ]);
+
+    const orders = await prisma.order.findMany({ where: { userId: owner } });
+    const stock = await prisma.product.findUniqueOrThrow({
+      where: { id: product.id },
+    });
+    const cart = await prisma.cartItem.count({ where: { userId: owner } });
+
+    expect(orders).toHaveLength(1);
+    expect(first.order.id).toBe(second.order.id);
+    expect([first.replay, second.replay].sort()).toEqual([false, true]);
+    expect(stock.quantity).toBe(3);
+    expect(cart).toBe(0);
+
+    await cleanup(owner, product.id);
+  }, 60000);
+
+  it("оставляет остаток в корзине и не трогает невыбранный товар (AC-5)", async () => {
+    const { owner, product, dto } = await provision({
+      stock: 5,
+      cart: 5,
+      orderQty: 2,
+    });
+    const other = await prisma.product.create({
+      data: {
+        businessId: owner,
+        name: `Untouched ${owner}`,
+        quantity: 50,
+        price: 10,
+        currency: "RUB",
+        category: "Home",
+        previewImage: "http://cdn/other.png",
+        images: [],
+        visibility: "Public",
+        status: "Published",
+      },
+    });
+    await prisma.cartItem.create({
+      data: { userId: owner, productId: other.id, quantity: 9 },
+    });
+
+    await new OrderService().createOrder(owner, dto, `partial-${Date.now()}`);
+
+    const ordered = await prisma.cartItem.findFirstOrThrow({
+      where: { userId: owner, productId: product.id },
+    });
+    const kept = await prisma.cartItem.findFirstOrThrow({
+      where: { userId: owner, productId: other.id },
+    });
+
+    expect(ordered.quantity).toBe(3);
+    expect(kept.quantity).toBe(9);
+
+    await prisma.cartItem.deleteMany({ where: { userId: owner } });
+    await prisma.product.delete({ where: { id: other.id } });
+    await cleanup(owner, product.id);
+  }, 30000);
+
+  it("отказ не пишет ключ и не меняет корзину (AC-5)", async () => {
+    const { owner, product, dto } = await provision({
+      stock: 1,
+      cart: 2,
+      orderQty: 2,
+    });
+    const key = `refused-${Date.now()}`;
+
+    const error = await new OrderService()
+      .createOrder(owner, dto, key)
+      .catch((caught: AppError) => caught);
+
+    const stored = await prisma.order.count({
+      where: { userId: owner, idempotencyKey: key },
+    });
+    const cart = await prisma.cartItem.findFirstOrThrow({
+      where: { userId: owner, productId: product.id },
+    });
+
+    expect((error as AppError).code).toBe("OUT_OF_STOCK");
+    expect(stored).toBe(0);
+    expect(cart.quantity).toBe(2);
+
+    await cleanup(owner, product.id);
+  }, 30000);
+
+  it("тот же ключ с другим телом отвечает 409 и пишет один заказ (AC-3)", async () => {
+    const { owner, product, dto } = await provision({
+      stock: 5,
+      cart: 3,
+      orderQty: 1,
+    });
+    const key = `conflict-${Date.now()}`;
+
+    await new OrderService().createOrder(owner, dto, key);
+
+    const error = await new OrderService()
+      .createOrder(owner, { ...dto, deliveryAddress: "Lenin 2" }, key)
+      .catch((caught: AppError) => caught);
+
+    const orders = await prisma.order.count({ where: { userId: owner } });
+
+    expect((error as AppError).status).toBe(409);
+    expect((error as AppError).code).toBe("IDEMPOTENCY_KEY_REUSED");
+    expect(orders).toBe(1);
+
+    await cleanup(owner, product.id);
   }, 30000);
 });

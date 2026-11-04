@@ -10,6 +10,7 @@ import { Prisma } from "../../../generated/prisma/client";
 import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
 import type { CreateOrderDto } from "./dto/create-order.dto";
+import { idempotencyOf } from "./idempotency";
 import { mergeOrderLines, OrderService } from "./order.service";
 
 type ProductRow = {
@@ -71,8 +72,11 @@ const createTx = () => ({
       { productId: "p-1", quantity: 999 },
       { productId: "p-2", quantity: 999 },
     ]),
+    deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+    updateMany: jest.fn().mockResolvedValue({ count: 0 }),
   },
   order: {
+    findFirst: jest.fn().mockResolvedValue(null),
     create: jest.fn().mockImplementation(({ data }) => ({
       id: "order-1",
       userId: data.userId,
@@ -149,7 +153,7 @@ describe("OrderService.createOrder", () => {
       { productId: "p-2", quantity: 2 },
     ]);
 
-    const order = await new OrderService().createOrder(
+    const { order } = await new OrderService().createOrder(
       "user-1",
       makeDto({
         orderItems: [
@@ -535,5 +539,225 @@ describe("OrderService.updateOrderStatus", () => {
     expect(order.status).toBe("CANCELED");
     expect(tx.order.update).not.toHaveBeenCalled();
     expect(tx.product.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("OrderService.createOrder with an idempotency key", () => {
+  const KEY = "test-key-12345678";
+  const hash = idempotencyOf(
+    KEY,
+    makeDto(),
+    mergeOrderLines(makeDto().orderItems),
+  ).hash;
+
+  const existingOrder = (overrides: Record<string, unknown> = {}) => ({
+    id: "order-existing",
+    userId: "user-1",
+    status: "PENDING",
+    totalPrice: new Prisma.Decimal("59.97"),
+    currency: "RUB",
+    idempotencyKey: KEY,
+    idempotencyHash: hash,
+    shippingMethod: { id: "ship-1", name: "Standard", price: 5.99 },
+    OrderItem: [{ id: "line-1", price: new Prisma.Decimal("19.99") }],
+    ...overrides,
+  });
+
+  let tx: Tx;
+
+  beforeEach(() => {
+    tx = createTx();
+    prismaMock.$transaction.mockReset();
+    prismaMock.$transaction.mockImplementation((fn: (client: Tx) => unknown) =>
+      fn(tx),
+    );
+    prismaMock.product.findMany.mockResolvedValue([makeProduct({ quantity: 10 })]);
+    prismaMock.order.findFirst.mockReset();
+    prismaMock.order.findFirst.mockResolvedValue(null);
+    tx.product.findMany.mockResolvedValue([makeProduct({ quantity: 10 })]);
+    jest.spyOn(console, "info").mockImplementation(() => undefined);
+    jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    jest.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("пишет ключ и отпечаток в тот же create (AC-1)", async () => {
+    await new OrderService().createOrder("user-1", makeDto(), KEY);
+
+    const data = tx.order.create.mock.calls[0][0].data;
+
+    expect(data.idempotencyKey).toBe(KEY);
+    expect(data.idempotencyHash).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("пишет NULL в обе колонки, когда заголовка нет (AC-1)", async () => {
+    await new OrderService().createOrder("user-1", makeDto());
+
+    const data = tx.order.create.mock.calls[0][0].data;
+
+    expect(data.idempotencyKey).toBeNull();
+    expect(data.idempotencyHash).toBeNull();
+    expect(tx.order.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("отвечает повтором без записи, когда строка с тем же отпечатком есть (AC-2)", async () => {
+    tx.order.findFirst.mockResolvedValue(existingOrder());
+
+    const result = await new OrderService().createOrder("user-1", makeDto(), KEY);
+
+    expect(result.replay).toBe(true);
+    expect(result.order.id).toBe("order-existing");
+    expect(tx.order.create).not.toHaveBeenCalled();
+    expect(tx.product.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("ищет строку по паре userId и ключ (AC-9)", async () => {
+    await new OrderService().createOrder("user-1", makeDto(), KEY);
+
+    expect(tx.order.findFirst).toHaveBeenCalledWith({
+      where: { userId: "user-1", idempotencyKey: KEY },
+      include: { OrderItem: true, shippingMethod: true },
+    });
+  });
+
+  it("отказывает с 409, когда отпечаток другой (AC-3)", async () => {
+    const other = existingOrder({ idempotencyHash: "b".repeat(64) });
+    tx.order.findFirst.mockResolvedValue(other);
+    prismaMock.order.findFirst.mockResolvedValue(other);
+
+    await expectAppError(
+      new OrderService().createOrder("user-1", makeDto(), KEY),
+      "IDEMPOTENCY_KEY_REUSED",
+    );
+
+    expect(tx.order.create).not.toHaveBeenCalled();
+  });
+
+  it("разрешает отказ в повтор по ключу (AC-6)", async () => {
+    tx.product.findMany.mockResolvedValue([makeProduct({ quantity: 0 })]);
+    prismaMock.order.findFirst.mockResolvedValue(existingOrder());
+
+    const result = await new OrderService().createOrder("user-1", makeDto(), KEY);
+
+    expect(result.replay).toBe(true);
+    expect(result.order.id).toBe("order-existing");
+    expect(tx.order.create).not.toHaveBeenCalled();
+  });
+
+  it("перечитывает ключ трижды и оставляет исходный отказ, когда строки нет (AC-6)", async () => {
+    tx.product.findMany.mockResolvedValue([makeProduct({ quantity: 0 })]);
+
+    await expectAppError(
+      new OrderService().createOrder("user-1", makeDto(), KEY),
+      "OUT_OF_STOCK",
+    );
+
+    expect(prismaMock.order.findFirst).toHaveBeenCalledTimes(3);
+  });
+
+  it("отдаёт отменённый заказ как он есть на повторе (AC-7)", async () => {
+    tx.order.findFirst.mockResolvedValue(existingOrder({ status: "CANCELED" }));
+
+    const result = await new OrderService().createOrder("user-1", makeDto(), KEY);
+
+    expect(result.replay).toBe(true);
+    expect(result.order.status).toBe("CANCELED");
+  });
+});
+
+describe("OrderService.createOrder cart clearing", () => {
+  let tx: Tx;
+
+  const create = () => new OrderService().createOrder("user-1", makeDto());
+
+  beforeEach(() => {
+    tx = createTx();
+    prismaMock.$transaction.mockReset();
+    prismaMock.$transaction.mockImplementation((fn: (client: Tx) => unknown) =>
+      fn(tx),
+    );
+    prismaMock.product.findMany.mockResolvedValue([makeProduct({ quantity: 10 })]);
+    prismaMock.order.findFirst.mockResolvedValue(null);
+    tx.product.findMany.mockResolvedValue([makeProduct({ quantity: 10 })]);
+    jest.spyOn(console, "info").mockImplementation(() => undefined);
+    jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    jest.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("удаляет строку корзины, которой не больше заказанного (AC-5)", async () => {
+    tx.cartItem.findMany.mockResolvedValue([{ productId: "p-1", quantity: 3 }]);
+
+    await create();
+
+    expect(tx.cartItem.deleteMany).toHaveBeenCalledWith({
+      where: {
+        userId: "user-1",
+        productId: "p-1",
+        quantity: { lte: 3 },
+      },
+    });
+    expect(tx.cartItem.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("уменьшает строку корзины, которая больше заказанного (AC-5)", async () => {
+    tx.cartItem.findMany.mockResolvedValue([{ productId: "p-1", quantity: 5 }]);
+    tx.cartItem.deleteMany.mockResolvedValue({ count: 0 });
+    tx.cartItem.updateMany.mockResolvedValue({ count: 1 });
+
+    await create();
+
+    expect(tx.cartItem.updateMany).toHaveBeenCalledWith({
+      where: {
+        userId: "user-1",
+        productId: "p-1",
+        quantity: { gte: 3 },
+      },
+      data: { quantity: { decrement: 3 } },
+    });
+  });
+
+  it("не трогает строку товара, которого нет в заказе (AC-5)", async () => {
+    tx.cartItem.findMany.mockResolvedValue([
+      { productId: "p-1", quantity: 3 },
+      { productId: "p-2", quantity: 9 },
+    ]);
+
+    await create();
+
+    expect(tx.cartItem.deleteMany).toHaveBeenCalledTimes(1);
+    expect(tx.cartItem.deleteMany.mock.calls[0][0].where.productId).toBe("p-1");
+  });
+
+  it("логирует пропуск, когда строку удалили между чтением и очисткой (AC-8)", async () => {
+    tx.cartItem.findMany.mockResolvedValue([{ productId: "p-1", quantity: 3 }]);
+    tx.cartItem.deleteMany.mockResolvedValue({ count: 0 });
+    tx.cartItem.updateMany.mockResolvedValue({ count: 0 });
+    const warn = console.warn as jest.Mock;
+
+    await create();
+
+    const events = warn.mock.calls.map(([line]) => JSON.parse(line as string));
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        event: "cart.clear.skipped",
+        orderId: "order-1",
+        productId: "p-1",
+      }),
+    );
+  });
+
+  it("прерывает транзакцию, когда очистка упала (AC-8)", async () => {
+    tx.cartItem.deleteMany.mockRejectedValue(new Error("db is down"));
+
+    await expect(create()).rejects.toThrow("db is down");
+    expect(tx.order.create).toHaveBeenCalled();
   });
 });

@@ -4,6 +4,7 @@ import authenticateToken from "../../middlewares/authenticateToken";
 import { validateDto } from "../../middlewares/validateDto";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { UpdateOrderStatusDto } from "./dto/update-order-status.dto";
+import { attachIdempotencyKey } from "./idempotency";
 import { ORDER_ERROR_CODES } from "./order.constants";
 import { OrderController } from "./order.controller";
 
@@ -25,6 +26,7 @@ orderRoutes.patch(
 orderRoutes.post(
   "/",
   authenticateToken,
+  attachIdempotencyKey,
   validateDto(CreateOrderDto, {
     status: StatusCodes.UNPROCESSABLE_ENTITY,
     code: ORDER_ERROR_CODES.validation,

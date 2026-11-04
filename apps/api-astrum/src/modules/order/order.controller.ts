@@ -12,9 +12,19 @@ const userIdOf = (req: Request): string =>
 export class OrderController {
   async createOrder(req: Request, res: Response) {
     try {
-      const order = await orderService.createOrder(userIdOf(req), req.body);
+      const { order, replay } = await orderService.createOrder(
+        userIdOf(req),
+        req.body,
+        res.locals.idempotencyKey as string | undefined,
+      );
 
-      res.status(StatusCodes.CREATED).json(toOrderJson(order));
+      if (replay) {
+        res.setHeader("Idempotent-Replay", "true");
+      }
+
+      res
+        .status(replay ? StatusCodes.OK : StatusCodes.CREATED)
+        .json(toOrderJson(order));
     } catch (error) {
       handleErrors(res, error);
     }
