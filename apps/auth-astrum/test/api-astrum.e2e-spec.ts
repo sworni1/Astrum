@@ -1,7 +1,13 @@
-import { type INestApplication, ValidationPipe } from "@nestjs/common";
+import {
+  type INestApplication,
+  RequestMethod,
+  ValidationPipe,
+} from "@nestjs/common";
 import { Test, type TestingModule } from "@nestjs/testing";
 import request from "supertest";
 import apiApp from "../../api-astrum/src/app";
+import { prisma } from "../../api-astrum/lib/prisma";
+import { PrismaService } from "../src/prisma/prisma.service";
 import { AppModule as AuthAppModule } from "../src/app.module";
 
 jest.setTimeout(30000);
@@ -39,11 +45,19 @@ describe("Auth -> api-astrum (e2e)", () => {
         whitelist: true,
       }),
     );
+    authApp.setGlobalPrefix("/api", {
+      exclude: [{ path: "health", method: RequestMethod.GET }],
+    });
     await authApp.init();
   });
 
   afterAll(async () => {
-    if (authApp) await authApp.close();
+    if (authApp) {
+      await authApp.get(PrismaService).$disconnect();
+      await authApp.close();
+    }
+
+    await prisma.$disconnect();
   });
 
   it("returns 401 when __auth cookie is missing", async () => {
