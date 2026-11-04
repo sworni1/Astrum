@@ -6,6 +6,13 @@ import { AppModule as AuthAppModule } from "../src/app.module";
 
 jest.setTimeout(30000);
 
+const birthDate = (yearsAgo: number) => {
+  const date = new Date();
+  date.setUTCFullYear(date.getUTCFullYear() - yearsAgo);
+
+  return date.toISOString();
+};
+
 describe("Auth -> api-astrum (e2e)", () => {
   let authApp: INestApplication;
 
@@ -101,5 +108,58 @@ describe("Auth -> api-astrum (e2e)", () => {
       .expect(200);
 
     expect(Array.isArray(ordersResponse.body)).toBe(true);
+  });
+
+  it("отклоняет регистрацию младше 14 лет и не создаёт пользователя", async () => {
+    const email = `underage_${Date.now()}@example.com`;
+
+    const response = await request(authApp.getHttpServer())
+      .post("/api/auth/register")
+      .send({
+        email,
+        password: "qwertyuiop",
+        gender: "Male",
+        dateOfBirth: birthDate(13),
+      })
+      .expect(400);
+
+    expect(response.body?.message).toContain(
+      "You must be at least 14 years old",
+    );
+
+    await request(authApp.getHttpServer())
+      .post("/api/auth/signin")
+      .send({ email, password: "qwertyuiop" })
+      .expect(403);
+  });
+
+  it("принимает регистрацию ровно в 14 лет", async () => {
+    const email = `exactly14_${Date.now()}@example.com`;
+
+    await request(authApp.getHttpServer())
+      .post("/api/auth/register")
+      .send({
+        email,
+        password: "qwertyuiop",
+        gender: "Female",
+        dateOfBirth: birthDate(14),
+      })
+      .expect(200);
+  });
+
+  it("отклоняет будущую дату рождения", async () => {
+    const response = await request(authApp.getHttpServer())
+      .post("/api/auth/register")
+      .send({
+        email: `future_${Date.now()}@example.com`,
+        password: "qwertyuiop",
+        gender: "Male",
+        dateOfBirth: birthDate(-1),
+      })
+      .expect(400);
+
+    expect(response.body?.message).toContain(
+      "Date of birth cannot be in the future",
+    );
   });
 });

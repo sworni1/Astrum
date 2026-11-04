@@ -10,6 +10,7 @@ import {
   MinLength,
 } from "class-validator";
 import { Gender } from "../../../generated/prisma/enums";
+import { MIN_AGE_YEARS, MinAge } from "./min-age.validator";
 
 export class RegisterUserDto {
   @IsNotEmpty()
@@ -52,10 +53,11 @@ export class RegisterUserDto {
 
   @IsNotEmpty()
   @IsDateString()
+  @MinAge(MIN_AGE_YEARS)
   @ApiProperty({
     required: true,
     nullable: false,
-    description: "Date of birth",
+    description: "Date of birth, at least 14 years ago",
   })
   dateOfBirth: Date;
 
