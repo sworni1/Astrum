@@ -7,6 +7,7 @@ datasource db {
   provider = "postgresql"
 }
 
+// User model
 model User {
   id                  String              @id @default(uuid())
   createdAt           DateTime            @default(now())
@@ -19,17 +20,19 @@ model User {
   preferredCategories String[]
   dateOfBirth         DateTime
   lastViewedProduct   LastViewedProduct[]
-  Review              Review[]
+  reviews             Review[]
 }
 
 model LastViewedProduct {
-  id          String  @id @default(uuid())
+  id          String @id @default(uuid())
   viewingTime Int
   productId   String
-  userId      String?
-  User        User?   @relation(fields: [userId], references: [id])
+
+  User   User?   @relation(fields: [userId], references: [id])
+  userId String?
 }
 
+// Product models
 model Impression {
   id        String   @id @unique @default(uuid())
   stars     Float    @default(0)
@@ -56,7 +59,7 @@ model CartItem {
   createdAt DateTime @default(now())
   userId    String
   productId String
-  quantity  Int      @default(1)
+  quantity  Int      @default(1) @db.Integer
 
   @@unique([userId, productId])
   @@index([userId])
@@ -85,11 +88,11 @@ model Product {
   previewImage  String
   sales         Int               @default(0)
   views         Int               @default(0)
-  reviewCount   Int               @default(0)
-  averageRating Float             @default(0)
   impressions   Impression[]
   properties    ProductProperty[]
-  Review        Review[]
+  reviews       Review[]
+  reviewCount   Int               @default(0)
+  averageRating Float             @default(0)
 }
 
 model ProductProperty {
@@ -100,21 +103,25 @@ model ProductProperty {
   Product   Product       @relation(fields: [productId], references: [id])
 }
 
+// Order models
 model Order {
   id               String         @id @default(cuid())
   userId           String
-  totalPrice       Float
+  totalPrice       Decimal        @db.Decimal(10, 2)
+  currency         Currency
   paymentMethod    PaymentMethod
   paymentStatus    PaymentStatus  @default(PENDING)
   paymentDetails   String?
   status           OrderStatus    @default(PENDING)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+  shippingMethod   ShippingMethod @relation(fields: [shippingMethodId], references: [id])
   deliveryAddress  String
   deliveryDate     DateTime
-  shippingMethodId String
-  shippingMethod   ShippingMethod @relation(fields: [shippingMethodId], references: [id])
   OrderItem        OrderItem[]
+  shippingMethodId String
+
+  @@index([userId])
 }
 
 model OrderItem {
@@ -123,13 +130,16 @@ model OrderItem {
   previewImage String
   name         String
   quantity     Int
-  price        Float
+  price        Decimal         @db.Decimal(10, 2)
+  currency     Currency
   orderId      String
   receiptDate  DateTime?
   status       OrderItemStatus @default(PENDING)
   userId       String
   order        Order           @relation(fields: [orderId], references: [id])
-  Review       Review?
+  review       Review?
+
+  @@index([orderId])
 }
 
 model ShippingMethod {
@@ -137,42 +147,6 @@ model ShippingMethod {
   name  String  @unique
   price Float
   Order Order[]
-}
-
-model Review {
-  id             String           @id @default(uuid())
-  userId         String
-  productId      String
-  orderItemId    String           @unique
-  rating         Int              @db.SmallInt
-  qualityRating  Int              @db.SmallInt
-  deliveryRating Int              @db.SmallInt
-  accuracyRating Int              @db.SmallInt
-  comment        String
-  photos         String[]         @default([])
-  status         ReviewStatus     @default(PENDING)
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt 
-  OrderItem      OrderItem        @relation(fields: [orderItemId], references: [id])
-  Product        Product          @relation(fields: [productId], references: [id])
-  User           User             @relation(fields: [userId], references: [id])
-  ReviewResponse ReviewResponse[]
-
-  @@index([createdAt])
-  @@index([productId, status])
-  @@index([userId])
-}
-
-model ReviewResponse {
-  id         String   @id @default(uuid())
-  reviewId   String
-  businessId String
-  comment    String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  Review     Review   @relation(fields: [reviewId], references: [id])
-
-  @@index([reviewId])
 }
 
 enum PaymentMethod {
@@ -281,4 +255,41 @@ enum ReviewStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+model Review {
+  id             String       @id @default(uuid())
+  userId         String
+  productId      String
+  orderItemId    String       @unique
+  rating         Int          @db.SmallInt
+  qualityRating  Int          @db.SmallInt
+  deliveryRating Int          @db.SmallInt
+  accuracyRating Int          @db.SmallInt
+  comment        String
+  photos         String[]     @default([])
+  status         ReviewStatus @default(PENDING)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  Product         Product          @relation(fields: [productId], references: [id])
+  User            User             @relation(fields: [userId], references: [id])
+  OrderItem       OrderItem        @relation(fields: [orderItemId], references: [id])
+  reviewResponses ReviewResponse[]
+
+  @@index([productId, status])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model ReviewResponse {
+  id         String   @id @default(uuid())
+  reviewId   String
+  Review     Review   @relation(fields: [reviewId], references: [id])
+  businessId String
+  comment    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([reviewId])
 }

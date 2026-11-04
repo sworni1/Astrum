@@ -107,7 +107,8 @@ model ProductProperty {
 model Order {
   id               String         @id @default(cuid())
   userId           String
-  totalPrice       Float
+  totalPrice       Decimal        @db.Decimal(10, 2)
+  currency         Currency
   paymentMethod    PaymentMethod
   paymentStatus    PaymentStatus  @default(PENDING)
   paymentDetails   String?
@@ -119,6 +120,8 @@ model Order {
   deliveryDate     DateTime
   OrderItem        OrderItem[]
   shippingMethodId String
+
+  @@index([userId])
 }
 
 model OrderItem {
@@ -127,13 +130,16 @@ model OrderItem {
   previewImage String
   name         String
   quantity     Int
-  price        Float
+  price        Decimal         @db.Decimal(10, 2)
+  currency     Currency
   orderId      String
   receiptDate  DateTime?
   status       OrderItemStatus @default(PENDING)
   userId       String
   order        Order           @relation(fields: [orderId], references: [id])
   review       Review?
+
+  @@index([orderId])
 }
 
 model ShippingMethod {
