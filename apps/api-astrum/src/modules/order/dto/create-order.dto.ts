@@ -1,16 +1,23 @@
 import { Expose, Type } from "class-transformer";
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
   IsDateString,
   IsEnum,
+  IsInt,
   IsNotEmpty,
-  IsNumber,
   IsString,
-  MaxLength,
-  MinLength,
+  Max,
+  Min,
   ValidateNested,
 } from "class-validator";
 import { PaymentMethod } from "../../../../generated/prisma/enums";
+import { MAX_LINE_QUANTITY, MAX_ORDER_LINES } from "../order.constants";
 
+/**
+ * A line names what to buy and how many. Price, name and image come from the
+ * product record on the server, so a body that carries them is stripped here.
+ */
 class OrderItemDto {
   @Expose()
   @IsNotEmpty()
@@ -18,26 +25,10 @@ class OrderItemDto {
   productId!: string;
 
   @Expose()
-  @IsString()
-  @IsNotEmpty()
-  @MinLength(3)
-  @MaxLength(100)
-  name!: string;
-
-  @Expose()
-  @IsString()
-  @IsNotEmpty()
-  previewImage!: string;
-
-  @Expose()
-  @IsNotEmpty()
-  @IsNumber({ allowNaN: false, allowInfinity: false })
+  @IsInt()
+  @Min(1)
+  @Max(MAX_LINE_QUANTITY)
   quantity!: number;
-
-  @Expose()
-  @IsNotEmpty()
-  @IsNumber({ allowNaN: false, allowInfinity: false })
-  price!: number;
 }
 
 export class CreateOrderDto {
@@ -67,7 +58,11 @@ export class CreateOrderDto {
   paymentDetails!: string;
 
   @Expose()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_ORDER_LINES)
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
   orderItems!: OrderItemDto[];
 }
+
+export type { OrderItemDto };
