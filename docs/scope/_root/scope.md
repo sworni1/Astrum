@@ -11,7 +11,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 
 | #   | Feature                                   | Phase   | Status  |
 | --- | ----------------------------------------- | ------- | ------- |
-| 1   | Order price and stock on the server       | Slice 1 | in-progress |
+| 1   | Order price and stock on the server       | Slice 1 | done |
 | 2   | Idempotent checkout and cart clearing     | Slice 1 | planned |
 | 3   | Shipping methods from the API             | Slice 1 | planned |
 | 4   | Order statuses with seller ownership      | Slice 2 | planned |
@@ -25,7 +25,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 
 The thinnest real order: the server decides the money and the stock, the browser just asks.
 
-### 1. Order price and stock on the server · in-progress · GA
+### 1. Order price and stock on the server · done · GA
 
 Today the checkout form sends name, image and price, and the gateway stores them as sent, so the browser decides both money and stock.
 **Done when:** each line price and the order total come from the product records, the order is written in one transaction, a line above the available stock is refused with a message naming the product, and stock drops exactly once per ordered unit.
@@ -37,9 +37,9 @@ Today the checkout form sends name, image and price, and the gateway stores them
   - [x] Storefront hook: `productId` and `quantity` only, error body read, cart revalidated on failure (AC-1, AC-4, AC-6)
   - [x] Tests: happy path, tampered body, 20 parallel requests on a stock of 5, limits, unknown shipping method, foreign read (AC-1 to AC-10)
 - [x] Verify it: `/check verify order price and stock on the server` (2026-11-04: 10 of 10 AC on the live API; browser walkthrough still owed)
-- [ ] Test it: `/test order price and stock on the server`
-- [ ] Review it (fresh model): `/check review order price and stock on the server`
-- [ ] Document it: `/document order price and stock on the server`
+- [x] Test it: `/test order price and stock on the server` (2026-11-04: 28 tests in the order module, every `AC-1` to `AC-10` tagged, 41 passing with `ORDER_DB_TESTS=1`; the storefront `useCheckout` hook stayed untested because the package has no React testing library)
+- [x] Review it (fresh model): `/check review order price and stock on the server` (2026-11-04: read on the same model, `delegation` is not configured in `config.yaml`; no blocking defect, one finding: the cancel toast shows a generic message instead of the server reason)
+- [x] Document it: `/document order price and stock on the server` (README, `docs/DEVELOPMENT.md`, `docs/changelog/2026-11-04-order-price-and-stock.md`, `docs/changelog/2026-11-04-order-cancel.md`)
   spec [0001](../../specs/_root/0001-order-price-and-stock/index.md)
   code in `apps/api-astrum/src/modules/order`, `apps/api-astrum/src/common/helpers`, `packages/Astrum-db/prisma/migrations/20261104125143_order_price_and_stock`, `apps/customer/src/hooks/order`
 

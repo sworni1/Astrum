@@ -2,7 +2,7 @@
 
 id: 0001
 slug: order-price-and-stock
-status: In Progress
+status: Accepted
 adrs: []
 date: 2026-11-04
 ---
