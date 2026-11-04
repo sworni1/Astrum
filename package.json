@@ -16,7 +16,6 @@
     "dev:customer": "turbo dev --filter=@astrum/customer",
     "dev:api": "turbo dev --filter=@astrum/api",
     "dev:auth": "turbo dev --filter=@astrum/auth",
-    "dev:business": "turbo dev --filter=@astrum/business",
     "prisma:generate": "turbo prisma:generate",
     "prisma:migrate:dev": "pnpm --filter @astrum/db exec prisma migrate dev",
     "prisma:migrate:deploy": "pnpm --filter @astrum/db exec prisma migrate deploy",

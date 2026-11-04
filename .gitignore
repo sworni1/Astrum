@@ -46,3 +46,6 @@ Thumbs.db
 
 # Локальные worktree
 .worktrees/
+
+# graphify: generated graph, report and 500+ MB extraction cache
+graphify-out/
