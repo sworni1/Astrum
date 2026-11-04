@@ -1,6 +1,7 @@
 import type { Response } from "express";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
 
+import { AppError } from "../common/helpers/appError";
 import { handleErrors } from "../common/helpers/errorHandler";
 
 const createMockResponse = (): jest.Mocked<Response> => {
@@ -12,21 +13,45 @@ const createMockResponse = (): jest.Mocked<Response> => {
 };
 
 describe("handleErrors", () => {
-  it("возвращает 400 + message, когда err — экземпляр Error", () => {
-    const res = createMockResponse();
-    const err = new Error("bad input");
-
-    handleErrors(res, err);
-
-    expect(res.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST);
-    expect(res.json).toHaveBeenCalledWith({ message: "bad input" });
+  beforeEach(() => {
+    jest.spyOn(console, "error").mockImplementation(() => undefined);
   });
 
-  it("возвращает 500 + INTERNAL_SERVER_ERROR, когда err — не Error", () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("отдаёт статус, код и детали из AppError", () => {
     const res = createMockResponse();
-    const err = "string-not-error";
+    const err = new AppError(409, "OUT_OF_STOCK", "Only 2 left", {
+      items: [{ productId: "p-1", requested: 3, available: 2 }],
+    });
 
     handleErrors(res, err);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      code: "OUT_OF_STOCK",
+      message: "Only 2 left",
+      items: [{ productId: "p-1", requested: 3, available: 2 }],
+    });
+  });
+
+  it("отдаёт 500 для обычного Error, чтобы сбой базы не читался как ошибка клиента", () => {
+    const res = createMockResponse();
+
+    handleErrors(res, new Error("connection lost"));
+
+    expect(res.status).toHaveBeenCalledWith(StatusCodes.INTERNAL_SERVER_ERROR);
+    expect(res.json).toHaveBeenCalledWith({
+      message: ReasonPhrases.INTERNAL_SERVER_ERROR,
+    });
+  });
+
+  it("отдаёт 500, когда бросили не Error", () => {
+    const res = createMockResponse();
+
+    handleErrors(res, "string-not-error");
 
     expect(res.status).toHaveBeenCalledWith(StatusCodes.INTERNAL_SERVER_ERROR);
     expect(res.json).toHaveBeenCalledWith({

@@ -1,18 +1,30 @@
 import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { handleErrors } from "../../common/helpers/errorHandler";
+import { toOrderJson, toOrderListJson } from "./order.mapper";
 import { OrderService } from "./order.service";
 
 const orderService = new OrderService();
 
+const userIdOf = (req: Request): string =>
+  (req as Request & { userId: string }).userId;
+
 export class OrderController {
   async createOrder(req: Request, res: Response) {
     try {
-      const userId = (req as Request & { userId: string }).userId;
+      const { order, replay } = await orderService.createOrder(
+        userIdOf(req),
+        req.body,
+        res.locals.idempotencyKey as string | undefined,
+      );
 
-      const order = await orderService.createOrder(userId, req.body);
+      if (replay) {
+        res.setHeader("Idempotent-Replay", "true");
+      }
 
-      res.status(StatusCodes.OK).json(order);
+      res
+        .status(replay ? StatusCodes.OK : StatusCodes.CREATED)
+        .json(toOrderJson(order));
     } catch (error) {
       handleErrors(res, error);
     }
@@ -20,11 +32,9 @@ export class OrderController {
 
   async getOrdersByUserId(req: Request, res: Response) {
     try {
-      const userId = (req as Request & { userId: string }).userId;
+      const orders = await orderService.getOrdersByUserId(userIdOf(req));
 
-      const order = await orderService.getOrdersByUserId(userId);
-
-      res.status(StatusCodes.OK).json(order);
+      res.status(StatusCodes.OK).json(toOrderListJson(orders));
     } catch (error) {
       handleErrors(res, error);
     }
@@ -32,13 +42,28 @@ export class OrderController {
 
   async getOrderById(req: Request, res: Response) {
     try {
-      const orderId = req.params.orderId as string;
+      const order = await orderService.getOrderById(
+        req.params.orderId as string,
+        userIdOf(req),
+      );
 
-      const order = await orderService.getOrderById(orderId);
+      res.status(StatusCodes.OK).json(toOrderJson(order));
+    } catch (error) {
+      handleErrors(res, error);
+    }
+  }
 
-      res.status(StatusCodes.OK).json(order);
-    } catch (_error) {
-      handleErrors(res, _error);
+  async updateOrderStatus(req: Request, res: Response) {
+    try {
+      const order = await orderService.updateOrderStatus(
+        req.params.orderId as string,
+        userIdOf(req),
+        req.body.status,
+      );
+
+      res.status(StatusCodes.OK).json(toOrderJson(order));
+    } catch (error) {
+      handleErrors(res, error);
     }
   }
 }

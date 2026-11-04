@@ -58,9 +58,12 @@ export const useFetcher = () => {
   );
 
   const postItem = useCallback(
-    async <TData>(url: string, { arg }: { arg: TData }) => {
+    async <TData>(
+      url: string,
+      { arg, headers }: { arg: TData; headers?: Record<string, string> },
+    ) => {
       try {
-        const response = await fetcher.post(url, arg);
+        const response = await fetcher.post(url, arg, { headers });
         return response.data;
       } catch (error) {
         console.error("POST request failed:", url, error);

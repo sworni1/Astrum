@@ -81,10 +81,7 @@ export interface Order {
 // DTOs for API calls
 export interface CreateOrderItemDto {
   productId: string;
-  name: string;
-  previewImage: string;
   quantity: number;
-  price: number;
 }
 
 export interface CreateOrderDto {
