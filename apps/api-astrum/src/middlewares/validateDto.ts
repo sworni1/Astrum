@@ -1,9 +1,21 @@
 import { plainToInstance } from "class-transformer";
 import { type ValidationError, validate } from "class-validator";
 import type { NextFunction, Request, Response } from "express";
-import { StatusCodes } from "http-status-codes";
+import { ReasonPhrases, StatusCodes } from "http-status-codes";
 
-export const validateDto = (dtoClass: any) => {
+type ValidateDtoOptions = {
+  /** HTTP status for an invalid body. Defaults to 400. */
+  status?: number;
+  /** Machine readable code added to the invalid body response. */
+  code?: string;
+};
+
+export const validateDto = (
+  dtoClass: any,
+  options: ValidateDtoOptions = {},
+) => {
+  const status = options.status ?? StatusCodes.BAD_REQUEST;
+
   return async (
     req: Request,
     res: Response,
@@ -20,7 +32,15 @@ export const validateDto = (dtoClass: any) => {
         constraints: error.constraints,
       }));
 
-      res.status(StatusCodes.BAD_REQUEST).json({ errors: formattedErrors });
+      const payload = options.code
+        ? {
+            code: options.code,
+            message: ReasonPhrases.UNPROCESSABLE_ENTITY,
+            errors: formattedErrors,
+          }
+        : { errors: formattedErrors };
+
+      res.status(status).json(payload);
     } else {
       req.body = dtoInstance;
 
