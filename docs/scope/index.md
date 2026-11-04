@@ -1,0 +1,17 @@
+# Scope: Astrum monorepo
+
+A shop with a Next.js storefront, an Express gateway, a NestJS auth service, and a shared Prisma package. Each workspace keeps its own scope file; this page only maps them.
+
+**Build approach:** Tracer Bullet (every feature works end to end through the storefront and the gateway).
+**Workflow:** Beta (after `/develop`: `/check verify`, then `/test`).
+
+## Workspaces
+
+| Workspace            | Scope                                        | Rollup                 |
+| -------------------- | -------------------------------------------- | ---------------------- |
+| `apps/customer`      | [customer/scope.md](customer/scope.md)       | 0 done / 1 in progress |
+| `apps/api-astrum`    | no scope yet                                 | 0 / 0                  |
+| `apps/auth-astrum`   | [auth-astrum/scope.md](auth-astrum/scope.md) | 0 done / 1 planned     |
+| `packages/astrum-db` | no scope yet                                 | 0 / 0                  |
+
+Repo wide decisions that no single app owns live in `docs/adr/`, and repo wide planning goes to `docs/scope/_root/` when it appears.
