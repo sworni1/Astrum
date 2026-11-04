@@ -89,7 +89,9 @@ Spec: [0004-session-store-in-redis](../specs/_root/0004-session-store-in-redis/i
 ## Open
 
 - `apps/customer/src/proxy.ts` still trusts the signature only, so a revoked customer can see page
-  shells until the first API call answers `401`. Deferred in spec 0004.
+  shells until the first API call answers `401`. Checked and dropped by decision on 2026-11-04: the
+  check costs a gateway hop and one more dependency on every render and buys only the chrome, while
+  the data is already guarded. It stays in the spec's Follow up.
 - There is no `user:<id>:sessions` index, so «выйти на всех устройствах» and a device list still
   need a design.
 - A session lives one day flat, with no renewal on activity.
