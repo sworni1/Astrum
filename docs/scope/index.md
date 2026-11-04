@@ -9,7 +9,7 @@ A shop with a Next.js storefront, an Express gateway, a NestJS auth service, and
 
 | Workspace            | Scope                                        | Rollup                 |
 | -------------------- | -------------------------------------------- | ---------------------- |
-| `_root` (order flow) | [_root/scope.md](_root/scope.md)             | 1 done / 8 planned     |
+| `_root` (order flow) | [_root/scope.md](_root/scope.md)             | 1 done / 1 in progress / 7 planned |
 | `apps/customer`      | [customer/scope.md](customer/scope.md)       | 0 done / 1 in progress |
 | `apps/api-astrum`    | no scope yet                                 | 0 / 0                  |
 | `apps/auth-astrum`   | [auth-astrum/scope.md](auth-astrum/scope.md) | 1 done / 0 planned     |

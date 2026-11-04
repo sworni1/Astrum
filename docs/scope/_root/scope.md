@@ -12,7 +12,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | #   | Feature                                   | Phase   | Status  |
 | --- | ----------------------------------------- | ------- | ------- |
 | 1   | Order price and stock on the server       | Slice 1 | done |
-| 2   | Idempotent checkout and cart clearing     | Slice 1 | planned |
+| 2   | Idempotent checkout and cart clearing     | Slice 1 | in-progress |
 | 3   | Shipping methods from the API             | Slice 1 | planned |
 | 4   | Order statuses with seller ownership      | Slice 2 | planned |
 | 5   | Seller order panel                        | Slice 2 | planned |
@@ -43,11 +43,20 @@ Today the checkout form sends name, image and price, and the gateway stores them
   spec [0001](../../specs/_root/0001-order-price-and-stock/index.md)
   code in `apps/api-astrum/src/modules/order`, `apps/api-astrum/src/common/helpers`, `packages/Astrum-db/prisma/migrations/20261104125143_order_price_and_stock`, `apps/customer/src/hooks/order`
 
-### 2. Idempotent checkout and cart clearing · planned · GA
+### 2. Idempotent checkout and cart clearing · in-progress · GA
 
 A second click or a retry after a timeout can create a twin order, and the cart is only cleared in the browser.
 **Done when:** a resubmission with the same `Idempotency-Key` returns the first order instead of creating a second, the ordered lines leave the cart on the server in the same transaction, and lines the customer did not select stay in the cart.
-- [ ] Design it (spec): `/architect idempotent checkout and cart clearing`
+- [x] Design it (spec): `/architect idempotent checkout and cart clearing`
+- [ ] Build it: `/develop idempotent checkout and cart clearing`
+  - [ ] Migration and gateway idempotency core: two nullable columns and the unique index, the header reader, the canonical fingerprint, the three replay paths with the fingerprint compare, the mapper dropping both columns (AC-1 to AC-4, AC-6, AC-7, AC-9, AC-12)
+  - [ ] Cart clearing inside the order transaction, the skipped-clear log and the rollback policy (AC-5, AC-8)
+  - [ ] Storefront key generation and lifetime, `postItem` headers, replay read as success, the CORS header allowance (AC-10, AC-11)
+- [ ] Verify it: `/check verify idempotent checkout and cart clearing`
+- [ ] Test it: `/test idempotent checkout and cart clearing`
+- [ ] Review it (fresh model): `/check review idempotent checkout and cart clearing`
+- [ ] Document it: `/document idempotent checkout and cart clearing`
+  spec [0003](../../specs/_root/0003-idempotent-checkout-and-cart-clearing/index.md)
 
 ### 3. Shipping methods from the API · planned
 
@@ -106,6 +115,8 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Courier delivery**: a shipping address instead of a pickup point · needs a decision
 - **Returns and refunds** · needs a decision
 - **Second currency** · needs a decision
+- **Storefront checkout timeout above the server budget**: the client gives up at 10000 ms while the server transaction may still be committing · from spec 0003, a separate small change
+- **Two order create hooks**: `useCreateOrder` is unused and sends no idempotency key · from spec 0003, cleanup
 
 ## Legend
 
