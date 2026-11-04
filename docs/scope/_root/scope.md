@@ -123,7 +123,7 @@ A session today is a signed token and nothing else: the auth service signs `{ us
 - [ ] Verify it: `/check verify session store in Redis` (not run as its own step: on 2026-11-04 twelve of the fourteen AC were exercised on the live dev stack during `/develop`, the two browser steps for AC-11 and AC-12 stayed unrun and live in the spec's `verify.md`; the owner marked the feature done)
 - [ ] Test it: `/test session store in Redis` (skipped: the owner marked the feature done on 2026-11-04; the guard, the auth service and the auth controller carry suites written with the feature)
 - [ ] Review it (fresh model): `/check review session store in Redis` (skipped: the owner marked the feature done on 2026-11-04)
-- [ ] Document it: `/document session store in Redis` (skipped: the owner marked the feature done on 2026-11-04)
+- [x] Document it: `/document session store in Redis` (2026-11-04: `docs/changelog/2026-11-04-session-store-in-redis.md`, roadmap split in `README.md`)
   spec [0004](../../specs/_root/0004-session-store-in-redis/index.md)
   code in `apps/api-astrum/src/session`, `apps/api-astrum/src/middlewares/authenticateToken.ts`, `apps/api-astrum/src/modules/user/user.service.ts`, `apps/auth-astrum/src/redis`, `apps/auth-astrum/src/auth`, `apps/customer/src/common/helpers/session.ts`, `apps/customer/src/hooks/useFetcher.ts`, `docker-compose.yml`, `docker-compose.prod.yml`
 
