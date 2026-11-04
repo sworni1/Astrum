@@ -21,14 +21,13 @@ const nextConfig: NextConfig = {
   images: {
     // Next 16 narrowed the default qualities to [75]; OptimizedImage requests 85.
     qualities: [75, 85],
+    // The demo catalogue is scraped from around fifty shops (ozone, fotosklad,
+    // mts, citilink and more), so a fixed host list cannot cover it and any
+    // product from an unlisted shop crashed the page that rendered it. A real
+    // catalogue should copy images into its own storage and drop the wildcard.
     remotePatterns: [
-      new URL("https://flowbite.s3.amazonaws.com/docs/gallery/**"),
-      new URL("https://bundui-images.netlify.app/**"),
-      new URL("https://images.unsplash.com/**"),
-      new URL("http://magazilla.ru/**"),
-      new URL("https://magazilla.ru/**"),
-      new URL("http://mzimg.com/**"),
-      new URL("https://mzimg.com/**"),
+      { protocol: "http", hostname: "**" },
+      { protocol: "https", hostname: "**" },
     ],
   },
 };
