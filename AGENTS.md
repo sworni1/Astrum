@@ -58,7 +58,7 @@ customer -> proxy:3580  -> api x3 -> auth x1 -> db
 - React component files use PascalCase names, request logic lives in dedicated hooks, and code carries no comments unless the owner asks for them.
 - Do not create git commits unless explicitly requested.
 - Run `pnpm db:generate` after a fresh install or a schema change; type checks and builds fail while the generated client is missing.
-- Hooks are live: `commit-msg` validates the format through commitlint, `pre-commit` formats staged files and runs `pnpm check-types`, `pre-push` runs `pnpm quality-gate`. Test one hook without committing with `git hook run <hook>`.
+- Hooks are live: `commit-msg` validates the format through the local `commitlint` binary, `pre-commit` is empty on purpose so a commit stays instant (formatting is manual: `pnpm format`), `pre-push` runs `pnpm quality-gate` (types, lint, tests). Test one hook without committing with `git hook run <hook>`.
 - `typescript` in every `package.json` is an alias for `@typescript/typescript6`: tools that need a compiler API read it, while `tsc` comes from `@typescript/native` (TypeScript 7). Install both, never one.
 
 ## Context files
