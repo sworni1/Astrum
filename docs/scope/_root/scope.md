@@ -2,7 +2,7 @@
 
 One order moves through three places: the storefront (`apps/customer`), the gateway (`apps/api-astrum`) and the shared schema (`packages/Astrum-db`). The seller surface does not exist yet. This plan holds the whole order path, slice by slice, so the storefront and backend scopes stay about their own pages.
 
-**Build approach:** Tracer Bullet (every slice runs end to end through the storefront and the gateway).
+**Build approach:** Tracer Bullet (every slice runs end to end through the storefront and the gateway). Session state crosses the same places, so its slice lives here too.
 **Workflow:** Beta (after `/develop`: `/check verify`, then `/test`). Features that move money or stock carry a `· GA` tag.
 
 _These are recommendations to keep the build orderly, not requirements. Skip anything that does not fit. You decide when a feature is `done`._
@@ -12,7 +12,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | #   | Feature                                   | Phase   | Status  |
 | --- | ----------------------------------------- | ------- | ------- |
 | 1   | Order price and stock on the server       | Slice 1 | done |
-| 2   | Idempotent checkout and cart clearing     | Slice 1 | in-progress |
+| 2   | Idempotent checkout and cart clearing     | Slice 1 | done |
 | 3   | Shipping methods from the API             | Slice 1 | planned |
 | 4   | Order statuses with seller ownership      | Slice 2 | planned |
 | 5   | Seller order panel                        | Slice 2 | planned |
@@ -20,6 +20,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | 7   | Pickup handover                           | Slice 3 | planned |
 | 8   | Reviews on the product screen             | Slice 4 | planned |
 | 9   | Order flow end to end test and CI         | Slice 4 | planned |
+| 10  | Session store in Redis                    | Slice 5 | done |
 
 ## Slice 1: the order thread
 
@@ -43,7 +44,7 @@ Today the checkout form sends name, image and price, and the gateway stores them
   spec [0001](../../specs/_root/0001-order-price-and-stock/index.md)
   code in `apps/api-astrum/src/modules/order`, `apps/api-astrum/src/common/helpers`, `packages/Astrum-db/prisma/migrations/20261104125143_order_price_and_stock`, `apps/customer/src/hooks/order`
 
-### 2. Idempotent checkout and cart clearing · in-progress · GA
+### 2. Idempotent checkout and cart clearing · done · GA
 
 A second click or a retry after a timeout can create a twin order, and the cart is only cleared in the browser.
 **Done when:** a resubmission with the same `Idempotency-Key` returns the first order instead of creating a second, the ordered lines leave the cart on the server in the same transaction, and lines the customer did not select stay in the cart.
@@ -51,11 +52,11 @@ A second click or a retry after a timeout can create a twin order, and the cart 
 - [x] Build it: `/develop idempotent checkout and cart clearing` — 2026-11-04: schema, gateway and storefront built, `pnpm quality-gate` green
   - [x] Migration and gateway idempotency core: two nullable columns and the unique index, the header reader, the canonical fingerprint, the three replay paths with the fingerprint compare, the mapper dropping both columns (AC-1 to AC-4, AC-6, AC-7, AC-9, AC-12) — 2026-11-04: migration `20261104150202_order_idempotency` applied; repeat proved on the live database
   - [x] Cart clearing inside the order transaction, the skipped-clear log and the rollback policy (AC-5, AC-8) — 2026-11-04: `clearCart` after the order insert, three database specs green
-  - [x] Storefront key generation and lifetime, `postItem` headers, replay read as success, the CORS header allowance (AC-10, AC-11) — 2026-11-04: CORS proved on the live preflight; the storefront logic is in place with the key helpers under vitest, the browser walkthrough is still owed
-- [ ] Verify it: `/check verify idempotent checkout and cart clearing`
-- [ ] Test it: `/test idempotent checkout and cart clearing`
-- [ ] Review it (fresh model): `/check review idempotent checkout and cart clearing`
-- [ ] Document it: `/document idempotent checkout and cart clearing`
+  - [x] Storefront key generation and lifetime, `postItem` headers, replay read as success, the CORS header allowance (AC-10, AC-11) — 2026-11-04: CORS proved on the live preflight, the key helpers under vitest, the five UI steps confirmed by the owner
+- [x] Verify it: `/check verify idempotent checkout and cart clearing` — 2026-11-04: 19 command steps and the database suite passed on the live stack, the five UI steps confirmed by the owner; log in the spec's `verify.md`
+- [ ] Test it: `/test idempotent checkout and cart clearing` (skipped: the owner marked the feature done on 2026-11-04)
+- [ ] Review it (fresh model): `/check review idempotent checkout and cart clearing` (skipped: the owner marked the feature done on 2026-11-04)
+- [ ] Document it: `/document idempotent checkout and cart clearing` (skipped: the owner marked the feature done on 2026-11-04)
   spec [0003](../../specs/_root/0003-idempotent-checkout-and-cart-clearing/index.md)
 
 ### 3. Shipping methods from the API · planned
@@ -106,6 +107,26 @@ Nothing proves the order path keeps working, and no pipeline runs the gates.
 **Done when:** one end to end test walks register, add to cart, checkout and see the order against a real database, and CI runs types, lint, unit tests and that test on every pull request.
 - [ ] Design it (spec): `/architect order flow end to end test and CI`
 
+## Slice 5: session state
+
+### 10. Session store in Redis · done · GA
+
+A session today is a signed token and nothing else: the auth service signs `{ userId }` for one day, the gateway verifies the signature on each request, the storefront keeps its own copy in the `__auth` cookie for seven days, and logging out only deletes that cookie. Nothing on the server remembers a session, so a copied token stays valid until it expires and no replica can revoke it.
+**Done when:** signing in writes one session record, keyed by an id carried inside the token, to a store every replica reads; the gateway answers `401` for a token whose record is gone, whatever replica serves the request; logging out revokes that one session so the same token is refused everywhere at once while the user's other sessions keep working; and a request on a live session still passes.
+- [x] Design it (spec): `/architect session store in Redis`
+- [x] Build it: `/develop session store in Redis` — 2026-11-04: store, guard, logout, revocation, health and the storefront handlers built, `pnpm quality-gate` green
+  - [x] Store and client: `redis` service in both compose files, `REDIS_URL` in both env templates, one `ioredis` client per app that fails at boot without it (AC-13)
+  - [x] Thin thread: `sid` in the token, the record written with `EX 86400` before the answer, the guard reading it, `503` on a failed write, the unused `updateSession` deleted (AC-1, AC-2, AC-9, AC-14)
+  - [x] Refusals: the four `401` codes, an unreadable record, an owner mismatch, a token without `sid`, one log line per branch (AC-2, AC-3, AC-7, AC-10)
+  - [x] Revocation: `POST /api/auth/logout` with `cookie-parser`, password change and account deletion (AC-4, AC-5, AC-6)
+  - [x] Health and the storefront: Redis in `/health`, the logout server action, the shared `401` handling (AC-8, AC-11, AC-12)
+- [ ] Verify it: `/check verify session store in Redis` (not run as its own step: on 2026-11-04 twelve of the fourteen AC were exercised on the live dev stack during `/develop`, the two browser steps for AC-11 and AC-12 stayed unrun and live in the spec's `verify.md`; the owner marked the feature done)
+- [ ] Test it: `/test session store in Redis` (skipped: the owner marked the feature done on 2026-11-04; the guard, the auth service and the auth controller carry suites written with the feature)
+- [ ] Review it (fresh model): `/check review session store in Redis` (skipped: the owner marked the feature done on 2026-11-04)
+- [x] Document it: `/document session store in Redis` (2026-11-04: `docs/changelog/2026-11-04-session-store-in-redis.md`, roadmap split in `README.md`)
+  spec [0004](../../specs/_root/0004-session-store-in-redis/index.md)
+  code in `apps/api-astrum/src/session`, `apps/api-astrum/src/middlewares/authenticateToken.ts`, `apps/api-astrum/src/modules/user/user.service.ts`, `apps/auth-astrum/src/redis`, `apps/auth-astrum/src/auth`, `apps/customer/src/common/helpers/session.ts`, `apps/customer/src/hooks/useFetcher.ts`, `docker-compose.yml`, `docker-compose.prod.yml`
+
 ## Deferred
 
 Kept so the plan stays honest, built only when the loop above runs.
@@ -117,6 +138,10 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Second currency** · needs a decision
 - **Storefront checkout timeout above the server budget**: the client gives up at 10000 ms while the server transaction may still be committing · from spec 0003, a separate small change
 - **Two order create hooks**: `useCreateOrder` is unused and sends no idempotency key · from spec 0003, cleanup
+- **Log out everywhere**: a `user:<id>:sessions` index plus the button that uses it · from spec 0004 · needs a decision
+- **Session renewal and a device list**: refresh on activity, plus the screen that lists sessions · from spec 0004 · needs a decision
+- **Session alerts**: metrics and an alert on `session.store.error` and on a `/health` `503` · from spec 0004
+- **Storefront guard reading the session**: stops a revoked customer from seeing page shells before the first API call · from spec 0004 · needs a decision
 
 ## Legend
 

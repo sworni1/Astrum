@@ -2,6 +2,7 @@ import { RequestMethod, ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import compression from "compression";
+import cookieParser from "cookie-parser";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
@@ -12,6 +13,7 @@ async function bootstrap() {
   app.getHttpAdapter().getInstance().set("trust proxy", 1);
 
   app.use(compression());
+  app.use(cookieParser());
   app.use((_req, res, next) => {
     res.setHeader("X-Instance", process.env.HOSTNAME ?? "unknown");
     next();

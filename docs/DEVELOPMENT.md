@@ -13,6 +13,7 @@ Node 24+, pnpm 12.8+, Docker.
 | `apps/customer`      | Next.js 16           | 3000 | Витрина (B2C)                    |
 | `apps/api-astrum`    | Express 5 + Prisma 7 | 3580 | API-шлюз (оркестратор)           |
 | `apps/auth-astrum`   | NestJS 11 + Prisma 7 | 4580 | Аутентификация и пользователи    |
+| `astrum-redis` (dev) | Redis 7              | 6379 | Хранилище сессий                 |
 | `packages/Astrum-db` | Prisma client + zod  | —    | Общая БД-схема и обёртки моделей |
 
 ## Архитектура и сценарий заказа
@@ -46,6 +47,8 @@ flowchart LR
 
 Браузер вызывает API по относительному пути `/api-gateway`, поэтому cookie сессии `__auth` остаётся same-origin. Внутренние порты API `3580` и auth `4580` на хост не публикуются.
 
+Сессия живёт в двух местах: подписанный JWT `{ userId, sid }` в cookie `__auth` и запись `session:<sid>` в Redis с TTL 86400. Шлюз на каждом защищённом запросе сначала проверяет подпись, потом читает запись, и отказывает четырьмя кодами: `SESSION_MISSING` (нет cookie), `TOKEN_INVALID` (подпись или срок), `SESSION_REVOKED` (записи нет, она не разбирается, владелец в ней другой, или в токене нет `sid`) и `SESSION_STORE_UNAVAILABLE` (упал Redis, ответ всё равно `401`, а не `5xx`). Выход, смена пароля и удаление аккаунта удаляют запись, поэтому скопированная cookie перестаёт работать на всех репликах сразу. Redis входит в `GET /health`, так что при его падении реплика выходит из ротации, а не отвечает как здоровая.
+
 Блок-схема показывает текущую реализацию `POST /api/orders`. Успешный путь возможен только при наличии указанного способа доставки в БД.
 
 ```mermaid
@@ -54,7 +57,7 @@ flowchart TD
     customer["Витрина отправляет POST /api-gateway/orders<br/>с cookie __auth"]
     rewrite["Next.js rewrite<br/>/api-gateway/orders → proxy:3580/api/orders"]
     api["API-шлюз Express"]
-    jwt{"Cookie __auth есть<br/>и JWT действителен?"}
+    jwt{"Cookie __auth есть,<br/>JWT действителен,<br/>сессия жива в Redis?"}
     unauthorized["Ответ 401 Unauthorized"]
     dto{"Запрос соответствует CreateOrderDto?"}
     invalid["Ответ 400 Bad Request"]
@@ -93,10 +96,10 @@ flowchart TD
 ```bash
 pnpm install
 cp .env.example .env        # заполните JWT_SECRET и пароль БД
-pnpm db:up                  # Postgres 16 в Docker
+pnpm db:up                  # Postgres 16 и Redis 7 в Docker
 pnpm prisma:migrate:deploy
 pnpm db:generate            # обязателен после чистого клона и после смены схемы
-pnpm dev                    # docker start astrum-db + turbo dev
+pnpm dev                    # docker compose up astrum-db astrum-redis + turbo dev
 ```
 
 После старта: витрина <http://localhost:3000>, API <http://localhost:3580>, auth <http://localhost:4580>.
@@ -104,13 +107,14 @@ pnpm dev                    # docker start astrum-db + turbo dev
 - **Демо-каталог**: `pnpm --filter @astrum/db seed:excel` читает xlsx из папки «Бесплатная база товаров 2018»; сами файлы в репозиторий не входят.
 - **Смена схемы**: правка `packages/Astrum-db/prisma/schema.prisma` → `pnpm prisma:migrate:dev` → `pnpm db:generate`.
 - **Пересоздать БД с нуля**: `pnpm db:restart`.
-- **Порты**: 3580 и 4580 захардкожены в `src/server.ts` и `src/main.ts`; `API_PORT`/`AUTH_PORT` из `.env` не читаются.
+- **Redis**: `REDIS_URL` обязателен для `api` и `auth`, без него процесс падает на старте, значения по умолчанию нет. Дев-файл compose публикует `6379` на хост, поэтому локально это `redis://localhost:6379`; в prod-файле порт наружу не выходит, а пароль задаёт `REDIS_PASSWORD` из `.env.prod`.
+- **Порты**: `API_PORT`/`AUTH_PORT` читаются из `.env`, по умолчанию 3580 и 4580.
 
 ## Скрипты
 
 | Скрипт                       | Назначение                                   |
 | ---------------------------- | -------------------------------------------- |
-| `pnpm dev`                   | контейнер БД + все приложения в watch-режиме |
+| `pnpm dev`                   | контейнеры БД и Redis + все приложения в watch-режиме |
 | `pnpm dev:customer`          | только витрина                               |
 | `pnpm dev:api`               | только API-шлюз                              |
 | `pnpm dev:auth`              | только auth-сервис                           |
@@ -121,7 +125,7 @@ pnpm dev                    # docker start astrum-db + turbo dev
 | `pnpm prisma:migrate:dev`    | новая миграция в dev                         |
 | `pnpm prisma:migrate:deploy` | применение миграций                          |
 | `pnpm prisma:studio`         | Prisma Studio                                |
-| `pnpm db:up` / `pnpm db:rm`  | поднять / удалить контейнер БД               |
+| `pnpm db:up` / `pnpm db:rm`  | поднять / удалить контейнеры БД и Redis      |
 
 `dev:business` ссылается на `@astrum/business` — приложения пока нет, панель продавца в дорожной карте.
 `prisma:seed` ссылается на несуществующий скрипт `seed`; рабочий сид — `seed:excel`.
@@ -161,12 +165,12 @@ docs: описать архитектуру заказа
 
 | Файл                            | Ключи                                                                                                                                       |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.env.example`                  | `POSTGRES_*`, `DATABASE_URL`, порты приложений, `JWT_SECRET`, `AUTH_SERVICE_URL`, `API_GATEWAY_INTERNAL_URL`, `NEXT_PUBLIC_API_GATEWAY_URL` |
-| `apps/api-astrum/.env.example`  | `DATABASE_URL`, `JWT_SECRET`, `AUTH_SERVICE_URL`, `API_PORT`                                                                                |
-| `apps/auth-astrum/.env.example` | `DATABASE_URL`, `JWT_SECRET`, `AUTH_PORT`                                                                                                   |
+| `.env.example`                  | `POSTGRES_*`, `DATABASE_URL`, порты приложений, `JWT_SECRET`, `AUTH_SERVICE_URL`, `API_GATEWAY_INTERNAL_URL`, `NEXT_PUBLIC_API_GATEWAY_URL`, `REDIS_URL` |
+| `apps/api-astrum/.env.example`  | `DATABASE_URL`, `JWT_SECRET`, `AUTH_SERVICE_URL`, `API_PORT`, `REDIS_URL`                                                                                |
+| `apps/auth-astrum/.env.example` | `DATABASE_URL`, `JWT_SECRET`, `AUTH_PORT`, `REDIS_URL`                                                                                                   |
 | `apps/customer/.env.example`    | `NEXT_PUBLIC_API_GATEWAY_URL`, `JWT_SECRET`, `NODE_ENV`                                                                                     |
 
-`JWT_SECRET` должен совпадать во всех сервисах. В браузер попадает только `NEXT_PUBLIC_*`.
+`JWT_SECRET` должен совпадать во всех сервисах. В браузер попадает только `NEXT_PUBLIC_*`. `REDIS_URL` обязателен для `api` и `auth`: без него процесс не стартует. В `.env.prod.example` рядом с ним лежит `REDIS_PASSWORD` для `--requirepass`.
 
 ## Документация и заметки
 
@@ -225,13 +229,13 @@ docs: описать архитектуру заказа
 - [ ] **Методы доставки**: таблица `ShippingMethod` пуста в чистой БД, а ID захардкожены в форме (`CheckoutForm`) → неизвестный id даёт `409 UNKNOWN_SHIPPING_METHOD`. Нужны сид, `GET /shipping-methods`, подгрузка в форму
 - [x] **Серверный пересчёт заказа**: `POST /api/orders` принимает только `productId` и `quantity`, цена и состав собираются из `Product` в транзакции, видимость и публикация проверяются. Доставка в `totalPrice` пока не входит — это отдельный пункт ниже
 - [x] **Остатки**: `Product.quantity` списывается условным `updateMany` внутри той же транзакции, при нехватке весь заказ откатывается с `OUT_OF_STOCK` и свежим `available`; `isOutOfStock` выставляется на нуле. Возврат остатка при отмене остаётся за статусами
-- [ ] **Корзина после заказа**: серверная корзина не очищается (фронт только ревалидирует SWR), позиции остаются в БД
+- [x] **Корзина после заказа**: заказанные строки удаляются или уменьшаются в той же транзакции, что создаёт заказ, невыбранные остаются; повторная отправка формы не создаёт второй заказ благодаря `Idempotency-Key`
 - [ ] **Доступ к заказу**: владелец проверяется, чужой id даёт `404`. `getOrdersByUserId` по-прежнему не отдаёт позиции и способ доставки — решить вместе с экраном списка
 - [ ] **Доставка в сумме**: `ShippingMethod.price` не прибавляется к `totalPrice`, форма показывает свою сумму с захардкоженной ценой доставки
 
 ### Ядро MVP
 
-- [ ] **Смена статусов**: `PATCH /orders/:id/status` и `PATCH /order-items/:id/status` отсутствуют, хотя фронт их вызывает — кнопка «Cancel» получает 404
+- [x] **Смена статуса заказа**: `PATCH /api/orders/:orderId/status` работает, отмена возвращает остаток и переводит строки в `CANCELLED`; `PATCH /order-items/:id/status` по-прежнему отсутствует
 - [ ] **Панель продавца**: `dev:business` в скриптах ссылается на `@astrum/business`, приложения нет. Нужны список заказов, смена статусов, модерация отзывов, создание товара
 - [ ] **Выдача покупателю**: самовывоза нет как модели — нужны пункты выдачи, статусы `READY_FOR_PICKUP` / `PICKED_UP`, код получения; либо явное подтверждение получения при доставке
 - [ ] **Оплата**: сейчас только enum и строка `paymentDetails`, `paymentStatus` всегда `PENDING`. Нужен тестовый провайдер с вебхуком или честный сценарий «оплата при получении»

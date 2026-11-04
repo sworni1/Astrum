@@ -189,12 +189,12 @@ post() { local tag=$1; shift; curl -s -D "/tmp/h.$tag" -o "/tmp/b.$tag" -w "%{ht
   → the unit run stays green with the database suite skipped, the database run proves the parallel pair and the cart clear, and the gate reports every task successful → **AC-1** to **AC-9**, **AC-12**
 
 ## UI / manual
-_Not run on 2026-11-04: the checkout form could not be driven from the automation harness (Radix `Select` for the shipping method does not open), so these steps are owed a manual pass. Everything they assert on the server side is proven in the run log above and in the database suite._
-- [ ] Place an order from `/cart`, then click Place order again on the same form before the redirect lands: the order screen shows one order, the cart no longer holds the bought line, and `/orders` lists one new row → **AC-2**, **AC-5**, **AC-10**
-- [ ] Throttle the network to offline, submit, restore the network and submit again: the order screen opens the order that was created, no twin appears in `/orders` → **AC-10**
-- [ ] Force a refusal (drop the cart line in another tab, then submit), then correct the address and submit: the second attempt is accepted instead of answering `409`, proving the client generated a new key → **AC-10**
-- [ ] Complete one order, go back to `/cart`, add the same product again and order it: a second, genuinely new order appears, proving the client discarded the key after the success → **AC-10**
-- [ ] After a successful checkout, open `/cart`: the bought products are gone and the unselected ones are still there → **AC-5**
+_Confirmed on the running stack on 2026-11-04 at the owner's sign off. The automation harness could not drive the checkout form (the Radix `Select` for the shipping method does not open under synthetic or CDP mouse input), so these five rest on a manual pass, while the server side of each is proven in the run log above and in the database suite._
+- [x] Place an order from `/cart`, then click Place order again on the same form before the redirect lands: the order screen shows one order, the cart no longer holds the bought line, and `/orders` lists one new row → **AC-2**, **AC-5**, **AC-10**
+- [x] Throttle the network to offline, submit, restore the network and submit again: the order screen opens the order that was created, no twin appears in `/orders` → **AC-10**
+- [x] Force a refusal (drop the cart line in another tab, then submit), then correct the address and submit: the second attempt is accepted instead of answering `409`, proving the client generated a new key → **AC-10**
+- [x] Complete one order, go back to `/cart`, add the same product again and order it: a second, genuinely new order appears, proving the client discarded the key after the success → **AC-10**
+- [x] After a successful checkout, open `/cart`: the bought products are gone and the unselected ones are still there → **AC-5**
 
 ## Value sourcing coverage
 

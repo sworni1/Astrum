@@ -4,7 +4,7 @@
   "description": "astrum project",
   "author": "sworni",
   "scripts": {
-    "dev": "docker start astrum-db && turbo dev",
+    "dev": "docker compose up astrum-db astrum-redis -d && turbo dev",
     "db:generate": "pnpm --filter @astrum/db db:generate",
     "build": "turbo build",
     "lint": "turbo lint",
@@ -21,7 +21,7 @@
     "prisma:migrate:deploy": "pnpm --filter @astrum/db exec prisma migrate deploy",
     "prisma:studio": "pnpm --filter @astrum/db exec prisma studio",
     "prisma:seed": "pnpm --filter @astrum/db seed",
-    "db:up": "docker compose up astrum-db -d",
+    "db:up": "docker compose up astrum-db astrum-redis -d",
     "db:rm": "docker compose rm astrum-db -s -f -v",
     "db:restart": "pnpm db:rm && pnpm db:up && timeout 2 && pnpm prisma:migrate:deploy",
     "docker:up": "docker compose up -d",
