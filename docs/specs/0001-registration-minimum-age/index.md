@@ -2,7 +2,7 @@
 
 id: 0001
 slug: registration-minimum-age
-status: In Progress
+status: Accepted
 adrs: []
 ---
 

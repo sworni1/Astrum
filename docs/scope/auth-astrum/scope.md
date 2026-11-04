@@ -12,7 +12,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | #   | Feature                          | Phase    | Status      |
 | --- | -------------------------------- | -------- | ----------- |
 | A   | Register, sign in, token refresh | Existing | existing    |
-| 1   | Minimum age gate on register     | Slice 1  | in-progress |
+| 1   | Minimum age gate on register     | Slice 1  | done        |
 
 ## Already built
 
@@ -22,7 +22,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 
 ## Slice 1: Registration guard rails
 
-### 1. Minimum age gate on register · in-progress
+### 1. Minimum age gate on register · done
 
 The API stores whatever birthday it is given, so a client that skips the browser check registers a child. The rule has to sit where every registration passes.
 **Done when:** registering with a birthday younger than 14 returns 400 with a clear message and creates no user, a birthday exactly 14 years old is accepted, and a future birthday is refused.
@@ -31,8 +31,8 @@ The API stores whatever birthday it is given, so a client that skips the browser
   - [x] Validator and its boundary unit tests (AC 1, 2, 3)
   - [x] DTO wiring and the Swagger note (AC 5)
   - [x] e2e register cases (AC 1, 2, 3, 4)
-- [ ] Verify it: `/check verify minimum age gate on register`
-- [ ] Test it: `/test minimum age gate on register`
+- [x] Verify it: `/check verify minimum age gate on register`
+- [x] Test it: `/test minimum age gate on register`
   Spec 0001 ([index.md](../../specs/0001-registration-minimum-age/index.md)) · code in `apps/auth-astrum/src/auth/dto/`
 
 ## Legend
