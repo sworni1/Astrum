@@ -31,6 +31,21 @@ services:
     restart: unless-stopped
     networks: [ astrum ]
 
+  # Session store: no volume and no persistence, so a restart ends every live
+  # session on purpose. Reached only inside the network, never published.
+  redis:
+    image: redis:7-alpine
+    logging: *default-logging
+    env_file: .env.prod
+    command: sh -c 'exec redis-server --requirepass "$$REDIS_PASSWORD" --save "" --appendonly no'
+    healthcheck:
+      test: [ "CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping | grep -q PONG" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks: [ astrum ]
+
   migrate:
     build:
       context: .
@@ -52,6 +67,8 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -76,6 +93,8 @@ services:
     env_file: .env.prod
     depends_on:
       auth:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test:

@@ -6,7 +6,7 @@ import { StatusCodes } from "http-status-codes";
 import morgan from "morgan";
 import { prisma } from "../lib/prisma";
 import proxyOptions from "./common/helpers/proxyOptions";
-import authenticateToken from "./middlewares/authenticateToken";
+import { createAuthenticateToken } from "./middlewares/authenticateToken";
 import corsOptions from "./middlewares/corsOptions";
 import cartRoutes from "./modules/cart/cart.routes";
 import orderRoutes from "./modules/order/order.routes";
@@ -14,8 +14,11 @@ import productRoutes from "./modules/product/product.routes";
 import { reviewsRouter } from "./modules/reviews/reviews.routes";
 import userRoutes from "./modules/user/user.routes";
 import wishlistRoutes from "./modules/wishlist/wishlist.routes";
+import { getSessionStore } from "./session/sessionStore";
 
 const app: Express = express();
+const sessionStore = getSessionStore();
+const authenticateToken = createAuthenticateToken(sessionStore);
 
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
@@ -41,6 +44,7 @@ app.use(cookieParser());
 app.get("/health", async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
+    await sessionStore.ping();
     res.status(StatusCodes.OK).json({
       status: "ok",
       instance: process.env.HOSTNAME ?? "unknown",

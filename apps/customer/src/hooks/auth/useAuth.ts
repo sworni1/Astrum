@@ -10,7 +10,7 @@ import {
   showToast,
 } from "../../common";
 import { createSession } from "../../common/helpers/session";
-import { useFetcher } from "../useFetcher";
+import { resetSessionEnded, useFetcher } from "../useFetcher";
 
 export const useAuth = () => {
   const { fetcher } = useFetcher();
@@ -28,6 +28,8 @@ export const useAuth = () => {
 
         if (res.status === 200) {
           await createSession(res.data.token);
+
+          resetSessionEnded();
 
           goNext();
 
@@ -69,10 +71,10 @@ export const useAuth = () => {
       try {
         const res = await fetcher.post("/auth/signin", signInData);
 
-        console.log(res.data);
-
         if (res.status === 200) {
           await createSession(res.data.token);
+
+          resetSessionEnded();
 
           goNext();
 

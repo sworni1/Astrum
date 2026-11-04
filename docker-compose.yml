@@ -11,14 +11,34 @@ services:
     networks:
       - astrumnetwork
 
+  astrum-redis:
+    image: redis:7-alpine
+    container_name: astrum-redis
+    # No persistence, the same as the production service: a restart ends every
+    # live session on purpose.
+    command: redis-server --save "" --appendonly no
+    ports:
+      - 6379:6379
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - astrumnetwork
+
   astrum-api:
     container_name: astrum-backend
     build:
       context: .
       dockerfile: apps/api-astrum/Dockerfile
     depends_on:
-      - astrum-db
-      - astrum-auth
+      astrum-db:
+        condition: service_started
+      astrum-auth:
+        condition: service_started
+      astrum-redis:
+        condition: service_healthy
     ports:
       - 3580:3580
     env_file:
@@ -32,7 +52,10 @@ services:
       context: .
       dockerfile: apps/auth-astrum/Dockerfile
     depends_on:
-      - astrum-db
+      astrum-db:
+        condition: service_started
+      astrum-redis:
+        condition: service_healthy
     ports:
       - 4580:4580
     env_file:

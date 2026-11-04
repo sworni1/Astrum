@@ -1,12 +1,16 @@
 import { hash, verify } from "argon2";
 import type { User } from "../../../generated/prisma/client";
 import { prisma } from "../../../lib/prisma";
+import { revokeSession } from "../../session/revokeSession";
+import { getSessionStore, type SessionStore } from "../../session/sessionStore";
 import type {
   UpdateUserDto,
   updateUserPasswordDto,
 } from "./dto/update-user.dto";
 
 export class UserService {
+  constructor(private readonly sessions: SessionStore = getSessionStore()) {}
+
   async userInfo(userId: User["id"]) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -48,7 +52,11 @@ export class UserService {
     return this.userInfo(updatedUser.id);
   }
 
-  async updateUserPassword(userId: User["id"], dto: updateUserPasswordDto) {
+  async updateUserPassword(
+    userId: User["id"],
+    sid: string | undefined,
+    dto: updateUserPasswordDto,
+  ) {
     const user = await prisma.user.findUnique({
       where: {
         id: userId,
@@ -67,6 +75,8 @@ export class UserService {
 
     const newHashedPassword = await hash(dto.newPassword);
 
+    await revokeSession(this.sessions, sid);
+
     const updatedUser = await prisma.user.update({
       where: {
         id: userId,
@@ -79,7 +89,9 @@ export class UserService {
     return this.userInfo(updatedUser.id);
   }
 
-  async deleteUser(userId: User["id"]) {
+  async deleteUser(userId: User["id"], sid: string | undefined) {
+    await revokeSession(this.sessions, sid);
+
     try {
       await prisma.user.delete({
         where: {
