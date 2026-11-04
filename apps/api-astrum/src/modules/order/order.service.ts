@@ -4,6 +4,7 @@ import type {
   OrderItem,
   ShippingMethod,
 } from "../../../generated/prisma/client";
+import type { OrderStatus } from "../../../generated/prisma/enums";
 import { Prisma } from "../../../generated/prisma/client";
 import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
@@ -39,6 +40,18 @@ const TRANSACTION_OPTIONS = {
   timeout: 10000,
   isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
 };
+
+/** Only these two can still become CANCELED; everything later is feature 4 (AC-4). */
+const CANCELABLE_STATUSES: OrderStatus[] = ["PENDING", "CONFIRMED"];
+
+const ORDER_DETAIL_INCLUDE = { OrderItem: true, shippingMethod: true } as const;
+
+const orderNotFound = () =>
+  new AppError(
+    404,
+    ORDER_ERROR_CODES.notFound,
+    "Order not found for this customer.",
+  );
 
 const PRODUCT_SELECT = {
   id: true,
@@ -182,15 +195,11 @@ export class OrderService {
   async getOrderById(orderId: string, userId: string): Promise<OrderDetail> {
     const order = await prisma.order.findFirst({
       where: { id: orderId, userId },
-      include: { OrderItem: true, shippingMethod: true },
+      include: ORDER_DETAIL_INCLUDE,
     });
 
     if (!order) {
-      throw new AppError(
-        404,
-        ORDER_ERROR_CODES.notFound,
-        "Order not found for this customer.",
-      );
+      throw orderNotFound();
     }
 
     return toOrderDetail(order);
@@ -201,6 +210,107 @@ export class OrderService {
       where: { userId },
       orderBy: { createdAt: "desc" },
     });
+  }
+
+  async updateOrderStatus(
+    orderId: string,
+    userId: string,
+    status: OrderStatus,
+  ): Promise<OrderDetail> {
+    if (status !== "CANCELED") {
+      throw new AppError(
+        409,
+        ORDER_ERROR_CODES.invalidTransition,
+        `Changing an order to ${status} is not supported yet.`,
+        { to: status },
+      );
+    }
+
+    const order = await prisma.$transaction(
+      (tx) => this.cancelOrder(tx, orderId, userId),
+      TRANSACTION_OPTIONS,
+    );
+
+    logger.info({
+      event: "order.cancelled",
+      orderId,
+      userId,
+      restoredLines: order.orderItems.length,
+    });
+
+    return order;
+  }
+
+  /** Owner check, transition check, status write and stock return in one transaction. */
+  private async cancelOrder(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+    userId: string,
+  ): Promise<OrderDetail> {
+    const current = await tx.order.findFirst({
+      where: { id: orderId, userId },
+      include: ORDER_DETAIL_INCLUDE,
+    });
+
+    if (!current) {
+      throw orderNotFound();
+    }
+
+    // A second cancel writes nothing, so the stock cannot be returned twice (AC-5).
+    if (current.status === "CANCELED") {
+      return toOrderDetail(current);
+    }
+
+    if (!CANCELABLE_STATUSES.includes(current.status)) {
+      throw new AppError(
+        409,
+        ORDER_ERROR_CODES.invalidTransition,
+        `A ${current.status} order can no longer be cancelled.`,
+        { from: current.status, to: "CANCELED" },
+      );
+    }
+
+    await tx.order.update({
+      where: { id: current.id },
+      data: {
+        status: "CANCELED",
+        // Nothing was charged for a pending payment, and a cancelled order is never charged.
+        paymentStatus:
+          current.paymentStatus === "PENDING"
+            ? "CANCELLED"
+            : current.paymentStatus,
+      },
+    });
+
+    await tx.orderItem.updateMany({
+      where: { orderId: current.id },
+      data: { status: "CANCELLED" },
+    });
+
+    await this.returnStock(tx, current.OrderItem);
+
+    return toOrderDetail(
+      await tx.order.findFirstOrThrow({
+        where: { id: current.id },
+        include: ORDER_DETAIL_INCLUDE,
+      }),
+    );
+  }
+
+  /**
+   * An increment cannot fail, so a product removed from the catalogue keeps a
+   * zero count instead of breaking the cancel (AC-2).
+   */
+  private async returnStock(
+    tx: Prisma.TransactionClient,
+    items: OrderItem[],
+  ): Promise<void> {
+    for (const item of items) {
+      await tx.product.updateMany({
+        where: { id: item.productId },
+        data: { quantity: { increment: item.quantity }, isOutOfStock: false },
+      });
+    }
   }
 
   private async buildOrder(

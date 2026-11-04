@@ -42,4 +42,18 @@ export class OrderController {
       handleErrors(res, error);
     }
   }
+
+  async updateOrderStatus(req: Request, res: Response) {
+    try {
+      const order = await orderService.updateOrderStatus(
+        req.params.orderId as string,
+        userIdOf(req),
+        req.body.status,
+      );
+
+      res.status(StatusCodes.OK).json(toOrderJson(order));
+    } catch (error) {
+      handleErrors(res, error);
+    }
+  }
 }

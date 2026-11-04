@@ -6,6 +6,7 @@ export const ORDER_ERROR_CODES = {
   unknownShippingMethod: "UNKNOWN_SHIPPING_METHOD",
   validation: "VALIDATION",
   notFound: "ORDER_NOT_FOUND",
+  invalidTransition: "INVALID_STATUS_TRANSITION",
 } as const;
 
 /** At most 50 lines per order (AC-7). */

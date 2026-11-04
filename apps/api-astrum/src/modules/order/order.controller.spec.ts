@@ -102,4 +102,59 @@ describe("OrderController", () => {
     expect(res.status).toHaveBeenCalledWith(StatusCodes.OK);
     expect(res.json).toHaveBeenCalledWith([{ id: "order-1", totalPrice: 10 }]);
   });
+
+  it("отвечает 200 на отмену заказа и отдаёт деньги числом (AC-1)", async () => {
+    jest
+      .spyOn(OrderService.prototype, "updateOrderStatus")
+      .mockResolvedValue({ ...orderDetail, status: "CANCELED" } as never);
+    const res = createMockResponse();
+
+    await new OrderController().updateOrderStatus(
+      createRequest({
+        params: { orderId: "order-1" },
+        body: { status: "CANCELED" },
+      }),
+      res,
+    );
+
+    expect(OrderService.prototype.updateOrderStatus).toHaveBeenCalledWith(
+      "order-1",
+      "user-1",
+      "CANCELED",
+    );
+    expect(res.status).toHaveBeenCalledWith(StatusCodes.OK);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "CANCELED", totalPrice: 70.95 }),
+    );
+  });
+
+  it("отдаёт 409 на запрещённый переход через handleErrors (AC-4)", async () => {
+    jest
+      .spyOn(OrderService.prototype, "updateOrderStatus")
+      .mockRejectedValue(
+        new AppError(
+          409,
+          "INVALID_STATUS_TRANSITION",
+          "A SHIPPED order can no longer be cancelled.",
+          { from: "SHIPPED", to: "CANCELED" },
+        ),
+      );
+    const res = createMockResponse();
+
+    await new OrderController().updateOrderStatus(
+      createRequest({
+        params: { orderId: "order-1" },
+        body: { status: "CANCELED" },
+      }),
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(StatusCodes.CONFLICT);
+    expect(res.json).toHaveBeenCalledWith({
+      code: "INVALID_STATUS_TRANSITION",
+      message: "A SHIPPED order can no longer be cancelled.",
+      from: "SHIPPED",
+      to: "CANCELED",
+    });
+  });
 });

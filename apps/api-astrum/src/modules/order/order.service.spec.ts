@@ -403,3 +403,137 @@ describe("OrderService.getOrderById", () => {
     expect(order).not.toHaveProperty("OrderItem");
   });
 });
+
+const makeCancelableOrder = (overrides: Record<string, unknown> = {}) => ({
+  id: "order-1",
+  userId: "user-1",
+  status: "PENDING",
+  paymentStatus: "PENDING",
+  totalPrice: new Prisma.Decimal("39.98"),
+  currency: "RUB",
+  shippingMethodId: "ship-1",
+  shippingMethod: { id: "ship-1", name: "Standard", price: 5.99 },
+  OrderItem: [
+    {
+      id: "line-1",
+      productId: "p-1",
+      quantity: 2,
+      price: new Prisma.Decimal("19.99"),
+      currency: "RUB",
+      status: "PENDING",
+    },
+  ],
+  ...overrides,
+});
+
+const createCancelTx = (order: Record<string, unknown> | null) => ({
+  order: {
+    findFirst: jest.fn().mockResolvedValue(order),
+    update: jest.fn().mockResolvedValue(order),
+    findFirstOrThrow: jest
+      .fn()
+      .mockResolvedValue({ ...(order ?? {}), status: "CANCELED" }),
+  },
+  orderItem: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+  product: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+});
+
+type CancelTx = ReturnType<typeof createCancelTx>;
+
+describe("OrderService.updateOrderStatus", () => {
+  let tx: CancelTx;
+
+  const prepare = (order: Record<string, unknown> | null) => {
+    tx = createCancelTx(order);
+    prismaMock.$transaction.mockReset();
+    prismaMock.$transaction.mockImplementation((fn: (client: CancelTx) => unknown) =>
+      fn(tx),
+    );
+    jest.spyOn(console, "info").mockImplementation(() => undefined);
+    jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    jest.spyOn(console, "error").mockImplementation(() => undefined);
+  };
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("переводит заказ в CANCELED, строки в CANCELLED и возвращает остаток (AC-1, AC-2)", async () => {
+    prepare(makeCancelableOrder());
+
+    const order = await new OrderService().updateOrderStatus(
+      "order-1",
+      "user-1",
+      "CANCELED",
+    );
+
+    expect(tx.order.update).toHaveBeenCalledWith({
+      where: { id: "order-1" },
+      data: { status: "CANCELED", paymentStatus: "CANCELLED" },
+    });
+    expect(tx.orderItem.updateMany).toHaveBeenCalledWith({
+      where: { orderId: "order-1" },
+      data: { status: "CANCELLED" },
+    });
+    expect(tx.product.updateMany).toHaveBeenCalledWith({
+      where: { id: "p-1" },
+      data: { quantity: { increment: 2 }, isOutOfStock: false },
+    });
+    expect(order.status).toBe("CANCELED");
+  });
+
+  it("отказывает чужому заказу с 404 и ничего не пишет (AC-3)", async () => {
+    prepare(null);
+
+    const error = await new OrderService()
+      .updateOrderStatus("order-9", "user-1", "CANCELED")
+      .catch((caught: AppError) => caught);
+
+    expect((error as AppError).status).toBe(404);
+    expect((error as AppError).code).toBe("ORDER_NOT_FOUND");
+    expect(tx.order.update).not.toHaveBeenCalled();
+  });
+
+  it("отказывает отмене отгруженного заказа и не трогает склад (AC-4)", async () => {
+    prepare(makeCancelableOrder({ status: "SHIPPED" }));
+
+    const error = await new OrderService()
+      .updateOrderStatus("order-1", "user-1", "CANCELED")
+      .catch((caught: AppError) => caught);
+
+    expect((error as AppError).status).toBe(409);
+    expect((error as AppError).code).toBe("INVALID_STATUS_TRANSITION");
+    expect((error as AppError).details).toEqual({
+      from: "SHIPPED",
+      to: "CANCELED",
+    });
+    expect(tx.order.update).not.toHaveBeenCalled();
+    expect(tx.product.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("отказывает переводу в любой статус кроме отмены (AC-4)", async () => {
+    prepare(makeCancelableOrder());
+
+    const error = await new OrderService()
+      .updateOrderStatus("order-1", "user-1", "DELIVERED")
+      .catch((caught: AppError) => caught);
+
+    expect((error as AppError).status).toBe(409);
+    expect((error as AppError).code).toBe("INVALID_STATUS_TRANSITION");
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("не возвращает остаток повторно на уже отменённом заказе (AC-5)", async () => {
+    prepare(makeCancelableOrder({ status: "CANCELED" }));
+
+    const order = await new OrderService().updateOrderStatus(
+      "order-1",
+      "user-1",
+      "CANCELED",
+    );
+
+    expect(order.status).toBe("CANCELED");
+    expect(tx.order.update).not.toHaveBeenCalled();
+    expect(tx.product.updateMany).not.toHaveBeenCalled();
+  });
+});

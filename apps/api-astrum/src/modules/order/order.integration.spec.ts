@@ -128,4 +128,62 @@ describeWithDatabase("OrderService against a real database", () => {
     expect(orders).toBe(6);
     expect(lines._sum.quantity).toBe(6);
   }, 60000);
+
+  it("возвращает остаток при отмене и не добавляет его второй раз (AC-1, AC-2, AC-5)", async () => {
+    const localUser = `cancel-test-${Date.now()}`;
+    const product = await prisma.product.create({
+      data: {
+        businessId: localUser,
+        name: `Cancel drill ${localUser}`,
+        quantity: 4,
+        price: 10,
+        currency: "RUB",
+        category: "Home",
+        previewImage: "http://cdn/cancel.png",
+        images: [],
+        visibility: "Public",
+        status: "Published",
+      },
+    });
+    await prisma.cartItem.create({
+      data: { userId: localUser, productId: product.id, quantity: 3 },
+    });
+
+    const service = new OrderService();
+    const order = await service.createOrder(localUser, {
+      ...dtoFor(),
+      orderItems: [{ productId: product.id, quantity: 3 }],
+    } as CreateOrderDto);
+
+    const taken = await prisma.product.findUniqueOrThrow({
+      where: { id: product.id },
+    });
+    expect(taken.quantity).toBe(1);
+
+    const cancelled = await service.updateOrderStatus(
+      order.id,
+      localUser,
+      "CANCELED",
+    );
+
+    const restored = await prisma.product.findUniqueOrThrow({
+      where: { id: product.id },
+    });
+    expect(cancelled.status).toBe("CANCELED");
+    expect(cancelled.orderItems[0].status).toBe("CANCELLED");
+    expect(restored.quantity).toBe(4);
+    expect(restored.isOutOfStock).toBe(false);
+
+    await service.updateOrderStatus(order.id, localUser, "CANCELED");
+
+    const afterSecondCall = await prisma.product.findUniqueOrThrow({
+      where: { id: product.id },
+    });
+    expect(afterSecondCall.quantity).toBe(4);
+
+    await prisma.orderItem.deleteMany({ where: { userId: localUser } });
+    await prisma.order.deleteMany({ where: { userId: localUser } });
+    await prisma.cartItem.deleteMany({ where: { userId: localUser } });
+    await prisma.product.delete({ where: { id: product.id } });
+  }, 30000);
 });
