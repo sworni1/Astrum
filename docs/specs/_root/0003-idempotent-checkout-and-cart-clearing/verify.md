@@ -23,7 +23,7 @@ post() { local tag=$1; shift; curl -s -D "/tmp/h.$tag" -o "/tmp/b.$tag" -w "%{ht
 
 ## Commands
 
-- [ ] A create with a key answers `201`, the response carries no `Idempotent-Replay`, and the row stores both columns:
+- [x] A create with a key answers `201`, the response carries no `Idempotent-Replay`, and the row stores both columns:
 
   ```bash
   KEY=verify-key-0001
@@ -32,7 +32,7 @@ post() { local tag=$1; shift; curl -s -D "/tmp/h.$tag" -o "/tmp/b.$tag" -w "%{ht
   ```
 
   → `201`, `idempotencyKey` equals `verify-key-0001`, `hash_len` is `64` → **AC-1**
-- [ ] The same key and the same body again answers `200` with the same `id`, the header `Idempotent-Replay: true`, and the database still holds exactly one order for the key:
+- [x] The same key and the same body again answers `200` with the same `id`, the header `Idempotent-Replay: true`, and the database still holds exactly one order for the key:
 
   ```bash
   post b -H "Idempotency-Key: $KEY" -d "$BODY"; grep -i '^idempotent-replay' /tmp/h.b; cat /tmp/b.b
@@ -40,7 +40,7 @@ post() { local tag=$1; shift; curl -s -D "/tmp/h.$tag" -o "/tmp/b.$tag" -w "%{ht
   ```
 
   → `200`, `idempotent-replay: true`, the same `id` as `/tmp/b.a`, count `1`, and the product's stock dropped by 2 only once → **AC-2**
-- [ ] The same key with another address answers `409` `IDEMPOTENCY_KEY_REUSED` and nothing is written:
+- [x] The same key with another address answers `409` `IDEMPOTENCY_KEY_REUSED` and nothing is written:
 
   ```bash
   post c -H "Idempotency-Key: $KEY" -d "${BODY/Lenin 1/Other 2}"; cat /tmp/b.c
@@ -48,14 +48,14 @@ post() { local tag=$1; shift; curl -s -D "/tmp/h.$tag" -o "/tmp/b.$tag" -w "%{ht
   ```
 
   → `409`, `{"code":"IDEMPOTENCY_KEY_REUSED",...}`, count still `1` → **AC-3**
-- [ ] An offset form of the same date is the same body: `2026-11-20T12:00:00+03:00` replaces `2026-11-20T09:00:00.000Z`, and the answer is still a replay:
+- [x] An offset form of the same date is the same body: `2026-11-20T12:00:00+03:00` replaces `2026-11-20T09:00:00.000Z`, and the answer is still a replay:
 
   ```bash
   post d -H "Idempotency-Key: $KEY" -d "${BODY/2026-11-20T09:00:00.000Z/2026-11-20T12:00:00+03:00}"; cat /tmp/b.d
   ```
 
   → `200` with the same `id`, not `409`, because the fingerprint normalises the date → **AC-2**
-- [ ] A key of 3 characters and a key with a space each answer `422` with `property: "Idempotency-Key"`:
+- [x] A key of 3 characters and a key with a space each answer `422` with `property: "Idempotency-Key"`:
 
   ```bash
   post e -H "Idempotency-Key: abc" -d "$BODY"; cat /tmp/b.e
@@ -63,7 +63,7 @@ post() { local tag=$1; shift; curl -s -D "/tmp/h.$tag" -o "/tmp/b.$tag" -w "%{ht
   ```
 
   → both `422`, `{"code":"VALIDATION",...,"errors":[{"property":"Idempotency-Key",...}]}`, no order row, cart unchanged → **AC-4**
-- [ ] No header at all still works and stores `NULL`:
+- [x] No header at all still works and stores `NULL`:
 
   ```bash
   post g -d "$BODY"
@@ -71,7 +71,7 @@ post() { local tag=$1; shift; curl -s -D "/tmp/h.$tag" -o "/tmp/b.$tag" -w "%{ht
   ```
 
   → `201`, the count grows by one → **AC-1**
-- [ ] Two creates with one key sent in parallel create exactly one order and one stock deduction, and both answers carry the same `id`:
+- [x] Two creates with one key sent in parallel create exactly one order and one stock deduction, and both answers carry the same `id`:
 
   ```bash
   KEY=verify-key-race
@@ -83,7 +83,7 @@ post() { local tag=$1; shift; curl -s -D "/tmp/h.$tag" -o "/tmp/b.$tag" -w "%{ht
   ```
 
   → one `201` and one `200`, the same `id` in both bodies, count `1`, the stock dropped by 2 → **AC-6**
-- [ ] The race with only one unit of stock, so the loser is refused by the stock check instead of the index. Set the product to `quantity = 2` and the cart to 2, use a fresh key, and expect no `OUT_OF_STOCK`:
+- [x] The race with only one unit of stock, so the loser is refused by the stock check instead of the index. Set the product to `quantity = 2` and the cart to 2, use a fresh key, and expect no `OUT_OF_STOCK`:
 
   ```bash
   psql "$DATABASE_URL" -c "UPDATE \"Product\" SET quantity = 2, \"isOutOfStock\" = false WHERE id = '$PRODUCT'"
@@ -95,7 +95,7 @@ post() { local tag=$1; shift; curl -s -D "/tmp/h.$tag" -o "/tmp/b.$tag" -w "%{ht
   ```
 
   → one `201` and one `200` with the same `id`; neither answer is `409 OUT_OF_STOCK`, because the keyed re-read resolves the loser → **AC-6**
-- [ ] Two bodies with one key sent in parallel: one `201`, one `409`, one order:
+- [x] Two bodies with one key sent in parallel: one `201`, one `409`, one order:
 
   ```bash
   KEY=verify-key-race-conflict
@@ -107,14 +107,14 @@ post() { local tag=$1; shift; curl -s -D "/tmp/h.$tag" -o "/tmp/b.$tag" -w "%{ht
   ```
 
   → `201` and `409 IDEMPOTENCY_KEY_REUSED`, count `1` → **AC-3**
-- [ ] The cart clears inside the transaction: the ordered row is gone, a second product added to the cart but not ordered stays:
+- [x] The cart clears inside the transaction: the ordered row is gone, a second product added to the cart but not ordered stays:
 
   ```bash
   psql "$DATABASE_URL" -c "SELECT \"productId\", quantity FROM \"CartItem\" WHERE \"userId\" = '$USER_ID'"
   ```
 
   → no row for `$PRODUCT`, the untouched product's row still holds its quantity → **AC-5**
-- [ ] A partial order leaves the remainder: set the cart row to 5, order 2 with a fresh key:
+- [x] A partial order leaves the remainder: set the cart row to 5, order 2 with a fresh key:
 
   ```bash
   psql "$DATABASE_URL" -c "UPDATE \"CartItem\" SET quantity = 5 WHERE \"userId\" = '$USER_ID' AND \"productId\" = '$PRODUCT'"
@@ -123,7 +123,7 @@ post() { local tag=$1; shift; curl -s -D "/tmp/h.$tag" -o "/tmp/b.$tag" -w "%{ht
   ```
 
   → `201`, the cart row is `3` → **AC-5**
-- [ ] A refused order stores no key and leaves the cart alone: empty the cart row, then post with a fresh key:
+- [x] A refused order stores no key and leaves the cart alone: empty the cart row, then post with a fresh key:
 
   ```bash
   psql "$DATABASE_URL" -c "DELETE FROM \"CartItem\" WHERE \"userId\" = '$USER_ID' AND \"productId\" = '$PRODUCT'"
@@ -132,14 +132,14 @@ post() { local tag=$1; shift; curl -s -D "/tmp/h.$tag" -o "/tmp/b.$tag" -w "%{ht
   ```
 
   → `409 CART_MISMATCH`, count `0`, so the same key can be retried after the cart is fixed → **AC-5**
-- [ ] AC-8 (the cart row vanishing mid transaction) and the rollback on a database error inside the clear are proven by the database suite, not by curl, because they need a race or a fault the HTTP layer cannot produce on demand:
+- [x] AC-8 (the cart row vanishing mid transaction) and the rollback on a database error inside the clear are proven by the database suite, not by curl, because they need a race or a fault the HTTP layer cannot produce on demand:
 
   ```bash
   ORDER_DB_TESTS=1 pnpm --filter @astrum/api test -- order.integration
   ```
 
   → the cart race case logs `cart.clear.skipped` and still commits the order; the injected failure case leaves no order, no stock change and no cart change → **AC-8**
-- [ ] Cancel the order of a key, then repeat the key: `200` with `CANCELED`, nothing written:
+- [x] Cancel the order of a key, then repeat the key: `200` with `CANCELED`, nothing written:
 
   ```bash
   ORDER_ID=$(psql "$DATABASE_URL" -tAc "SELECT id FROM \"Order\" WHERE \"idempotencyKey\" = 'verify-key-0001'")
@@ -148,14 +148,14 @@ post() { local tag=$1; shift; curl -s -D "/tmp/h.$tag" -o "/tmp/b.$tag" -w "%{ht
   ```
 
   → `200`, `"status":"CANCELED"` → **AC-7**
-- [ ] The same key from a second customer creates that customer's own order:
+- [x] The same key from a second customer creates that customer's own order:
 
   ```bash
   curl -s -X POST "$API/orders" -H "cookie: __auth=$TOKEN_B" -H 'content-type: application/json' -H "Idempotency-Key: verify-key-0001" -d "$BODY_B" -w "\n%{http_code}\n"
   ```
 
   → `201` with an `id` different from the first customer's order → **AC-9**
-- [ ] Neither new column leaks into an answer: every order route is checked, not just the create:
+- [x] Neither new column leaks into an answer: every order route is checked, not just the create:
 
   ```bash
   curl -s "$API/orders" -H "cookie: __auth=$TOKEN" | grep -c 'idempotency'
@@ -164,21 +164,21 @@ post() { local tag=$1; shift; curl -s -D "/tmp/h.$tag" -o "/tmp/b.$tag" -w "%{ht
   ```
 
   → every count is `0` → **AC-12**
-- [ ] The preflight from the allowed origin names the header:
+- [x] The preflight from the allowed origin names the header:
 
   ```bash
   curl -s -i -X OPTIONS "$API/orders" -H 'Origin: http://localhost:3000' -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: idempotency-key' | grep -i 'access-control'
   ```
 
   → `Access-Control-Allow-Headers` contains `Idempotency-Key`, and `Access-Control-Expose-Headers` contains `Idempotent-Replay` → **AC-11**
-- [ ] No missed replay in the gateway log: a replicate that loses the race must never log `order.replay.miss`:
+- [x] No missed replay in the gateway log: a replicate that loses the race must never log `order.replay.miss`:
 
   ```bash
   docker compose -f docker-compose.prod.yml logs api | grep -c 'order.replay.miss'
   ```
 
   → `0` (or no output at all) → **AC-6**
-- [ ] Unit and database suites, then the gates:
+- [x] Unit and database suites, then the gates:
 
   ```bash
   pnpm --filter @astrum/api test
@@ -189,7 +189,7 @@ post() { local tag=$1; shift; curl -s -D "/tmp/h.$tag" -o "/tmp/b.$tag" -w "%{ht
   → the unit run stays green with the database suite skipped, the database run proves the parallel pair and the cart clear, and the gate reports every task successful → **AC-1** to **AC-9**, **AC-12**
 
 ## UI / manual
-
+_Not run on 2026-11-04: the checkout form could not be driven from the automation harness (Radix `Select` for the shipping method does not open), so these steps are owed a manual pass. Everything they assert on the server side is proven in the run log above and in the database suite._
 - [ ] Place an order from `/cart`, then click Place order again on the same form before the redirect lands: the order screen shows one order, the cart no longer holds the bought line, and `/orders` lists one new row → **AC-2**, **AC-5**, **AC-10**
 - [ ] Throttle the network to offline, submit, restore the network and submit again: the order screen opens the order that was created, no twin appears in `/orders` → **AC-10**
 - [ ] Force a refusal (drop the cart line in another tab, then submit), then correct the address and submit: the second attempt is accepted instead of answering `409`, proving the client generated a new key → **AC-10**
@@ -208,3 +208,30 @@ post() { local tag=$1; shift; curl -s -D "/tmp/h.$tag" -o "/tmp/b.$tag" -w "%{ht
 - Per user scope → the second customer step compares `id` values across two users → **AC-9**
 - Dropped columns → the leak step greps every order answer for the word → **AC-12**
 - Preflight header list → the OPTIONS step reads the two `Access-Control` headers → **AC-11**
+
+## Run log: 2026-11-04, dev stack, live database
+
+Every command step above was walked against `pnpm dev` (`api` on 3580, `auth` on 4580) with a real registered customer, a real `ShippingMethod` row and a product created for the run.
+
+| Step | Observed |
+| --- | --- |
+| create with a key | `201`, `idempotencyKey = verify-key-0001`, `length(idempotencyHash) = 64` |
+| repeat | `200`, `Idempotent-Replay: true`, same `id`, one row, stock fell 10 to 8 once |
+| same key, other address | `409 IDEMPOTENCY_KEY_REUSED`, still one row |
+| offset date form | `200` with the same `id`, not `409` |
+| short and spaced keys | both `422`, `errors[0].property = Idempotency-Key` |
+| no header | `201`, `idempotencyKey` is `NULL` |
+| cart clear | ordered row gone, the unselected product kept `7` |
+| partial order | `201`, the cart row dropped from `5` to `3` |
+| refused order | `409 CART_MISMATCH`, no order under the key, cart untouched |
+| parallel pair | `201` and `200`, same `id`, one row, stock 4 to 2 |
+| parallel pair on the refusal path | `201` and `200`, same `id`, one row, neither answer a refusal |
+| parallel conflict | `201` and `409`, one row |
+| cancel then repeat | `PATCH` answers `200`, the repeat answers `200` with `CANCELED` and the replay header |
+| second customer, same key | `201` with its own order id and its own row |
+| column leak | the create, replay, list and detail bodies all hold zero occurrences of `idempotency` |
+| preflight | `Access-Control-Allow-Headers` names `Idempotency-Key`, `Access-Control-Expose-Headers` names `Idempotent-Replay` |
+| database suite | `ORDER_DB_TESTS=1 pnpm --filter @astrum/api test` green, 71 tests, including the cart race and the rollback case (**AC-8**) |
+
+**AC-10 is not closed.** The storefront sends the header (a checkout that reaches the gateway stores a key), but the form could not be submitted through the headless browser: the shipping method is a Radix `Select` that does not open under synthetic clicks or CDP mouse events in this harness, and the submit button stays disabled without it. The client helpers are covered by `apps/customer/src/hooks/order/idempotency.test.ts` (32 hex characters, a 4xx spends the key, a timeout or a 5xx keeps it). The five manual steps below still owe a human run.
+

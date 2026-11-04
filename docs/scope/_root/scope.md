@@ -48,10 +48,10 @@ Today the checkout form sends name, image and price, and the gateway stores them
 A second click or a retry after a timeout can create a twin order, and the cart is only cleared in the browser.
 **Done when:** a resubmission with the same `Idempotency-Key` returns the first order instead of creating a second, the ordered lines leave the cart on the server in the same transaction, and lines the customer did not select stay in the cart.
 - [x] Design it (spec): `/architect idempotent checkout and cart clearing`
-- [ ] Build it: `/develop idempotent checkout and cart clearing`
-  - [ ] Migration and gateway idempotency core: two nullable columns and the unique index, the header reader, the canonical fingerprint, the three replay paths with the fingerprint compare, the mapper dropping both columns (AC-1 to AC-4, AC-6, AC-7, AC-9, AC-12)
-  - [ ] Cart clearing inside the order transaction, the skipped-clear log and the rollback policy (AC-5, AC-8)
-  - [ ] Storefront key generation and lifetime, `postItem` headers, replay read as success, the CORS header allowance (AC-10, AC-11)
+- [x] Build it: `/develop idempotent checkout and cart clearing` — 2026-11-04: schema, gateway and storefront built, `pnpm quality-gate` green
+  - [x] Migration and gateway idempotency core: two nullable columns and the unique index, the header reader, the canonical fingerprint, the three replay paths with the fingerprint compare, the mapper dropping both columns (AC-1 to AC-4, AC-6, AC-7, AC-9, AC-12) — 2026-11-04: migration `20261104150202_order_idempotency` applied; repeat proved on the live database
+  - [x] Cart clearing inside the order transaction, the skipped-clear log and the rollback policy (AC-5, AC-8) — 2026-11-04: `clearCart` after the order insert, three database specs green
+  - [x] Storefront key generation and lifetime, `postItem` headers, replay read as success, the CORS header allowance (AC-10, AC-11) — 2026-11-04: CORS proved on the live preflight; the storefront logic is in place with the key helpers under vitest, the browser walkthrough is still owed
 - [ ] Verify it: `/check verify idempotent checkout and cart clearing`
 - [ ] Test it: `/test idempotent checkout and cart clearing`
 - [ ] Review it (fresh model): `/check review idempotent checkout and cart clearing`
