@@ -8,17 +8,20 @@ Node 24+, pnpm 12.8+, Docker.
 
 ## Приложения и порты
 
-| Приложение           | Стек                 | Порт | Назначение                       |
-| -------------------- | -------------------- | ---- | -------------------------------- |
-| `apps/customer`      | Next.js 16           | 3000 | Витрина (B2C)                    |
-| `apps/api-astrum`    | Express 5 + Prisma 7 | 3580 | API-шлюз (оркестратор)           |
-| `apps/auth-astrum`   | NestJS 11 + Prisma 7 | 4580 | Аутентификация и пользователи    |
-| `astrum-redis` (dev) | Redis 7              | 6379 | Хранилище сессий                 |
-| `packages/Astrum-db` | Prisma client + zod  | —    | Общая БД-схема и обёртки моделей |
+| Приложение             | Стек                 | Порт        | Назначение                                  |
+| ---------------------- | -------------------- | ----------- | ------------------------------------------- |
+| `apps/customer`        | Next.js 16           | 3000        | Витрина (B2C)                               |
+| `apps/api-astrum`      | Express 5 + Prisma 7 | 3580        | API-шлюз (оркестратор)                      |
+| `apps/auth-astrum`     | NestJS 11 + Prisma 7 | 4580        | Аутентификация и пользователи               |
+| `apps/worker`          | Node 24 + amqplib    | 5580        | Письма подтверждения из очереди             |
+| `packages/Astrum-db`   | Prisma client + seed | —           | Общая БД-схема, клиент и сид из xlsx        |
+| `astrum-redis` (dev)   | Redis 7              | 6379        | Хранилище сессий                            |
+| `astrum-rabbit` (dev)  | RabbitMQ 4           | 5672, 15672 | Обменник `astrum.events`, консоль на 15672  |
+| `astrum-mailpit` (dev) | Mailpit              | 1025, 8025  | SMTP-приёмник писем и веб-интерфейс на 8025 |
 
 ## Архитектура и сценарий заказа
 
-Production-топология из `docker-compose.prod.yml`. Публичный и внутренний узлы Caddy на схеме — два listener одного контейнера; только proxy публикует порты хоста. `customer` обращается к API через внутренний listener, а API и auth подключаются к PostgreSQL напрямую. Одноразовый сервис `migrate` применяет схему до запуска приложений.
+Production-топология из `docker-compose.prod.yml`. Публичный и внутренний узлы Caddy на схеме — два listener одного контейнера; порты хоста публикуют только `proxy` (80 и 443) и `mailpit` (8025, кэтчер писем). `customer` обращается к API через внутренний listener, а API, auth и worker подключаются к PostgreSQL напрямую. Сессии всех реплик сходятся в Redis, письма подтверждения идут через RabbitMQ в отдельный воркер. Одноразовый сервис `migrate` применяет схему до запуска приложений.
 
 ```mermaid
 flowchart LR
@@ -30,6 +33,10 @@ flowchart LR
         caddyApi["Caddy — балансировщик API<br/>:3580, внутренний"]
         api["API-шлюз Express<br/>api ×3, :3580"]
         auth["Сервис auth NestJS<br/>auth ×1, :4580"]
+        worker["Воркер писем<br/>worker ×1, :5580"]
+        redis[("Redis 7<br/>сессии")]
+        rabbit[("RabbitMQ 4<br/>astrum.events")]
+        mailpit["Mailpit<br/>SMTP 1025, UI 8025"]
         db[("PostgreSQL 16")]
         migrate["Миграция Prisma<br/>одноразовый сервис"]
 
@@ -39,6 +46,13 @@ flowchart LR
         api -->|"/api/auth/*"| auth
         api -->|"Prisma"| db
         auth -->|"Prisma"| db
+        worker -->|"Prisma"| db
+        api -->|"session:<sid>"| redis
+        auth -->|"session:<sid>"| redis
+        api -->|"account.confirmation.requested"| rabbit
+        auth -->|"account.confirmation.requested"| rabbit
+        rabbit -->|"очередь писем"| worker
+        worker -->|"SMTP"| mailpit
         migrate -->|"prisma migrate deploy"| db
     end
 
@@ -59,19 +73,29 @@ flowchart TD
     api["API-шлюз Express"]
     jwt{"Cookie __auth есть,<br/>JWT действителен,<br/>сессия жива в Redis?"}
     unauthorized["Ответ 401 Unauthorized"]
+    active{"Аккаунт ACTIVE?"}
+    pending["Ответ 403 EMAIL_NOT_CONFIRMED"]
     dto{"Запрос соответствует CreateOrderDto?"}
-    invalid["Ответ 400 Bad Request"]
-    create["OrderService.createOrder<br/>сумма считается по присланным price × quantity"]
+    invalid["Ответ 422 с кодом VALIDATION"]
+    idem{"Idempotency-Key уже был<br/>с тем же телом?"}
+    replay["Ответ 200, тот же заказ<br/>Idempotent-Replay: true"]
+    reused["Ответ 409 IDEMPOTENCY_KEY_REUSED"]
+    create["OrderService.createOrder<br/>цена и состав из Product, суммы в Decimal"]
     fk{"PostgreSQL проверяет внешний ключ<br/>shippingMethodId"}
     fkError["Ошибка записи заказа<br/>способ доставки не найден"]
-    save[("Сохранить Order и OrderItem")]
-    success["Ответ 201 с заказом<br/>200 на повтор по ключу"]
+    save[("Сохранить Order и OrderItem,<br/>списать остаток, очистить корзину")]
+    success["Ответ 201 с заказом"]
 
     buyer --> customer --> rewrite --> api --> jwt
     jwt -->|Нет| unauthorized
-    jwt -->|Да| dto
+    jwt -->|Да| active
+    active -->|Нет| pending
+    active -->|Да| dto
     dto -->|Нет| invalid
-    dto -->|Да| create --> fk
+    dto -->|Да| idem
+    idem -->|Да, тело совпало| replay
+    idem -->|Да, тело другое| reused
+    idem -->|Нет| create --> fk
     fk -->|Нет| fkError
     fk -->|Да| save --> success
 ```
@@ -82,12 +106,12 @@ flowchart TD
 
 `POST /api/orders` принимает необязательный заголовок `Idempotency-Key`: от 8 до 128 символов из `[A-Za-z0-9_-]`, иначе `422` с `{ "code": "VALIDATION", "errors": [{ "property": "Idempotency-Key", ... }] }`. Ключ и sha256 отпечаток нормализованного тела (строки отсортированы по `productId`, дата приведена к UTC) пишутся в `Order.idempotencyKey` и `Order.idempotencyHash` тем же `create`, что и сам заказ.
 
-| Запрос | Ответ |
-| --- | --- |
-| новый ключ | `201`, заказ создан |
-| тот же ключ и то же тело | `200`, тот же `id`, заголовок `Idempotent-Replay: true`, ничего не пишется |
-| тот же ключ и другое тело | `409 IDEMPOTENCY_KEY_REUSED`, ничего не пишется |
-| ключ короче 8, длиннее 128 или с посторонним символом | `422 VALIDATION` |
+| Запрос                                                | Ответ                                                                      |
+| ----------------------------------------------------- | -------------------------------------------------------------------------- |
+| новый ключ                                            | `201`, заказ создан                                                        |
+| тот же ключ и то же тело                              | `200`, тот же `id`, заголовок `Idempotent-Replay: true`, ничего не пишется |
+| тот же ключ и другое тело                             | `409 IDEMPOTENCY_KEY_REUSED`, ничего не пишется                            |
+| ключ короче 8, длиннее 128 или с посторонним символом | `422 VALIDATION`                                                           |
 
 Уникальный индекс `(userId, idempotencyKey)` держит гонку: проигравший перечитывает ключ на обычном клиенте (три попытки по 100 мс) и получает заказ победителя, а не отказ. Заказанные строки корзины удаляются или уменьшаются в той же транзакции, что списывает остаток; строки, которых нет в заказе, остаются нетронутыми. Витрина генерирует ключ из 16 случайных байт, держит его в `useRef` до окончательного ответа (сбрасывает после `2xx` и любого `4xx`, сохраняет после таймаута или `5xx`) и сама ничего не повторяет после `409`.
 
@@ -99,55 +123,61 @@ cp .env.example .env        # заполните JWT_SECRET и пароль БД
 pnpm db:up                  # Postgres 16 и Redis 7 в Docker
 pnpm prisma:migrate:deploy
 pnpm db:generate            # обязателен после чистого клона и после смены схемы
-pnpm dev                    # docker compose up astrum-db astrum-redis + turbo dev
+pnpm dev                    # astrum-db, astrum-redis, astrum-rabbit, astrum-mailpit + turbo dev
 ```
 
-После старта: витрина <http://localhost:3000>, API <http://localhost:3580>, auth <http://localhost:4580>.
+После старта: витрина <http://localhost:3000>, API <http://localhost:3580>, auth <http://localhost:4580>, воркер писем <http://localhost:5580/health>, письма в Mailpit <http://localhost:8025>, консоль RabbitMQ <http://localhost:15672>.
 
 - **Демо-каталог**: `pnpm --filter @astrum/db seed:excel` читает xlsx из папки «Бесплатная база товаров 2018»; сами файлы в репозиторий не входят.
 - **Смена схемы**: правка `packages/Astrum-db/prisma/schema.prisma` → `pnpm prisma:migrate:dev` → `pnpm db:generate`.
 - **Пересоздать БД с нуля**: `pnpm db:restart`.
 - **Redis**: `REDIS_URL` обязателен для `api` и `auth`, без него процесс падает на старте, значения по умолчанию нет. Дев-файл compose публикует `6379` на хост, поэтому локально это `redis://localhost:6379`; в prod-файле порт наружу не выходит, а пароль задаёт `REDIS_PASSWORD` из `.env.prod`.
-- **Порты**: `API_PORT`/`AUTH_PORT` читаются из `.env`, по умолчанию 3580 и 4580.
+- **Брокер**: `RABBITMQ_URL` обязателен для воркера, он падает на старте без него. В `auth` и `api` соединение открывается при первой публикации, и отказ брокера логируется, а не роняет запрос. Дев-файл задаёт логин и пароль брокера через `RABBITMQ_USER` / `RABBITMQ_PASSWORD` (по умолчанию `astrum` / `change-me`), поэтому в строке подключения они обязательны: без них handshake отвечает `403 ACCESS-REFUSED`. После правки `.env` перезапустите процесс: watch-раннер читает файл один раз при старте.
+- **Почта**: `SMTP_URL` в dev смотрит на Mailpit (`smtp://localhost:1025`); без него воркер пишет письмо в `MAIL_OUTBOX_DIR`. В прод-стеке Mailpit тоже поднят (интерфейс на `8025`), но `.env.prod.example` указывает `SMTP_URL` на реальный релей, поэтому для локальной проверки письма поставьте `smtp://mailpit:1025`. `STOREFRONT_URL` подставляется в ссылку подтверждения.
+- **Порты**: `API_PORT` / `AUTH_PORT` / `WORKER_PORT` читаются из `.env`, по умолчанию 3580, 4580 и 5580.
 
 ## Скрипты
 
-| Скрипт                       | Назначение                                   |
-| ---------------------------- | -------------------------------------------- |
-| `pnpm dev`                   | контейнеры БД и Redis + все приложения в watch-режиме |
-| `pnpm dev:customer`          | только витрина                               |
-| `pnpm dev:api`               | только API-шлюз                              |
-| `pnpm dev:auth`              | только auth-сервис                           |
-| `pnpm build`                 | сборка всех пакетов через Turborepo          |
-| `pnpm quality-gate`          | check-types + lint + test                    |
-| `pnpm format`                | Prettier по репозиторию                      |
-| `pnpm db:generate`           | генерация Prisma-клиента                     |
-| `pnpm prisma:migrate:dev`    | новая миграция в dev                         |
-| `pnpm prisma:migrate:deploy` | применение миграций                          |
-| `pnpm prisma:studio`         | Prisma Studio                                |
-| `pnpm db:up` / `pnpm db:rm`  | поднять / удалить контейнеры БД и Redis      |
+| Скрипт                         | Назначение                                                                   |
+| ------------------------------ | ---------------------------------------------------------------------------- |
+| `pnpm dev`                     | Postgres, Redis, RabbitMQ и Mailpit в Docker + все приложения в watch-режиме |
+| `pnpm dev:customer`            | только витрина                                                               |
+| `pnpm dev:api`                 | только API-шлюз                                                              |
+| `pnpm dev:auth`                | только auth-сервис                                                           |
+| `pnpm build`                   | сборка всех пакетов через Turborepo                                          |
+| `pnpm quality-gate`            | check-types + lint + test                                                    |
+| `pnpm format`                  | `biome format --write` по репозиторию                                        |
+| `pnpm db:generate`             | генерация Prisma-клиента                                                     |
+| `pnpm prisma:migrate:dev`      | новая миграция в dev                                                         |
+| `pnpm prisma:migrate:deploy`   | применение миграций                                                          |
+| `pnpm prisma:studio`           | Prisma Studio                                                                |
+| `pnpm db:up` / `pnpm db:rm`    | поднять / удалить контейнеры Postgres и Redis                                |
+| `pnpm docker:prod:build`       | собрать образы прод-стека                                                    |
+| `pnpm docker:prod:up` / `down` | запустить / остановить прод-стек                                             |
+| `pnpm docker:prod:scale`       | пересобрать и перезапустить реплики api                                      |
 
-`dev:business` ссылается на `@astrum/business` — приложения пока нет, панель продавца в дорожной карте.
-`prisma:seed` ссылается на несуществующий скрипт `seed`; рабочий сид — `seed:excel`.
+Воркер отдельным корневым скриптом не вынесен: `pnpm --filter @astrum/worker dev`.
+
+`prisma:seed` ссылается на несуществующий скрипт `seed` в пакете БД; рабочий сид — `seed:excel`.
 
 ## Качество кода
 
-| Скрипт              | Назначение                               |
-| ------------------- | ---------------------------------------- |
-| `pnpm lint`         | ESLint по всем пакетам                   |
-| `pnpm check-types`  | `tsc --noEmit` по всем пакетам           |
-| `pnpm test`         | unit-тесты (Jest/Vitest) по всем пакетам |
-| `pnpm quality-gate` | lint + check-types + test                |
-| `pnpm format`       | Prettier авто-формат                     |
-| `pnpm format:check` | Prettier проверка без записи             |
+| Скрипт              | Назначение                                                                |
+| ------------------- | ------------------------------------------------------------------------- |
+| `pnpm lint`         | ESLint в `customer` и `auth`; в `api`, `db` и `worker` заглушка           |
+| `pnpm check-types`  | `tsc --noEmit` по всем пакетам                                            |
+| `pnpm test`         | jest в `api` и `auth`, vitest в `customer`, `node:test` в `db` и `worker` |
+| `pnpm quality-gate` | check-types + lint + test                                                 |
+| `pnpm format`       | Biome, формат по репозиторию                                              |
+| `pnpm format:check` | Biome, проверка без записи                                                |
 
 Хуки husky:
 
-- **pre-commit** — prettier по staged файлам + `pnpm check-types`.
-- **pre-push** — `pnpm quality-gate`.
-- **commit-msg** — commitlint.
+- **pre-commit** — пустой (`exit 0`): коммит остаётся мгновенным, форматирование запускается вручную.
+- **pre-push** — `pnpm quality-gate`: типы, линт и тесты по всем пакетам.
+- **commit-msg** — commitlint через локальный бинарник, при его отсутствии проверка формата регуляркой.
 
-Проверить хук без коммита: `git hook run pre-commit`.
+Проверить хук без коммита: `git hook run pre-push`.
 
 ## Конвенция коммитов
 
@@ -163,20 +193,23 @@ docs: описать архитектуру заказа
 
 ## Переменные окружения
 
-| Файл                            | Ключи                                                                                                                                       |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.env.example`                  | `POSTGRES_*`, `DATABASE_URL`, порты приложений, `JWT_SECRET`, `AUTH_SERVICE_URL`, `API_GATEWAY_INTERNAL_URL`, `NEXT_PUBLIC_API_GATEWAY_URL`, `REDIS_URL` |
-| `apps/api-astrum/.env.example`  | `DATABASE_URL`, `JWT_SECRET`, `AUTH_SERVICE_URL`, `API_PORT`, `REDIS_URL`                                                                                |
-| `apps/auth-astrum/.env.example` | `DATABASE_URL`, `JWT_SECRET`, `AUTH_PORT`, `REDIS_URL`                                                                                                   |
-| `apps/customer/.env.example`    | `NEXT_PUBLIC_API_GATEWAY_URL`, `JWT_SECRET`, `NODE_ENV`                                                                                     |
+| Файл                            | Ключи                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.env.example`                  | `POSTGRES_*`, `DATABASE_URL`, `API_PORT`, `AUTH_PORT`, `WORKER_PORT`, `JWT_SECRET`, `DB_POOL_SIZE`, `REDIS_URL`, `RABBITMQ_URL`, `SMTP_URL`, `MAIL_FROM`, `STOREFRONT_URL`, `MAIL_OUTBOX_DIR`, `AUTH_SERVICE_URL`, `API_GATEWAY_INTERNAL_URL`, `NEXT_PUBLIC_API_GATEWAY_URL`                                               |
+| `.env.prod.example`             | `POSTGRES_*`, `DATABASE_URL` (`db:5432`), `JWT_SECRET`, `DB_POOL_SIZE`, `AUTH_SERVICE_URL`, `REDIS_URL` + `REDIS_PASSWORD`, `API_GATEWAY_INTERNAL_URL`, `NEXT_PUBLIC_API_GATEWAY_URL`, `RABBITMQ_URL` + `RABBITMQ_USER` / `RABBITMQ_PASSWORD`, `SMTP_URL`, `MAIL_FROM`, `STOREFRONT_URL`, `WORKER_PORT`, `MAIL_OUTBOX_DIR` |
+| `apps/api-astrum/.env.example`  | `DATABASE_URL`, `JWT_SECRET`, `AUTH_SERVICE_URL`, `API_PORT`, `REDIS_URL`, `RABBITMQ_URL`                                                                                                                                                                                                                                  |
+| `apps/auth-astrum/.env.example` | `DATABASE_URL`, `JWT_SECRET`, `AUTH_PORT`, `REDIS_URL`, `RABBITMQ_URL`, `STOREFRONT_URL`                                                                                                                                                                                                                                   |
+| `apps/worker/.env.example`      | `DATABASE_URL`, `RABBITMQ_URL`, `MAIL_FROM`, `STOREFRONT_URL`, `SMTP_URL`, `WORKER_PORT`, `MAIL_OUTBOX_DIR`                                                                                                                                                                                                                |
+| `apps/customer/.env.example`    | `NEXT_PUBLIC_API_GATEWAY_URL`, `JWT_SECRET`, `NODE_ENV`                                                                                                                                                                                                                                                                    |
 
-`JWT_SECRET` должен совпадать во всех сервисах. В браузер попадает только `NEXT_PUBLIC_*`. `REDIS_URL` обязателен для `api` и `auth`: без него процесс не стартует. В `.env.prod.example` рядом с ним лежит `REDIS_PASSWORD` для `--requirepass`.
+`JWT_SECRET` должен совпадать во всех сервисах. В браузер попадает только `NEXT_PUBLIC_*`. `REDIS_URL` обязателен для `api` и `auth`: без него процесс не стартует. `RABBITMQ_URL` обязателен для `worker` (падает на старте), а в `api` и `auth` читается при публикации, так что недоступный брокер даёт запись в лог, а не отказ на запросе. В `.env.prod.example` рядом с `REDIS_URL` лежит `REDIS_PASSWORD` для `--requirepass`.
 
 ## Документация и заметки
 
 - [`docs/adr/`](./adr/README.md) — архитектурные решения, одно решение на файл, на английском.
 - [`docs/changelog/`](./changelog/) — журнал изменений по датам, Conventional Commits.
-- `docs/specs/` и `docs/scope/` появляются, когда пишется первая спека или скоуп.
+- [`docs/specs/`](./specs/) — спеки фич: контракт, обоснование и лог проверки.
+- [`docs/scope/`](./scope/index.md) — живой скоуп по воркспейсам и статусы фич.
 - Зеркало заметок: `~/Documents/Obsidian Vault/Astrum/` (`Change Logs/`, `decisions/`, `notes/`), связи через `[[WikiLinks]]`.
 
 ## Чеклист готовности к MVP
@@ -187,16 +220,17 @@ docs: описать архитектуру заказа
 
 **Инфраструктура и качество**
 
-- [x] Монорепо: pnpm 12 + Turborepo 2, три приложения и общий пакет БД
-- [x] Postgres 16 в Docker, весь стек в Docker Compose: реплики api и customer за Caddy (ADR-0003)
+- [x] Монорепо: pnpm 12 + Turborepo 2, четыре приложения (витрина, шлюз, auth, воркер) и общий пакет БД
+- [x] Postgres 16 в Docker, весь стек в Docker Compose: реплики api и customer за Caddy (ADR-0003), Redis для сессий, RabbitMQ и воркер для писем
 - [x] Husky-хуки `commit-msg` / `pre-commit` / `pre-push`, commitlint, quality gates
 - [x] ADR + журнал изменений, Swagger у auth-сервиса
-- [x] Unit-тесты: подпись JWT, JWT-guard, errorHandler, контроллер отзывов
+- [x] Unit-тесты: подпись JWT, JWT-guard, errorHandler, контроллер отзывов, модуль заказа, воркер писем, правила DTO
 
 **Аутентификация и профиль**
 
-- [x] Регистрация и вход, argon2, JWT (1 день) в HttpOnly-cookie `__auth`
-- [x] Проверка токена на шлюзе + серверный guard маршрутов в Next (`proxy.ts`)
+- [x] Регистрация и вход, argon2, JWT (1 день) в HttpOnly-cookie `__auth` плюс запись `session:<sid>` в Redis
+- [x] Проверка токена и сессии в Redis на шлюзе + серверный guard маршрутов в Next (`proxy.ts`)
+- [x] Подтверждение почты: статус `PENDING`, одноразовая ссылка на 24 часа, письмо через RabbitMQ и `apps/worker`, лимиты повторной отправки, смена адреса возвращает в `PENDING`
 - [x] Профиль: редактирование, смена пароля, удаление аккаунта, выход
 
 **Каталог**
@@ -236,10 +270,10 @@ docs: описать архитектуру заказа
 ### Ядро MVP
 
 - [x] **Смена статуса заказа**: `PATCH /api/orders/:orderId/status` работает, отмена возвращает остаток и переводит строки в `CANCELLED`; `PATCH /order-items/:id/status` по-прежнему отсутствует
-- [ ] **Панель продавца**: `dev:business` в скриптах ссылается на `@astrum/business`, приложения нет. Нужны список заказов, смена статусов, модерация отзывов, создание товара
+- [ ] **Панель продавца**: приложения `@astrum/business` в репозитории нет. Нужны список заказов, смена статусов, модерация отзывов, создание товара
 - [ ] **Выдача покупателю**: самовывоза нет как модели — нужны пункты выдачи, статусы `READY_FOR_PICKUP` / `PICKED_UP`, код получения; либо явное подтверждение получения при доставке
 - [ ] **Оплата**: сейчас только enum и строка `paymentDetails`, `paymentStatus` всегда `PENDING`. Нужен тестовый провайдер с вебхуком или честный сценарий «оплата при получении»
-- [ ] **Уведомления**: ни одного письма — подтверждение заказа и «готов к выдаче» (nodemailer / Resend)
+- [ ] **Уведомления**: письмо подтверждения уже отправляется через брокер и воркер, а писем о заказе и «готов к выдаче» нет
 
 ### Не примитивно: чем проект отличается от учебного
 
