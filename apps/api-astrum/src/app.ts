@@ -1,6 +1,6 @@
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import express, { type Express } from "express";
+import express, { type Express, type Request } from "express";
 import helmet from "helmet";
 import { StatusCodes } from "http-status-codes";
 import morgan from "morgan";
@@ -23,8 +23,14 @@ const authenticateToken = createAuthenticateToken(sessionStore);
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
 
+const CONFIRM_PATH = "/api/auth/confirm";
+
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
-app.use(morgan("dev"));
+const isConfirmRequest = (req: Request): boolean =>
+  req.method === "GET" &&
+  (req.originalUrl || req.url).split("?")[0] === CONFIRM_PATH;
+
+app.use(morgan("dev", { skip: isConfirmRequest }));
 app.use(cors(corsOptions));
 app.options("/{*splat}", cors(corsOptions));
 
