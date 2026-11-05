@@ -2,7 +2,7 @@
 
 ## Overview
 
-Single source of truth for the Postgres schema and the generated Prisma client that both services import. It also holds the Excel seeding script that fills the catalogue.
+Single source of truth for the Postgres schema and the generated Prisma client that the api, auth and worker services import. It also holds the Excel seeding script that fills the catalogue.
 
 ## Stack
 
@@ -37,7 +37,7 @@ pnpm --filter @astrum/db seed:excel
 ## Gotchas
 
 - `generated/prisma` is not committed; a fresh checkout needs `pnpm db:generate` before any type check or build.
-- Each package generates its own copy of the client: `apps/api-astrum/generated/prisma` used to be a symlink into this package, which let a generate from either side overwrite the other's client from a schema that had drifted. Keep `apps/api-astrum/prisma/schema.prisma` byte identical to this one (copy it over after an edit); if the two ever differ, the app and its tests fight over relation field names.
+- Every consumer generates its own copy of the client: `apps/api-astrum/generated/prisma` used to be a symlink into this package, which let a generate from either side overwrite the other's client from a schema that had drifted. `apps/api-astrum`, `apps/auth-astrum` and `apps/worker` each carry a `prisma/schema.prisma` that must stay byte identical to this one (copy it over after an edit); if two of them ever differ, the app and its tests fight over relation field names.
 - `seed:excel` runs with `--max-old-space-size=8192` and reads every xlsx file inside `Бесплатная база товаров 2018`.
 - Build scripts are allowlisted in `pnpm-workspace.yaml` under `allowBuilds` (pnpm 12 ignores `pnpm.onlyBuiltDependencies`); a new native dependency needs an entry there or its install script is skipped.
 
