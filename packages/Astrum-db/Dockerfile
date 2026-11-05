@@ -3,7 +3,8 @@
 # One-shot image: applies Prisma migrations, then exits.
 FROM node:24-bookworm-slim AS base
 ENV CI=true
-RUN npm install --global pnpm@12.8.1
+RUN npm install --global pnpm@12.8.1 \
+    && pnpm config set store-dir /pnpm/store
 WORKDIR /app
 
 FROM base AS pruner
@@ -17,7 +18,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=pruner /pruned/json/ ./
 COPY --from=pruner /pruned/pnpm-lock.yaml /pruned/pnpm-workspace.yaml ./
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+RUN --mount=type=cache,id=astrum-pnpm-store,target=/pnpm/store,sharing=locked \
     pnpm install --frozen-lockfile
 COPY --from=pruner /pruned/full/ ./
 
