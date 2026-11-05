@@ -19,8 +19,10 @@ model User {
   nickName            String?
   preferredCategories String[]
   dateOfBirth         DateTime
+  status              UserStatus          @default(PENDING)
   lastViewedProduct   LastViewedProduct[]
   reviews             Review[]
+  emailTokens         EmailToken[]
 }
 
 model LastViewedProduct {
@@ -254,6 +256,11 @@ enum Gender {
   Female
 }
 
+enum UserStatus {
+  PENDING
+  ACTIVE
+}
+
 enum ReviewStatus {
   PENDING
   APPROVED
@@ -295,4 +302,19 @@ model ReviewResponse {
   updatedAt  DateTime @updatedAt
 
   @@index([reviewId])
+}
+
+// Account confirmation models
+model EmailToken {
+  id        String    @id @default(uuid())
+  userId    String
+  email     String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
