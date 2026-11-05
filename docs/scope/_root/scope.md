@@ -144,7 +144,7 @@ Registering hands out a session at once, so an account works before anyone prove
 - [x] Verify it: `/check verify account confirmation by email` — 2026-11-05: all 17 acceptance criteria walked on a freshly started stack, including the letter lifecycle, both rate limits, the boot refusals and the 21 minute retry ladder that ends in the dead letter queue; three defects found on the way and fixed (`consumer.ts`), the confirm token reaching the gateway access log and `email.publish.failed` logging an empty reason; log in the spec's `verify.md`, three steps still owed
 - [ ] Test it: `/test account confirmation by email`
 - [ ] Review it (fresh model): `/check review account confirmation by email`
-- [ ] Document it: `/document account confirmation by email`
+- [x] Document it: `/document account confirmation by email` — 2026-11-05: entry `docs/changelog/2026-11-05-account-confirmation.md`, written from the diff and the verify report (Added, Changed, Fixed, Verified, Open)
   spec [0005](../../specs/_root/0005-account-confirmation-by-email/index.md)
   code in `packages/Astrum-db/prisma/migrations/20261105112608_account_confirmation`, `apps/auth-astrum/src`, `apps/api-astrum/src/middlewares/requireActiveAccount.ts`, `apps/api-astrum/src/events`, `apps/api-astrum/src/modules/user`, `apps/worker`, `apps/customer/src/features/auth/ConfirmEmail`, `apps/customer/src/features/layout/ConfirmEmailBanner`, `docker-compose.yml`, `docker-compose.prod.yml`
 
