@@ -90,3 +90,27 @@ customer -> proxy:3580  -> api x3 -> auth x1 -> db
 - **Debt accepted**: `apps/api-astrum`, `apps/auth-astrum` and `packages/Astrum-db` each
   keep their own copy of the Prisma schema; the migrate image uses the `Astrum-db` copy.
   They are semantically identical today and must be edited together.
+
+## Update: the asynchronous side channels
+
+Four services joined the stack after this record was accepted, and none of them changes the
+decision above. They follow the same rules: one image per service, configuration from
+`.env.prod`, a `GET /health` probe and a compose healthcheck gate.
+
+- `redis` holds the session records: one `session:<sid>` per sign in, read by the gateway on
+  every protected request. It runs without persistence on purpose, so a restart ends every
+  live session. Decision and contracts: `docs/specs/_root/0004-session-store-in-redis/`.
+- `rabbitmq` and `worker` carry the account confirmation letter. `auth` and `api` publish
+  `account.confirmation.requested` after their commit, `worker` consumes the queue, writes
+  the token hash and sends the letter through SMTP, retrying at 60, 300 and 900 seconds
+  before the dead letter queue. Decision and contracts:
+  `docs/specs/_root/0005-account-confirmation-by-email/`.
+- `worker:5580` stays inside the `astrum` network. On `SIGTERM` it cancels the consumer,
+  waits for the in flight send and closes the connection, which is what the compose
+  `stop_grace_period` uses.
+- `mailpit` is the SMTP catcher of the prod stack and the second service that publishes a
+  host port (`8025`), next to `proxy` on `80`/`443`. A deployment that delivers for real
+  points `SMTP_URL` at a relay and drops the service.
+- The Prisma schema now has a copy in `apps/worker` as well: `apps/api-astrum`,
+  `apps/auth-astrum`, `apps/worker` and `packages/Astrum-db` are byte identical today and
+  must be edited together.

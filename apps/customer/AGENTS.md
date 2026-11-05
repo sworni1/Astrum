@@ -13,17 +13,19 @@ Next.js App Router storefront for the Astrum shop. Server components fetch on th
 
 ## Key files
 
-| File                            | Owns                                                                                                                                                                                                      |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `next.config.ts`                | `output: "standalone"`, `outputFileTracingRoot` at the workspace root, `/api-gateway/:path*` rewrite to `API_GATEWAY_INTERNAL_URL`, allowed image hosts and qualities, no eslint key (removed in Next 16) |
-| `src/app/(content)/`            | store pages: home, categories, product, cart, orders, profile, wishlist                                                                                                                                   |
-| `src/app/(auth)/`               | sign in and register pages                                                                                                                                                                                |
-| `src/proxy.ts`                  | route guard reading the `__auth` cookie (Next 16 renamed `middleware` to `proxy`)                                                                                                                         |
-| `src/common/helpers/session.ts` | cookie read, set, refresh and delete                                                                                                                                                                      |
-| `src/features/pages/<Page>/`    | page level feature components                                                                                                                                                                             |
-| `src/hooks/<domain>/`           | data hooks per domain, exported through `index.ts`                                                                                                                                                        |
-| `src/app/health/route.ts`       | `GET /health` for the balancer; reports `os.hostname()`, since `HOSTNAME` is pinned to the bind address                                                                                                   |
-| `docker/graceful.cjs`           | container entry wrapper that drains in flight requests on SIGTERM (the standalone server has no handler)                                                                                                  |
+| File                                      | Owns                                                                                                                                                                                                      |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `next.config.ts`                          | `output: "standalone"`, `outputFileTracingRoot` at the workspace root, `/api-gateway/:path*` rewrite to `API_GATEWAY_INTERNAL_URL`, allowed image hosts and qualities, no eslint key (removed in Next 16) |
+| `src/app/(content)/`                      | store pages: home, categories, product, cart, orders, profile, wishlist                                                                                                                                   |
+| `src/app/(auth)/`                         | sign in and register pages, plus `auth/confirm-email` for the letter link                                                                                                                                 |
+| `src/features/auth/ConfirmEmail/`         | "check your mail" screen with the resend countdown                                                                                                                                                        |
+| `src/features/layout/ConfirmEmailBanner/` | banner that tells a `PENDING` account why orders are refused                                                                                                                                              |
+| `src/proxy.ts`                            | route guard reading the `__auth` cookie (Next 16 renamed `middleware` to `proxy`)                                                                                                                         |
+| `src/common/helpers/session.ts`           | cookie read, set, refresh and delete                                                                                                                                                                      |
+| `src/features/pages/<Page>/`              | page level feature components                                                                                                                                                                             |
+| `src/hooks/<domain>/`                     | data hooks per domain, exported through `index.ts`                                                                                                                                                        |
+| `src/app/health/route.ts`                 | `GET /health` for the balancer; reports `os.hostname()`, since `HOSTNAME` is pinned to the bind address                                                                                                   |
+| `docker/graceful.cjs`                     | container entry wrapper that drains in flight requests on SIGTERM (the standalone server has no handler)                                                                                                  |
 
 ## Commands
 
@@ -39,6 +41,8 @@ pnpm --filter @astrum/customer lint
 - Route groups separate the auth layout from the content layout; a new page joins the matching group.
 - Components are organised by feature: a PascalCase folder under `src/features`, shared primitives in `src/components/ui`.
 - Backend calls go through a hook in `src/hooks/<domain>`, never inline inside a component.
+- Signing out calls `POST /api/auth/logout` first and only then clears the `__auth` cookie, so the session is revoked on the server.
+- A `403 EMAIL_NOT_CONFIRMED` response is not a generic error: it means the account still sits in `PENDING` and the screen points at the confirmation banner.
 - Only `NEXT_PUBLIC_*` values reach the browser; the JWT secret stays on the server.
 - In the container both gateway values are baked at build time: `API_GATEWAY_INTERNAL_URL=http://proxy:3580` (the rewrite is compiled into the routes manifest) and `NEXT_PUBLIC_API_GATEWAY_URL=/api-gateway`, which keeps the call same origin so the `__auth` cookie is sent without a CORS allowlist.
 

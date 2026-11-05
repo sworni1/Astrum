@@ -9,15 +9,15 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 
 ## At a glance
 
-| #   | Feature                                    | Phase    | Status      |
-| --- | ------------------------------------------ | -------- | ----------- |
-| A   | Sign in and register screens               | Existing | existing    |
-| B   | Home and categories                        | Existing | existing    |
-| C   | Product page                               | Existing | existing    |
-| D   | Cart and wishlist                          | Existing | existing    |
-| E   | Orders                                     | Existing | existing    |
-| F   | Profile and profile editing                | Existing | existing    |
-| 1   | Registration form: age rule and date entry | Slice 1  | in-progress |
+| #   | Feature                                    | Phase    | Status   |
+| --- | ------------------------------------------ | -------- | -------- |
+| A   | Sign in and register screens               | Existing | existing |
+| B   | Home and categories                        | Existing | existing |
+| C   | Product page                               | Existing | existing |
+| D   | Cart and wishlist                          | Existing | existing |
+| E   | Orders                                     | Existing | existing |
+| F   | Profile and profile editing                | Existing | existing |
+| 1   | Registration form: age rule and date entry | Slice 1  | done     |
 
 ## Already built
 
@@ -47,7 +47,7 @@ Profile page with an edit form for the stored fields. code in `apps/customer/src
 
 ## Slice 1: Registration form
 
-### 1. Registration form: age rule and date entry · in-progress
+### 1. Registration form: age rule and date entry · done
 
 The register screen accepts a birthday and a gender, but the date field has no minimum age rule, the calendar needs a lot of clicking to reach an older year, the picker stays open after a choice, and the date cannot be typed at all. Gender selection has the same staying open problem.
 **Done when:** a birthday can be typed as `DD.MM.YYYY` or picked from the calendar; a date younger than 14 years is refused with a message under the field; the calendar jumps to any month and year through dropdowns and lands on a usable month when opened; both the calendar and the gender list close right after a choice.
