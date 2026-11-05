@@ -27,6 +27,29 @@ services:
     networks:
       - astrumnetwork
 
+  astrum-rabbit:
+    image: rabbitmq:4-management
+    container_name: astrum-rabbit
+    ports:
+      - 5672:5672
+      - 15672:15672
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - astrumnetwork
+
+  astrum-mailpit:
+    image: axllent/mailpit
+    container_name: astrum-mailpit
+    ports:
+      - 1025:1025
+      - 8025:8025
+    networks:
+      - astrumnetwork
+
   astrum-api:
     container_name: astrum-backend
     build:
