@@ -30,10 +30,12 @@ import {
   SelectValue,
 } from "../../../components/ui/select";
 import { useAuth } from "../../../hooks";
+import { useResendConfirmation } from "../../../hooks/user/useResendConfirmation";
 import { DateOfBirthField } from "./DateOfBirthField";
 
 export default function Register() {
-  const { handleRegister } = useAuth();
+  const { handleRegister, emailTaken } = useAuth();
+  const { send, isSending, isCoolingDown } = useResendConfirmation();
 
   const form = useForm<SignUpCredentials>({
     resolver: zodResolver(registerFormSchema),
@@ -166,6 +168,28 @@ export default function Register() {
                 <Button disabled={!isValid} type="submit" className="w-full">
                   Sign up
                 </Button>
+
+                {emailTaken ? (
+                  <div className="flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">
+                    <p>Этот адрес уже зарегистрирован.</p>
+                    <div className="flex flex-wrap items-center gap-4">
+                      <Link
+                        href="/auth/signin"
+                        className="underline underline-offset-4"
+                      >
+                        Войти
+                      </Link>
+                      <button
+                        type="button"
+                        className="underline underline-offset-4 disabled:opacity-50"
+                        disabled={isSending || isCoolingDown}
+                        onClick={() => void send(form.getValues("email"))}
+                      >
+                        Отправить письмо снова
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
               <div className="mt-4 text-center text-sm">
                 Already have an account?&nbsp;{" "}

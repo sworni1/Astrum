@@ -1,5 +1,6 @@
 import "@/app/index.css";
 import { verifySession } from "../../common/helpers/session";
+import ConfirmEmailBanner from "../../features/layout/ConfirmEmailBanner";
 import Footer from "../../features/layout/Footer";
 import Navbar from "../../features/layout/Navbar";
 
@@ -13,6 +14,7 @@ export default async function ContentLayout({
 
   return (
     <>
+      <ConfirmEmailBanner />
       <Navbar />
       {children}
       <Footer />
