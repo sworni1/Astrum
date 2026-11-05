@@ -30,6 +30,9 @@ services:
   astrum-rabbit:
     image: rabbitmq:4-management
     container_name: astrum-rabbit
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-astrum}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-change-me}
     ports:
       - 5672:5672
       - 15672:15672
@@ -62,10 +65,14 @@ services:
         condition: service_started
       astrum-redis:
         condition: service_healthy
+      astrum-rabbit:
+        condition: service_healthy
     ports:
       - 3580:3580
     env_file:
       - apps/api-astrum/.env.prod
+    environment:
+      RABBITMQ_URL: "${RABBITMQ_URL:-amqp://astrum:[REDACTED]@astrum-rabbit:5672}"
     networks:
       - astrumnetwork
 
@@ -79,10 +86,15 @@ services:
         condition: service_started
       astrum-redis:
         condition: service_healthy
+      astrum-rabbit:
+        condition: service_healthy
     ports:
-      - 4580:4580
+      - 4581:4580
     env_file:
       - apps/auth-astrum/.env.prod
+    environment:
+      RABBITMQ_URL: "${RABBITMQ_URL:-amqp://astrum:[REDACTED]@astrum-rabbit:5672}"
+      STOREFRONT_URL: ${STOREFRONT_URL:-http://localhost:3000}
     networks:
       - astrumnetwork
 
