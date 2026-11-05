@@ -66,6 +66,17 @@ services:
     restart: unless-stopped
     networks: [ astrum ]
 
+  # Local mail catcher: the confirmation letter lands here instead of a real
+  # mailbox, and http://localhost:8025 shows it. A deployment that delivers for
+  # real removes this service and points SMTP_URL at the relay instead.
+  mailpit:
+    image: axllent/mailpit
+    logging: *default-logging
+    ports:
+      - 8025:8025
+    restart: unless-stopped
+    networks: [ astrum ]
+
   migrate:
     build:
       context: .
@@ -149,6 +160,8 @@ services:
         condition: service_completed_successfully
       rabbitmq:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     healthcheck:
       test:
         [

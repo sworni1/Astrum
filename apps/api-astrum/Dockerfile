@@ -3,7 +3,8 @@
 FROM node:24-bookworm-slim AS base
 ENV CI=true \
     NEXT_TELEMETRY_DISABLED=1
-RUN npm install --global pnpm@12.8.1
+RUN npm install --global pnpm@12.8.1 \
+    && pnpm config set store-dir /pnpm/store
 WORKDIR /app
 
 # Cuts the workspace down to @astrum/api and its dependency graph.
@@ -14,7 +15,7 @@ RUN pnpm turbo prune @astrum/api --docker --out-dir /pruned
 FROM base AS deps
 COPY --from=pruner /pruned/json/ ./
 COPY --from=pruner /pruned/pnpm-lock.yaml /pruned/pnpm-workspace.yaml ./
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+RUN --mount=type=cache,id=astrum-pnpm-store,target=/pnpm/store,sharing=locked \
     pnpm install --frozen-lockfile
 
 FROM deps AS builder
@@ -28,7 +29,7 @@ FROM base AS runner
 ENV NODE_ENV=production
 COPY --from=pruner /pruned/json/ ./
 COPY --from=pruner /pruned/pnpm-lock.yaml /pruned/pnpm-workspace.yaml ./
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+RUN --mount=type=cache,id=astrum-pnpm-store,target=/pnpm/store,sharing=locked \
     pnpm install --prod --frozen-lockfile --ignore-scripts
 COPY --from=builder /app/apps/api-astrum/dist ./apps/api-astrum/dist
 
