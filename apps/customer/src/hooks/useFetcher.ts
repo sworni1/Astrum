@@ -2,6 +2,7 @@
 
 import axios, { type AxiosInstance } from "axios";
 import { useCallback, useMemo, useState } from "react";
+import { requestConfirmationForCurrentUser } from "../common/helpers/confirmEmail";
 import { deleteSession } from "../common/helpers/session";
 import { showToast } from "../common/helpers/showToast";
 
@@ -23,6 +24,7 @@ const SESSION_GONE_CODES = [
  */
 let sessionEnded = false;
 let storeWarningShown = false;
+let confirmationWarningShown = false;
 
 export const resetSessionEnded = (): void => {
   sessionEnded = false;
@@ -84,6 +86,26 @@ const handleRefusal = async (error: unknown): Promise<void> => {
     return;
   }
 
+  if (code === "EMAIL_NOT_CONFIRMED") {
+    if (!confirmationWarningShown) {
+      confirmationWarningShown = true;
+      showToast({
+        title: "Подтвердите почту",
+        description:
+          "Заказы и отзывы откроются после клика по ссылке из письма.",
+        type: "warning",
+        action: {
+          label: "Отправить письмо",
+          onClick: () => {
+            void requestConfirmationForCurrentUser();
+          },
+        },
+      });
+    }
+
+    return;
+  }
+
   if (SESSION_GONE_CODES.includes(code)) {
     await endSessionHere();
   }
@@ -102,6 +124,7 @@ const createAxiosInstance = (): AxiosInstance => {
   instance.interceptors.response.use(
     (response) => {
       storeWarningShown = false;
+      confirmationWarningShown = false;
       return response;
     },
     async (error: unknown) => {

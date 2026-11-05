@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
+import { requireActiveAccount } from "../../middlewares/requireActiveAccount";
 import { validateDto } from "../../middlewares/validateDto";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { UpdateOrderStatusDto } from "./dto/update-order-status.dto";
@@ -23,6 +24,7 @@ orderRoutes.patch(
 );
 orderRoutes.post(
   "/",
+  requireActiveAccount,
   attachIdempotencyKey,
   validateDto(CreateOrderDto, {
     status: StatusCodes.UNPROCESSABLE_ENTITY,

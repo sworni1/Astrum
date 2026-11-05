@@ -1,0 +1,320 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// User model
+model User {
+  id                  String              @id @default(uuid())
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  email               String              @unique
+  passwordhash        String
+  gender              Gender
+  isDeleted           Boolean             @default(false)
+  nickName            String?
+  preferredCategories String[]
+  dateOfBirth         DateTime
+  status              UserStatus          @default(PENDING)
+  lastViewedProduct   LastViewedProduct[]
+  reviews             Review[]
+  emailTokens         EmailToken[]
+}
+
+model LastViewedProduct {
+  id          String @id @default(uuid())
+  viewingTime Int
+  productId   String
+
+  User   User?   @relation(fields: [userId], references: [id])
+  userId String?
+}
+
+// Product models
+model Impression {
+  id        String   @id @unique @default(uuid())
+  stars     Float    @default(0)
+  comment   String
+  photos    String[]
+  userId    String
+  productId String
+  Product   Product  @relation(fields: [productId], references: [id])
+}
+
+model WishlistItem {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  userId    String
+  productId String
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  userId    String
+  productId String
+  quantity  Int      @default(1) @db.Integer
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+}
+
+model Product {
+  id            String            @id @default(uuid())
+  businessId    String
+  createdAt     DateTime          @default(now())
+  name          String
+  quantity      Int
+  description   String?
+  price         Float
+  discount      Float?
+  stars         Float             @default(0)
+  popularity    Float             @default(0)
+  category      ProductCategory
+  subcategory   String?
+  currency      Currency
+  isDeleted     Boolean           @default(false)
+  isOutOfStock  Boolean           @default(false)
+  visibility    ProductVisibility @default(Draft)
+  status        ProductStatus     @default(Draft)
+  images        String[]
+  previewImage  String
+  sales         Int               @default(0)
+  views         Int               @default(0)
+  impressions   Impression[]
+  properties    ProductProperty[]
+  reviews       Review[]
+  reviewCount   Int               @default(0)
+  averageRating Float             @default(0)
+}
+
+model ProductProperty {
+  id        String        @id @default(uuid())
+  label     PropertyLabel
+  value     String
+  productId String
+  Product   Product       @relation(fields: [productId], references: [id])
+}
+
+// Order models
+model Order {
+  id               String         @id @default(cuid())
+  userId           String
+  totalPrice       Decimal        @db.Decimal(10, 2)
+  currency         Currency
+  paymentMethod    PaymentMethod
+  paymentStatus    PaymentStatus  @default(PENDING)
+  paymentDetails   String?
+  status           OrderStatus    @default(PENDING)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  shippingMethod   ShippingMethod @relation(fields: [shippingMethodId], references: [id])
+  deliveryAddress  String
+  deliveryDate     DateTime
+  OrderItem        OrderItem[]
+  shippingMethodId String
+  idempotencyKey   String?
+  idempotencyHash  String?        @db.VarChar(64)
+
+  @@unique([userId, idempotencyKey])
+  @@index([userId])
+}
+
+model OrderItem {
+  id           String          @id @default(cuid())
+  productId    String
+  previewImage String
+  name         String
+  quantity     Int
+  price        Decimal         @db.Decimal(10, 2)
+  currency     Currency
+  orderId      String
+  receiptDate  DateTime?
+  status       OrderItemStatus @default(PENDING)
+  userId       String
+  order        Order           @relation(fields: [orderId], references: [id])
+  review       Review?
+
+  @@index([orderId])
+}
+
+model ShippingMethod {
+  id    String  @id @default(cuid())
+  name  String  @unique
+  price Float
+  Order Order[]
+}
+
+enum PaymentMethod {
+  CASH
+  CARD_ON_DELIVERY
+  ONLINE_CARD
+  PAYPAL
+  STRIPE
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum OrderItemStatus {
+  PENDING
+  CONFIRMED
+  OUT_OF_STOCK
+  CANCELLED
+  SHIPPED
+  DELIVERED
+  RETURNED
+  BACKORDERED
+  REPLACED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELED
+}
+
+enum PropertyLabel {
+  Color
+  Size
+  Material
+  Brand
+  Weight
+  Dimensions
+  Warranty
+  EnergyEfficiency
+  StorageCapacity
+  OperatingSystem
+  Processor
+  GraphicsCard
+  ScreenSize
+  BatteryLife
+  Type
+  Power
+  Features
+  Control
+  NoiseLevel
+  PowerSource
+  Display
+  Capacity
+  Installation
+  Speed
+  Construction
+  RAM
+  Connectivity
+}
+
+enum ProductCategory {
+  Electronics
+  Fashion
+  Home
+  Food
+  Beauty
+  Books
+  Sports
+  Toys
+  Automotive
+  Office
+}
+
+enum Currency {
+  RUB
+  USD
+}
+
+enum ProductStatus {
+  Draft
+  Published
+  Discontinued
+}
+
+enum ProductVisibility {
+  Public
+  Private
+  Archived
+  Draft
+}
+
+enum Gender {
+  Male
+  Female
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Review {
+  id             String       @id @default(uuid())
+  userId         String
+  productId      String
+  orderItemId    String       @unique
+  rating         Int          @db.SmallInt
+  qualityRating  Int          @db.SmallInt
+  deliveryRating Int          @db.SmallInt
+  accuracyRating Int          @db.SmallInt
+  comment        String
+  photos         String[]     @default([])
+  status         ReviewStatus @default(PENDING)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  Product         Product          @relation(fields: [productId], references: [id])
+  User            User             @relation(fields: [userId], references: [id])
+  OrderItem       OrderItem        @relation(fields: [orderItemId], references: [id])
+  reviewResponses ReviewResponse[]
+
+  @@index([productId, status])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model ReviewResponse {
+  id         String   @id @default(uuid())
+  reviewId   String
+  Review     Review   @relation(fields: [reviewId], references: [id])
+  businessId String
+  comment    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([reviewId])
+}
+
+// Account confirmation models
+model EmailToken {
+  id        String    @id @default(uuid())
+  userId    String
+  email     String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

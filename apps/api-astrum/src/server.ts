@@ -3,6 +3,12 @@ import type { Server } from "node:http";
 import { prisma } from "../lib/prisma";
 import app from "./app";
 
+if (!process.env.RABBITMQ_URL) {
+  throw new Error(
+    "RABBITMQ_URL is required: the gateway publishes the event an email change produces",
+  );
+}
+
 const PORT = Number(process.env.API_PORT ?? 3580);
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 

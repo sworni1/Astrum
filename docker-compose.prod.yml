@@ -46,6 +46,26 @@ services:
     restart: unless-stopped
     networks: [ astrum ]
 
+  # Broker for the background path. No published port: only the auth service
+  # publishes and only the worker consumes.
+  rabbitmq:
+    image: rabbitmq:4-management
+    logging: *default-logging
+    env_file: .env.prod
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-astrum}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-change-me}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+    networks: [ astrum ]
+
   migrate:
     build:
       context: .
@@ -68,6 +88,8 @@ services:
       migrate:
         condition: service_completed_successfully
       redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test:
@@ -96,6 +118,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -110,6 +134,34 @@ services:
       start_period: 20s
     deploy:
       replicas: 3
+    stop_grace_period: 30s
+    restart: unless-stopped
+    networks: [ astrum ]
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    logging: *default-logging
+    env_file: .env.prod
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5580/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    # SIGTERM cancels the consumer, lets the in-flight send finish, then closes.
     stop_grace_period: 30s
     restart: unless-stopped
     networks: [ astrum ]
@@ -174,5 +226,6 @@ volumes:
   # starts from the default fresh volume.
   pgdata:
     name: ${POSTGRES_VOLUME:-astrum-pgdata}
+  rabbitmq_data:
   caddy_data:
   caddy_config:

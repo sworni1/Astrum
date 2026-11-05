@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import axios from "axios";
 import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -25,6 +26,7 @@ import { Button } from "../../../../../components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -38,11 +40,34 @@ type Props = {
   profileData: UserData;
 };
 
+const describeProfileError = (error: unknown): string => {
+  if (!axios.isAxiosError(error)) {
+    return "Повторите попытку позже.";
+  }
+
+  const code = (error.response?.data as { code?: string } | undefined)?.code;
+
+  if (code === "EMAIL_TAKEN") {
+    return "Этот адрес занят другим аккаунтом.";
+  }
+
+  if (code === "EMAIL_UNCHANGED") {
+    return "Адрес уже указан в профиле.";
+  }
+
+  if (code === "EMAIL_NOT_CONFIRMED") {
+    return "Пока адрес не подтверждён, менять можно только почту.";
+  }
+
+  return "Повторите попытку позже.";
+};
+
 const EditProfileForm = ({ profileData }: Props) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isFormChanged, setIsFormChanged] = useState(false);
 
-  const { updateAccountTrigger } = useUser();
+  const { updateAccountTrigger, mutateProfile } = useUser();
+  const isPending = profileData.status === "PENDING";
 
   const defaultValues = useMemo<Partial<updateUserDto>>(
     () => ({
@@ -59,22 +84,52 @@ const EditProfileForm = ({ profileData }: Props) => {
   });
 
   const editUser = async (data: updateUserDto) => {
+    const payload: Partial<updateUserDto> = {};
+
+    if (data.email !== profileData.email) {
+      payload.email = data.email;
+    }
+
+    if (!isPending && data.nickName !== profileData.nickName) {
+      payload.nickName = data.nickName;
+    }
+
+    if (!payload.email && !payload.nickName) {
+      showToast({
+        title: "Изменений нет",
+        description: "Поля совпадают с профилем.",
+        type: "info",
+      });
+      setIsDialogOpen(false);
+      return;
+    }
+
     try {
-      await updateAccountTrigger(data, {
-        onSuccess: () => {
-          showToast({
-            title: "Success!",
-            type: "success",
-            description: "Profile updated successfully",
-          });
+      await updateAccountTrigger(payload, {
+        onSuccess: async () => {
+          showToast(
+            payload.email
+              ? {
+                  title: "Проверьте новую почту",
+                  description:
+                    "Мы отправили письмо со ссылкой на новый адрес. Заказы откроются после подтверждения.",
+                  type: "success",
+                }
+              : {
+                  title: "Профиль обновлён",
+                  type: "success",
+                },
+          );
 
           setIsFormChanged(false);
+          setIsDialogOpen(false);
+          await mutateProfile();
         },
-        onError: () =>
+        onError: (error: unknown) =>
           showToast({
-            title: "Error!",
+            title: "Не удалось сохранить",
             type: "error",
-            description: "The email is occupied by another user",
+            description: describeProfileError(error),
           }),
       });
     } catch (error) {
@@ -107,8 +162,18 @@ const EditProfileForm = ({ profileData }: Props) => {
               <FormItem>
                 <FormLabel>Username</FormLabel>
                 <FormControl>
-                  <Input placeholder="shadcn" {...field} />
+                  <Input
+                    placeholder="shadcn"
+                    {...field}
+                    value={field.value ?? ""}
+                    disabled={isPending}
+                  />
                 </FormControl>
+                {isPending ? (
+                  <FormDescription>
+                    Ник можно изменить после подтверждения почты.
+                  </FormDescription>
+                ) : null}
                 <FormMessage />
               </FormItem>
             )}
@@ -122,7 +187,11 @@ const EditProfileForm = ({ profileData }: Props) => {
                 <FormControl>
                   <Input placeholder="email" {...field} />
                 </FormControl>
-
+                <FormDescription>
+                  {isPending
+                    ? "Пока адрес не подтверждён, менять можно только его."
+                    : "После смены адреса аккаунт снова ждёт подтверждения."}
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -156,7 +225,7 @@ const EditProfileForm = ({ profileData }: Props) => {
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will update your data.
+                  Изменения сохранятся в профиле.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

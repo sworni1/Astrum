@@ -1,9 +1,9 @@
 # Scope: Astrum order flow
 
-One order moves through three places: the storefront (`apps/customer`), the gateway (`apps/api-astrum`) and the shared schema (`packages/Astrum-db`). The seller surface does not exist yet. This plan holds the whole order path, slice by slice, so the storefront and backend scopes stay about their own pages.
+One order moves through three places: the storefront (`apps/customer`), the gateway (`apps/api-astrum`) and the shared schema (`packages/Astrum-db`). The seller surface does not exist yet. This plan holds the whole order path, slice by slice, so the storefront and backend scopes stay about their own pages. Session state and account confirmation cross the same places plus the auth service and a new worker, so their slices live here too.
 
-**Build approach:** Tracer Bullet (every slice runs end to end through the storefront and the gateway). Session state crosses the same places, so its slice lives here too.
-**Workflow:** Beta (after `/develop`: `/check verify`, then `/test`). Features that move money or stock carry a `· GA` tag.
+**Build approach:** Tracer Bullet (every slice runs end to end through the storefront and the gateway).
+**Workflow:** Beta (after `/develop`: `/check verify`, then `/test`). Features that move money or stock, or guard access, carry a `· GA` tag.
 
 _These are recommendations to keep the build orderly, not requirements. Skip anything that does not fit. You decide when a feature is `done`._
 
@@ -21,6 +21,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | 8   | Reviews on the product screen             | Slice 4 | planned |
 | 9   | Order flow end to end test and CI         | Slice 4 | planned |
 | 10  | Session store in Redis                    | Slice 5 | done |
+| 11  | Account confirmation by email             | Slice 6 | in-progress |
 
 ## Slice 1: the order thread
 
@@ -126,6 +127,28 @@ A session today is a signed token and nothing else: the auth service signs `{ us
 - [x] Document it: `/document session store in Redis` (2026-11-04: `docs/changelog/2026-11-04-session-store-in-redis.md`, roadmap split in `README.md`)
   spec [0004](../../specs/_root/0004-session-store-in-redis/index.md)
   code in `apps/api-astrum/src/session`, `apps/api-astrum/src/middlewares/authenticateToken.ts`, `apps/api-astrum/src/modules/user/user.service.ts`, `apps/auth-astrum/src/redis`, `apps/auth-astrum/src/auth`, `apps/customer/src/common/helpers/session.ts`, `apps/customer/src/hooks/useFetcher.ts`, `docker-compose.yml`, `docker-compose.prod.yml`
+
+## Slice 6: confirming an account
+
+### 11. Account confirmation by email · in-progress · GA
+
+Registering hands out a session at once, so an account works before anyone proved they own the mailbox. Nothing here can send that proof: there is no mail transport, no broker, no worker, and `User` carries no status at all.
+**Done when:** a new account and every existing one starts `PENDING`, can sign in and browse, and is refused on ordering, on writing a review and on every profile field except the email; one link from the letter confirms it once and works in one click, while an expired, replaced or unknown link lands on a page that says which and offers another letter; the letter ships through a worker fed by a broker, retries with delays, and keeps what it cannot deliver in a dead letter queue; asking for another letter is limited per address and per IP; changing the address puts the account back to `PENDING` and sends a letter to the new one.
+- [x] Design it (spec): `/architect account confirmation by email`
+- [x] Build it: `/develop account confirmation by email` — 2026-11-05: schema, gate, worker, confirm, resend and the email change rules built, `pnpm quality-gate` green, the whole path proved on the running stack
+  - [x] Schema and the status on the read path: migration, `EmailToken` bound to the address, `status` in `GET /api/users/me` (AC-1, AC-2) — done: migration applied, 29 existing rows read `PENDING`, the profile answers the status
+  - [x] Gate and publisher: `requireActiveAccount` reading `User.status` with its `503` case, `EMAIL_TAKEN` on register, the event published after commit (AC-3, AC-4, AC-9, AC-10) — done: `403` and `503` proved live, register answered `200` in 92 ms with the broker stopped
+  - [x] Worker and the letter: `apps/worker`, Rabbit and Mailpit in both compose files, token minting, the letter, retries and the dead letter queue (AC-5, AC-6, AC-7, AC-16, AC-17) — done: `/health` `{rabbit:true,smtp:true}`, the letter in Mailpit with one link, 16 worker tests
+  - [x] Confirm and resend: `GET /api/auth/confirm` with its four outcomes, `resend` with its limits, the storefront screen and banner (AC-8, AC-11, AC-13, AC-14) — done: four outcomes proved by redirect, the screen rendered at desktop and mobile, the cooldown counted down from 59 s
+  - [x] Email change and rights: the `PATCH /api/users/me` rules, `400` and `409`, the status reset, the profile form (AC-12, AC-15) — done: `403`, `400`, `409` and a `200` that went back to `PENDING` and sent a letter
+- [x] Verify it: `/check verify account confirmation by email` — 2026-11-05: all 17 acceptance criteria walked on a freshly started stack, including the letter lifecycle, both rate limits, the boot refusals and the 21 minute retry ladder that ends in the dead letter queue; three defects found on the way and fixed (`consumer.ts`), the confirm token reaching the gateway access log and `email.publish.failed` logging an empty reason; log in the spec's `verify.md`, three steps still owed
+- [x] Test it: `/test account confirmation by email` — 2026-11-05: отдельного прохода `/test` не было (по решению владельца), покрытие закрыто тем, что уже лежит в репозитории: `apps/worker` 24 теста на топологию, токены, письмо, лестницу ретраев и outbox, `auth` 41 тест на регистрацию, confirm, resend и лимиты, `api` 73 теста включая `requireActiveAccount`, плюс живые 17 AC из `/check verify`; `pnpm quality-gate` 18 из 18
+- [ ] Review it (fresh model): `/check review account confirmation by email`
+- [x] Document it: `/document account confirmation by email` — 2026-11-05: entry `docs/changelog/2026-11-05-account-confirmation.md`, written from the diff and the verify report (Added, Changed, Fixed, Verified, Open)
+  spec [0005](../../specs/_root/0005-account-confirmation-by-email/index.md)
+  code in `packages/Astrum-db/prisma/migrations/20261105112608_account_confirmation`, `apps/auth-astrum/src`, `apps/api-astrum/src/middlewares/requireActiveAccount.ts`, `apps/api-astrum/src/events`, `apps/api-astrum/src/modules/user`, `apps/worker`, `apps/customer/src/features/auth/ConfirmEmail`, `apps/customer/src/features/layout/ConfirmEmailBanner`, `docker-compose.yml`, `docker-compose.prod.yml`
+
+Today: the register path signs a token in `apps/auth-astrum/src/auth/auth.service.ts` and the storefront writes the cookie in `apps/customer/src/hooks/auth/useAuth.ts`; `POST /api/auth/*` is proxied whole, so a confirm route needs no gateway change.
 
 ## Deferred
 

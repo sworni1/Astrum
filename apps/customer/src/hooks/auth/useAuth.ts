@@ -2,7 +2,7 @@
 
 import axios from "axios";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { SubmitHandler } from "react-hook-form";
 import {
   type SignInCredentials,
@@ -17,7 +17,14 @@ export const useAuth = () => {
 
   const router = useRouter();
 
+  const [emailTaken, setEmailTaken] = useState(false);
+
   const goNext = useCallback(() => router.push("/"), [router]);
+
+  const goConfirmEmail = useCallback(
+    () => router.push("/auth/confirm-email"),
+    [router],
+  );
 
   const handleRegister: SubmitHandler<SignUpCredentials> = useCallback(
     async (signUpData: SignUpCredentials) => {
@@ -27,24 +34,27 @@ export const useAuth = () => {
         const res = await fetcher.post("/auth/register", signUpData);
 
         if (res.status === 200) {
+          setEmailTaken(false);
+
           await createSession(res.data.token);
 
           resetSessionEnded();
 
-          goNext();
+          goConfirmEmail();
 
           showToast({
-            title: "Success!",
+            title: "Аккаунт создан",
             type: "success",
-            description: "You have successfully registered",
+            description: "Проверьте почту и подтвердите адрес",
           });
         }
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
           if (error.response.status === 403) {
+            setEmailTaken(true);
             showToast({
-              title: "Error",
-              description: "Conflict: The user with this email already exists",
+              title: "Адрес уже зарегистрирован",
+              description: "Войдите в аккаунт или отправьте письмо снова",
               type: "error",
             });
           } else {
@@ -63,7 +73,7 @@ export const useAuth = () => {
         }
       }
     },
-    [goNext, fetcher],
+    [goConfirmEmail, fetcher],
   );
 
   const handleSignIn: SubmitHandler<SignInCredentials> = useCallback(
@@ -115,7 +125,8 @@ export const useAuth = () => {
     () => ({
       handleRegister,
       handleSignIn,
+      emailTaken,
     }),
-    [handleRegister, handleSignIn],
+    [handleRegister, handleSignIn, emailTaken],
   );
 };

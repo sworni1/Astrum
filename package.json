@@ -4,7 +4,7 @@
   "description": "astrum project",
   "author": "sworni",
   "scripts": {
-    "dev": "docker compose up astrum-db astrum-redis -d && turbo dev",
+    "dev": "docker compose up astrum-db astrum-redis astrum-rabbit astrum-mailpit -d && turbo dev",
     "db:generate": "pnpm --filter @astrum/db db:generate",
     "build": "turbo build",
     "lint": "turbo lint",
