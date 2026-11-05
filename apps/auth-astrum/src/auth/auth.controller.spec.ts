@@ -1,8 +1,13 @@
+import { ConfigService } from "@nestjs/config";
 import { Test, type TestingModule } from "@nestjs/testing";
-import type { Request } from "express";
+import type { Request, Response } from "express";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
-import type { RegisterUserDto, SignInUserDto } from "./dto";
+import type {
+  RegisterUserDto,
+  ResendConfirmationDto,
+  SignInUserDto,
+} from "./dto";
 
 describe("AuthController", () => {
   let controller: AuthController;
@@ -10,18 +15,29 @@ describe("AuthController", () => {
     register: jest.Mock;
     signin: jest.Mock;
     logout: jest.Mock;
+    confirm: jest.Mock;
+    resend: jest.Mock;
   };
+  let config: { get: jest.Mock };
 
   beforeEach(async () => {
     authService = {
       register: jest.fn(),
       signin: jest.fn(),
       logout: jest.fn(),
+      confirm: jest.fn(),
+      resend: jest.fn(),
+    };
+    config = {
+      get: jest.fn().mockReturnValue("http://localhost:3000"),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
-      providers: [{ provide: AuthService, useValue: authService }],
+      providers: [
+        { provide: AuthService, useValue: authService },
+        { provide: ConfigService, useValue: config },
+      ],
     }).compile();
 
     controller = module.get<AuthController>(AuthController);
@@ -57,6 +73,43 @@ describe("AuthController", () => {
 
       expect(authService.signin).toHaveBeenCalledWith(dto, "Mozilla/5.0");
       expect(result).toEqual({ token: "t", expiresIn: "1d" });
+    });
+  });
+
+  describe("confirm", () => {
+    it("AC-8: всегда отвечает 302 на страницу витрины с исходом", async () => {
+      authService.confirm.mockResolvedValue("expired");
+      const res = { redirect: jest.fn() };
+
+      await controller.confirm("token-value", res as unknown as Response);
+
+      expect(authService.confirm).toHaveBeenCalledWith("token-value");
+      expect(res.redirect).toHaveBeenCalledWith(
+        302,
+        "http://localhost:3000/auth/confirm-email?status=expired",
+      );
+    });
+
+    it("AC-8: без параметра токена всё равно редиректит, исход invalid", async () => {
+      authService.confirm.mockResolvedValue("invalid");
+      const res = { redirect: jest.fn() };
+
+      await controller.confirm(undefined, res as unknown as Response);
+
+      expect(res.redirect).toHaveBeenCalledWith(
+        302,
+        "http://localhost:3000/auth/confirm-email?status=invalid",
+      );
+    });
+  });
+
+  describe("resend", () => {
+    it("AC-11: передаёт адрес и ip запроса и не возвращает тело", async () => {
+      const req = { ip: "203.0.113.7" } as unknown as Request;
+      const dto: ResendConfirmationDto = { email: "a@b.c" };
+
+      await expect(controller.resend(dto, req)).resolves.toBeUndefined();
+      expect(authService.resend).toHaveBeenCalledWith("a@b.c", "203.0.113.7");
     });
   });
 

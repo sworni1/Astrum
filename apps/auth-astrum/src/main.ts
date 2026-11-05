@@ -4,8 +4,11 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import compression from "compression";
 import cookieParser from "cookie-parser";
 import { AppModule } from "./app.module";
+import { loadAuthConfig } from "./config/auth.config";
 
 async function bootstrap() {
+  loadAuthConfig();
+
   const app = await NestFactory.create(AppModule);
   const port = Number(process.env.AUTH_PORT ?? 4580);
 

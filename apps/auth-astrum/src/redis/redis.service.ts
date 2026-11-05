@@ -5,6 +5,14 @@ import Redis from "ioredis";
 export const SESSION_TTL_SECONDS = 86_400;
 
 const SESSION_KEY_PREFIX = "session:";
+
+const INCREMENT_WITH_TTL_SCRIPT = `
+local count = redis.call("INCR", KEYS[1])
+if count == 1 then
+  redis.call("EXPIRE", KEYS[1], ARGV[1])
+end
+return count
+`;
 const LOGGED_SID_LENGTH = 8;
 
 /**
@@ -72,6 +80,21 @@ export class RedisService implements SessionStore, OnModuleDestroy {
 
   async del(key: string): Promise<number> {
     return await this.client.del(key);
+  }
+
+  /**
+   * One script per key, so `INCR` and `EXPIRE` cannot be separated by a crash:
+   * a counter without a lifetime would block an address forever.
+   */
+  async incrementWithTtl(key: string, ttlSeconds: number): Promise<number> {
+    const count = await this.client.eval(
+      INCREMENT_WITH_TTL_SCRIPT,
+      1,
+      key,
+      String(ttlSeconds),
+    );
+
+    return Number(count);
   }
 
   async ping(): Promise<string> {

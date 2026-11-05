@@ -8,8 +8,10 @@ import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 import * as argon from "argon2";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import type { User } from "../../generated/prisma/client";
+import type { ConfirmOutcome } from "../config/auth.config";
+import { EventsService } from "../events/events.service";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   loggedSid,
@@ -20,6 +22,13 @@ import {
 import type { RegisterUserDto, SignInUserDto } from "./dto";
 
 const USER_AGENT_MAX_LENGTH = 512;
+
+const EMAIL_TAKEN = "The user already exists";
+
+const RESEND_EMAIL_LIMIT = 3;
+const RESEND_EMAIL_WINDOW_SECONDS = 900;
+const RESEND_IP_LIMIT = 10;
+const RESEND_IP_WINDOW_SECONDS = 3600;
 
 const SESSION_UNAVAILABLE =
   "The session store is unavailable, so no session was started. Try again in a moment.";
@@ -39,6 +48,7 @@ export class AuthService {
     private jwt: JwtService,
     private config: ConfigService,
     private sessions: RedisService,
+    private events: EventsService,
   ) {}
 
   /**
@@ -112,11 +122,19 @@ export class AuthService {
     } catch (err) {
       if (err instanceof PrismaClientKnownRequestError) {
         if (err.code === "P2002") {
-          throw new ForbiddenException("The user already exists");
+          throw new ForbiddenException({
+            code: "EMAIL_TAKEN",
+            message: EMAIL_TAKEN,
+          });
         }
       }
       throw err;
     }
+
+    await this.events.requestAccountConfirmation({
+      userId: user.id,
+      email: user.email,
+    });
 
     return this.signToken(
       user.id,
@@ -168,6 +186,135 @@ export class AuthService {
           reason: describeError(error),
         }),
       );
+    }
+  }
+
+  /**
+   * One click from the letter. Only the sha256 of the parameter reaches the
+   * database, and every outcome is a value the page knows how to render.
+   */
+  async confirm(rawToken: string | undefined): Promise<ConfirmOutcome> {
+    const token = rawToken?.trim();
+
+    if (!token) {
+      return "invalid";
+    }
+
+    const tokenHash = createHash("sha256").update(token).digest("hex");
+
+    const row = await this.prisma.emailToken.findUnique({
+      where: { tokenHash },
+      select: {
+        id: true,
+        userId: true,
+        email: true,
+        usedAt: true,
+        expiresAt: true,
+        user: { select: { email: true, status: true } },
+      },
+    });
+
+    if (!row || row.email !== row.user.email) {
+      return "invalid";
+    }
+
+    if (row.usedAt) {
+      return row.user.status === "ACTIVE" ? "ok" : "used";
+    }
+
+    if (row.expiresAt.getTime() <= Date.now()) {
+      return "expired";
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.emailToken.update({
+        where: { id: row.id },
+        data: { usedAt: new Date() },
+      }),
+      this.prisma.user.update({
+        where: { id: row.userId },
+        data: { status: "ACTIVE" },
+      }),
+    ]);
+
+    return "ok";
+  }
+
+  /**
+   * Reveals nothing: every outcome is the same 204. The limits count unknown
+   * addresses too, so the route cannot probe a mailbox for free.
+   */
+  async resend(rawEmail: string, ip: string | undefined): Promise<void> {
+    const email = rawEmail.trim().toLowerCase();
+    const limit = await this.hitResendLimits(email, ip);
+
+    if (limit === "unavailable") {
+      return;
+    }
+
+    if (limit) {
+      this.logger.warn(
+        JSON.stringify({
+          event: "email.resend.rate_limited",
+          email,
+          limit,
+        }),
+      );
+      return;
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" } },
+      select: { id: true, email: true, status: true },
+    });
+
+    if (!user || user.status !== "PENDING") {
+      return;
+    }
+
+    await this.events.requestAccountConfirmation({
+      userId: user.id,
+      email: user.email,
+    });
+  }
+
+  private async hitResendLimits(
+    email: string,
+    ip: string | undefined,
+  ): Promise<string | "unavailable" | undefined> {
+    try {
+      const emailHits = await this.sessions.incrementWithTtl(
+        `rl:confirm:email:${email}`,
+        RESEND_EMAIL_WINDOW_SECONDS,
+      );
+
+      if (emailHits > RESEND_EMAIL_LIMIT) {
+        return `${RESEND_EMAIL_LIMIT} requests per ${RESEND_EMAIL_WINDOW_SECONDS / 60} minutes per address`;
+      }
+
+      if (!ip) {
+        return undefined;
+      }
+
+      const ipHits = await this.sessions.incrementWithTtl(
+        `rl:confirm:ip:${ip}`,
+        RESEND_IP_WINDOW_SECONDS,
+      );
+
+      if (ipHits > RESEND_IP_LIMIT) {
+        return `${RESEND_IP_LIMIT} requests per hour per IP`;
+      }
+
+      return undefined;
+    } catch (error) {
+      this.logger.error(
+        JSON.stringify({
+          event: "email.resend.limiter.failed",
+          reason: describeError(error),
+        }),
+      );
+
+      return "unavailable";
     }
   }
 
