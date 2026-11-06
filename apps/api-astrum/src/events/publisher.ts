@@ -6,6 +6,7 @@ import {
   EVENTS_EXCHANGE,
   PUBLISH_TIMEOUT_MS,
 } from "./events.constants";
+import { DEFAULT_LETTER_LOCALE, type LetterLocale } from "./locale";
 
 let connection: ChannelModel | undefined;
 let channel: ConfirmChannel | undefined;
@@ -108,9 +109,11 @@ const reset = async (): Promise<void> => {
 export const publishConfirmationRequested = async ({
   userId,
   email,
+  locale = DEFAULT_LETTER_LOCALE,
 }: {
   userId: string;
   email: string;
+  locale?: LetterLocale;
 }): Promise<void> => {
   try {
     await withTimeout(
@@ -125,6 +128,7 @@ export const publishConfirmationRequested = async ({
               userId,
               email,
               requestedAt: new Date().toISOString(),
+              locale,
             }),
           ),
           { persistent: true, contentType: "application/json" },

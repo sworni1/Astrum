@@ -5,6 +5,10 @@ import { UserStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
 import { publishConfirmationRequested } from "../../events/publisher";
+import {
+  DEFAULT_LETTER_LOCALE,
+  type LetterLocale,
+} from "../../events/locale";
 import { revokeSession } from "../../session/revokeSession";
 import { getSessionStore, type SessionStore } from "../../session/sessionStore";
 import type {
@@ -34,7 +38,11 @@ export class UserService {
     return user;
   }
 
-  async updateUser(userId: User["id"], dto: UpdateUserDto) {
+  async updateUser(
+    userId: User["id"],
+    dto: UpdateUserDto,
+    locale: LetterLocale = DEFAULT_LETTER_LOCALE,
+  ) {
     const user = await prisma.user.findUnique({
       where: {
         id: userId,
@@ -106,6 +114,7 @@ export class UserService {
       await publishConfirmationRequested({
         userId: updatedUser.id,
         email: updatedUser.email,
+        locale,
       });
     }
 

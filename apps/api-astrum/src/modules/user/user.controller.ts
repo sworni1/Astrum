@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { handleErrors } from "../../common/helpers/errorHandler";
 import type { AuthenticatedRequest } from "../../common/types/jwt.payload";
+import { resolveLetterLocale } from "../../events/locale";
 import { UserService } from "./user.service";
 
 const userService = new UserService();
@@ -23,7 +24,11 @@ export class UserController {
     try {
       const { userId } = req as AuthenticatedRequest;
 
-      const updatedUser = await userService.updateUser(userId, req.body);
+      const updatedUser = await userService.updateUser(
+        userId,
+        req.body,
+        resolveLetterLocale(req.headers["accept-language"]),
+      );
 
       res.status(StatusCodes.OK).json(updatedUser);
     } catch (err) {
