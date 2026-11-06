@@ -22,6 +22,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | 9   | Order flow end to end test and CI         | Slice 4 | planned |
 | 10  | Session store in Redis                    | Slice 5 | done |
 | 11  | Account confirmation by email             | Slice 6 | in-progress |
+| 12  | English interface by default              | Slice 7 | in-progress |
 
 ## Slice 1: the order thread
 
@@ -150,6 +151,22 @@ Registering hands out a session at once, so an account works before anyone prove
 
 Today: the register path signs a token in `apps/auth-astrum/src/auth/auth.service.ts` and the storefront writes the cookie in `apps/customer/src/hooks/auth/useAuth.ts`; `POST /api/auth/*` is proxied whole, so a confirm route needs no gateway change.
 
+## Slice 7: English by default
+
+### 12. English interface by default · in-progress · Alpha
+
+A visitor meets Russian in places: toasts and screens across ten storefront files, the subject and body of the confirmation letter, and most of the root README with parts of the app READMEs. English should be what a visitor sees first, with Russian kept as a second locale.
+**Done when:** every storefront screen, toast, form error, confirmation page and review block answers in English by default, the confirmation letter arrives in English, the root README, each app README and `docs/DEVELOPMENT.md` read in English, a language switcher moves the whole interface to Russian and back, that choice survives a reload, and no Russian string is left in the English catalog.
+- [x] Design it (spec): `/architect english interface by default`
+- [x] Build it: `/develop english interface by default` (2026-11-06: built, `pnpm quality-gate` green, the storefront build and the switch checked in a browser)
+  - [x] Locale plumbing and switcher: next-intl with no routing layer, the cookie, the server action and the switcher in the navbar, the mobile menu and the auth screens, localized metadata (AC-1 to AC-4, AC-11)
+  - [x] Every storefront screen on the catalog, both catalogs complete and in parity, dates through the formatter (AC-5 to AC-8)
+  - [x] Letter language from the request through register, resend, the address change and the worker (AC-9, AC-10)
+  - [x] Documentation in English, tests updated, `pnpm quality-gate` green (AC-12, AC-13)
+- [ ] Verify it: `/check verify english interface by default`
+  spec [0006](../../specs/_root/0006-english-interface-by-default/index.md)
+  code in `apps/customer/src/i18n`, `apps/customer/messages`, `apps/customer/src/components/LocaleSwitcher.tsx`, `apps/customer/src/common/actions`, `apps/worker/src/letters`
+
 ## Deferred
 
 Kept so the plan stays honest, built only when the loop above runs.
@@ -165,6 +182,8 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Session renewal and a device list**: refresh on activity, plus the screen that lists sessions · from spec 0004 · needs a decision
 - **Session alerts**: metrics and an alert on `session.store.error` and on a `/health` `503` · from spec 0004
 - **Storefront guard reading the session**: stops a revoked customer from seeing page shells before the first API call · from spec 0004 · needs a decision
+- **Cyrillic copy guard**: a check that refuses Cyrillic literals in `apps/customer/src`, so a hardcoded string cannot come back · from spec 0006
+- **Shareable Russian links**: a `[locale]` segment in the address, once a Russian page needs to be linked or crawled · from spec 0006 · needs a decision
 
 ## Legend
 
