@@ -1,35 +1,32 @@
 import { differenceInYears } from "date-fns";
 import { z } from "zod";
+import type { ValidationTranslator } from "./translator";
 
 export const MIN_AGE_YEARS = 14;
 
-export const signInFormSchema = z.object({
-  email: z.email("Invalid email address").min(1, "Email is required"),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .max(25, "Password cannot exceed 25 characters"),
-});
+export const createSignInFormSchema = (t: ValidationTranslator) =>
+  z.object({
+    email: z.email(t("emailInvalid")).min(1, t("emailRequired")),
+    password: z
+      .string()
+      .min(8, t("passwordTooShort"))
+      .max(25, t("passwordTooLong")),
+  });
 
-export const registerFormSchema = z.object({
-  email: z
-    .string()
-    .email("Invalid email address")
-    .nonempty("Email is required"),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .max(25, "Password cannot exceed 25 characters"),
-  nickName: z
-    .string()
-    .max(25, "Nickname cannot exceed 25 characters")
-    .optional(),
-  dateOfBirth: z
-    .date({ error: "Date of birth is required" })
-    .refine((date) => differenceInYears(new Date(), date) >= MIN_AGE_YEARS, {
-      message: `You must be at least ${MIN_AGE_YEARS} years old`,
+export const createRegisterFormSchema = (t: ValidationTranslator) =>
+  z.object({
+    email: z.string().email(t("emailInvalid")).nonempty(t("emailRequired")),
+    password: z
+      .string()
+      .min(8, t("passwordTooShort"))
+      .max(25, t("passwordTooLong")),
+    nickName: z.string().max(25, t("nicknameTooLong")).optional(),
+    dateOfBirth: z
+      .date({ error: t("dateOfBirthRequired") })
+      .refine((date) => differenceInYears(new Date(), date) >= MIN_AGE_YEARS, {
+        message: t("minAge", { age: MIN_AGE_YEARS }),
+      }),
+    gender: z.enum(["Male", "Female"], {
+      error: t("genderRequired"),
     }),
-  gender: z.enum(["Male", "Female"], {
-    error: "Gender is required",
-  }),
-});
+  });

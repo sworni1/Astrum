@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { showToast } from "../../common";
 import { requestConfirmationEmail } from "../../common/helpers/confirmEmail";
@@ -12,6 +13,7 @@ export const RESEND_COOLDOWN_SECONDS = 60;
  * accepted request.
  */
 export const useResendConfirmation = () => {
+  const t = useTranslations("confirmEmail");
   const [cooldown, setCooldown] = useState(0);
   const [isSending, setIsSending] = useState(false);
 
@@ -37,21 +39,21 @@ export const useResendConfirmation = () => {
         await requestConfirmationEmail(email);
         setCooldown(RESEND_COOLDOWN_SECONDS);
         showToast({
-          title: "Письмо отправлено",
-          description: "Проверьте почту, ссылка действует 24 часа.",
+          title: t("sentTitle"),
+          description: t("sentText"),
           type: "success",
         });
       } catch {
         showToast({
-          title: "Не удалось отправить письмо",
-          description: "Повторите через минуту.",
+          title: t("sendFailedTitle"),
+          description: t("sendFailedText"),
           type: "error",
         });
       } finally {
         setIsSending(false);
       }
     },
-    [cooldown, isSending],
+    [cooldown, isSending, t],
   );
 
   return {

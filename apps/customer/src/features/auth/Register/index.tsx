@@ -2,6 +2,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { registerFormSchema, type SignUpCredentials } from "../../../common";
+import { createRegisterFormSchema, type SignUpCredentials } from "../../../common";
 import {
   Form,
   FormControl,
@@ -36,9 +38,16 @@ import { DateOfBirthField } from "./DateOfBirthField";
 export default function Register() {
   const { handleRegister, emailTaken } = useAuth();
   const { send, isSending, isCoolingDown } = useResendConfirmation();
+  const t = useTranslations("auth");
+  const validation = useTranslations("validation");
+
+  const schema = useMemo(
+    () => createRegisterFormSchema(validation),
+    [validation],
+  );
 
   const form = useForm<SignUpCredentials>({
-    resolver: zodResolver(registerFormSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       email: "",
       password: "",
@@ -59,8 +68,8 @@ export default function Register() {
     <div className={cn("flex flex-col gap-6")}>
       <Card className="bg-[hsl(var(--card))]">
         <CardHeader>
-          <CardTitle className="text-2xl">Register</CardTitle>
-          <CardDescription>Enter your email below to register</CardDescription>
+          <CardTitle className="text-2xl">{t("registerTitle")}</CardTitle>
+          <CardDescription>{t("registerDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -71,10 +80,10 @@ export default function Register() {
                   control={control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>{t("email")}</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Enter your email"
+                          placeholder={t("emailPlaceholder")}
                           {...field}
                           id="email"
                         />
@@ -89,11 +98,11 @@ export default function Register() {
                   control={control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel>{t("password")}</FormLabel>
                       <FormControl>
                         <Input
                           type="password"
-                          placeholder="Enter your password"
+                          placeholder={t("passwordPlaceholder")}
                           {...field}
                           id="password"
                         />
@@ -108,10 +117,10 @@ export default function Register() {
                   control={control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nickname</FormLabel>
+                      <FormLabel>{t("nickname")}</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Enter your nickname"
+                          placeholder={t("nicknamePlaceholder")}
                           {...field}
                           value={field.value || ""}
                         />
@@ -126,7 +135,7 @@ export default function Register() {
                   name="dateOfBirth"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Date of birth</FormLabel>
+                      <FormLabel>{t("dateOfBirth")}</FormLabel>
                       <DateOfBirthField
                         name={field.name}
                         value={field.value}
@@ -143,7 +152,7 @@ export default function Register() {
                   control={control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Gender</FormLabel>
+                      <FormLabel>{t("gender")}</FormLabel>
                       <FormControl>
                         <Select
                           value={field.value ?? ""}
@@ -152,11 +161,15 @@ export default function Register() {
                           }
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select your gender" />
+                            <SelectValue placeholder={t("genderPlaceholder")} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Male">Male</SelectItem>
-                            <SelectItem value="Female">Female</SelectItem>
+                            <SelectItem value="Male">
+                              {t("genderMale")}
+                            </SelectItem>
+                            <SelectItem value="Female">
+                              {t("genderFemale")}
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </FormControl>
@@ -166,18 +179,18 @@ export default function Register() {
                 />
 
                 <Button disabled={!isValid} type="submit" className="w-full">
-                  Sign up
+                  {t("signUp")}
                 </Button>
 
                 {emailTaken ? (
                   <div className="flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">
-                    <p>Этот адрес уже зарегистрирован.</p>
+                    <p>{t("emailTaken")}</p>
                     <div className="flex flex-wrap items-center gap-4">
                       <Link
                         href="/auth/signin"
                         className="underline underline-offset-4"
                       >
-                        Войти
+                        {t("goToSignIn")}
                       </Link>
                       <button
                         type="button"
@@ -185,19 +198,19 @@ export default function Register() {
                         disabled={isSending || isCoolingDown}
                         onClick={() => void send(form.getValues("email"))}
                       >
-                        Отправить письмо снова
+                        {t("resendAgain")}
                       </button>
                     </div>
                   </div>
                 ) : null}
               </div>
               <div className="mt-4 text-center text-sm">
-                Already have an account?&nbsp;{" "}
+                {t("haveAccount")}&nbsp;{" "}
                 <Link
                   href="/auth/signin"
                   className="underline underline-offset-4"
                 >
-                  Sign in
+                  {t("signIn")}
                 </Link>
               </div>
             </form>

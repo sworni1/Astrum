@@ -2,6 +2,7 @@
 
 import { format, isValid, parse, subYears } from "date-fns";
 import { CalendarIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "../../../components/ui/button";
 import { Calendar } from "../../../components/ui/calendar";
@@ -48,6 +49,7 @@ export function DateOfBirthField({
   onChange,
   onBlur,
 }: DateOfBirthFieldProps) {
+  const t = useTranslations("auth");
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(() =>
     value ? format(value, DATE_FORMAT) : "",
@@ -102,7 +104,7 @@ export function DateOfBirthField({
             value={text}
             onChange={(event) => changeText(event.target.value)}
             onBlur={commitText}
-            placeholder="DD.MM.YYYY"
+            placeholder={t("dateOfBirthPlaceholder")}
             inputMode="numeric"
             autoComplete="bday"
             className="pr-9"
@@ -113,7 +115,7 @@ export function DateOfBirthField({
             type="button"
             variant="ghost"
             size="icon-sm"
-            aria-label="Open the calendar"
+            aria-label={t("calendarOpen")}
             className="absolute top-1/2 right-0.5 -translate-y-1/2 text-muted-foreground hover:text-foreground"
           >
             <CalendarIcon />

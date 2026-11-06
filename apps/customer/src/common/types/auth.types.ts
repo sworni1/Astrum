@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type { registerFormSchema } from "../zodSchemes/auth.scheme";
+import type { createRegisterFormSchema } from "../zodSchemes/auth.scheme";
 
 export enum Gender {
   Male,
@@ -7,7 +7,9 @@ export enum Gender {
 }
 
 // Single source of truth: the zod schema the register form validates against.
-export type SignUpCredentials = z.infer<typeof registerFormSchema>;
+export type SignUpCredentials = z.infer<
+  ReturnType<typeof createRegisterFormSchema>
+>;
 
 export type SignInCredentials = {
   email: string;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,7 @@ type Props = {
  * prefilled when the session knows it.
  */
 export default function ResendForm({ defaultEmail = "" }: Props) {
+  const t = useTranslations("confirmEmail");
   const [typedEmail, setTypedEmail] = useState<string | null>(null);
   const { send, cooldown, isSending, isCoolingDown } = useResendConfirmation();
   const email = typedEmail ?? defaultEmail;
@@ -25,13 +27,13 @@ export default function ResendForm({ defaultEmail = "" }: Props) {
   };
 
   const buttonLabel = isCoolingDown
-    ? `Отправить снова через ${cooldown} с`
-    : "Отправить письмо";
+    ? t("resendIn", { seconds: cooldown })
+    : t("resend");
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3 text-left">
       <div className="space-y-2">
-        <Label htmlFor="confirm-email">Адрес почты</Label>
+        <Label htmlFor="confirm-email">{t("emailLabel")}</Label>
         <Input
           id="confirm-email"
           type="email"
@@ -54,7 +56,7 @@ export default function ResendForm({ defaultEmail = "" }: Props) {
       </Button>
 
       <p className="min-h-4 text-xs text-muted-foreground" aria-live="polite">
-        {isCoolingDown ? "Новое письмо можно запросить через минуту." : ""}
+        {isCoolingDown ? t("resendHint") : ""}
       </p>
     </form>
   );

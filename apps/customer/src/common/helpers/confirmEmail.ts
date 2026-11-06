@@ -1,10 +1,16 @@
 import axios from "axios";
+import { acceptLanguage } from "../../i18n/config";
 
 const client = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_GATEWAY_URL,
   withCredentials: true,
   timeout: 10000,
   headers: { "Content-Type": "application/json" },
+});
+
+client.interceptors.request.use((config) => {
+  config.headers.set("Accept-Language", acceptLanguage()["Accept-Language"]);
+  return config;
 });
 
 /**
