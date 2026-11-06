@@ -12,6 +12,7 @@ import { createHash, randomBytes } from "node:crypto";
 import type { User } from "../../generated/prisma/client";
 import type { ConfirmOutcome } from "../config/auth.config";
 import { EventsService } from "../events/events.service";
+import { DEFAULT_LETTER_LOCALE, type LetterLocale } from "../events/locale";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   loggedSid,
@@ -105,7 +106,11 @@ export class AuthService {
     return { token: token, expiresIn: "1d" };
   }
 
-  async register(dto: RegisterUserDto, userAgent?: string) {
+  async register(
+    dto: RegisterUserDto,
+    userAgent?: string,
+    locale: LetterLocale = DEFAULT_LETTER_LOCALE,
+  ) {
     let user: User;
 
     try {
@@ -134,6 +139,7 @@ export class AuthService {
     await this.events.requestAccountConfirmation({
       userId: user.id,
       email: user.email,
+      locale,
     });
 
     return this.signToken(
@@ -244,7 +250,11 @@ export class AuthService {
    * Reveals nothing: every outcome is the same 204. The limits count unknown
    * addresses too, so the route cannot probe a mailbox for free.
    */
-  async resend(rawEmail: string, ip: string | undefined): Promise<void> {
+  async resend(
+    rawEmail: string,
+    ip: string | undefined,
+    locale: LetterLocale = DEFAULT_LETTER_LOCALE,
+  ): Promise<void> {
     const email = rawEmail.trim().toLowerCase();
     const limit = await this.hitResendLimits(email, ip);
 
@@ -275,6 +285,7 @@ export class AuthService {
     await this.events.requestAccountConfirmation({
       userId: user.id,
       email: user.email,
+      locale,
     });
   }
 

@@ -14,6 +14,7 @@ import { ConfigService } from "@nestjs/config";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type { Request, Response } from "express";
 import { confirmRedirectUrl } from "../config/auth.config";
+import { resolveLetterLocale } from "../events/locale";
 import { AuthService } from "./auth.service";
 import { RegisterUserDto, ResendConfirmationDto, SignInUserDto } from "./dto";
 
@@ -35,9 +36,14 @@ export class AuthController {
   })
   signup(
     @Body() dto: RegisterUserDto,
+    @Headers("accept-language") acceptLanguage?: string,
     @Headers("user-agent") userAgent?: string,
   ) {
-    return this.authService.register(dto, userAgent);
+    return this.authService.register(
+      dto,
+      userAgent,
+      resolveLetterLocale(acceptLanguage),
+    );
   }
 
   @HttpCode(HttpStatus.OK)
@@ -85,8 +91,13 @@ export class AuthController {
   async resend(
     @Body() dto: ResendConfirmationDto,
     @Req() req: Request,
+    @Headers("accept-language") acceptLanguage?: string,
   ): Promise<void> {
-    await this.authService.resend(dto.email, req.ip);
+    await this.authService.resend(
+      dto.email,
+      req.ip,
+      resolveLetterLocale(acceptLanguage),
+    );
   }
 
   @HttpCode(HttpStatus.NO_CONTENT)
