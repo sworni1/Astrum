@@ -1,10 +1,30 @@
+import { enCopy } from "./letters/en";
+import { ruCopy } from "./letters/ru";
+
 export type Letter = {
   subject: string;
   text: string;
   html: string;
 };
 
-export const CONFIRMATION_SUBJECT = "Подтвердите адрес почты в Astrum";
+export type LetterLocale = "en" | "ru";
+
+export type LetterCopy = {
+  subject: string;
+  greeting: string;
+  intro: string;
+  action: string;
+  hint: string;
+};
+
+const CATALOG: Record<LetterLocale, LetterCopy> = {
+  en: enCopy,
+  ru: ruCopy,
+};
+
+/** An unknown or missing language is English, never a failed delivery. */
+export const resolveLetterLocale = (value: unknown): LetterLocale =>
+  value === "ru" ? "ru" : "en";
 
 const escapeHtml = (value: string): string =>
   value
@@ -14,28 +34,32 @@ const escapeHtml = (value: string): string =>
     .replace(/"/g, "&quot;");
 
 /** One link, a plain part and a minimal HTML part, nothing else. */
-export const buildConfirmationLetter = (link: string): Letter => {
+export const buildConfirmationLetter = (
+  link: string,
+  locale: LetterLocale = "en",
+): Letter => {
+  const copy = CATALOG[locale];
   const safeLink = escapeHtml(link);
 
   const text = [
-    "Здравствуйте!",
+    copy.greeting,
     "",
-    "Подтвердите адрес почты, чтобы оформлять заказы и оставлять отзывы в Astrum.",
+    copy.intro,
     "",
     link,
     "",
-    "Ссылка действует 24 часа. Если вы не регистрировались в Astrum, просто проигнорируйте это письмо.",
+    copy.hint,
   ].join("\n");
 
   const html = [
     '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#111111">',
-    "<p>Здравствуйте!</p>",
-    "<p>Подтвердите адрес почты, чтобы оформлять заказы и оставлять отзывы в Astrum.</p>",
-    `<p><a href="${safeLink}" style="color:#2563eb">Подтвердить адрес</a></p>`,
+    `<p>${escapeHtml(copy.greeting)}</p>`,
+    `<p>${escapeHtml(copy.intro)}</p>`,
+    `<p><a href="${safeLink}" style="color:#2563eb">${escapeHtml(copy.action)}</a></p>`,
     `<p style="font-size:13px;color:#555555">${safeLink}</p>`,
-    '<p style="font-size:13px;color:#555555">Ссылка действует 24 часа. Если вы не регистрировались в Astrum, просто проигнорируйте это письмо.</p>',
+    `<p style="font-size:13px;color:#555555">${escapeHtml(copy.hint)}</p>`,
     "</div>",
   ].join("");
 
-  return { subject: CONFIRMATION_SUBJECT, text, html };
+  return { subject: copy.subject, text, html };
 };
