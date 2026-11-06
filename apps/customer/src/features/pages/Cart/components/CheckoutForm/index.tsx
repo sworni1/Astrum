@@ -1,15 +1,15 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
 import { CalendarIcon, CreditCard, Loader2, MapPin } from "lucide-react";
-import { useState } from "react";
+import { useFormatter, useTranslations } from "next-intl";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { PaymentMethod } from "@/common/types/order.types";
 import type { ProductCartProps } from "@/common/types/product.types";
 import {
   type CheckoutFormData,
-  checkoutFormSchema,
+  createCheckoutFormSchema,
 } from "@/common/zodSchemes/checkout.scheme";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -47,16 +47,24 @@ type Props = {
 const CheckoutForm = ({ cartItems, subtotal }: Props) => {
   const { handleCheckout } = useCheckout();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const t = useTranslations("cart");
+  const validation = useTranslations("validation");
+  const format = useFormatter();
+
+  const schema = useMemo(
+    () => createCheckoutFormSchema(validation),
+    [validation],
+  );
 
   // Temporary shipping methods - should be fetched from API
   const shippingMethods = [
-    { id: "cmf3vpjoi0000vdqkkwrasuzx", name: "Standard Delivery", price: 5.99 },
-    { id: "cmf3vq53t0001vdqk50gx74qz", name: "Express Delivery", price: 12.99 },
+    { id: "cmf3vpjoi0000vdqkkwrasuzx", name: t("shippingStandard"), price: 5.99 },
+    { id: "cmf3vq53t0001vdqk50gx74qz", name: t("shippingExpress"), price: 12.99 },
   ];
   const shippingMethodsLoading = false;
 
   const form = useForm<CheckoutFormData>({
-    resolver: zodResolver(checkoutFormSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       deliveryAddress: "",
       deliveryDate: undefined,
@@ -102,14 +110,14 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CreditCard className="h-5 w-5" />
-          Checkout
+          {t("checkoutTitle")}
         </CardTitle>
       </CardHeader>
       <CardContent>
         {/* Selected Items Summary */}
         <div className="mb-6 p-4 bg-muted/30 rounded-lg">
           <h3 className="font-medium mb-2">
-            Selected Items ({cartItems.length})
+            {t("checkoutSelectedItems", { count: cartItems.length })}
           </h3>
           <div className="space-y-2">
             {cartItems.map((item) => (
@@ -132,7 +140,7 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
               <div className="flex items-center gap-2">
                 <MapPin className="h-5 w-5" />
                 <FormLabel className="text-base font-medium">
-                  Delivery Address
+                  {t("deliveryAddress")}
                 </FormLabel>
               </div>
 
@@ -141,10 +149,10 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
                 name="deliveryAddress"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Address *</FormLabel>
+                    <FormLabel>{t("fullAddress")}</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Enter your complete delivery address including street, city, state, zip code, and country"
+                        placeholder={t("fullAddressPlaceholder")}
                         rows={3}
                         {...field}
                       />
@@ -161,11 +169,11 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
               name="shippingMethodId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Shipping Method *</FormLabel>
+                  <FormLabel>{t("shippingMethod")}</FormLabel>
                   <FormControl>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select shipping method" />
+                        <SelectValue placeholder={t("selectShippingMethod")} />
                       </SelectTrigger>
                       <SelectContent>
                         {shippingMethodsLoading ? (
@@ -198,7 +206,7 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
               name="deliveryDate"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Preferred Delivery Date *</FormLabel>
+                  <FormLabel>{t("deliveryDate")}</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
@@ -211,9 +219,11 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {field.value ? (
-                            format(field.value, "PPP")
+                            format.dateTime(field.value, {
+                              dateStyle: "long",
+                            })
                           ) : (
-                            <span>Pick a delivery date</span>
+                            <span>{t("pickDeliveryDate")}</span>
                           )}
                         </Button>
                       </FormControl>
@@ -244,7 +254,7 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
               name="paymentMethod"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Payment Method</FormLabel>
+                  <FormLabel>{t("paymentMethod")}</FormLabel>
                   <FormControl>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger>
@@ -252,19 +262,19 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value={PaymentMethod.ONLINE_CARD}>
-                          Credit/Debit Card
+                          {t("paymentOnlineCard")}
                         </SelectItem>
                         <SelectItem value={PaymentMethod.PAYPAL}>
-                          PayPal
+                          {t("paymentPaypal")}
                         </SelectItem>
                         <SelectItem value={PaymentMethod.STRIPE}>
-                          Stripe
+                          {t("paymentStripe")}
                         </SelectItem>
                         <SelectItem value={PaymentMethod.CARD_ON_DELIVERY}>
-                          Card on Delivery
+                          {t("paymentCardOnDelivery")}
                         </SelectItem>
                         <SelectItem value={PaymentMethod.CASH}>
-                          Cash on Delivery
+                          {t("paymentCash")}
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -281,10 +291,10 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
                 name="paymentDetails"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Payment Details</FormLabel>
+                    <FormLabel>{t("paymentDetails")}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Card ending in 1234, PayPal email, etc."
+                        placeholder={t("paymentDetailsPlaceholder")}
                         {...field}
                       />
                     </FormControl>
@@ -297,15 +307,15 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
             {/* Order Summary */}
             <div className="space-y-2 border-t pt-4">
               <div className="flex justify-between text-sm">
-                <span>Subtotal</span>
+                <span>{t("subtotal")}</span>
                 <span>${subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span>Shipping</span>
+                <span>{t("shipping")}</span>
                 <span>${shippingPrice.toFixed(2)}</span>
               </div>
               <div className="flex justify-between font-medium">
-                <span>Total</span>
+                <span>{t("total")}</span>
                 <span>${total.toFixed(2)}</span>
               </div>
             </div>
@@ -319,12 +329,12 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Placing Order...
+                  {t("placingOrder")}
                 </>
               ) : (
                 <>
                   <CreditCard className="mr-2 h-4 w-4" />
-                  Place Order - ${total.toFixed(2)}
+                  {t("placeOrder", { price: total.toFixed(2) })}
                 </>
               )}
             </Button>

@@ -1,9 +1,10 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { editPasswordFormSchema, showToast } from "../../../../../common";
+import { createEditPasswordFormSchema, showToast } from "../../../../../common";
 import type { updatePasswordUserDto } from "../../../../../common/dto/update-user.dto";
 import { Button } from "../../../../../components/ui/button";
 import {
@@ -31,9 +32,17 @@ const ChangePasswordForm = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const { updatePasswordTrigger } = useUser();
+  const t = useTranslations("profile");
+  const common = useTranslations("common");
+  const validation = useTranslations("validation");
+
+  const schema = useMemo(
+    () => createEditPasswordFormSchema(validation),
+    [validation],
+  );
 
   const form = useForm<updatePasswordUserDto>({
-    resolver: zodResolver(editPasswordFormSchema),
+    resolver: zodResolver(schema),
     mode: "onChange",
   });
 
@@ -49,9 +58,8 @@ const ChangePasswordForm = () => {
       await updatePasswordTrigger(data, {
         onSuccess: () => {
           showToast({
-            title: "Success!",
+            title: t("passwordUpdated"),
             type: "success",
-            description: "Password updated successfully",
           });
 
           reset();
@@ -59,9 +67,8 @@ const ChangePasswordForm = () => {
         },
         onError: () =>
           showToast({
-            title: "Error!",
+            title: t("oldPasswordWrong"),
             type: "error",
-            description: "The old password is incorrect",
           }),
       });
     } catch (error) {
@@ -71,24 +78,21 @@ const ChangePasswordForm = () => {
 
   return (
     <div className="mt-8 pt-4">
-      <h2 className="text-xl font-medium ">Change password</h2>
+      <h2 className="text-xl font-medium ">{t("changePasswordTitle")}</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Click the button below to change password.
+        {t("changePasswordSubtitle")}
       </p>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogTrigger asChild>
           <Button type="button" variant="destructive" className="mt-4">
-            Change password
+            {t("changePasswordButton")}
           </Button>
         </DialogTrigger>
         <DialogContent className="text-gray-900 dark:text-white">
           <DialogHeader>
-            <DialogTitle>Update password</DialogTitle>
-            <DialogDescription>
-              Make changes to your profile here. Click save when you&apos;re
-              done.
-            </DialogDescription>
+            <DialogTitle>{t("updatePasswordTitle")}</DialogTitle>
+            <DialogDescription>{t("updatePasswordSubtitle")}</DialogDescription>
           </DialogHeader>
 
           <Form {...form}>
@@ -98,11 +102,11 @@ const ChangePasswordForm = () => {
                 name="oldPassword"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Old password</FormLabel>
+                    <FormLabel>{t("oldPassword")}</FormLabel>
                     <FormControl>
                       <Input
                         type="password"
-                        placeholder="Old password"
+                        placeholder={t("oldPassword")}
                         {...field}
                       />
                     </FormControl>
@@ -115,11 +119,11 @@ const ChangePasswordForm = () => {
                 name="newPassword"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>New password</FormLabel>
+                    <FormLabel>{t("newPassword")}</FormLabel>
                     <FormControl>
                       <Input
                         type="password"
-                        placeholder="New password"
+                        placeholder={t("newPassword")}
                         {...field}
                       />
                     </FormControl>
@@ -130,10 +134,10 @@ const ChangePasswordForm = () => {
 
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button variant={"outline"}>Cancel</Button>
+                  <Button variant={"outline"}>{common("cancel")}</Button>
                 </DialogClose>
                 <Button type="submit" disabled={!isValid}>
-                  Save changes
+                  {t("saveChanges")}
                 </Button>
               </DialogFooter>
             </form>

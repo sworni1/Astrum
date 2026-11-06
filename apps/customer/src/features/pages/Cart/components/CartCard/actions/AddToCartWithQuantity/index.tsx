@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2, Minus, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { showToast } from "../../../../../../../common";
 import { Button } from "../../../../../../../components/ui/button";
@@ -22,6 +23,7 @@ const AddToCartWithQuantity = ({
   size,
   quantityInCart,
 }: Props) => {
+  const t = useTranslations("cart");
   const widthClass = size === "full" ? "w-full" : "w-full sm:w-[14rem]";
 
   const { changeProductCartQuantityTrigger, changeProductCartQuantityError } =
@@ -73,17 +75,15 @@ const AddToCartWithQuantity = ({
 
   if (deleteProductFromCartError) {
     showToast({
-      title: "Error!",
+      title: t("removeFailed"),
       type: "error",
-      description: "Failed to remove product from cart",
     });
   }
 
   if (changeProductCartQuantityError) {
     showToast({
-      title: "Error!",
+      title: t("quantityFailed"),
       type: "error",
-      description: "Failed to change product quantity in cart",
     });
   }
 

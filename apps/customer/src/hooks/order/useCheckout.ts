@@ -2,6 +2,7 @@
 
 import axios from "axios";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useRef } from "react";
 import { useSWRConfig } from "swr";
 import { showToast } from "../../common";
@@ -16,7 +17,7 @@ type OrderErrorBody = {
   message?: string;
 };
 
-const readErrorMessage = (error: unknown): string => {
+const readErrorMessage = (error: unknown, fallback: string): string => {
   if (axios.isAxiosError<OrderErrorBody>(error)) {
     const message = error.response?.data?.message;
 
@@ -25,22 +26,21 @@ const readErrorMessage = (error: unknown): string => {
     }
   }
 
-  return error instanceof Error
-    ? error.message
-    : "Failed to create order. Please try again.";
+  return error instanceof Error ? error.message : fallback;
 };
 
 export const useCheckout = () => {
   const { postItem } = useFetcher();
   const { mutate } = useSWRConfig();
   const router = useRouter();
+  const t = useTranslations("cart");
   const idempotencyKey = useRef<string | null>(null);
 
   const handleCheckout = useCallback(
     async (checkoutData: CheckoutFormData, cartItems: ProductCartProps[]) => {
       try {
         if (cartItems.length === 0) {
-          throw new Error("No items selected for checkout");
+          throw new Error(t("noItemsSelected"));
         }
 
         const orderItems: CreateOrderItemDto[] = cartItems.map((item) => ({
@@ -82,9 +82,8 @@ export const useCheckout = () => {
         await Promise.all([mutate("/cart"), mutate("/orders")]);
 
         showToast({
-          title: "Success!",
+          title: t("orderPlaced"),
           type: "success",
-          description: "Order placed successfully!",
         });
 
         router.push(`/orders/${response.id}`);
@@ -100,15 +99,15 @@ export const useCheckout = () => {
         await Promise.all([mutate("/cart"), mutate("/orders")]);
 
         showToast({
-          title: "Error!",
+          title: t("orderFailed"),
           type: "error",
-          description: readErrorMessage(error),
+          description: readErrorMessage(error, t("orderFailed")),
         });
 
         throw error;
       }
     },
-    [postItem, mutate, router],
+    [postItem, mutate, router, t],
   );
 
   return useMemo(

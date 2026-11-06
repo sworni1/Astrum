@@ -1,6 +1,7 @@
 "use client";
 
 import { CreditCard, Loader2, Package, Shield, Truck } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +19,7 @@ import CheckoutForm from "./components/CheckoutForm";
 
 export default function Cart() {
   const { cart, cartIsLoading, cartError } = useGetCart();
+  const t = useTranslations("cart");
   const [showCheckout, setShowCheckout] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
@@ -72,17 +74,14 @@ export default function Cart() {
 
   if (cartError) {
     showToast({
-      title: "Error!",
+      title: t("failed"),
       type: "error",
-      description: "Failed to load cart",
     });
   }
 
   if (!cart || cart.length === 0) {
     return (
-      <div className="text-center py-20 text-muted-foreground">
-        Your cart is empty
-      </div>
+      <div className="text-center py-20 text-muted-foreground">{t("empty")}</div>
     );
   }
 
@@ -95,12 +94,10 @@ export default function Cart() {
             onClick={() => setShowCheckout(false)}
             className="mb-4"
           >
-            ← Back to Cart
+            ← {t("back")}
           </Button>
-          <h1 className="text-2xl font-semibold">Checkout</h1>
-          <p className="text-muted-foreground">
-            Complete your order details below
-          </p>
+          <h1 className="text-2xl font-semibold">{t("checkoutTitle")}</h1>
+          <p className="text-muted-foreground">{t("checkoutSubtitle")}</p>
         </div>
         <CheckoutForm
           cartItems={selectedCartItems}
@@ -116,9 +113,9 @@ export default function Cart() {
         {/* Main Cart Section */}
         <div className="space-y-6 lg:col-span-2">
           <div>
-            <h1 className="text-2xl font-semibold">Shopping Cart</h1>
+            <h1 className="text-2xl font-semibold">{t("title")}</h1>
             <p className="text-muted-foreground">
-              {cart.length} {cart.length === 1 ? "item" : "items"} in your cart
+              {t("itemCount", { count: cart.length })}
             </p>
           </div>
 
@@ -134,11 +131,14 @@ export default function Cart() {
               htmlFor="select-all"
               className="text-sm font-medium cursor-pointer"
             >
-              Select all items ({cart.length})
+              {t("selectAll", { count: cart.length })}
             </label>
             {someItemsSelected && (
               <span className="text-xs text-muted-foreground ml-auto">
-                {selectedItems.size} of {cart.length} selected
+                {t("selectedOf", {
+                  selected: selectedItems.size,
+                  total: cart.length,
+                })}
               </span>
             )}
           </div>
@@ -161,28 +161,26 @@ export default function Cart() {
         <div className="space-y-6  lg:sticky lg:top-24 lg:self-start">
           <Card>
             <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
-              <CardDescription>
-                Review your cart and proceed to checkout
-              </CardDescription>
+              <CardTitle>{t("summaryTitle")}</CardTitle>
+              <CardDescription>{t("summaryDescription")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Order Summary */}
               <div className="space-y-2">
                 <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>Total items in cart</span>
-                  <span>{cart.length} items</span>
+                  <span>{t("totalItems")}</span>
+                  <span>{t("itemsValue", { count: cart.length })}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Selected items ({selectedItems.size})</span>
+                  <span>{t("selectedItems", { count: selectedItems.size })}</span>
                   <span>${selectedSubtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>Shipping</span>
-                  <span>Calculated at checkout</span>
+                  <span>{t("shipping")}</span>
+                  <span>{t("shippingAtCheckout")}</span>
                 </div>
                 <div className="flex justify-between font-medium text-base pt-2 border-t">
-                  <span>Order Total</span>
+                  <span>{t("orderTotal")}</span>
                   <span>${selectedSubtotal.toFixed(2)}</span>
                 </div>
               </div>
@@ -191,15 +189,15 @@ export default function Cart() {
               <div className="space-y-4 border-t pt-4">
                 <div className="flex items-center gap-2 text-sm">
                   <Package className="text-primary h-4 w-4" />
-                  <span>Free returns within 30 days</span>
+                  <span>{t("freeReturns")}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Shield className="text-primary h-4 w-4" />
-                  <span>Secure payment</span>
+                  <span>{t("securePayment")}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Truck className="text-primary h-4 w-4" />
-                  <span>Fast delivery</span>
+                  <span>{t("fastDelivery")}</span>
                 </div>
               </div>
 
@@ -211,8 +209,8 @@ export default function Cart() {
               >
                 <CreditCard className="mr-2 h-4 w-4" />
                 {selectedItems.size === 0
-                  ? "Select items to checkout"
-                  : `Proceed to Checkout (${selectedItems.size} items)`}
+                  ? t("selectToCheckout")
+                  : t("proceed", { count: selectedItems.size })}
               </Button>
             </CardContent>
           </Card>

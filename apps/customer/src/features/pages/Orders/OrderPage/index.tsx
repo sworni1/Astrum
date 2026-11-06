@@ -1,6 +1,5 @@
 "use client";
 
-import dayjs from "dayjs";
 import {
   ArrowLeft,
   Check,
@@ -14,6 +13,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useFormatter, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +38,55 @@ const ICON_SIZE = "h-4 w-4";
 
 type Props = {
   orderId: string;
+};
+
+type LabelKey =
+  | "pending"
+  | "confirmed"
+  | "shipped"
+  | "delivered"
+  | "canceled";
+
+const STATUS_KEYS: Record<OrderStatus, LabelKey> = {
+  [OrderStatus.PENDING]: "pending",
+  [OrderStatus.CONFIRMED]: "confirmed",
+  [OrderStatus.SHIPPED]: "shipped",
+  [OrderStatus.DELIVERED]: "delivered",
+  [OrderStatus.CANCELED]: "canceled",
+};
+
+type ItemStatusKey =
+  | "pending"
+  | "confirmed"
+  | "outOfStock"
+  | "cancelled"
+  | "shipped"
+  | "delivered"
+  | "returned"
+  | "backordered"
+  | "replaced";
+
+const ITEM_STATUS_KEYS: Record<string, ItemStatusKey> = {
+  PENDING: "pending",
+  CONFIRMED: "confirmed",
+  OUT_OF_STOCK: "outOfStock",
+  CANCELLED: "cancelled",
+  SHIPPED: "shipped",
+  DELIVERED: "delivered",
+  RETURNED: "returned",
+  BACKORDERED: "backordered",
+  REPLACED: "replaced",
+};
+
+const PAYMENT_KEYS: Record<
+  PaymentMethod,
+  "onlineCard" | "paypal" | "stripe" | "cardOnDelivery" | "cash"
+> = {
+  [PaymentMethod.ONLINE_CARD]: "onlineCard",
+  [PaymentMethod.PAYPAL]: "paypal",
+  [PaymentMethod.STRIPE]: "stripe",
+  [PaymentMethod.CARD_ON_DELIVERY]: "cardOnDelivery",
+  [PaymentMethod.CASH]: "cash",
 };
 
 const getStatusColor = (status: OrderStatus) => {
@@ -68,11 +117,15 @@ const getPaymentMethodIcon = (method: PaymentMethod) => {
 };
 
 const getStatusSteps = (currentStatus: OrderStatus) => {
-  const allSteps = [
-    { status: OrderStatus.PENDING, label: "Processing", icon: Check },
-    { status: OrderStatus.CONFIRMED, label: "Confirmed", icon: Check },
-    { status: OrderStatus.SHIPPED, label: "Shipped", icon: Package },
-    { status: OrderStatus.DELIVERED, label: "Delivered", icon: Truck },
+  const allSteps: {
+    status: OrderStatus;
+    key: LabelKey;
+    icon: typeof Check;
+  }[] = [
+    { status: OrderStatus.PENDING, key: "pending", icon: Check },
+    { status: OrderStatus.CONFIRMED, key: "confirmed", icon: Check },
+    { status: OrderStatus.SHIPPED, key: "shipped", icon: Package },
+    { status: OrderStatus.DELIVERED, key: "delivered", icon: Truck },
   ];
 
   const statusOrder = {
@@ -93,6 +146,8 @@ const getStatusSteps = (currentStatus: OrderStatus) => {
 
 export default function OrderPage({ orderId }: Props) {
   const router = useRouter();
+  const t = useTranslations("orders");
+  const format = useFormatter();
   const { order, isLoading, error } = useGetOrderById(orderId);
   const { updateOrderStatusTrigger, updateOrderStatusIsMutating } =
     useUpdateOrderStatus(orderId);
@@ -113,18 +168,16 @@ export default function OrderPage({ orderId }: Props) {
 
   if (error) {
     showToast({
-      title: "Error!",
+      title: t("detailsFailed"),
       type: "error",
-      description: "Failed to load order details",
     });
     return (
       <div className="min-h-screen flex flex-col justify-center items-center">
-        <h2 className="text-2xl font-bold mb-4">Order Not Found</h2>
-        <p className="text-muted-foreground mb-4">
-          The order you&apos;re looking for doesn&apos;t exist or you don&apos;t
-          have permission to view it.
-        </p>
-        <Button onClick={() => router.push("/orders")}>Back to Orders</Button>
+        <h2 className="text-2xl font-bold mb-4">{t("notFoundTitle")}</h2>
+        <p className="text-muted-foreground mb-4">{t("notFoundText")}</p>
+        <Button onClick={() => router.push("/orders")}>
+          {t("backToOrders")}
+        </Button>
       </div>
     );
   }
@@ -145,15 +198,13 @@ export default function OrderPage({ orderId }: Props) {
         status: OrderStatus.CANCELED,
       });
       showToast({
-        title: "Success!",
+        title: t("cancelSuccess"),
         type: "success",
-        description: "Order has been cancelled successfully",
       });
     } catch (error) {
       showToast({
-        title: "Error!",
+        title: t("cancelFailed"),
         type: "error",
-        description: "Failed to cancel order",
       });
     }
   };
@@ -174,19 +225,22 @@ export default function OrderPage({ orderId }: Props) {
             </Button>
             <div>
               <h1 className="text-xl lg:text-2xl font-bold">
-                Order #{order.id.slice(-8)}{" "}
-                {/* Use last 8 chars of ID as order number */}
+                {t("number", { number: order.id.slice(-8) })}
               </h1>
               <p className="text-muted-foreground text-sm">
-                Placed on{" "}
-                {dayjs(order.createdAt).format("MMMM DD, YYYY [at] HH:mm")}
+                {t("placedOn", {
+                  date: format.dateTime(new Date(order.createdAt), {
+                    dateStyle: "long",
+                    timeStyle: "short",
+                  }),
+                })}
               </p>
             </div>
           </div>
           <div className="flex gap-2 lg:gap-3">
             <Button variant="outline" size="sm" className={buttonOutlineClass}>
               <Printer className={ICON_SIZE} />{" "}
-              <span className="ml-1 lg:ml-2">Print</span>
+              <span className="ml-1 lg:ml-2">{t("print")}</span>
             </Button>
             {order.status === OrderStatus.PENDING && (
               <Button
@@ -201,7 +255,7 @@ export default function OrderPage({ orderId }: Props) {
                 ) : (
                   <>
                     <Edit className={ICON_SIZE} />{" "}
-                    <span className="ml-1 lg:ml-2">Cancel</span>
+                    <span className="ml-1 lg:ml-2">{t("cancel")}</span>
                   </>
                 )}
               </Button>
@@ -219,10 +273,10 @@ export default function OrderPage({ orderId }: Props) {
                 <Badge
                   className={`text-white px-3 py-1 ${getStatusColor(order.status)}`}
                 >
-                  {order.status.replace("_", " ")}
+                  {t(`status.${STATUS_KEYS[order.status]}`)}
                 </Badge>
                 <span className="text-muted-foreground text-sm">
-                  {order.paymentStatus === "PAID" ? "Paid" : "Payment Pending"}
+                  {order.paymentStatus === "PAID" ? t("paid") : t("paymentPending")}
                 </span>
               </div>
 
@@ -232,7 +286,7 @@ export default function OrderPage({ orderId }: Props) {
               <div>
                 <h3 className="text-lg font-medium mb-3 flex items-center gap-2">
                   <MapPin className="h-5 w-5" />
-                  Delivery Address
+                  {t("deliveryAddress")}
                 </h3>
                 <div className="space-y-1 text-sm">
                   <p>{order.deliveryAddress}</p>
@@ -241,12 +295,14 @@ export default function OrderPage({ orderId }: Props) {
 
               {/* Payment Method */}
               <div>
-                <h3 className="text-lg font-medium mb-3">Payment Method</h3>
+                <h3 className="text-lg font-medium mb-3">
+                  {t("paymentMethod")}
+                </h3>
                 <Card className="flex items-center justify-between bg-muted p-3 rounded-lg">
                   <div className="flex items-center gap-3">
                     {getPaymentMethodIcon(order.paymentMethod)}
                     <span className="text-muted-foreground">
-                      {order.paymentMethod.replace("_", " ")}
+                      {t(`payment.${PAYMENT_KEYS[order.paymentMethod]}`)}
                     </span>
                   </div>
                 </Card>
@@ -254,14 +310,19 @@ export default function OrderPage({ orderId }: Props) {
 
               {/* Shipping Method */}
               <div>
-                <h3 className="text-lg font-medium mb-3">Shipping Method</h3>
+                <h3 className="text-lg font-medium mb-3">
+                  {t("shippingMethod")}
+                </h3>
                 <div className="space-y-1 text-sm">
                   <p className="font-medium">
-                    {order.shippingMethod?.name || "Shipping method"}
+                    {order.shippingMethod?.name || t("shippingMethodFallback")}
                   </p>
                   <p className="text-muted-foreground">
-                    Price: {getCurrencyEmoji(Currency.USD)}
-                    {order.shippingMethod?.price?.toFixed(2) || "0.00"}
+                    {t("price", {
+                      price: `${getCurrencyEmoji(Currency.USD)}${
+                        order.shippingMethod?.price?.toFixed(2) || "0.00"
+                      }`,
+                    })}
                   </p>
                 </div>
               </div>
@@ -272,19 +333,19 @@ export default function OrderPage({ orderId }: Props) {
           <Card className={commonCardClass}>
             <CardHeader className="pb-3 lg:pb-4">
               <CardTitle className="text-lg font-medium">
-                Order Summary
+                {t("summary")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 lg:space-y-4 pt-0">
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Total Price</span>
+                <span className="text-muted-foreground">{t("totalPrice")}</span>
                 <span className="font-medium">
                   {getCurrencyEmoji(Currency.USD)}
                   {order.totalPrice.toFixed(2)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Shipping</span>
+                <span className="text-muted-foreground">{t("shipping")}</span>
                 <span className="font-medium">
                   {getCurrencyEmoji(Currency.USD)}
                   {order.shippingMethod?.price?.toFixed(2) || "0.00"}
@@ -294,7 +355,7 @@ export default function OrderPage({ orderId }: Props) {
               <div>
                 <div className="flex justify-between items-center">
                   <span className="font-medium text-lg lg:text-base">
-                    Total
+                    {t("total")}
                   </span>
                   <span className="font-semibold text-xl lg:text-lg">
                     {getCurrencyEmoji(Currency.USD)}
@@ -311,7 +372,7 @@ export default function OrderPage({ orderId }: Props) {
           <Card className={commonCardClass}>
             <CardHeader className="pb-4 lg:pb-6">
               <CardTitle className="text-lg font-medium">
-                Delivery Status
+                {t("deliveryStatus")}
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
@@ -335,7 +396,7 @@ export default function OrderPage({ orderId }: Props) {
                           step.active ? "" : "text-muted-foreground "
                         }`}
                       >
-                        {step.label}
+                        {t(`status.${step.key}`)}
                       </span>
                     </div>
                   );
@@ -367,7 +428,7 @@ export default function OrderPage({ orderId }: Props) {
                               : "text-muted-foreground"
                           }`}
                         >
-                          {step.label}
+                          {t(`status.${step.key}`)}
                         </span>
                       </div>
                     );
@@ -379,11 +440,14 @@ export default function OrderPage({ orderId }: Props) {
                 <Badge
                   className={`text-white px-3 py-1 text-sm font-medium ${getStatusColor(order.status)}`}
                 >
-                  {order.status.replace("_", " ")}
+                  {t(`status.${STATUS_KEYS[order.status]}`)}
                 </Badge>
                 <span className="text-muted-foreground text-sm">
-                  Delivery Date:{" "}
-                  {dayjs(order.deliveryDate).format("MMMM DD, YYYY")}
+                  {t("deliveryDate", {
+                    date: format.dateTime(new Date(order.deliveryDate), {
+                      dateStyle: "long",
+                    }),
+                  })}
                 </span>
               </div>
             </CardContent>
@@ -394,7 +458,7 @@ export default function OrderPage({ orderId }: Props) {
         <Card className={commonCardClass}>
           <CardHeader className="pb-4">
             <CardTitle className="text-lg font-medium">
-              Order Items ({order.orderItems?.length || 0})
+              {t("itemsTitle", { count: order.orderItems?.length || 0 })}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
@@ -403,16 +467,16 @@ export default function OrderPage({ orderId }: Props) {
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-left py-4 text-muted-foreground font-medium text-sm">
-                    Product
+                    {t("columns.product")}
                   </TableHead>
                   <TableHead className="text-center py-4 text-muted-foreground font-medium text-sm">
-                    Quantity
+                    {t("columns.quantity")}
                   </TableHead>
                   <TableHead className="text-right py-4 text-muted-foreground font-medium text-sm">
-                    Price
+                    {t("columns.price")}
                   </TableHead>
                   <TableHead className="text-center py-4 text-muted-foreground font-medium text-sm">
-                    Status
+                    {t("columns.status")}
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -433,7 +497,7 @@ export default function OrderPage({ orderId }: Props) {
                                 alt={
                                   item.name ||
                                   item.product?.name ||
-                                  "Product image"
+                                  t("productImage")
                                 }
                                 width={64}
                                 height={64}
@@ -457,7 +521,7 @@ export default function OrderPage({ orderId }: Props) {
                           <span className="font-medium text-sm text-foreground leading-tight">
                             {item.name ||
                               item.product?.name ||
-                              `Product ${item.productId}`}
+                              t("productFallback", { id: item.productId })}
                           </span>
                           <span className="text-xs text-muted-foreground mt-1">
                             ID: {item.productId.slice(-8)}
@@ -474,7 +538,7 @@ export default function OrderPage({ orderId }: Props) {
                     </TableCell>
                     <TableCell className="text-center py-4">
                       <Badge className="text-xs">
-                        {item.status.replace("_", " ")}
+                        {t(`itemStatus.${ITEM_STATUS_KEYS[item.status] ?? "pending"}`)}
                       </Badge>
                     </TableCell>
                   </TableRow>

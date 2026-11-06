@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,31 +17,31 @@ import { useLogOut } from "../../../../../hooks";
 
 const LogOutForm = () => {
   const { logOut } = useLogOut();
+  const t = useTranslations("profile");
+  const common = useTranslations("common");
 
   return (
     <div className="mt-8 pt-4">
-      <h2 className="text-xl font-medium ">Log out</h2>
+      <h2 className="text-xl font-medium ">{t("logoutTitle")}</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Click the button below to log out of your account.
+        {t("logoutSubtitle")}
       </p>
 
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button type="button" variant="destructive" className="mt-4">
-            Log out
+            {t("logoutButton")}
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will end your session.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t("sureTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("logoutWarning")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{common("cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={() => logOut()}>
-              Confirm
+              {common("confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

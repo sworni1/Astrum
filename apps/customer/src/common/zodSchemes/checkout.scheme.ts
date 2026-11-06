@@ -1,16 +1,18 @@
 import { z } from "zod";
 import { PaymentMethod } from "../types/order.types";
+import type { ValidationTranslator } from "./translator";
 
-export const checkoutFormSchema = z.object({
-  deliveryAddress: z
-    .string()
-    .min(10, "Delivery address must be at least 10 characters"),
-  deliveryDate: z.date({ error: "Please select a delivery date" }),
-  shippingMethodId: z.string().min(1, "Please select a shipping method"),
-  paymentMethod: z.enum(PaymentMethod, {
-    error: "Please select a payment method",
-  }),
-  paymentDetails: z.string().optional(),
-});
+export const createCheckoutFormSchema = (t: ValidationTranslator) =>
+  z.object({
+    deliveryAddress: z.string().min(10, t("deliveryAddressTooShort")),
+    deliveryDate: z.date({ error: t("deliveryDateRequired") }),
+    shippingMethodId: z.string().min(1, t("shippingMethodRequired")),
+    paymentMethod: z.enum(PaymentMethod, {
+      error: t("paymentMethodRequired"),
+    }),
+    paymentDetails: z.string().optional(),
+  });
 
-export type CheckoutFormData = z.infer<typeof checkoutFormSchema>;
+export type CheckoutFormData = z.infer<
+  ReturnType<typeof createCheckoutFormSchema>
+>;
