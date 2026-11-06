@@ -4,6 +4,7 @@ import useEmblaCarousel, {
   type UseEmblaCarouselType,
 } from "embla-carousel-react";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -176,6 +177,7 @@ function CarouselPrevious({
   size = "icon-sm",
   ...props
 }: React.ComponentProps<typeof Button>) {
+  const translate = useTranslations("common");
   const { orientation, scrollPrev, canScrollPrev } = useCarousel();
 
   return (
@@ -195,7 +197,7 @@ function CarouselPrevious({
       {...props}
     >
       <ChevronLeftIcon />
-      <span className="sr-only">Previous slide</span>
+      <span className="sr-only">{translate("previousSlide")}</span>
     </Button>
   );
 }
@@ -206,6 +208,7 @@ function CarouselNext({
   size = "icon-sm",
   ...props
 }: React.ComponentProps<typeof Button>) {
+  const translate = useTranslations("common");
   const { orientation, scrollNext, canScrollNext } = useCarousel();
 
   return (
@@ -225,7 +228,7 @@ function CarouselNext({
       {...props}
     >
       <ChevronRightIcon />
-      <span className="sr-only">Next slide</span>
+      <span className="sr-only">{translate("nextSlide")}</span>
     </Button>
   );
 }

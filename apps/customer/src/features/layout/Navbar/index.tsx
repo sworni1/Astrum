@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { FiPackage } from "react-icons/fi";
 import { LuMenu } from "react-icons/lu";
@@ -9,6 +10,7 @@ import { TbCategory } from "react-icons/tb";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { showToast } from "../../../common";
+import LocaleSwitcher from "../../../components/LocaleSwitcher";
 import ThemeSwitcher from "../../../components/ThemeSwitcher";
 import { useGetCart, useGetOrders, useGetWishlist } from "../../../hooks";
 import { AcmeLogo } from "../../general/AcmeLogo";
@@ -17,6 +19,7 @@ import NavItem from "./NavItem";
 import Searchbar from "./Searchbar";
 
 export default function Navbar() {
+  const t = useTranslations("nav");
   const [sheetOpen, setSheetOpen] = useState(false);
   const { cart, cartIsLoading, cartError } = useGetCart();
   const { wishlist, wishlistIsLoading, wishlistError } = useGetWishlist();
@@ -28,25 +31,22 @@ export default function Navbar() {
 
   if (cartError) {
     showToast({
-      title: "Error!",
+      title: t("cartFailed"),
       type: "error",
-      description: "Failed to load cart",
     });
   }
 
   if (ordersError) {
     showToast({
-      title: "Error!",
+      title: t("ordersFailed"),
       type: "error",
-      description: "Failed to load cart",
     });
   }
 
   if (wishlistError) {
     showToast({
-      title: "Error!",
+      title: t("wishlistFailed"),
       type: "error",
-      description: "Failed to load wishlist",
     });
   }
 
@@ -68,6 +68,8 @@ export default function Navbar() {
 
         <div className="hidden sm:flex space-x-6 items-center">
           <NavItem icon={<TbCategory size={25} />} href={"/categories"} />
+
+          <LocaleSwitcher />
 
           <ThemeSwitcher />
 

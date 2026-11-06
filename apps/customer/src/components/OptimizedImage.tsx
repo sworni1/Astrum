@@ -2,6 +2,7 @@
 
 import { AlertCircle, Download, Eye, ImageIcon, Maximize2 } from "lucide-react";
 import Image, { type ImageProps } from "next/image";
+import { useTranslations } from "next-intl";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "./ui/skeleton";
@@ -84,6 +85,7 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
   priority = false,
   ...props
 }) {
+  const translate = useTranslations("common");
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [imageSrc, setImageSrc] = useState(src);
@@ -215,7 +217,7 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 p-4">
           <AlertCircle className="h-8 w-8 text-red-500 mb-2" />
           <p className="text-sm text-red-600 dark:text-red-400 text-center mb-2">
-            Failed to load image
+            {translate("imageLoadFailed")}
           </p>
           <p className="text-xs text-gray-500 text-center">{alt}</p>
         </div>
@@ -224,13 +226,13 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 p-4">
           <AlertCircle className="h-8 w-8 text-red-500 mb-2" />
           <p className="text-sm text-red-600 dark:text-red-400 text-center mb-3">
-            Failed to load image
+            {translate("imageLoadFailed")}
           </p>
           <button
             onClick={handleRetry}
             className="px-3 py-1 text-xs bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
           >
-            Retry
+            {translate("retry")}
           </button>
         </div>
       ),
@@ -256,7 +258,7 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
               <button
                 onClick={onImageClick}
                 className="p-2 bg-white/90 hover:bg-white rounded-full transition-all duration-200 transform hover:scale-110 shadow-lg"
-                title="View Image"
+                title={translate("viewImage")}
               >
                 <Eye className="h-4 w-4 text-gray-700" />
               </button>
@@ -264,14 +266,14 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
             <button
               onClick={handleFullscreen}
               className="p-2 bg-white/90 hover:bg-white rounded-full transition-all duration-200 transform hover:scale-110 shadow-lg"
-              title="Fullscreen"
+              title={translate("fullscreen")}
             >
               <Maximize2 className="h-4 w-4 text-gray-700" />
             </button>
             <button
               onClick={handleDownload}
               className="p-2 bg-white/90 hover:bg-white rounded-full transition-all duration-200 transform hover:scale-110 shadow-lg"
-              title="Download"
+              title={translate("download")}
             >
               <Download className="h-4 w-4 text-gray-700" />
             </button>

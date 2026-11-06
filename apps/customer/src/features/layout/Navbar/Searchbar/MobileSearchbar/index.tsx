@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { categoryList } from "@/common/constants/category.list";
@@ -29,6 +30,7 @@ type FormValues = {
 };
 
 const MobileSearchbar = () => {
+  const t = useTranslations("nav");
   const router = useRouter();
   const [openDialoog, setOpenDialoog] = useState(false);
 
@@ -59,7 +61,7 @@ const MobileSearchbar = () => {
         <DialogTrigger asChild>
           <Input
             type="search"
-            placeholder="Search..."
+            placeholder={t("searchPlaceholder")}
             style={{
               userSelect: "none",
               cursor: "pointer",
@@ -69,7 +71,7 @@ const MobileSearchbar = () => {
         </DialogTrigger>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Search products</DialogTitle>
+            <DialogTitle>{t("searchDialogTitle")}</DialogTitle>
           </DialogHeader>
 
           <Form {...form}>
@@ -83,7 +85,7 @@ const MobileSearchbar = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <Input placeholder="Search..." {...field} />
+                      <Input placeholder={t("searchPlaceholder")} {...field} />
                     </FormControl>
                   </FormItem>
                 )}
@@ -100,12 +102,12 @@ const MobileSearchbar = () => {
                     >
                       <FormControl>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="All" />
+                          <SelectValue placeholder={t("allCategories")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         <SelectGroup>
-                          <SelectItem value="all">All</SelectItem>
+                          <SelectItem value="all">{t("allCategories")}</SelectItem>
                           {categoryList.map((category, idx) => (
                             <SelectItem key={idx} value={category.href}>
                               {category.name}
@@ -121,7 +123,7 @@ const MobileSearchbar = () => {
                 type="submit"
                 className="px-3 py-2 rounded-md border w-full"
               >
-                Search
+                {t("searchButton")}
               </Button>
             </form>
           </Form>

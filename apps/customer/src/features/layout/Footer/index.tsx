@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { AcmeLogo } from "../../general/AcmeLogo";
 
-const Footer = () => {
+const Footer = async () => {
+  const t = await getTranslations("footer");
+
   return (
     <footer className="border-t border-border">
       <div className="w-full max-w-screen-xl mx-auto p-4 md:py-8">
@@ -15,22 +18,22 @@ const Footer = () => {
           <ul className="flex flex-wrap items-center mb-6 text-sm font-medium text-gray-500 sm:mb-0 dark:text-gray-400">
             <li>
               <Link href="/about" className="hover:underline me-4 md:me-6">
-                About
+                {t("about")}
               </Link>
             </li>
             <li>
               <Link href="/privacy" className="hover:underline me-4 md:me-6">
-                Privacy Policy
+                {t("privacy")}
               </Link>
             </li>
             <li>
               <Link href="/licensing" className="hover:underline me-4 md:me-6">
-                Licensing
+                {t("licensing")}
               </Link>
             </li>
             <li>
               <Link href="/contact" className="hover:underline">
-                Contact
+                {t("contact")}
               </Link>
             </li>
           </ul>
@@ -44,7 +47,7 @@ const Footer = () => {
           >
             Astrum
           </Link>
-          . All Rights Reserved.
+          . {t("rights")}
         </span>
       </div>
     </footer>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { showToast } from "../../../../common";
 import { ProductCardsSkeleton } from "../../../../components/skeletons";
 import { useInfiniteScroll } from "../../../../hooks";
@@ -8,6 +9,7 @@ import { useGetCategoryProducts } from "../../../../hooks/product/useProducts";
 import ProductCard from "../../../general/ProductCard";
 
 export const CategoryPage = () => {
+  const t = useTranslations("catalog");
   const params = useParams<{ category: string }>();
   const searchParams = useSearchParams();
 
@@ -31,9 +33,8 @@ export const CategoryPage = () => {
 
   if (previewProductsByCategoryError) {
     showToast({
-      title: "Error!",
+      title: t("failed"),
       type: "error",
-      description: "Failed to load preview products by category",
     });
   }
 
@@ -42,7 +43,7 @@ export const CategoryPage = () => {
       <div className="mx-auto max-w-screen-2xl px-4 2xl:px-3">
         <div className="mb-4 items-end justify-between space-y-4 sm:flex sm:space-y-0 md:mb-8">
           <h2 className="mt-3 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
-            Results
+            {t("results")}
           </h2>
         </div>
 
@@ -53,7 +54,7 @@ export const CategoryPage = () => {
             ))
           ) : (
             <div className="col-span-full text-center py-8 text-gray-500">
-              No more recommendations
+              {t("end")}
             </div>
           )}
 
@@ -66,7 +67,7 @@ export const CategoryPage = () => {
               )
             : products.length > 0 && (
                 <div className="col-span-full text-center py-8 text-gray-500">
-                  No more recommendations
+                  {t("end")}
                 </div>
               )}
         </div>

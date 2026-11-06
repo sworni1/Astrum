@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import * as React from "react";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ type Props = {
 };
 
 function ProductGallery({ images }: Props) {
+  const t = useTranslations("product");
   const safeImages = React.useMemo<string[]>(
     () => images.filter(Boolean),
     [images],
@@ -77,7 +79,7 @@ function ProductGallery({ images }: Props) {
                 {src && !imageErrors[index] ? (
                   <Image
                     src={src}
-                    alt={`Product image ${index + 1}`}
+                    alt={t("imageAlt", { index: index + 1 })}
                     fill
                     unoptimized
                     className="object-contain"
@@ -101,7 +103,7 @@ function ProductGallery({ images }: Props) {
             key={`thumb-${src}-${index}`}
             onClick={() => scrollTo(index)}
             type="button"
-            aria-label={`Open image ${index + 1}`}
+            aria-label={t("openImage", { index: index + 1 })}
             className={cn(
               "relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition-all",
               current === index
