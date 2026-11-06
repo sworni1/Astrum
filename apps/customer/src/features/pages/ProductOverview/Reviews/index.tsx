@@ -1,6 +1,7 @@
 "use client";
 
 import { Calendar, MessageCircle, Send, Star, ThumbsUp } from "lucide-react";
+import { useFormatter, useTranslations } from "next-intl";
 import { type FormEvent, useMemo, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -42,89 +43,62 @@ interface Review {
   comments: number;
 }
 
-interface StoreData {
-  pageTitle: string;
-  pageDescription: string;
-  formTitle: string;
-  formDescription: string;
-  nameLabel: string;
-  emailLabel: string;
-  reviewLabel: string;
-  namePlaceholder: string;
-  emailPlaceholder: string;
-  reviewPlaceholder: string;
-  submitButtonText: string;
-  reviews: Review[];
-}
-
-const storeData: StoreData = {
-  pageTitle: "Customer Reviews",
-  pageDescription:
-    "Read what our customers have to say about their experience with our products and services.",
-  formTitle: "Submit Your Review",
-  formDescription: "Share your experience with our community",
-  nameLabel: "Name",
-  emailLabel: "Email",
-  reviewLabel: "Write Your Review",
-  namePlaceholder: "John Doe",
-  emailPlaceholder: "mail@example.com",
-  reviewPlaceholder: "Write here...",
-  submitButtonText: "Submit Review",
-  reviews: [
-    {
-      id: 1,
-      userName: "Emma Davis",
-      userAvatar:
-        "https://notion-avatars.netlify.app/api/avatar?preset=female-1",
-      date: "20 Mar, 2024",
-      rating: 5,
-      content:
-        "I was blown away by the quality of this product. It's clear that a lot of thought and care went into its design. The attention to detail is remarkable, and it's been an absolute pleasure to use. I've already recommended it to several friends who are equally impressed with their purchases.",
-      likes: 8,
-      comments: 2,
-    },
-    {
-      id: 2,
-      userName: "Anuj Mishra",
-      userAvatar: "https://notion-avatars.netlify.app/api/avatar?preset=male-1",
-      date: "16 Dec, 2023",
-      rating: 5,
-      content:
-        "The customer service experience was exceptional from start to finish. When I had questions about my order, the team responded promptly and went above and beyond to ensure I was completely satisfied. It's rare to find such dedication to customer happiness these days.",
-      likes: 10,
-      comments: 5,
-    },
-    {
-      id: 3,
-      userName: "Robert Karmazov",
-      userAvatar: "https://notion-avatars.netlify.app/api/avatar?preset=male-2",
-      date: "24 Oct, 2023",
-      rating: 5,
-      content:
-        "I was hesitant about the price at first, but after using this product for several weeks, I can confidently say it's worth every penny. The quality and durability are outstanding, and it's made a noticeable difference in my daily routine. I'm already planning to purchase more items from this store.",
-      likes: 4,
-      comments: 0,
-    },
-    {
-      id: 4,
-      userName: "Sophia Chen",
-      userAvatar:
-        "https://notion-avatars.netlify.app/api/avatar?preset=female-2",
-      date: "15 May, 2024",
-      rating: 4,
-      content:
-        "This is a fantastic product that has really improved my daily routine. The quality is excellent and it's very user-friendly. The only reason I'm not giving it 5 stars is that I wish it came in more color options. Other than that, it's been a great purchase and I would definitely recommend it to others.",
-      likes: 6,
-      comments: 1,
-    },
-  ],
-};
+const DEMO_REVIEWS: Review[] = [
+  {
+    id: 1,
+    userName: "Emma Davis",
+    userAvatar: "https://notion-avatars.netlify.app/api/avatar?preset=female-1",
+    date: "2024-03-20",
+    rating: 5,
+    content:
+      "I was blown away by the quality of this product. It's clear that a lot of thought and care went into its design. The attention to detail is remarkable, and it's been an absolute pleasure to use. I've already recommended it to several friends who are equally impressed with their purchases.",
+    likes: 8,
+    comments: 2,
+  },
+  {
+    id: 2,
+    userName: "Anuj Mishra",
+    userAvatar: "https://notion-avatars.netlify.app/api/avatar?preset=male-1",
+    date: "2023-12-16",
+    rating: 5,
+    content:
+      "The customer service experience was exceptional from start to finish. When I had questions about my order, the team responded promptly and went above and beyond to ensure I was completely satisfied. It's rare to find such dedication to customer happiness these days.",
+    likes: 10,
+    comments: 5,
+  },
+  {
+    id: 3,
+    userName: "Robert Karmazov",
+    userAvatar: "https://notion-avatars.netlify.app/api/avatar?preset=male-2",
+    date: "2023-10-24",
+    rating: 5,
+    content:
+      "I was hesitant about the price at first, but after using this product for several weeks, I can confidently say it's worth every penny. The quality and durability are outstanding, and it's made a noticeable difference in my daily routine. I'm already planning to purchase more items from this store.",
+    likes: 4,
+    comments: 0,
+  },
+  {
+    id: 4,
+    userName: "Sophia Chen",
+    userAvatar: "https://notion-avatars.netlify.app/api/avatar?preset=female-2",
+    date: "2024-05-15",
+    rating: 4,
+    content:
+      "This is a fantastic product that has really improved my daily routine. The quality is excellent and it's very user-friendly. The only reason I'm not giving it 5 stars is that I wish it came in more color options. Other than that, it's been a great purchase and I would definitely recommend it to others.",
+    likes: 6,
+    comments: 1,
+  },
+];
 
 interface ReviewsProps {
   productId: string;
 }
 
+const REVIEWS_PER_PAGE = 2;
+
 const Reviews = ({ productId }: ReviewsProps) => {
+  const t = useTranslations("reviews");
+  const format = useFormatter();
   const [currentPage, setCurrentPage] = useState(1);
   const [isLiked, setIsLiked] = useState<Record<number, boolean>>({});
   const [rating, setRating] = useState<number>(0);
@@ -134,31 +108,27 @@ const Reviews = ({ productId }: ReviewsProps) => {
     email: "",
     review: "",
   });
-  const reviewsPerPage = 2; // Show only 2 reviews per page
-
   // Calculate pagination
-  const totalPages = Math.ceil(storeData.reviews.length / reviewsPerPage);
+  const totalPages = Math.ceil(DEMO_REVIEWS.length / REVIEWS_PER_PAGE);
   const currentReviews = useMemo<Review[]>(() => {
-    const startIndex = (currentPage - 1) * reviewsPerPage;
-    const endIndex = startIndex + reviewsPerPage;
-    return storeData.reviews.slice(startIndex, endIndex);
-  }, [currentPage, reviewsPerPage]);
+    const startIndex = (currentPage - 1) * REVIEWS_PER_PAGE;
+    const endIndex = startIndex + REVIEWS_PER_PAGE;
+    return DEMO_REVIEWS.slice(startIndex, endIndex);
+  }, [currentPage]);
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!productId) {
       showToast({
-        title: "Ошибка",
+        title: t("productMissing"),
         type: "error",
-        description: "Не удалось определить продукт",
       });
       return;
     }
     if (rating < 1) {
       showToast({
-        title: "Ошибка",
+        title: t("ratingMissing"),
         type: "error",
-        description: "Поставьте рейтинг перед отправкой",
       });
       return;
     }
@@ -167,9 +137,9 @@ const Reviews = ({ productId }: ReviewsProps) => {
   return (
     <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-12 text-center">
-        <h1 className="text-3xl font-bold">{storeData.pageTitle}</h1>
+        <h1 className="text-3xl font-bold">{t("title")}</h1>
         <p className="text-muted-foreground mx-auto mt-2 max-w-2xl">
-          {storeData.pageDescription}
+          {t("description")}
         </p>
       </div>
 
@@ -183,7 +153,7 @@ const Reviews = ({ productId }: ReviewsProps) => {
                     <Avatar className="bg-muted size-12">
                       <AvatarImage
                         src={review.userAvatar}
-                        alt={`${review.userName}'s avatar`}
+                        alt={t("avatarAlt", { name: review.userName })}
                       />
                       <AvatarFallback>
                         {review.userName.substring(0, 2)}
@@ -194,21 +164,25 @@ const Reviews = ({ productId }: ReviewsProps) => {
                       <div className="text-muted-foreground mt-1 flex items-center gap-2 text-sm">
                         <div
                           className="flex"
-                          aria-label={`Rated ${review.rating} out of 5`}
+                          role="img"
+                          aria-label={t("ratedOutOf", {
+                            rating: review.rating,
+                          })}
                         >
-                          {Array(5)
-                            .fill(0)
-                            .map((_, i) => (
-                              <Star
-                                key={i}
-                                className={cn(
-                                  "size-4",
-                                  i < review.rating
-                                    ? "fill-foreground text-foreground"
-                                    : "text-foreground fill-transparent",
-                                )}
-                              />
-                            ))}
+                          {Array.from(
+                            { length: 5 },
+                            (_, index) => index + 1,
+                          ).map((star) => (
+                            <Star
+                              key={`review-star-${star}`}
+                              className={cn(
+                                "size-4",
+                                star <= review.rating
+                                  ? "fill-foreground text-foreground"
+                                  : "text-foreground fill-transparent",
+                              )}
+                            />
+                          ))}
                         </div>
                         <span>•</span>
                         <time
@@ -218,7 +192,9 @@ const Reviews = ({ productId }: ReviewsProps) => {
                           className="flex items-center"
                         >
                           <Calendar className="me-1 size-3" />
-                          {review.date}
+                          {format.dateTime(new Date(review.date), {
+                            dateStyle: "long",
+                          })}
                         </time>
                       </div>
                     </div>
@@ -236,7 +212,7 @@ const Reviews = ({ productId }: ReviewsProps) => {
                       }))
                     }
                     className="h-8 px-3 text-xs text-muted-foreground hover:bg-primary/10 hover:text-primary cursor-pointer"
-                    aria-label={`${isLiked[review.id] ? "Unlike" : "Like"} this review`}
+                    aria-label={isLiked[review.id] ? t("unlike") : t("like")}
                   >
                     <ThumbsUp
                       className={cn(
@@ -250,7 +226,7 @@ const Reviews = ({ productId }: ReviewsProps) => {
                     variant="ghost"
                     size="sm"
                     className="h-8 px-3 text-xs text-muted-foreground hover:bg-primary/10 hover:text-primary cursor-pointer"
-                    aria-label="View comments"
+                    aria-label={t("viewComments")}
                   >
                     <MessageCircle className="size-4" />
                     <span>{review.comments}</span>
@@ -272,14 +248,17 @@ const Reviews = ({ productId }: ReviewsProps) => {
                     }
                   />
                 </PaginationItem>
-                {Array.from({ length: totalPages }).map((_, i) => (
-                  <PaginationItem key={i}>
+                {Array.from(
+                  { length: totalPages },
+                  (_, index) => index + 1,
+                ).map((page) => (
+                  <PaginationItem key={page}>
                     <PaginationLink
-                      onClick={() => setCurrentPage(i + 1)}
-                      isActive={currentPage === i + 1}
+                      onClick={() => setCurrentPage(page)}
+                      isActive={currentPage === page}
                       className="cursor-pointer"
                     >
-                      {i + 1}
+                      {page}
                     </PaginationLink>
                   </PaginationItem>
                 ))}
@@ -303,10 +282,8 @@ const Reviews = ({ productId }: ReviewsProps) => {
         <div className="lg:sticky lg:top-8 lg:h-fit">
           <Card className="border-2 transition-colors">
             <CardHeader>
-              <CardTitle id="review-form-heading">
-                {storeData.formTitle}
-              </CardTitle>
-              <CardDescription>{storeData.formDescription}</CardDescription>
+              <CardTitle id="review-form-heading">{t("formTitle")}</CardTitle>
+              <CardDescription>{t("formDescription")}</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -314,7 +291,7 @@ const Reviews = ({ productId }: ReviewsProps) => {
                   <div
                     className="flex gap-1"
                     role="radiogroup"
-                    aria-label="Rating"
+                    aria-label={t("ratingLabel")}
                   >
                     {[1, 2, 3, 4, 5].map((star) => (
                       <Button
@@ -326,7 +303,7 @@ const Reviews = ({ productId }: ReviewsProps) => {
                         onMouseLeave={() => setHoveredStar(0)}
                         className="h-9 px-4 py-2 focus-visible:ring-ring cursor-pointer rounded-full !p-1 hover:bg-transparent focus:outline-hidden focus-visible:ring-2"
                         aria-pressed={rating === star}
-                        aria-label={`Rate ${star} ${star === 1 ? "star" : "stars"}`}
+                        aria-label={t("rate", { star })}
                       >
                         <Star
                           className={cn(
@@ -342,14 +319,14 @@ const Reviews = ({ productId }: ReviewsProps) => {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="name">{storeData.nameLabel}</Label>
+                  <Label htmlFor="name">{t("nameLabel")}</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
                     }
-                    placeholder={storeData.namePlaceholder}
+                    placeholder={t("namePlaceholder")}
                     required
                     aria-required="true"
                     className="h-9"
@@ -357,7 +334,7 @@ const Reviews = ({ productId }: ReviewsProps) => {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="email">{storeData.emailLabel}</Label>
+                  <Label htmlFor="email">{t("emailLabel")}</Label>
                   <Input
                     id="email"
                     type="email"
@@ -365,7 +342,7 @@ const Reviews = ({ productId }: ReviewsProps) => {
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value })
                     }
-                    placeholder={storeData.emailPlaceholder}
+                    placeholder={t("emailPlaceholder")}
                     required
                     aria-required="true"
                     className="h-9"
@@ -373,14 +350,14 @@ const Reviews = ({ productId }: ReviewsProps) => {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="review">{storeData.reviewLabel}</Label>
+                  <Label htmlFor="review">{t("reviewLabel")}</Label>
                   <Textarea
                     id="review"
                     value={formData.review}
                     onChange={(e) =>
                       setFormData({ ...formData, review: e.target.value })
                     }
-                    placeholder={storeData.reviewPlaceholder}
+                    placeholder={t("reviewPlaceholder")}
                     required
                     aria-required="true"
                   />
@@ -391,7 +368,7 @@ const Reviews = ({ productId }: ReviewsProps) => {
                   className="h-9 px-4 py-2 w-full cursor-pointer"
                   disabled={rating < 1}
                 >
-                  {storeData.submitButtonText}
+                  {t("submit")}
                   <Send className="size-4" />
                 </Button>
               </form>

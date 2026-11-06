@@ -1,23 +1,25 @@
 # customer (Astrum)
 
-Фронтенд на **Next.js** для монорепозитория Astrum.
+The **Next.js** storefront for the Astrum monorepo.
 
-## Как запускать в этом репозитории
+## Running it in this repository
 
-Из **корня** монорепозитория (не из `apps/customer` в первую очередь):
+From the **root** of the monorepo (not from `apps/customer`):
 
 ```bash
 pnpm install
 pnpm dev:customer
 ```
 
-Открой в браузере [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000) in the browser.
 
-Переменные окружения и прокси к API настраиваются в `apps/customer` (см. `next.config.ts` и документацию проекта в корневом `README.md`).
+Environment variables and the proxy to the API are configured inside `apps/customer` (see `next.config.ts` and the project documentation in the root `README.md`).
+
+Product text lives in `messages/en.json` and `messages/ru.json`, and the chosen language sits in the `NEXT_LOCALE` cookie.
 
 ---
 
-Ниже — стандартный текст шаблона `create-next-app` (справочно по Next.js).
+The rest is the standard `create-next-app` template text, kept as a Next.js reference.
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 

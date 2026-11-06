@@ -9,10 +9,10 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 
 ## At a glance
 
-| #   | Feature                          | Phase    | Status      |
-| --- | -------------------------------- | -------- | ----------- |
-| A   | Register, sign in, token refresh | Existing | existing    |
-| 1   | Minimum age gate on register     | Slice 1  | done        |
+| #   | Feature                          | Phase    | Status   |
+| --- | -------------------------------- | -------- | -------- |
+| A   | Register, sign in, token refresh | Existing | existing |
+| 1   | Minimum age gate on register     | Slice 1  | done     |
 
 ## Already built
 

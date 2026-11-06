@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 import type {
   Product,
   ProductCategory,
@@ -32,7 +32,7 @@ export class ProductService {
       throw new Error("Product not found");
     }
 
-    const { impressions, properties, _count, ...rest } = product as any;
+    const { impressions, properties, _count, ...rest } = product;
 
     return {
       ...rest,

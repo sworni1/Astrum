@@ -2,11 +2,11 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
-import dayjs from "dayjs";
+import { useFormatter, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
-  editProfileFormSchema,
+  createEditProfileFormSchema,
   showToast,
   type UserData,
 } from "../../../../../common";
@@ -40,34 +40,43 @@ type Props = {
   profileData: UserData;
 };
 
-const describeProfileError = (error: unknown): string => {
-  if (!axios.isAxiosError(error)) {
-    return "Повторите попытку позже.";
-  }
-
-  const code = (error.response?.data as { code?: string } | undefined)?.code;
-
-  if (code === "EMAIL_TAKEN") {
-    return "Этот адрес занят другим аккаунтом.";
-  }
-
-  if (code === "EMAIL_UNCHANGED") {
-    return "Адрес уже указан в профиле.";
-  }
-
-  if (code === "EMAIL_NOT_CONFIRMED") {
-    return "Пока адрес не подтверждён, менять можно только почту.";
-  }
-
-  return "Повторите попытку позже.";
-};
-
 const EditProfileForm = ({ profileData }: Props) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isFormChanged, setIsFormChanged] = useState(false);
 
   const { updateAccountTrigger, mutateProfile } = useUser();
   const isPending = profileData.status === "PENDING";
+  const t = useTranslations("profile");
+  const common = useTranslations("common");
+  const validation = useTranslations("validation");
+  const format = useFormatter();
+
+  const describeProfileError = (error: unknown): string => {
+    if (!axios.isAxiosError(error)) {
+      return t("tryLater");
+    }
+
+    const code = (error.response?.data as { code?: string } | undefined)?.code;
+
+    if (code === "EMAIL_TAKEN") {
+      return t("errorEmailTaken");
+    }
+
+    if (code === "EMAIL_UNCHANGED") {
+      return t("errorEmailUnchanged");
+    }
+
+    if (code === "EMAIL_NOT_CONFIRMED") {
+      return t("errorEmailNotConfirmed");
+    }
+
+    return t("tryLater");
+  };
+
+  const schema = useMemo(
+    () => createEditProfileFormSchema(validation),
+    [validation],
+  );
 
   const defaultValues = useMemo<Partial<updateUserDto>>(
     () => ({
@@ -78,7 +87,7 @@ const EditProfileForm = ({ profileData }: Props) => {
   );
 
   const form = useForm<updateUserDto>({
-    resolver: zodResolver(editProfileFormSchema),
+    resolver: zodResolver(schema),
     defaultValues,
     mode: "onChange",
   });
@@ -96,8 +105,8 @@ const EditProfileForm = ({ profileData }: Props) => {
 
     if (!payload.email && !payload.nickName) {
       showToast({
-        title: "Изменений нет",
-        description: "Поля совпадают с профилем.",
+        title: t("noChangesTitle"),
+        description: t("noChangesText"),
         type: "info",
       });
       setIsDialogOpen(false);
@@ -110,13 +119,12 @@ const EditProfileForm = ({ profileData }: Props) => {
           showToast(
             payload.email
               ? {
-                  title: "Проверьте новую почту",
-                  description:
-                    "Мы отправили письмо со ссылкой на новый адрес. Заказы откроются после подтверждения.",
+                  title: t("checkNewEmailTitle"),
+                  description: t("checkNewEmailText"),
                   type: "success",
                 }
               : {
-                  title: "Профиль обновлён",
+                  title: t("profileUpdated"),
                   type: "success",
                 },
           );
@@ -127,7 +135,7 @@ const EditProfileForm = ({ profileData }: Props) => {
         },
         onError: (error: unknown) =>
           showToast({
-            title: "Не удалось сохранить",
+            title: t("saveFailed"),
             type: "error",
             description: describeProfileError(error),
           }),
@@ -151,94 +159,98 @@ const EditProfileForm = ({ profileData }: Props) => {
     return () => subscription.unsubscribe();
   }, [form, defaultValues]);
 
+  const gender = String(profileData.gender);
+  const genderLabel =
+    gender === "Female"
+      ? t("genderFemale")
+      : gender === "Male"
+        ? t("genderMale")
+        : gender;
+
   return (
-    <>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(editUser)} className="space-y-8">
-          <FormField
-            control={form.control}
-            name="nickName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Username</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="shadcn"
-                    {...field}
-                    value={field.value ?? ""}
-                    disabled={isPending}
-                  />
-                </FormControl>
-                {isPending ? (
-                  <FormDescription>
-                    Ник можно изменить после подтверждения почты.
-                  </FormDescription>
-                ) : null}
-                <FormMessage />
-              </FormItem>
-            )}
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(editUser)} className="space-y-8">
+        <FormField
+          control={form.control}
+          name="nickName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("username")}</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="shadcn"
+                  {...field}
+                  value={field.value ?? ""}
+                  disabled={isPending}
+                />
+              </FormControl>
+              {isPending ? (
+                <FormDescription>{t("nicknameLocked")}</FormDescription>
+              ) : null}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("email")}</FormLabel>
+              <FormControl>
+                <Input placeholder="email" {...field} />
+              </FormControl>
+              <FormDescription>
+                {isPending ? t("emailPendingNote") : t("emailChangeNote")}
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="space-y-2">
+          <Label htmlFor="dateOfBirth">{t("dateOfBirth")}</Label>
+          <Input
+            id="dateOfBirth"
+            readOnly
+            disabled
+            value={format.dateTime(new Date(profileData.dateOfBirth), {
+              dateStyle: "long",
+            })}
           />
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <Input placeholder="email" {...field} />
-                </FormControl>
-                <FormDescription>
-                  {isPending
-                    ? "Пока адрес не подтверждён, менять можно только его."
-                    : "После смены адреса аккаунт снова ждёт подтверждения."}
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="dateOfBirth">Date of birth</Label>
-            <Input
-              id="dateOfBirth"
-              readOnly
-              disabled
-              value={dayjs(profileData?.dateOfBirth).format("YYYY-MM-DD")}
-            />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="gender">{t("gender")}</Label>
+          <Input id="gender" readOnly disabled value={genderLabel} />
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="gender">Gender</Label>
-            <Input id="gender" readOnly disabled value={profileData.gender} />
-          </div>
-
-          <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <AlertDialogTrigger asChild>
-              <Button
-                type="button"
-                disabled={!isFormChanged || !form.formState.isValid}
-              >
-                Update profile
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Изменения сохранятся в профиле.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => editUser(form.getValues())}>
-                  Confirm
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </form>
-      </Form>
-    </>
+        <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <AlertDialogTrigger asChild>
+            <Button
+              type="button"
+              disabled={!isFormChanged || !form.formState.isValid}
+            >
+              {t("updateProfile")}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("sureTitle")}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("saveConfirmText")}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{common("cancel")}</AlertDialogCancel>
+              <AlertDialogAction onClick={() => editUser(form.getValues())}>
+                {common("confirm")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </form>
+    </Form>
   );
 };
 

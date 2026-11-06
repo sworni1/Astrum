@@ -1,6 +1,7 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { showToast } from "../../../../../../../common";
 import {
   AlertDialog,
@@ -21,14 +22,15 @@ type Props = {
 };
 
 const RemoveFromCartButton = ({ id }: Props) => {
+  const t = useTranslations("cart");
+  const common = useTranslations("common");
   const { deleteProductFromCartTrigger, deleteProductFromCartError } =
     useDeleteProductFromCart(id);
 
   if (deleteProductFromCartError) {
     showToast({
-      title: "Error!",
+      title: t("removeFailed"),
       type: "error",
-      description: "Failed to remove product from cart",
     });
   }
 
@@ -41,18 +43,15 @@ const RemoveFromCartButton = ({ id }: Props) => {
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Remove product from cart</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to delete the selected item? This action
-            cannot be undone.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{t("removeTitle")}</AlertDialogTitle>
+          <AlertDialogDescription>{t("removeText")}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{common("cancel")}</AlertDialogCancel>
           <AlertDialogAction
             onClick={async () => await deleteProductFromCartTrigger()}
           >
-            Confirm
+            {common("confirm")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

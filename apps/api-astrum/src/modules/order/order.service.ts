@@ -4,13 +4,13 @@ import type {
   OrderItem,
   ShippingMethod,
 } from "../../../generated/prisma/client";
-import type { OrderStatus } from "../../../generated/prisma/enums";
 import { Prisma } from "../../../generated/prisma/client";
+import type { OrderStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
 import { logger } from "../../common/helpers/logger";
 import type { CreateOrderDto, OrderItemDto } from "./dto/create-order.dto";
-import { idempotencyOf, type Idempotency } from "./idempotency";
+import { type Idempotency, idempotencyOf } from "./idempotency";
 import {
   MAX_LINE_QUANTITY,
   ORDER_ERROR_CODES,
@@ -603,7 +603,9 @@ export class OrderService {
     lines: OrderLine[],
     cartRows: CartRow[],
   ): Promise<void> {
-    const before = new Map(cartRows.map((row) => [row.productId, row.quantity]));
+    const before = new Map(
+      cartRows.map((row) => [row.productId, row.quantity]),
+    );
 
     for (const line of lines) {
       const { count } = await tx.cartItem.deleteMany({

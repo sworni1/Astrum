@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { categoryList } from "@/common/constants/category.list";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ type FormValues = {
 };
 
 const LaptopSearchbar = () => {
+  const t = useTranslations("nav");
   const router = useRouter();
 
   const form = useForm<FormValues>({
@@ -58,7 +60,7 @@ const LaptopSearchbar = () => {
                 <FormControl>
                   <Input
                     className="w-[287px]"
-                    placeholder="Search..."
+                    placeholder={t("searchPlaceholder")}
                     {...field}
                   />
                 </FormControl>
@@ -77,14 +79,14 @@ const LaptopSearchbar = () => {
                 >
                   <FormControl>
                     <SelectTrigger className="w-[135px]">
-                      <SelectValue placeholder="All" />
+                      <SelectValue placeholder={t("allCategories")} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem value="all">All</SelectItem>
-                      {categoryList.map((category, idx) => (
-                        <SelectItem key={idx} value={category.href}>
+                      <SelectItem value="all">{t("allCategories")}</SelectItem>
+                      {categoryList.map((category) => (
+                        <SelectItem key={category.href} value={category.href}>
                           {category.name}
                         </SelectItem>
                       ))}

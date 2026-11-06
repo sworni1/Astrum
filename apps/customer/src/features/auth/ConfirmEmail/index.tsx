@@ -3,7 +3,8 @@
 import { Clock, Mail, MailCheck, MailWarning, MailX } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
+import { type ReactNode, useEffect } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,27 +21,21 @@ import ResendForm from "./ResendForm";
 type Outcome = "ok" | "expired" | "used" | "invalid";
 
 const isOutcome = (value: string | null): value is Outcome =>
-  value === "ok" || value === "expired" || value === "used" || value === "invalid";
+  value === "ok" ||
+  value === "expired" ||
+  value === "used" ||
+  value === "invalid";
 
-const VIEWS: Record<Outcome, { title: string; description: string }> = {
-  ok: {
-    title: "Адрес подтверждён",
-    description: "Спасибо! Заказы, отзывы и профиль открыты.",
-  },
-  expired: {
-    title: "Срок ссылки истёк",
-    description: "Ссылка живёт 24 часа. Отправим новую, укажите адрес.",
-  },
-  used: {
-    title: "Ссылка больше не действует",
-    description:
-      "Похоже, адрес уже подтвердили или запросили новое письмо. Отправим ещё одно.",
-  },
-  invalid: {
-    title: "Ссылка недействительна",
-    description:
-      "Проверьте, что адрес скопирован целиком, и запросите новое письмо.",
-  },
+type ViewKeys = {
+  title: "okTitle" | "expiredTitle" | "usedTitle" | "invalidTitle";
+  text: "okText" | "expiredText" | "usedText" | "invalidText";
+};
+
+const VIEW_KEYS: Record<Outcome, ViewKeys> = {
+  ok: { title: "okTitle", text: "okText" },
+  expired: { title: "expiredTitle", text: "expiredText" },
+  used: { title: "usedTitle", text: "usedText" },
+  invalid: { title: "invalidTitle", text: "invalidText" },
 };
 
 const OUTCOME_ICONS: Record<Outcome, typeof MailCheck> = {
@@ -51,6 +46,7 @@ const OUTCOME_ICONS: Record<Outcome, typeof MailCheck> = {
 };
 
 export default function ConfirmEmail() {
+  const t = useTranslations("confirmEmail");
   const params = useSearchParams();
   const status = params.get("status");
   const outcome: Outcome | null = isOutcome(status) ? status : null;
@@ -78,15 +74,15 @@ export default function ConfirmEmail() {
           <OutcomeIcon>
             <MailCheck className="size-5" aria-hidden="true" />
           </OutcomeIcon>
-          <CardTitle className="text-2xl">{VIEWS.ok.title}</CardTitle>
-          <CardDescription>{VIEWS.ok.description}</CardDescription>
+          <CardTitle className="text-2xl">{t("okTitle")}</CardTitle>
+          <CardDescription>{t("okText")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           <Button asChild className="w-full">
-            <Link href="/">Перейти к покупкам</Link>
+            <Link href="/">{t("goShopping")}</Link>
           </Button>
           <Button asChild variant="ghost" className="w-full">
-            <Link href="/auth/signin">Войти в другой аккаунт</Link>
+            <Link href="/auth/signin">{t("signInOther")}</Link>
           </Button>
         </CardContent>
       </Card>
@@ -102,13 +98,15 @@ export default function ConfirmEmail() {
           <OutcomeIcon>
             <OutcomeGlyph className="size-5" aria-hidden="true" />
           </OutcomeIcon>
-          <CardTitle className="text-2xl">{VIEWS[outcome].title}</CardTitle>
-          <CardDescription>{VIEWS[outcome].description}</CardDescription>
+          <CardTitle className="text-2xl">
+            {t(VIEW_KEYS[outcome].title)}
+          </CardTitle>
+          <CardDescription>{t(VIEW_KEYS[outcome].text)}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <ResendForm defaultEmail={profile?.email} />
           <Button asChild variant="ghost" className="w-full">
-            <Link href="/auth/signin">Вернуться ко входу</Link>
+            <Link href="/auth/signin">{t("backToSignIn")}</Link>
           </Button>
         </CardContent>
       </Card>
@@ -121,17 +119,17 @@ export default function ConfirmEmail() {
         <OutcomeIcon>
           <Mail className="size-5" aria-hidden="true" />
         </OutcomeIcon>
-        <CardTitle className="text-2xl">Проверьте почту</CardTitle>
+        <CardTitle className="text-2xl">{t("checkMailTitle")}</CardTitle>
         <CardDescription>
           {profile?.email
-            ? `Письмо со ссылкой ушло на ${profile.email}.`
-            : "Письмо со ссылкой ушло на адрес, указанный при регистрации."}
+            ? t("checkMailTo", { email: profile.email })
+            : t("checkMailGeneric")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <ResendForm defaultEmail={profile?.email} />
         <Button asChild variant="ghost" className="w-full">
-          <Link href="/">Вернуться к покупкам</Link>
+          <Link href="/">{t("backToShop")}</Link>
         </Button>
       </CardContent>
     </Card>

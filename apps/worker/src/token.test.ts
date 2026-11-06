@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  TOKEN_TTL_SECONDS,
   confirmationLink,
   expiresAtFrom,
   hashToken,
   mintRawToken,
+  TOKEN_TTL_SECONDS,
 } from "./token";
 
 test("AC-5: raw token is 32 random bytes in base64url", () => {
@@ -30,7 +30,10 @@ test("AC-5: the token lives 24 hours from mint time", () => {
   const mintedAt = new Date("2026-11-05T10:00:00.000Z");
   const expiresAt = expiresAtFrom(mintedAt);
 
-  assert.equal(expiresAt.getTime() - mintedAt.getTime(), TOKEN_TTL_SECONDS * 1000);
+  assert.equal(
+    expiresAt.getTime() - mintedAt.getTime(),
+    TOKEN_TTL_SECONDS * 1000,
+  );
 });
 
 test("AC-6: the link points at the storefront confirm route", () => {

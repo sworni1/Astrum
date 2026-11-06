@@ -1,15 +1,15 @@
 import type { ConfirmChannel, ConsumeMessage } from "amqplib";
 import type { PrismaClient } from "../generated/prisma/client";
-import { buildConfirmationLetter } from "./letter";
+import { buildConfirmationLetter, resolveLetterLocale } from "./letter";
 import { describeError, logger } from "./logger";
 import type { Mailer } from "./mailer";
 import { confirmationLink } from "./token";
 import { mintConfirmationToken } from "./tokenStore";
 import {
   ATTEMPT_HEADER,
+  attemptOf,
   DEAD_LETTER_QUEUE,
   MAX_ATTEMPTS,
-  attemptOf,
   retryQueueName,
 } from "./topology";
 
@@ -17,6 +17,7 @@ export type ConfirmationEvent = {
   userId: string;
   email: string;
   requestedAt?: string;
+  locale: "en" | "ru";
 };
 
 export type ConsumerDeps = {
@@ -45,13 +46,16 @@ const parseEvent = (message: ConsumeMessage): ConfirmationEvent | undefined => {
       email: parsed.email,
       requestedAt:
         typeof parsed.requestedAt === "string" ? parsed.requestedAt : undefined,
+      locale: resolveLetterLocale(parsed.locale),
     };
   } catch {
     return undefined;
   }
 };
 
-export type ConfirmationHandler = (message: ConsumeMessage | null) => Promise<void>;
+export type ConfirmationHandler = (
+  message: ConsumeMessage | null,
+) => Promise<void>;
 
 /**
  * One delivery of one account confirmation event. The letter is minted and
@@ -148,6 +152,7 @@ export const createConfirmationHandler = (
 
       const letter = buildConfirmationLetter(
         confirmationLink(storefrontUrl, rawToken),
+        event.locale,
       );
 
       await mailer.send(event.email, letter);
@@ -157,6 +162,7 @@ export const createConfirmationHandler = (
         event: "email.sent",
         userId: event.userId,
         attempt,
+        locale: event.locale,
       });
     } catch (error) {
       await fail(message, attempt, error);

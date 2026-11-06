@@ -1,6 +1,6 @@
-import dayjs from "dayjs";
 import Image from "next/image";
 import Link from "next/link";
+import { useFormatter, useTranslations } from "next-intl";
 import { getCurrencyEmoji } from "../../../../common/helpers";
 import { type Order, OrderStatus } from "../../../../common/types/order.types";
 import { Currency } from "../../../../common/types/product.types";
@@ -10,6 +10,16 @@ import { Card, CardContent } from "../../../../components/ui/card";
 
 type Props = {
   order: Order;
+};
+
+type StatusKey = "pending" | "confirmed" | "shipped" | "delivered" | "canceled";
+
+const STATUS_KEYS: Record<OrderStatus, StatusKey> = {
+  [OrderStatus.PENDING]: "pending",
+  [OrderStatus.CONFIRMED]: "confirmed",
+  [OrderStatus.SHIPPED]: "shipped",
+  [OrderStatus.DELIVERED]: "delivered",
+  [OrderStatus.CANCELED]: "canceled",
 };
 
 const getStatusVariant = (status: OrderStatus) => {
@@ -29,6 +39,8 @@ const getStatusVariant = (status: OrderStatus) => {
 };
 
 const OrderCard = ({ order }: Props) => {
+  const t = useTranslations("orders");
+  const format = useFormatter();
   const orderItems = order.orderItems || [];
   const firstItem = orderItems.length > 0 ? orderItems[0] : null;
   const remainingItemsCount = Math.max(0, orderItems.length - 1);
@@ -40,16 +52,18 @@ const OrderCard = ({ order }: Props) => {
           <div className="flex items-start justify-between mb-4">
             <div>
               <h2 className="text-lg font-bold">
-                Order #{order.id.slice(-8)}{" "}
-                {/* Use last 8 chars of ID as order number */}
+                {t("number", { number: order.id.slice(-8) })}
               </h2>
               <p className="text-muted-foreground text-sm">
-                {dayjs(order.createdAt).format("MMMM DD, YYYY [at] HH:mm")}
+                {format.dateTime(new Date(order.createdAt), {
+                  dateStyle: "long",
+                  timeStyle: "short",
+                })}
               </p>
               <p className="text-muted-foreground text-xs mt-1">{order.id}</p>
             </div>
             <div className="text-right">
-              <p className="text-sm text-muted-foreground">Total paid</p>
+              <p className="text-sm text-muted-foreground">{t("totalPaid")}</p>
               <p className="font-bold text-lg">
                 {getCurrencyEmoji(Currency.USD)}
                 {order.totalPrice.toFixed(2)}
@@ -61,17 +75,21 @@ const OrderCard = ({ order }: Props) => {
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
                 <p className="text-sm">
-                  {order.shippingMethod?.name || "Shipping method"}
+                  {order.shippingMethod?.name || t("shippingMethodFallback")}
                 </p>
                 <Badge
                   className={`text-white px-2 py-0.5 rounded-md text-xs font-medium ${getStatusVariant(order.status)}`}
                 >
-                  {order.status.replace("_", " ")}
+                  {t(`status.${STATUS_KEYS[order.status]}`)}
                 </Badge>
               </div>
 
               <p className="text-sm text-muted-foreground mb-3">
-                Delivery: {dayjs(order.deliveryDate).format("MMMM DD, YYYY")}
+                {t("deliveryDate", {
+                  date: format.dateTime(new Date(order.deliveryDate), {
+                    dateStyle: "long",
+                  }),
+                })}
               </p>
 
               <div className="flex gap-2">
@@ -82,7 +100,7 @@ const OrderCard = ({ order }: Props) => {
                   }}
                   size="sm"
                 >
-                  View Details
+                  {t("viewDetails")}
                 </Button>
                 {order.status === OrderStatus.PENDING && (
                   <Button
@@ -93,7 +111,7 @@ const OrderCard = ({ order }: Props) => {
                     variant="outline"
                     size="sm"
                   >
-                    Cancel Order
+                    {t("cancelOrder")}
                   </Button>
                 )}
               </div>
@@ -111,7 +129,7 @@ const OrderCard = ({ order }: Props) => {
                     alt={
                       firstItem.name ||
                       firstItem.product?.name ||
-                      "Product image"
+                      t("productImage")
                     }
                     width={80}
                     height={80}
@@ -126,8 +144,7 @@ const OrderCard = ({ order }: Props) => {
               ) : (
                 <div className="w-20 h-20 bg-muted rounded-md flex items-center justify-center">
                   <span className="text-muted-foreground text-xs">
-                    {orderItems.length} item
-                    {orderItems.length > 1 ? "s" : ""}
+                    {t("itemsCount", { count: orderItems.length })}
                   </span>
                 </div>
               )}

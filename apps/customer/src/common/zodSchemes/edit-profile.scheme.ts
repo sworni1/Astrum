@@ -1,9 +1,8 @@
 import { z } from "zod";
+import type { ValidationTranslator } from "./translator";
 
-export const editProfileFormSchema = z.object({
-  email: z.email("Invalid email address").min(1, "Email is required"),
-  nickName: z
-    .string()
-    .max(25, "Nickname cannot exceed 25 characters")
-    .optional(),
-});
+export const createEditProfileFormSchema = (t: ValidationTranslator) =>
+  z.object({
+    email: z.email(t("emailInvalid")).min(1, t("emailRequired")),
+    nickName: z.string().max(25, t("nicknameTooLong")).optional(),
+  });

@@ -57,10 +57,32 @@ describe("AuthController", () => {
       };
       authService.register.mockResolvedValue({ token: "t", expiresIn: "1d" });
 
-      const result = await controller.signup(dto, "Mozilla/5.0");
+      const result = await controller.signup(dto, "en", "Mozilla/5.0");
 
-      expect(authService.register).toHaveBeenCalledWith(dto, "Mozilla/5.0");
+      expect(authService.register).toHaveBeenCalledWith(
+        dto,
+        "Mozilla/5.0",
+        "en",
+      );
       expect(result).toEqual({ token: "t", expiresIn: "1d" });
+    });
+
+    it("AC-9: a Russian header reaches register as the letter language", async () => {
+      const dto: RegisterUserDto = {
+        email: "a@b.c",
+        password: "secret123",
+        gender: "Male" as never,
+        dateOfBirth: new Date("2000-01-01"),
+      };
+      authService.register.mockResolvedValue({ token: "t", expiresIn: "1d" });
+
+      await controller.signup(dto, "ru-RU,ru;q=0.9", "Mozilla/5.0");
+
+      expect(authService.register).toHaveBeenCalledWith(
+        dto,
+        "Mozilla/5.0",
+        "ru",
+      );
     });
   });
 
@@ -108,8 +130,24 @@ describe("AuthController", () => {
       const req = { ip: "203.0.113.7" } as unknown as Request;
       const dto: ResendConfirmationDto = { email: "a@b.c" };
 
+      await expect(controller.resend(dto, req, "en")).resolves.toBeUndefined();
+      expect(authService.resend).toHaveBeenCalledWith(
+        "a@b.c",
+        "203.0.113.7",
+        "en",
+      );
+    });
+
+    it("AC-10: a missing header asks for the English letter", async () => {
+      const req = { ip: "203.0.113.7" } as unknown as Request;
+      const dto: ResendConfirmationDto = { email: "a@b.c" };
+
       await expect(controller.resend(dto, req)).resolves.toBeUndefined();
-      expect(authService.resend).toHaveBeenCalledWith("a@b.c", "203.0.113.7");
+      expect(authService.resend).toHaveBeenCalledWith(
+        "a@b.c",
+        "203.0.113.7",
+        "en",
+      );
     });
   });
 

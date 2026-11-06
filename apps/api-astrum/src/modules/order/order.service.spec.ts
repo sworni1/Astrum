@@ -450,8 +450,8 @@ describe("OrderService.updateOrderStatus", () => {
   const prepare = (order: Record<string, unknown> | null) => {
     tx = createCancelTx(order);
     prismaMock.$transaction.mockReset();
-    prismaMock.$transaction.mockImplementation((fn: (client: CancelTx) => unknown) =>
-      fn(tx),
+    prismaMock.$transaction.mockImplementation(
+      (fn: (client: CancelTx) => unknown) => fn(tx),
     );
     jest.spyOn(console, "info").mockImplementation(() => undefined);
     jest.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -571,7 +571,9 @@ describe("OrderService.createOrder with an idempotency key", () => {
     prismaMock.$transaction.mockImplementation((fn: (client: Tx) => unknown) =>
       fn(tx),
     );
-    prismaMock.product.findMany.mockResolvedValue([makeProduct({ quantity: 10 })]);
+    prismaMock.product.findMany.mockResolvedValue([
+      makeProduct({ quantity: 10 }),
+    ]);
     prismaMock.order.findFirst.mockReset();
     prismaMock.order.findFirst.mockResolvedValue(null);
     tx.product.findMany.mockResolvedValue([makeProduct({ quantity: 10 })]);
@@ -606,7 +608,11 @@ describe("OrderService.createOrder with an idempotency key", () => {
   it("отвечает повтором без записи, когда строка с тем же отпечатком есть (AC-2)", async () => {
     tx.order.findFirst.mockResolvedValue(existingOrder());
 
-    const result = await new OrderService().createOrder("user-1", makeDto(), KEY);
+    const result = await new OrderService().createOrder(
+      "user-1",
+      makeDto(),
+      KEY,
+    );
 
     expect(result.replay).toBe(true);
     expect(result.order.id).toBe("order-existing");
@@ -640,7 +646,11 @@ describe("OrderService.createOrder with an idempotency key", () => {
     tx.product.findMany.mockResolvedValue([makeProduct({ quantity: 0 })]);
     prismaMock.order.findFirst.mockResolvedValue(existingOrder());
 
-    const result = await new OrderService().createOrder("user-1", makeDto(), KEY);
+    const result = await new OrderService().createOrder(
+      "user-1",
+      makeDto(),
+      KEY,
+    );
 
     expect(result.replay).toBe(true);
     expect(result.order.id).toBe("order-existing");
@@ -661,7 +671,11 @@ describe("OrderService.createOrder with an idempotency key", () => {
   it("отдаёт отменённый заказ как он есть на повторе (AC-7)", async () => {
     tx.order.findFirst.mockResolvedValue(existingOrder({ status: "CANCELED" }));
 
-    const result = await new OrderService().createOrder("user-1", makeDto(), KEY);
+    const result = await new OrderService().createOrder(
+      "user-1",
+      makeDto(),
+      KEY,
+    );
 
     expect(result.replay).toBe(true);
     expect(result.order.status).toBe("CANCELED");
@@ -679,7 +693,9 @@ describe("OrderService.createOrder cart clearing", () => {
     prismaMock.$transaction.mockImplementation((fn: (client: Tx) => unknown) =>
       fn(tx),
     );
-    prismaMock.product.findMany.mockResolvedValue([makeProduct({ quantity: 10 })]);
+    prismaMock.product.findMany.mockResolvedValue([
+      makeProduct({ quantity: 10 }),
+    ]);
     prismaMock.order.findFirst.mockResolvedValue(null);
     tx.product.findMany.mockResolvedValue([makeProduct({ quantity: 10 })]);
     jest.spyOn(console, "info").mockImplementation(() => undefined);

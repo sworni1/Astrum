@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { MdFavorite, MdFavoriteBorder } from "react-icons/md";
 import { showToast } from "../../../../../common";
@@ -20,6 +21,7 @@ const ToggleWishlistItemButton = ({
   isWishlisted,
   size = "lg",
 }: Props) => {
+  const t = useTranslations("wishlist");
   const {
     addProductToWishlistTrigger,
     addProductToWishlistLoading,
@@ -55,17 +57,15 @@ const ToggleWishlistItemButton = ({
 
   if (addProductToWishlistError) {
     showToast({
-      title: "Error!",
+      title: t("addFailed"),
       type: "error",
-      description: "Failed to add product to wishlist",
     });
   }
 
   if (deleteProductFromWishlistError) {
     showToast({
-      title: "Error!",
+      title: t("removeFailed"),
       type: "error",
-      description: "Failed to delete product from wishlist",
     });
   }
 

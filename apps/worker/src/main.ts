@@ -1,8 +1,8 @@
 import {
-  connect,
   type ChannelModel,
   type ConfirmChannel,
   type ConsumeMessage,
+  connect,
 } from "amqplib";
 import { prisma } from "../lib/prisma";
 import { loadConfig } from "./config";
@@ -65,18 +65,18 @@ const main = async (): Promise<void> => {
   let consumerTag: string | undefined;
   let inFlight: Promise<void> = Promise.resolve();
 
-  const handleMessage = (handler: (message: ConsumeMessage | null) => Promise<void>) => (
-    message: ConsumeMessage | null,
-  ): void => {
-    const work = handler(message).catch((error: unknown) => {
-      logger.error({
-        event: "email.handler.failed",
-        reason: describeError(error),
+  const handleMessage =
+    (handler: (message: ConsumeMessage | null) => Promise<void>) =>
+    (message: ConsumeMessage | null): void => {
+      const work = handler(message).catch((error: unknown) => {
+        logger.error({
+          event: "email.handler.failed",
+          reason: describeError(error),
+        });
       });
-    });
 
-    inFlight = inFlight.then(() => work);
-  };
+      inFlight = inFlight.then(() => work);
+    };
 
   const shutDown = async (signal: string): Promise<void> => {
     if (stopping) {
@@ -137,7 +137,10 @@ const main = async (): Promise<void> => {
     const closed = new Promise<void>((resolve) => {
       connection?.once("close", () => resolve());
       connection?.once("error", (error: Error) => {
-        logger.error({ event: "rabbit.connection.error", reason: error.message });
+        logger.error({
+          event: "rabbit.connection.error",
+          reason: error.message,
+        });
         resolve();
       });
     });
@@ -161,7 +164,10 @@ const main = async (): Promise<void> => {
       break;
     }
 
-    logger.warn({ event: "rabbit.connection.closed", retryInMs: RECONNECT_DELAY_MS });
+    logger.warn({
+      event: "rabbit.connection.closed",
+      retryInMs: RECONNECT_DELAY_MS,
+    });
     await sleep(RECONNECT_DELAY_MS);
   }
 };

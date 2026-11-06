@@ -1,8 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createTransport } from "nodemailer";
-import { logger } from "./logger";
 import type { Letter } from "./letter";
+import { logger } from "./logger";
 
 export const SEND_TIMEOUT_MS = 10_000;
 
@@ -22,7 +22,8 @@ const withTimeout = async <T>(
       work,
       new Promise<never>((_resolve, reject) => {
         timer = setTimeout(
-          () => reject(new Error(`send did not resolve within ${timeoutMs} ms`)),
+          () =>
+            reject(new Error(`send did not resolve within ${timeoutMs} ms`)),
           timeoutMs,
         );
       }),

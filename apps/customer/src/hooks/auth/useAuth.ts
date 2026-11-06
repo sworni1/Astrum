@@ -2,6 +2,7 @@
 
 import axios from "axios";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
 import type { SubmitHandler } from "react-hook-form";
 import {
@@ -16,6 +17,8 @@ export const useAuth = () => {
   const { fetcher } = useFetcher();
 
   const router = useRouter();
+
+  const t = useTranslations("auth");
 
   const [emailTaken, setEmailTaken] = useState(false);
 
@@ -43,9 +46,9 @@ export const useAuth = () => {
           goConfirmEmail();
 
           showToast({
-            title: "Аккаунт создан",
+            title: t("createdTitle"),
             type: "success",
-            description: "Проверьте почту и подтвердите адрес",
+            description: t("createdText"),
           });
         }
       } catch (error) {
@@ -53,27 +56,27 @@ export const useAuth = () => {
           if (error.response.status === 403) {
             setEmailTaken(true);
             showToast({
-              title: "Адрес уже зарегистрирован",
-              description: "Войдите в аккаунт или отправьте письмо снова",
+              title: t("emailTakenTitle"),
+              description: t("emailTakenText"),
               type: "error",
             });
           } else {
             showToast({
-              title: "Error",
-              description: "Forbidden: Access to the resource is denied",
+              title: t("errorTitle"),
+              description: t("errorForbidden"),
               type: "error",
             });
           }
         } else {
           showToast({
-            title: "Error",
-            description: "An unexpected error occurred",
+            title: t("errorTitle"),
+            description: t("errorUnexpected"),
             type: "error",
           });
         }
       }
     },
-    [goConfirmEmail, fetcher],
+    [goConfirmEmail, fetcher, t],
   );
 
   const handleSignIn: SubmitHandler<SignInCredentials> = useCallback(
@@ -89,36 +92,36 @@ export const useAuth = () => {
           goNext();
 
           showToast({
-            title: "Success!",
+            title: t("signInSuccessTitle"),
             type: "success",
-            description: "You have successfully signed in",
+            description: t("signInSuccessText"),
           });
         }
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
           if (error.response.status === 403) {
             showToast({
-              title: "Error!",
+              title: t("signInFailedTitle"),
               type: "error",
-              description: "User doesn't exist or incorrect login or password",
+              description: t("signInFailedText"),
             });
           } else {
             showToast({
-              title: "Error",
-              description: "Access denied. Please try again later.",
+              title: t("errorTitle"),
+              description: t("accessDenied"),
               type: "error",
             });
           }
         } else {
           showToast({
-            title: "Error",
-            description: "An unexpected error occurred",
+            title: t("errorTitle"),
+            description: t("errorUnexpected"),
             type: "error",
           });
         }
       }
     },
-    [goNext, fetcher],
+    [goNext, fetcher, t],
   );
 
   return useMemo(

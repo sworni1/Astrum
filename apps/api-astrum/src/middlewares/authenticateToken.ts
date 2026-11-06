@@ -9,8 +9,8 @@ import type {
 } from "../common/types/jwt.payload";
 import {
   loggedSid,
-  sessionKey,
   type SessionStore,
+  sessionKey,
 } from "../session/sessionStore";
 
 type RefusalCode =

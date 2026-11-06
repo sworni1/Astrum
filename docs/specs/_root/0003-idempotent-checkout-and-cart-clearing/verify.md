@@ -189,6 +189,7 @@ post() { local tag=$1; shift; curl -s -D "/tmp/h.$tag" -o "/tmp/b.$tag" -w "%{ht
   → the unit run stays green with the database suite skipped, the database run proves the parallel pair and the cart clear, and the gate reports every task successful → **AC-1** to **AC-9**, **AC-12**
 
 ## UI / manual
+
 _Confirmed on the running stack on 2026-11-04 at the owner's sign off. The automation harness could not drive the checkout form (the Radix `Select` for the shipping method does not open under synthetic or CDP mouse input), so these five rest on a manual pass, while the server side of each is proven in the run log above and in the database suite._
 - [x] Place an order from `/cart`, then click Place order again on the same form before the redirect lands: the order screen shows one order, the cart no longer holds the bought line, and `/orders` lists one new row → **AC-2**, **AC-5**, **AC-10**
 - [x] Throttle the network to offline, submit, restore the network and submit again: the order screen opens the order that was created, no twin appears in `/orders` → **AC-10**
@@ -213,25 +214,24 @@ _Confirmed on the running stack on 2026-11-04 at the owner's sign off. The autom
 
 Every command step above was walked against `pnpm dev` (`api` on 3580, `auth` on 4580) with a real registered customer, a real `ShippingMethod` row and a product created for the run.
 
-| Step | Observed |
-| --- | --- |
-| create with a key | `201`, `idempotencyKey = verify-key-0001`, `length(idempotencyHash) = 64` |
-| repeat | `200`, `Idempotent-Replay: true`, same `id`, one row, stock fell 10 to 8 once |
-| same key, other address | `409 IDEMPOTENCY_KEY_REUSED`, still one row |
-| offset date form | `200` with the same `id`, not `409` |
-| short and spaced keys | both `422`, `errors[0].property = Idempotency-Key` |
-| no header | `201`, `idempotencyKey` is `NULL` |
-| cart clear | ordered row gone, the unselected product kept `7` |
-| partial order | `201`, the cart row dropped from `5` to `3` |
-| refused order | `409 CART_MISMATCH`, no order under the key, cart untouched |
-| parallel pair | `201` and `200`, same `id`, one row, stock 4 to 2 |
-| parallel pair on the refusal path | `201` and `200`, same `id`, one row, neither answer a refusal |
-| parallel conflict | `201` and `409`, one row |
-| cancel then repeat | `PATCH` answers `200`, the repeat answers `200` with `CANCELED` and the replay header |
-| second customer, same key | `201` with its own order id and its own row |
-| column leak | the create, replay, list and detail bodies all hold zero occurrences of `idempotency` |
-| preflight | `Access-Control-Allow-Headers` names `Idempotency-Key`, `Access-Control-Expose-Headers` names `Idempotent-Replay` |
-| database suite | `ORDER_DB_TESTS=1 pnpm --filter @astrum/api test` green, 71 tests, including the cart race and the rollback case (**AC-8**) |
+| Step                              | Observed                                                                                                                    |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| create with a key                 | `201`, `idempotencyKey = verify-key-0001`, `length(idempotencyHash) = 64`                                                   |
+| repeat                            | `200`, `Idempotent-Replay: true`, same `id`, one row, stock fell 10 to 8 once                                               |
+| same key, other address           | `409 IDEMPOTENCY_KEY_REUSED`, still one row                                                                                 |
+| offset date form                  | `200` with the same `id`, not `409`                                                                                         |
+| short and spaced keys             | both `422`, `errors[0].property = Idempotency-Key`                                                                          |
+| no header                         | `201`, `idempotencyKey` is `NULL`                                                                                           |
+| cart clear                        | ordered row gone, the unselected product kept `7`                                                                           |
+| partial order                     | `201`, the cart row dropped from `5` to `3`                                                                                 |
+| refused order                     | `409 CART_MISMATCH`, no order under the key, cart untouched                                                                 |
+| parallel pair                     | `201` and `200`, same `id`, one row, stock 4 to 2                                                                           |
+| parallel pair on the refusal path | `201` and `200`, same `id`, one row, neither answer a refusal                                                               |
+| parallel conflict                 | `201` and `409`, one row                                                                                                    |
+| cancel then repeat                | `PATCH` answers `200`, the repeat answers `200` with `CANCELED` and the replay header                                       |
+| second customer, same key         | `201` with its own order id and its own row                                                                                 |
+| column leak                       | the create, replay, list and detail bodies all hold zero occurrences of `idempotency`                                       |
+| preflight                         | `Access-Control-Allow-Headers` names `Idempotency-Key`, `Access-Control-Expose-Headers` names `Idempotent-Replay`           |
+| database suite                    | `ORDER_DB_TESTS=1 pnpm --filter @astrum/api test` green, 71 tests, including the cart race and the rollback case (**AC-8**) |
 
 **AC-10 is not closed.** The storefront sends the header (a checkout that reaches the gateway stores a key), but the form could not be submitted through the headless browser: the shipping method is a Radix `Select` that does not open under synthetic clicks or CDP mouse events in this harness, and the submit button stays disabled without it. The client helpers are covered by `apps/customer/src/hooks/order/idempotency.test.ts` (32 hex characters, a 4xx spends the key, a timeout or a 5xx keeps it). The five manual steps below still owe a human run.
-

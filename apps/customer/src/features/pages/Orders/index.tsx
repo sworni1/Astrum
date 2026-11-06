@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { showToast } from "../../../common";
 import { useGetOrders } from "../../../hooks/order";
@@ -8,6 +9,7 @@ import OrderCard from "./OrderCard";
 
 export default function Orders() {
   const { orders, isLoading, error } = useGetOrders();
+  const t = useTranslations("orders");
 
   if (isLoading) {
     return (
@@ -19,9 +21,8 @@ export default function Orders() {
 
   if (error) {
     showToast({
-      title: "Error!",
+      title: t("failed"),
       type: "error",
-      description: "Failed to load orders",
     });
   }
 
@@ -29,11 +30,11 @@ export default function Orders() {
     <div className="min-h-screen mx-auto max-w-screen-xl px-4 2xl:px-3 p-4 md:p-6">
       <div className="mb-4 items-end justify-between space-y-4 sm:flex sm:space-y-0 md:mb-8">
         <h2 className="mt-3 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
-          My Orders
+          {t("title")}
         </h2>
         {orders && orders.length > 0 && (
           <p className="text-muted-foreground">
-            {orders.length} order{orders.length === 1 ? "" : "s"} found
+            {t("found", { count: orders.length })}
           </p>
         )}
       </div>
@@ -42,11 +43,8 @@ export default function Orders() {
         <Card className="w-full">
           <CardContent className="flex flex-col items-center justify-center py-16">
             <div className="text-center space-y-2">
-              <h3 className="text-lg font-medium">No orders yet</h3>
-              <p className="text-muted-foreground">
-                You haven&apos;t placed any orders yet. Start shopping to see
-                your orders here!
-              </p>
+              <h3 className="text-lg font-medium">{t("emptyTitle")}</h3>
+              <p className="text-muted-foreground">{t("emptyText")}</p>
             </div>
           </CardContent>
         </Card>

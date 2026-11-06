@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { FiPackage } from "react-icons/fi";
 import { MdFavoriteBorder, MdOutlineShoppingCart } from "react-icons/md";
 import { TbCategory } from "react-icons/tb";
+import LocaleSwitcher from "@/components/LocaleSwitcher";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -36,14 +38,15 @@ export function MobileMenuSheet({
   orderCount,
   orderIsLoading,
 }: MobileMenuSheetProps) {
+  const t = useTranslations("nav");
   const { setTheme, theme } = useTheme();
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className=" text-gray-900 dark:text-white">
         <SheetHeader>
-          <SheetTitle>Menu</SheetTitle>
-          <SheetDescription>Make changes here</SheetDescription>
+          <SheetTitle>{t("menuTitle")}</SheetTitle>
+          <SheetDescription>{t("menuDescription")}</SheetDescription>
         </SheetHeader>
         <div className="grid flex-1 auto-rows-min gap-6">
           <div className="flex-1 space-y-2 p-2">
@@ -53,16 +56,17 @@ export function MobileMenuSheet({
               onClick={() => onOpenChange(false)}
             >
               <TbCategory size={24} />
-              <span>Categories</span>
+              <span>{t("categories")}</span>
             </Link>
 
-            <div
+            <button
+              type="button"
               className="p-2 rounded-md hover:bg-muted transition flex items-center space-x-3"
               onClick={() => setTheme(theme === "light" ? "dark" : "light")}
             >
               <ThemeSwitcher size={24} />
-              <span>Theme</span>
-            </div>
+              <span>{t("theme")}</span>
+            </button>
 
             <Link
               href="/wishlist"
@@ -70,7 +74,7 @@ export function MobileMenuSheet({
               onClick={() => onOpenChange(false)}
             >
               <MdFavoriteBorder size={24} />
-              <span>Wishlist</span>
+              <span>{t("wishlist")}</span>
               {wishlistIsLoading
                 ? null
                 : wishlistCount !== undefined &&
@@ -87,7 +91,7 @@ export function MobileMenuSheet({
               onClick={() => onOpenChange(false)}
             >
               <MdOutlineShoppingCart size={24} />
-              <span>Cart</span>
+              <span>{t("cart")}</span>
               {cartIsLoading
                 ? null
                 : cartCount !== undefined &&
@@ -104,7 +108,7 @@ export function MobileMenuSheet({
               onClick={() => onOpenChange(false)}
             >
               <FiPackage size={24} />
-              <span>Orders</span>
+              <span>{t("orders")}</span>
               {orderIsLoading
                 ? null
                 : orderCount !== undefined &&
@@ -123,8 +127,12 @@ export function MobileMenuSheet({
               <Avatar className="h-7 w-7">
                 <AvatarFallback>JH</AvatarFallback>
               </Avatar>
-              <span>Profile</span>
+              <span>{t("profile")}</span>
             </Link>
+
+            <div className="flex w-full items-center space-x-3 p-2 rounded-md">
+              <LocaleSwitcher />
+            </div>
           </div>
         </div>
       </SheetContent>

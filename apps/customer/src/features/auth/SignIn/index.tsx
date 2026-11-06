@@ -2,6 +2,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,14 +23,24 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { type SignInCredentials, signInFormSchema } from "../../../common";
+import {
+  createSignInFormSchema,
+  type SignInCredentials,
+} from "../../../common";
 import { useAuth } from "../../../hooks";
 
 export default function SignIn() {
   const { handleSignIn } = useAuth();
+  const t = useTranslations("auth");
+  const validation = useTranslations("validation");
+
+  const schema = useMemo(
+    () => createSignInFormSchema(validation),
+    [validation],
+  );
 
   const form = useForm<SignInCredentials>({
-    resolver: zodResolver(signInFormSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       email: "",
       password: "",
@@ -46,10 +58,8 @@ export default function SignIn() {
     <div className={cn("flex flex-col gap-6")}>
       <Card className="bg-[hsl(var(--card))]">
         <CardHeader>
-          <CardTitle className="text-2xl">Sign In</CardTitle>
-          <CardDescription>
-            Enter your email below to sign in to your account
-          </CardDescription>
+          <CardTitle className="text-2xl">{t("signInTitle")}</CardTitle>
+          <CardDescription>{t("signInDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -60,10 +70,10 @@ export default function SignIn() {
                   control={control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>{t("email")}</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Enter your email"
+                          placeholder={t("emailPlaceholder")}
                           {...field}
                           id="email"
                         />
@@ -78,11 +88,11 @@ export default function SignIn() {
                   control={control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel>{t("password")}</FormLabel>
                       <FormControl>
                         <Input
                           type="password"
-                          placeholder="Enter your password"
+                          placeholder={t("passwordPlaceholder")}
                           {...field}
                           id="password"
                         />
@@ -93,16 +103,16 @@ export default function SignIn() {
                 />
 
                 <Button disabled={!isValid} type="submit" className="w-full">
-                  Sign In
+                  {t("signIn")}
                 </Button>
               </div>
               <div className="mt-4 text-center text-sm">
-                Need to create an account?&nbsp;{" "}
+                {t("needAccount")}&nbsp;{" "}
                 <Link
                   href="/auth/register"
                   className="underline underline-offset-4"
                 >
-                  Register
+                  {t("register")}
                 </Link>
               </div>
             </form>

@@ -1,48 +1,48 @@
-# Разработка
+# Development
 
-Внутренняя документация: как запускать проект, чем проверять изменения и какие правила соблюдать. Публичное описание проекта — в [README](../README.md).
+Internal documentation: how to run the project, how to check a change and which rules to follow. The public description of the project lives in [README](../README.md).
 
-## Требования
+## Requirements
 
 Node 24+, pnpm 12.8+, Docker.
 
-## Приложения и порты
+## Applications and ports
 
-| Приложение             | Стек                 | Порт        | Назначение                                  |
-| ---------------------- | -------------------- | ----------- | ------------------------------------------- |
-| `apps/customer`        | Next.js 16           | 3000        | Витрина (B2C)                               |
-| `apps/api-astrum`      | Express 5 + Prisma 7 | 3580        | API-шлюз (оркестратор)                      |
-| `apps/auth-astrum`     | NestJS 11 + Prisma 7 | 4580        | Аутентификация и пользователи               |
-| `apps/worker`          | Node 24 + amqplib    | 5580        | Письма подтверждения из очереди             |
-| `packages/Astrum-db`   | Prisma client + seed | —           | Общая БД-схема, клиент и сид из xlsx        |
-| `astrum-redis` (dev)   | Redis 7              | 6379        | Хранилище сессий                            |
-| `astrum-rabbit` (dev)  | RabbitMQ 4           | 5672, 15672 | Обменник `astrum.events`, консоль на 15672  |
-| `astrum-mailpit` (dev) | Mailpit              | 1025, 8025  | SMTP-приёмник писем и веб-интерфейс на 8025 |
+| Application            | Stack                | Port        | Purpose                                               |
+| ---------------------- | -------------------- | ----------- | ----------------------------------------------------- |
+| `apps/customer`        | Next.js 16           | 3000        | Storefront (B2C)                                      |
+| `apps/api-astrum`      | Express 5 + Prisma 7 | 3580        | API gateway (orchestrator)                            |
+| `apps/auth-astrum`     | NestJS 11 + Prisma 7 | 4580        | Authentication and users                              |
+| `apps/worker`          | Node 24 + amqplib    | 5580        | Confirmation letters from the queue                   |
+| `packages/Astrum-db`   | Prisma client + seed | none        | Shared database schema, client and xlsx seed          |
+| `astrum-redis` (dev)   | Redis 7              | 6379        | Session store                                         |
+| `astrum-rabbit` (dev)  | RabbitMQ 4           | 5672, 15672 | The `astrum.events` exchange, console on 15672        |
+| `astrum-mailpit` (dev) | Mailpit              | 1025, 8025  | SMTP receiver for letters and a web interface on 8025 |
 
-## Архитектура и сценарий заказа
+## Architecture and the order flow
 
-Production-топология из `docker-compose.prod.yml`. Публичный и внутренний узлы Caddy на схеме — два listener одного контейнера; порты хоста публикуют только `proxy` (80 и 443) и `mailpit` (8025, кэтчер писем). `customer` обращается к API через внутренний listener, а API, auth и worker подключаются к PostgreSQL напрямую. Сессии всех реплик сходятся в Redis, письма подтверждения идут через RabbitMQ в отдельный воркер. Одноразовый сервис `migrate` применяет схему до запуска приложений.
+The production topology comes from `docker-compose.prod.yml`. The public and the internal Caddy listeners in the diagram are two listeners of one container; only `proxy` (80 and 443) and `mailpit` (8025, the letter catcher) publish host ports. `customer` reaches the API through the internal listener, and the API, auth and the worker connect to PostgreSQL directly. The sessions of every replica meet in Redis, and confirmation letters go through RabbitMQ into a separate worker. A one shot `migrate` service applies the schema before the applications start.
 
 ```mermaid
 flowchart LR
-    browser["Браузер"]
+    browser["Browser"]
 
-    subgraph astrum["Docker-сеть astrum"]
-        caddyPublic["Caddy — вход сайта<br/>:80 / :443"]
-        customer["Витрина Next.js<br/>customer ×2"]
-        caddyApi["Caddy — балансировщик API<br/>:3580, внутренний"]
-        api["API-шлюз Express<br/>api ×3, :3580"]
-        auth["Сервис auth NestJS<br/>auth ×1, :4580"]
-        worker["Воркер писем<br/>worker ×1, :5580"]
-        redis[("Redis 7<br/>сессии")]
+    subgraph astrum["Docker network astrum"]
+        caddyPublic["Caddy, the site entry point<br/>:80 / :443"]
+        customer["Next.js storefront<br/>customer ×2"]
+        caddyApi["Caddy, the API balancer<br/>:3580, internal"]
+        api["Express API gateway<br/>api ×3, :3580"]
+        auth["NestJS auth service<br/>auth ×1, :4580"]
+        worker["Mail worker<br/>worker ×1, :5580"]
+        redis[("Redis 7<br/>sessions")]
         rabbit[("RabbitMQ 4<br/>astrum.events")]
         mailpit["Mailpit<br/>SMTP 1025, UI 8025"]
         db[("PostgreSQL 16")]
-        migrate["Миграция Prisma<br/>одноразовый сервис"]
+        migrate["Prisma migration<br/>one shot service"]
 
-        caddyPublic -->|"Балансировка сайта"| customer
+        caddyPublic -->|"Balancing the site"| customer
         customer -->|"/api-gateway/* → proxy:3580"| caddyApi
-        caddyApi -->|"Балансировка API"| api
+        caddyApi -->|"Balancing the API"| api
         api -->|"/api/auth/*"| auth
         api -->|"Prisma"| db
         auth -->|"Prisma"| db
@@ -51,7 +51,7 @@ flowchart LR
         auth -->|"session:<sid>"| redis
         api -->|"account.confirmation.requested"| rabbit
         auth -->|"account.confirmation.requested"| rabbit
-        rabbit -->|"очередь писем"| worker
+        rabbit -->|"mail queue"| worker
         worker -->|"SMTP"| mailpit
         migrate -->|"prisma migrate deploy"| db
     end
@@ -59,129 +59,138 @@ flowchart LR
     browser -->|"HTTP :80 / HTTPS :443"| caddyPublic
 ```
 
-Браузер вызывает API по относительному пути `/api-gateway`, поэтому cookie сессии `__auth` остаётся same-origin. Внутренние порты API `3580` и auth `4580` на хост не публикуются.
+The browser calls the API at the relative path `/api-gateway`, so the `__auth` session cookie stays same origin. The internal ports of the API `3580` and of auth `4580` are never published to the host.
 
-Сессия живёт в двух местах: подписанный JWT `{ userId, sid }` в cookie `__auth` и запись `session:<sid>` в Redis с TTL 86400. Шлюз на каждом защищённом запросе сначала проверяет подпись, потом читает запись, и отказывает четырьмя кодами: `SESSION_MISSING` (нет cookie), `TOKEN_INVALID` (подпись или срок), `SESSION_REVOKED` (записи нет, она не разбирается, владелец в ней другой, или в токене нет `sid`) и `SESSION_STORE_UNAVAILABLE` (упал Redis, ответ всё равно `401`, а не `5xx`). Выход, смена пароля и удаление аккаунта удаляют запись, поэтому скопированная cookie перестаёт работать на всех репликах сразу. Redis входит в `GET /health`, так что при его падении реплика выходит из ротации, а не отвечает как здоровая.
+A session lives in two places: a signed JWT `{ userId, sid }` in the `__auth` cookie and a `session:<sid>` record in Redis with a TTL of 86400. On every guarded request the gateway checks the signature first and then reads the record, and refuses with four codes: `SESSION_MISSING` (no cookie), `TOKEN_INVALID` (signature or expiry), `SESSION_REVOKED` (the record is gone, does not parse, belongs to another user, or the token has no `sid`) and `SESSION_STORE_UNAVAILABLE` (Redis is down, the answer is still `401` and not `5xx`). Signing out, a password change and account deletion remove the record, so a copied cookie stops working on every replica at once. Redis is part of `GET /health`, so a failed Redis takes the replica out of rotation instead of answering as healthy.
 
-Блок-схема показывает текущую реализацию `POST /api/orders`. Успешный путь возможен только при наличии указанного способа доставки в БД.
+The flow chart shows the current `POST /api/orders` implementation. The success path is possible only when the given delivery method exists in the database.
 
 ```mermaid
 flowchart TD
-    buyer(["Покупатель подтверждает заказ"])
-    customer["Витрина отправляет POST /api-gateway/orders<br/>с cookie __auth"]
+    buyer(["The customer confirms the order"])
+    customer["The storefront sends POST /api-gateway/orders<br/>with the __auth cookie"]
     rewrite["Next.js rewrite<br/>/api-gateway/orders → proxy:3580/api/orders"]
-    api["API-шлюз Express"]
-    jwt{"Cookie __auth есть,<br/>JWT действителен,<br/>сессия жива в Redis?"}
-    unauthorized["Ответ 401 Unauthorized"]
-    active{"Аккаунт ACTIVE?"}
-    pending["Ответ 403 EMAIL_NOT_CONFIRMED"]
-    dto{"Запрос соответствует CreateOrderDto?"}
-    invalid["Ответ 422 с кодом VALIDATION"]
-    idem{"Idempotency-Key уже был<br/>с тем же телом?"}
-    replay["Ответ 200, тот же заказ<br/>Idempotent-Replay: true"]
-    reused["Ответ 409 IDEMPOTENCY_KEY_REUSED"]
-    create["OrderService.createOrder<br/>цена и состав из Product, суммы в Decimal"]
-    fk{"PostgreSQL проверяет внешний ключ<br/>shippingMethodId"}
-    fkError["Ошибка записи заказа<br/>способ доставки не найден"]
-    save[("Сохранить Order и OrderItem,<br/>списать остаток, очистить корзину")]
-    success["Ответ 201 с заказом"]
+    api["Express API gateway"]
+    jwt{"Is there a __auth cookie,<br/>is the JWT valid,<br/>is the session alive in Redis?"}
+    unauthorized["401 Unauthorized"]
+    active{"Is the account ACTIVE?"}
+    pending["403 EMAIL_NOT_CONFIRMED"]
+    dto{"Does the request match CreateOrderDto?"}
+    invalid["422 with the code VALIDATION"]
+    idem{"Was the Idempotency-Key already<br/>used with the same body?"}
+    replay["200, the same order<br/>Idempotent-Replay: true"]
+    reused["409 IDEMPOTENCY_KEY_REUSED"]
+    create["OrderService.createOrder<br/>price and contents from Product, sums in Decimal"]
+    fk{"Does PostgreSQL find the<br/>shippingMethodId foreign key?"}
+    fkError["Writing the order fails<br/>the delivery method is missing"]
+    save[("Save Order and OrderItem,<br/>take the stock, clear the cart")]
+    success["201 with the order"]
 
     buyer --> customer --> rewrite --> api --> jwt
-    jwt -->|Нет| unauthorized
-    jwt -->|Да| active
-    active -->|Нет| pending
-    active -->|Да| dto
-    dto -->|Нет| invalid
-    dto -->|Да| idem
-    idem -->|Да, тело совпало| replay
-    idem -->|Да, тело другое| reused
-    idem -->|Нет| create --> fk
-    fk -->|Нет| fkError
-    fk -->|Да| save --> success
+    jwt -->|No| unauthorized
+    jwt -->|Yes| active
+    active -->|No| pending
+    active -->|Yes| dto
+    dto -->|No| invalid
+    dto -->|Yes| idem
+    idem -->|Yes, the body matches| replay
+    idem -->|Yes, another body| reused
+    idem -->|No| create --> fk
+    fk -->|No| fkError
+    fk -->|Yes| save --> success
 ```
 
-Цену, состав и остатки заказа теперь решает сервер: `POST /api/orders` принимает только `productId` и `quantity`, читает товары в транзакции, считает суммы в `Prisma.Decimal`, списывает остаток условным `updateMany` и отказывает кодами `OUT_OF_STOCK`, `CART_MISMATCH`, `MIXED_CURRENCY`, `UNKNOWN_SHIPPING_METHOD`. Отмена сделана отдельно: `PATCH /api/orders/:orderId/status` с `{ "status": "CANCELED" }` возвращает остаток и переводит строки в `CANCELLED`. Что осталось: таблица `ShippingMethod` по-прежнему пуста в чистой БД (id захардкожены в форме, неизвестный id даёт `409`), доставка не входит в `totalPrice`, остальные переходы статусов не сделаны. Эти части перечислены в блокерах ниже.
+The server now decides the price, the contents and the stock of an order: `POST /api/orders` takes only `productId` and `quantity`, reads the products in a transaction, counts the sums in `Prisma.Decimal`, takes the stock with a conditional `updateMany` and refuses with the codes `OUT_OF_STOCK`, `CART_MISMATCH`, `MIXED_CURRENCY`, `UNKNOWN_SHIPPING_METHOD`. Cancelling is separate: `PATCH /api/orders/:orderId/status` with `{ "status": "CANCELED" }` returns the stock and moves the lines to `CANCELLED`. What is left: the `ShippingMethod` table is still empty in a clean database (the form hardcodes the ids, and an unknown id answers `409`), delivery is not part of `totalPrice`, and the other status transitions are not built. These parts are listed among the blockers below.
 
-### Контракт идемпотентности
+### The idempotency contract
 
-`POST /api/orders` принимает необязательный заголовок `Idempotency-Key`: от 8 до 128 символов из `[A-Za-z0-9_-]`, иначе `422` с `{ "code": "VALIDATION", "errors": [{ "property": "Idempotency-Key", ... }] }`. Ключ и sha256 отпечаток нормализованного тела (строки отсортированы по `productId`, дата приведена к UTC) пишутся в `Order.idempotencyKey` и `Order.idempotencyHash` тем же `create`, что и сам заказ.
+`POST /api/orders` accepts an optional `Idempotency-Key` header: 8 to 128 characters from `[A-Za-z0-9_-]`, otherwise `422` with `{ "code": "VALIDATION", "errors": [{ "property": "Idempotency-Key", ... }] }`. The key and a sha256 fingerprint of the normalized body (lines sorted by `productId`, the date brought to UTC) are written into `Order.idempotencyKey` and `Order.idempotencyHash` by the same `create` that writes the order.
 
-| Запрос                                                | Ответ                                                                      |
-| ----------------------------------------------------- | -------------------------------------------------------------------------- |
-| новый ключ                                            | `201`, заказ создан                                                        |
-| тот же ключ и то же тело                              | `200`, тот же `id`, заголовок `Idempotent-Replay: true`, ничего не пишется |
-| тот же ключ и другое тело                             | `409 IDEMPOTENCY_KEY_REUSED`, ничего не пишется                            |
-| ключ короче 8, длиннее 128 или с посторонним символом | `422 VALIDATION`                                                           |
+| Request                                                         | Answer                                                                         |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| a new key                                                       | `201`, the order is created                                                    |
+| the same key and the same body                                  | `200`, the same `id`, the header `Idempotent-Replay: true`, nothing is written |
+| the same key and another body                                   | `409 IDEMPOTENCY_KEY_REUSED`, nothing is written                               |
+| a key shorter than 8, longer than 128 or with a stray character | `422 VALIDATION`                                                               |
 
-Уникальный индекс `(userId, idempotencyKey)` держит гонку: проигравший перечитывает ключ на обычном клиенте (три попытки по 100 мс) и получает заказ победителя, а не отказ. Заказанные строки корзины удаляются или уменьшаются в той же транзакции, что списывает остаток; строки, которых нет в заказе, остаются нетронутыми. Витрина генерирует ключ из 16 случайных байт, держит его в `useRef` до окончательного ответа (сбрасывает после `2xx` и любого `4xx`, сохраняет после таймаута или `5xx`) и сама ничего не повторяет после `409`.
+The unique index on `(userId, idempotencyKey)` handles the race: the losing request re-reads the key on a plain client (three attempts 100 ms apart) and gets the winner order instead of a refusal. The ordered cart lines are removed or decreased in the same transaction that takes the stock; lines that are not in the order stay untouched. The storefront generates the key from 16 random bytes, keeps it in a `useRef` until the final answer (resets it after `2xx` and any `4xx`, keeps it after a timeout or `5xx`) and never repeats on its own after a `409`.
 
-## Запуск
+## Running
 
 ```bash
 pnpm install
-cp .env.example .env        # заполните JWT_SECRET и пароль БД
-pnpm db:up                  # Postgres 16 и Redis 7 в Docker
+cp .env.example .env        # fill in JWT_SECRET and the database password
+pnpm db:up                  # Postgres 16 and Redis 7 in Docker
 pnpm prisma:migrate:deploy
-pnpm db:generate            # обязателен после чистого клона и после смены схемы
+pnpm db:generate            # required after a clean clone and after a schema change
 pnpm dev                    # astrum-db, astrum-redis, astrum-rabbit, astrum-mailpit + turbo dev
 ```
 
-После старта: витрина <http://localhost:3000>, API <http://localhost:3580>, auth <http://localhost:4580>, воркер писем <http://localhost:5580/health>, письма в Mailpit <http://localhost:8025>, консоль RabbitMQ <http://localhost:15672>.
+Once everything is up: the storefront at <http://localhost:3000>, the API at <http://localhost:3580>, auth at <http://localhost:4580>, the mail worker at <http://localhost:5580/health>, the letters in Mailpit at <http://localhost:8025> and the RabbitMQ console at <http://localhost:15672>.
 
-- **Демо-каталог**: `pnpm --filter @astrum/db seed:excel` читает xlsx из папки «Бесплатная база товаров 2018»; сами файлы в репозиторий не входят.
-- **Смена схемы**: правка `packages/Astrum-db/prisma/schema.prisma` → `pnpm prisma:migrate:dev` → `pnpm db:generate`.
-- **Пересоздать БД с нуля**: `pnpm db:restart`.
-- **Redis**: `REDIS_URL` обязателен для `api` и `auth`, без него процесс падает на старте, значения по умолчанию нет. Дев-файл compose публикует `6379` на хост, поэтому локально это `redis://localhost:6379`; в prod-файле порт наружу не выходит, а пароль задаёт `REDIS_PASSWORD` из `.env.prod`.
-- **Брокер**: `RABBITMQ_URL` обязателен для воркера, он падает на старте без него. В `auth` и `api` соединение открывается при первой публикации, и отказ брокера логируется, а не роняет запрос. Дев-файл задаёт логин и пароль брокера через `RABBITMQ_USER` / `RABBITMQ_PASSWORD` (по умолчанию `astrum` / `change-me`), поэтому в строке подключения они обязательны: без них handshake отвечает `403 ACCESS-REFUSED`. После правки `.env` перезапустите процесс: watch-раннер читает файл один раз при старте.
-- **Почта**: `SMTP_URL` в dev смотрит на Mailpit (`smtp://localhost:1025`); без него воркер пишет письмо в `MAIL_OUTBOX_DIR`. В прод-стеке Mailpit тоже поднят (интерфейс на `8025`), но `.env.prod.example` указывает `SMTP_URL` на реальный релей, поэтому для локальной проверки письма поставьте `smtp://mailpit:1025`. `STOREFRONT_URL` подставляется в ссылку подтверждения.
-- **Порты**: `API_PORT` / `AUTH_PORT` / `WORKER_PORT` читаются из `.env`, по умолчанию 3580, 4580 и 5580.
+- **Demo catalogue**: `pnpm --filter @astrum/db seed:excel` reads the xlsx files from the free product database folder; the files themselves stay out of the repository.
+- **Schema change**: edit `packages/Astrum-db/prisma/schema.prisma`, run `pnpm prisma:migrate:dev`, then `pnpm db:generate`.
+- **Recreate the database from scratch**: `pnpm db:restart`.
+- **Redis**: `REDIS_URL` is required for `api` and `auth`, and without it the process dies on start, there is no default. The dev compose file publishes `6379` to the host, so locally it is `redis://localhost:6379`; in the prod file the port stays inside and the password comes from `REDIS_PASSWORD` in `.env.prod`.
+- **Broker**: `RABBITMQ_URL` is required for the worker, which dies on start without it. In `auth` and `api` the connection opens on the first publish, and a broker refusal is logged instead of failing the request. The dev file sets the broker login and password through `RABBITMQ_USER` / `RABBITMQ_PASSWORD` (defaults `astrum` / `change-me`), so they are part of the connection string: without them the handshake answers `403 ACCESS-REFUSED`. Restart the process after editing `.env`, because the watch runner reads the file once at start.
+- **Mail**: in dev `SMTP_URL` points at Mailpit (`smtp://localhost:1025`); without it the worker writes the letter into `MAIL_OUTBOX_DIR`. The prod stack runs Mailpit too (interface on `8025`), but `.env.prod.example` points `SMTP_URL` at a real relay, so set `smtp://mailpit:1025` to check a letter locally. `STOREFRONT_URL` goes into the confirmation link.
+- **Ports**: `API_PORT` / `AUTH_PORT` / `WORKER_PORT` are read from `.env`, defaulting to 3580, 4580 and 5580.
 
-## Скрипты
+## Interface language
 
-| Скрипт                         | Назначение                                                                   |
-| ------------------------------ | ---------------------------------------------------------------------------- |
-| `pnpm dev`                     | Postgres, Redis, RabbitMQ и Mailpit в Docker + все приложения в watch-режиме |
-| `pnpm dev:customer`            | только витрина                                                               |
-| `pnpm dev:api`                 | только API-шлюз                                                              |
-| `pnpm dev:auth`                | только auth-сервис                                                           |
-| `pnpm build`                   | сборка всех пакетов через Turborepo                                          |
-| `pnpm quality-gate`            | check-types + lint + test                                                    |
-| `pnpm format`                  | `biome format --write` по репозиторию                                        |
-| `pnpm db:generate`             | генерация Prisma-клиента                                                     |
-| `pnpm prisma:migrate:dev`      | новая миграция в dev                                                         |
-| `pnpm prisma:migrate:deploy`   | применение миграций                                                          |
-| `pnpm prisma:studio`           | Prisma Studio                                                                |
-| `pnpm db:up` / `pnpm db:rm`    | поднять / удалить контейнеры Postgres и Redis                                |
-| `pnpm docker:prod:build`       | собрать образы прод-стека                                                    |
-| `pnpm docker:prod:up` / `down` | запустить / остановить прод-стек                                             |
-| `pnpm docker:prod:scale`       | пересобрать и перезапустить реплики api                                      |
+The storefront answers in English by default and keeps Russian behind a switcher. Both catalogs live in `apps/customer/messages/` (`en.json` and `ru.json`), the resolution code in `apps/customer/src/i18n/`, and the chosen language in the `NEXT_LOCALE` cookie (one year, path `/`, readable by the request helpers). There is no language segment in the address.
 
-Воркер отдельным корневым скриптом не вынесен: `pnpm --filter @astrum/worker dev`.
+- A new string is one entry in each catalog. The parity test in `apps/customer/src/i18n/config.test.ts` fails when the key trees or the interpolation placeholders diverge.
+- A screen reads strings through `useTranslations` (client) or `getTranslations` (server), never a literal, so a Cyrillic literal in `apps/customer/src` means a missed screen.
+- Validation messages come from `validation`, so a schema is built per language with `createRegisterFormSchema(t)` and friends instead of being a module constant.
+- The confirmation letter follows the page that asked for it: the storefront sends the explicit `Accept-Language` header, both publishers carry `locale` in the event, and the worker picks `apps/worker/src/letters/en.ts` or `ru.ts`, with English as the fallback.
 
-`prisma:seed` ссылается на несуществующий скрипт `seed` в пакете БД; рабочий сид — `seed:excel`.
+## Scripts
 
-## Качество кода
+| Script                         | Purpose                                                                              |
+| ------------------------------ | ------------------------------------------------------------------------------------ |
+| `pnpm dev`                     | Postgres, Redis, RabbitMQ and Mailpit in Docker plus every application in watch mode |
+| `pnpm dev:customer`            | the storefront only                                                                  |
+| `pnpm dev:api`                 | the API gateway only                                                                 |
+| `pnpm dev:auth`                | the auth service only                                                                |
+| `pnpm build`                   | build every package through Turborepo                                                |
+| `pnpm quality-gate`            | check-types, lint and test                                                           |
+| `pnpm format`                  | `biome format --write` across the repository                                         |
+| `pnpm db:generate`             | generate the Prisma client                                                           |
+| `pnpm prisma:migrate:dev`      | a new migration in dev                                                               |
+| `pnpm prisma:migrate:deploy`   | apply the migrations                                                                 |
+| `pnpm prisma:studio`           | Prisma Studio                                                                        |
+| `pnpm db:up` / `pnpm db:rm`    | start or remove the Postgres and Redis containers                                    |
+| `pnpm docker:prod:build`       | build the images of the prod stack                                                   |
+| `pnpm docker:prod:up` / `down` | start or stop the prod stack                                                         |
+| `pnpm docker:prod:scale`       | rebuild and restart the api replicas                                                 |
 
-| Скрипт              | Назначение                                                                |
-| ------------------- | ------------------------------------------------------------------------- |
-| `pnpm lint`         | ESLint в `customer` и `auth`; в `api`, `db` и `worker` заглушка           |
-| `pnpm check-types`  | `tsc --noEmit` по всем пакетам                                            |
-| `pnpm test`         | jest в `api` и `auth`, vitest в `customer`, `node:test` в `db` и `worker` |
-| `pnpm quality-gate` | check-types + lint + test                                                 |
-| `pnpm format`       | Biome, формат по репозиторию                                              |
-| `pnpm format:check` | Biome, проверка без записи                                                |
+The worker has no root script of its own: `pnpm --filter @astrum/worker dev`.
 
-Хуки husky:
+`prisma:seed` points at a `seed` script that does not exist in the database package; the working seed is `seed:excel`.
 
-- **pre-commit** — пустой (`exit 0`): коммит остаётся мгновенным, форматирование запускается вручную.
-- **pre-push** — `pnpm quality-gate`: типы, линт и тесты по всем пакетам.
-- **commit-msg** — commitlint через локальный бинарник, при его отсутствии проверка формата регуляркой.
+## Code quality
 
-Проверить хук без коммита: `git hook run pre-push`.
+| Script              | Purpose                                                                          |
+| ------------------- | -------------------------------------------------------------------------------- |
+| `pnpm lint`         | ESLint in `customer` and `auth`; a stub in `api`, `db` and `worker`              |
+| `pnpm check-types`  | `tsc --noEmit` across every package                                              |
+| `pnpm test`         | jest in `api` and `auth`, vitest in `customer`, `node:test` in `db` and `worker` |
+| `pnpm quality-gate` | check-types, lint and test                                                       |
+| `pnpm format`       | Biome, formatting across the repository                                          |
+| `pnpm format:check` | Biome, a check without writing                                                   |
 
-## Конвенция коммитов
+Husky hooks:
 
-Conventional Commits, тип и scope — на английском, описание — на русском. Типы: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`, `build`, `revert`.
+- **pre-commit**: empty (`exit 0`), so a commit stays instant and formatting runs by hand.
+- **pre-push**: `pnpm quality-gate`, meaning types, lint and tests across every package.
+- **commit-msg**: commitlint through the local binary, and a regular expression check when the binary is missing.
+
+Run a hook without committing: `git hook run pre-push`.
+
+## Commit convention
+
+Conventional Commits, with the type and the scope in English and the subject in Russian. The types are `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`, `build`, `revert`.
 
 ```
 feat(api): добавить эндпоинт обновления заказа
@@ -189,106 +198,106 @@ fix(auth): исправить обработку просроченного то
 docs: описать архитектуру заказа
 ```
 
-Валидация — commitlint (`.husky/commit-msg`, `commitlint.config.js`).
+Validation comes from commitlint (`.husky/commit-msg`, `commitlint.config.js`).
 
-## Переменные окружения
+## Environment variables
 
-| Файл                            | Ключи                                                                                                                                                                                                                                                                                                                      |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.env.example`                  | `POSTGRES_*`, `DATABASE_URL`, `API_PORT`, `AUTH_PORT`, `WORKER_PORT`, `JWT_SECRET`, `DB_POOL_SIZE`, `REDIS_URL`, `RABBITMQ_URL`, `SMTP_URL`, `MAIL_FROM`, `STOREFRONT_URL`, `MAIL_OUTBOX_DIR`, `AUTH_SERVICE_URL`, `API_GATEWAY_INTERNAL_URL`, `NEXT_PUBLIC_API_GATEWAY_URL`                                               |
-| `.env.prod.example`             | `POSTGRES_*`, `DATABASE_URL` (`db:5432`), `JWT_SECRET`, `DB_POOL_SIZE`, `AUTH_SERVICE_URL`, `REDIS_URL` + `REDIS_PASSWORD`, `API_GATEWAY_INTERNAL_URL`, `NEXT_PUBLIC_API_GATEWAY_URL`, `RABBITMQ_URL` + `RABBITMQ_USER` / `RABBITMQ_PASSWORD`, `SMTP_URL`, `MAIL_FROM`, `STOREFRONT_URL`, `WORKER_PORT`, `MAIL_OUTBOX_DIR` |
-| `apps/api-astrum/.env.example`  | `DATABASE_URL`, `JWT_SECRET`, `AUTH_SERVICE_URL`, `API_PORT`, `REDIS_URL`, `RABBITMQ_URL`                                                                                                                                                                                                                                  |
-| `apps/auth-astrum/.env.example` | `DATABASE_URL`, `JWT_SECRET`, `AUTH_PORT`, `REDIS_URL`, `RABBITMQ_URL`, `STOREFRONT_URL`                                                                                                                                                                                                                                   |
-| `apps/worker/.env.example`      | `DATABASE_URL`, `RABBITMQ_URL`, `MAIL_FROM`, `STOREFRONT_URL`, `SMTP_URL`, `WORKER_PORT`, `MAIL_OUTBOX_DIR`                                                                                                                                                                                                                |
-| `apps/customer/.env.example`    | `NEXT_PUBLIC_API_GATEWAY_URL`, `JWT_SECRET`, `NODE_ENV`                                                                                                                                                                                                                                                                    |
+| File                            | Keys                                                                                                                                                                                                                                                                                                                             |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.env.example`                  | `POSTGRES_*`, `DATABASE_URL`, `API_PORT`, `AUTH_PORT`, `WORKER_PORT`, `JWT_SECRET`, `DB_POOL_SIZE`, `REDIS_URL`, `RABBITMQ_URL`, `SMTP_URL`, `MAIL_FROM`, `STOREFRONT_URL`, `MAIL_OUTBOX_DIR`, `AUTH_SERVICE_URL`, `API_GATEWAY_INTERNAL_URL`, `NEXT_PUBLIC_API_GATEWAY_URL`                                                     |
+| `.env.prod.example`             | `POSTGRES_*`, `DATABASE_URL` (`db:5432`), `JWT_SECRET`, `DB_POOL_SIZE`, `AUTH_SERVICE_URL`, `REDIS_URL` with `REDIS_PASSWORD`, `API_GATEWAY_INTERNAL_URL`, `NEXT_PUBLIC_API_GATEWAY_URL`, `RABBITMQ_URL` with `RABBITMQ_USER` / `RABBITMQ_PASSWORD`, `SMTP_URL`, `MAIL_FROM`, `STOREFRONT_URL`, `WORKER_PORT`, `MAIL_OUTBOX_DIR` |
+| `apps/api-astrum/.env.example`  | `DATABASE_URL`, `JWT_SECRET`, `AUTH_SERVICE_URL`, `API_PORT`, `REDIS_URL`, `RABBITMQ_URL`                                                                                                                                                                                                                                        |
+| `apps/auth-astrum/.env.example` | `DATABASE_URL`, `JWT_SECRET`, `AUTH_PORT`, `REDIS_URL`, `RABBITMQ_URL`, `STOREFRONT_URL`                                                                                                                                                                                                                                         |
+| `apps/worker/.env.example`      | `DATABASE_URL`, `RABBITMQ_URL`, `MAIL_FROM`, `STOREFRONT_URL`, `SMTP_URL`, `WORKER_PORT`, `MAIL_OUTBOX_DIR`                                                                                                                                                                                                                      |
+| `apps/customer/.env.example`    | `NEXT_PUBLIC_API_GATEWAY_URL`, `JWT_SECRET`, `NODE_ENV`                                                                                                                                                                                                                                                                          |
 
-`JWT_SECRET` должен совпадать во всех сервисах. В браузер попадает только `NEXT_PUBLIC_*`. `REDIS_URL` обязателен для `api` и `auth`: без него процесс не стартует. `RABBITMQ_URL` обязателен для `worker` (падает на старте), а в `api` и `auth` читается при публикации, так что недоступный брокер даёт запись в лог, а не отказ на запросе. В `.env.prod.example` рядом с `REDIS_URL` лежит `REDIS_PASSWORD` для `--requirepass`.
+`JWT_SECRET` must match in every service. Only `NEXT_PUBLIC_*` values reach the browser. `REDIS_URL` is required for `api` and `auth`: the process does not start without it. `RABBITMQ_URL` is required for `worker`, which dies on start, while `api` and `auth` read it on a publish, so an unreachable broker leaves a log line instead of a failed request. In `.env.prod.example` the `REDIS_PASSWORD` next to `REDIS_URL` feeds `--requirepass`.
 
-## Документация и заметки
+## Documentation and notes
 
-- [`docs/adr/`](./adr/README.md) — архитектурные решения, одно решение на файл, на английском.
-- [`docs/changelog/`](./changelog/) — журнал изменений по датам, Conventional Commits.
-- [`docs/specs/`](./specs/) — спеки фич: контракт, обоснование и лог проверки.
-- [`docs/scope/`](./scope/index.md) — живой скоуп по воркспейсам и статусы фич.
-- Зеркало заметок: `~/Documents/Obsidian Vault/Astrum/` (`Change Logs/`, `decisions/`, `notes/`), связи через `[[WikiLinks]]`.
+- [`docs/adr/`](./adr/README.md): architecture decisions, one decision per file, in English.
+- [`docs/changelog/`](./changelog/): the change log by date, following Conventional Commits.
+- [`docs/specs/`](./specs/): feature specs with the contract, the reasoning and the verification log.
+- [`docs/scope/`](./scope/index.md): the living scope per workspace and the feature statuses.
+- The notes mirror lives in `~/Documents/Obsidian Vault/Astrum/` (`Change Logs/`, `decisions/`, `notes/`), linked through `[[WikiLinks]]`.
 
-## Чеклист готовности к MVP
+## MVP readiness checklist
 
-Легенда: `[x]` работает и проверено вручную · `[ ]` не сделано · 🔥 блокер демо.
+Legend: `[x]` works and was checked by hand, `[ ]` not done, 🔥 a demo blocker.
 
-### ✅ Сделано
+### Done
 
-**Инфраструктура и качество**
+**Infrastructure and quality**
 
-- [x] Монорепо: pnpm 12 + Turborepo 2, четыре приложения (витрина, шлюз, auth, воркер) и общий пакет БД
-- [x] Postgres 16 в Docker, весь стек в Docker Compose: реплики api и customer за Caddy (ADR-0003), Redis для сессий, RabbitMQ и воркер для писем
-- [x] Husky-хуки `commit-msg` / `pre-commit` / `pre-push`, commitlint, quality gates
-- [x] ADR + журнал изменений, Swagger у auth-сервиса
-- [x] Unit-тесты: подпись JWT, JWT-guard, errorHandler, контроллер отзывов, модуль заказа, воркер писем, правила DTO
+- [x] Monorepo: pnpm 12 and Turborepo 2, four applications (storefront, gateway, auth, worker) and one shared database package
+- [x] Postgres 16 in Docker, the whole stack in Docker Compose: api and customer replicas behind Caddy (ADR-0003), Redis for sessions, RabbitMQ and a worker for letters
+- [x] Husky hooks `commit-msg` / `pre-commit` / `pre-push`, commitlint, quality gates
+- [x] ADRs and a change log, Swagger on the auth service
+- [x] Unit tests: JWT signing, the JWT guard, the error handler, the reviews controller, the order module, the mail worker, the DTO rules
 
-**Аутентификация и профиль**
+**Authentication and profile**
 
-- [x] Регистрация и вход, argon2, JWT (1 день) в HttpOnly-cookie `__auth` плюс запись `session:<sid>` в Redis
-- [x] Проверка токена и сессии в Redis на шлюзе + серверный guard маршрутов в Next (`proxy.ts`)
-- [x] Подтверждение почты: статус `PENDING`, одноразовая ссылка на 24 часа, письмо через RabbitMQ и `apps/worker`, лимиты повторной отправки, смена адреса возвращает в `PENDING`
-- [x] Профиль: редактирование, смена пароля, удаление аккаунта, выход
+- [x] Registration and sign in, argon2, a JWT (1 day) in the `__auth` HttpOnly cookie plus a `session:<sid>` record in Redis
+- [x] Token and session checks in Redis at the gateway plus a server side route guard in Next (`proxy.ts`)
+- [x] Email confirmation: the `PENDING` status, a one time 24 hour link, the letter through RabbitMQ and `apps/worker`, resend limits, and an address change that returns the account to `PENDING`
+- [x] Profile: editing, password change, account deletion, signing out
 
-**Каталог**
+**Catalogue**
 
-- [x] 4745 товаров из xlsx, 10 категорий, карточка товара, рекомендации
-- [x] Курсорная пагинация и поиск внутри категории
-- [x] Вишлист, счётчики просмотров и продаж, скелетоны загрузки
+- [x] 4745 products from xlsx, 10 categories, the product page, recommendations
+- [x] Cursor pagination and search inside a category
+- [x] Wishlist, view and sale counters, loading skeletons
 
-**Корзина**
+**Cart**
 
-- [x] Добавление, изменение количества, удаление, выборочный чекаут
-- [x] Контроль остатка товара, индикатор «в корзине» на карточке
+- [x] Adding, changing the quantity, removing, checkout of selected lines
+- [x] A stock check and an in the cart indicator on the product card
 
-**Заказы (каркас)**
+**Orders (the skeleton)**
 
-- [x] Схема БД: `Order`, `OrderItem`, `ShippingMethod`, статусы заказа / позиции / оплаты
-- [x] API: создание, список и карточка заказа; UI чекаута, список и детальная страница
-- [x] Серверная цена и остатки: строки несут только `productId` и `quantity`, цена и имя берутся из `Product`, остаток списывается в транзакции, отказы приходят кодами `OUT_OF_STOCK` / `CART_MISMATCH` / `MIXED_CURRENCY` / `UNKNOWN_SHIPPING_METHOD`
-- [x] Деньги заказа — `numeric(10,2)` с `currency`, в JSON уходят числами; заказ читает только владелец (`404` на чужой)
-- [x] Тесты `OrderService`: подмена цены в теле, 20 параллельных заказов на склад 5, лимиты строк, чужая карточка
-- [x] Отмена заказа: `PATCH /api/orders/:orderId/status` возвращает остаток, строки в `CANCELLED`, повторная отмена ничего не пишет
-- [x] API отзывов: проверка покупки по `DELIVERED`, уникальность на позицию, модерация
+- [x] Database schema: `Order`, `OrderItem`, `ShippingMethod`, and the order, line and payment statuses
+- [x] API: create, list and read one order; the checkout UI, the list and the detail page
+- [x] Server side price and stock: lines carry only `productId` and `quantity`, the price and the name come from `Product`, the stock is taken in a transaction, and refusals come as `OUT_OF_STOCK` / `CART_MISMATCH` / `MIXED_CURRENCY` / `UNKNOWN_SHIPPING_METHOD`
+- [x] Order money is `numeric(10,2)` with `currency` and travels as numbers in JSON; only the owner reads an order (`404` for a stranger)
+- [x] `OrderService` tests: a price swapped in the body, 20 parallel orders against a stock of 5, line limits, a stranger order
+- [x] Cancelling an order: `PATCH /api/orders/:orderId/status` returns the stock, moves the lines to `CANCELLED`, and a second cancel writes nothing
+- [x] Reviews API: a purchase check through `DELIVERED`, one review per line, moderation
 
-**UI/UX**
+**UI and UX**
 
-- [x] 25 компонентов shadcn/Radix, адаптив, тёмная и светлая тема (next-themes), тосты, progress bar
+- [x] 25 shadcn and Radix components, a responsive layout, dark and light themes (next-themes), toasts, a progress bar
 
-### 🔥 Блокеры: заказ не проходит end-to-end
+### 🔥 Blockers: the order does not pass end to end
 
-- [ ] **Методы доставки**: таблица `ShippingMethod` пуста в чистой БД, а ID захардкожены в форме (`CheckoutForm`) → неизвестный id даёт `409 UNKNOWN_SHIPPING_METHOD`. Нужны сид, `GET /shipping-methods`, подгрузка в форму
-- [x] **Серверный пересчёт заказа**: `POST /api/orders` принимает только `productId` и `quantity`, цена и состав собираются из `Product` в транзакции, видимость и публикация проверяются. Доставка в `totalPrice` пока не входит — это отдельный пункт ниже
-- [x] **Остатки**: `Product.quantity` списывается условным `updateMany` внутри той же транзакции, при нехватке весь заказ откатывается с `OUT_OF_STOCK` и свежим `available`; `isOutOfStock` выставляется на нуле. Возврат остатка при отмене остаётся за статусами
-- [x] **Корзина после заказа**: заказанные строки удаляются или уменьшаются в той же транзакции, что создаёт заказ, невыбранные остаются; повторная отправка формы не создаёт второй заказ благодаря `Idempotency-Key`
-- [ ] **Доступ к заказу**: владелец проверяется, чужой id даёт `404`. `getOrdersByUserId` по-прежнему не отдаёт позиции и способ доставки — решить вместе с экраном списка
-- [ ] **Доставка в сумме**: `ShippingMethod.price` не прибавляется к `totalPrice`, форма показывает свою сумму с захардкоженной ценой доставки
+- [ ] **Delivery methods**: the `ShippingMethod` table is empty in a clean database while the ids are hardcoded in the form (`CheckoutForm`), so an unknown id answers `409 UNKNOWN_SHIPPING_METHOD`. It needs a seed, a `GET /shipping-methods` route and a form that loads them
+- [x] **Server side recalculation of an order**: `POST /api/orders` takes only `productId` and `quantity`, the price and the contents come from `Product` in a transaction, and visibility and publication are checked. Delivery is not part of `totalPrice` yet, which is a separate item below
+- [x] **Stock**: `Product.quantity` is taken with a conditional `updateMany` inside the same transaction, a shortage rolls the whole order back with `OUT_OF_STOCK` and a fresh `available`, and `isOutOfStock` is set at zero. Returning the stock on cancel stays with the status work
+- [x] **The cart after an order**: the ordered lines are removed or decreased in the same transaction that creates the order, the unselected ones stay, and a repeated submit does not create a second order thanks to `Idempotency-Key`
+- [ ] **Order access**: the owner is checked and a stranger id answers `404`. `getOrdersByUserId` still does not return the lines and the delivery method, which should be decided together with the list screen
+- [ ] **Delivery in the total**: `ShippingMethod.price` is not added to `totalPrice`, and the form shows its own sum with a hardcoded delivery price
 
-### Ядро MVP
+### The MVP core
 
-- [x] **Смена статуса заказа**: `PATCH /api/orders/:orderId/status` работает, отмена возвращает остаток и переводит строки в `CANCELLED`; `PATCH /order-items/:id/status` по-прежнему отсутствует
-- [ ] **Панель продавца**: приложения `@astrum/business` в репозитории нет. Нужны список заказов, смена статусов, модерация отзывов, создание товара
-- [ ] **Выдача покупателю**: самовывоза нет как модели — нужны пункты выдачи, статусы `READY_FOR_PICKUP` / `PICKED_UP`, код получения; либо явное подтверждение получения при доставке
-- [ ] **Оплата**: сейчас только enum и строка `paymentDetails`, `paymentStatus` всегда `PENDING`. Нужен тестовый провайдер с вебхуком или честный сценарий «оплата при получении»
-- [ ] **Уведомления**: письмо подтверждения уже отправляется через брокер и воркер, а писем о заказе и «готов к выдаче» нет
+- [x] **Changing the order status**: `PATCH /api/orders/:orderId/status` works, a cancel returns the stock and moves the lines to `CANCELLED`; `PATCH /order-items/:id/status` is still missing
+- [ ] **Seller panel**: there is no `@astrum/business` application in the repository. It needs an order list, status changes, review moderation and product creation
+- [ ] **Fulfilment**: pickup does not exist as a model. It needs pickup points, the `READY_FOR_PICKUP` / `PICKED_UP` statuses and a receipt code, or an explicit receipt confirmation for delivery
+- [ ] **Payment**: only the enum and the `paymentDetails` string exist today, and `paymentStatus` is always `PENDING`. It needs a test provider with a webhook or an honest pay on delivery flow
+- [ ] **Notifications**: the confirmation letter already goes through the broker and the worker, while order letters and a ready for pickup letter do not exist
 
-### Не примитивно: чем проект отличается от учебного
+### Not trivial: what makes the project more than a tutorial
 
-- [ ] Отзывы: UI живёт на моках с локальным состоянием — подключить к API, форма доступна после `DELIVERED`
-- [ ] Сохранённые адреса, слоты доставки, валидация даты и адреса на сервере
-- [ ] Скидки и валюта: `discount` не применяется, валюта захардкожена USD на всех экранах заказа
-- [ ] Тесты сценария: Playwright «каталог → корзина → заказ → выдача» (unit на `OrderService` уже есть: подмена цены, 20 параллельных заказов, лимиты строк, чужой заказ)
-- [ ] CI (GitHub Actions), демо-сид, скриншоты или GIF в README, рабочий `pnpm prisma:seed`
+- [ ] Reviews: the UI runs on mocks with local state, so it needs the API, with the form open after `DELIVERED`
+- [ ] Saved addresses, delivery slots, date and address validation on the server
+- [ ] Discounts and currency: `discount` is not applied, and the currency is hardcoded to USD on every order screen
+- [ ] Scenario tests: Playwright for catalogue to cart to order to fulfilment (the `OrderService` unit tests already cover a swapped price, 20 parallel orders, line limits and a stranger order)
+- [ ] CI (GitHub Actions), a demo seed, screenshots or a GIF in the README, a working `pnpm prisma:seed`
 
-### 🏁 Definition of Done для MVP
+### 🏁 Definition of Done for the MVP
 
-1. Покупатель проходит каталог → корзина → чекаут → заказ без ошибок, сумма на экране совпадает с БД.
-2. Остаток уменьшается, корзина очищается, повторный клик не создаёт второй заказ.
-3. Продавец видит заказ в панели и ведёт его по статусам до выдачи.
-4. Покупатель видит актуальный статус, получает товар и оставляет отзыв, который после модерации появляется на странице товара.
-5. `pnpm quality-gate` зелёный, e2e-сценарий проходит в CI.
+1. A customer walks the catalogue, the cart, checkout and the order without errors, and the sum on screen matches the database.
+2. The stock goes down, the cart is cleared, and a second click does not create a second order.
+3. A seller sees the order in the panel and leads it through the statuses up to fulfilment.
+4. The customer sees the current status, receives the product and leaves a review, which appears on the product page after moderation.
+5. `pnpm quality-gate` is green and the end to end scenario passes in CI.
 
-**Оценка:** блокеры — ~2 дня, ядро MVP — ~5–7 дней, полировка — ~2 дня.
+**Estimate:** blockers around 2 days, the MVP core around 5 to 7 days, polish around 2 days.

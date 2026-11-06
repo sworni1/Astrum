@@ -2,6 +2,7 @@
 
 import { AlertCircle, Download, Eye, ImageIcon, Maximize2 } from "lucide-react";
 import Image, { type ImageProps } from "next/image";
+import { useTranslations } from "next-intl";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "./ui/skeleton";
@@ -84,10 +85,10 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
   priority = false,
   ...props
 }) {
+  const translate = useTranslations("common");
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [imageSrc, setImageSrc] = useState(src);
-  const [isHovered, setIsHovered] = useState(false);
   const fallbackIndexRef = useRef(0);
   const triedSrcsRef = useRef(new Set<string>());
   const imageRef = useRef<HTMLDivElement>(null);
@@ -215,7 +216,7 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 p-4">
           <AlertCircle className="h-8 w-8 text-red-500 mb-2" />
           <p className="text-sm text-red-600 dark:text-red-400 text-center mb-2">
-            Failed to load image
+            {translate("imageLoadFailed")}
           </p>
           <p className="text-xs text-gray-500 text-center">{alt}</p>
         </div>
@@ -224,13 +225,14 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 p-4">
           <AlertCircle className="h-8 w-8 text-red-500 mb-2" />
           <p className="text-sm text-red-600 dark:text-red-400 text-center mb-3">
-            Failed to load image
+            {translate("imageLoadFailed")}
           </p>
           <button
+            type="button"
             onClick={handleRetry}
             className="px-3 py-1 text-xs bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
           >
-            Retry
+            {translate("retry")}
           </button>
         </div>
       ),
@@ -241,37 +243,48 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
 
   const renderOverlay = () => {
     if (!showOverlay && !overlayActions) return null;
-    if (!isHovered && !showOverlay) return null;
 
     return (
       <div
         className={cn(
-          "absolute inset-0 bg-black/40 backdrop-blur-[1px] transition-all duration-300 flex items-center justify-center",
-          isHovered || showOverlay ? "opacity-100" : "opacity-0",
+          "pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[1px] transition-all duration-300",
+          showOverlay
+            ? "opacity-100"
+            : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
         )}
       >
         {overlayActions && (
-          <div className="flex gap-2">
+          <div
+            className={cn(
+              "flex gap-2",
+              showOverlay
+                ? "pointer-events-auto"
+                : "pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto",
+            )}
+          >
             {onImageClick && (
               <button
+                type="button"
                 onClick={onImageClick}
                 className="p-2 bg-white/90 hover:bg-white rounded-full transition-all duration-200 transform hover:scale-110 shadow-lg"
-                title="View Image"
+                title={translate("viewImage")}
               >
                 <Eye className="h-4 w-4 text-gray-700" />
               </button>
             )}
             <button
+              type="button"
               onClick={handleFullscreen}
               className="p-2 bg-white/90 hover:bg-white rounded-full transition-all duration-200 transform hover:scale-110 shadow-lg"
-              title="Fullscreen"
+              title={translate("fullscreen")}
             >
               <Maximize2 className="h-4 w-4 text-gray-700" />
             </button>
             <button
+              type="button"
               onClick={handleDownload}
               className="p-2 bg-white/90 hover:bg-white rounded-full transition-all duration-200 transform hover:scale-110 shadow-lg"
-              title="Download"
+              title={translate("download")}
             >
               <Download className="h-4 w-4 text-gray-700" />
             </button>
@@ -280,6 +293,29 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
       </div>
     );
   };
+
+  const imageElement = (
+    <Image
+      {...props}
+      src={imageSrc}
+      alt={alt}
+      className={cn(
+        "transition-all duration-500 object-cover",
+        isLoading ? "opacity-0 scale-105" : "opacity-100 scale-100",
+        enableHoverEffects && "group-hover:scale-105",
+        roundedClasses[rounded],
+        className,
+      )}
+      placeholder={placeholder}
+      blurDataURL={blurDataURL}
+      sizes={sizes}
+      quality={quality}
+      priority={priority}
+      onLoad={handleLoad}
+      onError={handleError}
+      unoptimized={typeof imageSrc === "string" && imageSrc.startsWith("http")}
+    />
+  );
 
   return (
     <div
@@ -291,12 +327,8 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
         shadowClasses[shadow],
         enableHoverEffects &&
           "transform transition-all duration-300 hover:shadow-xl hover:scale-[1.02]",
-        onImageClick && "cursor-pointer",
         containerClassName,
       )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onClick={onImageClick}
     >
       {/* Loading State */}
       {renderLoadingState()}
@@ -305,30 +337,19 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
       {renderErrorState()}
 
       {/* Main Image */}
-      {!hasError && (
-        <Image
-          {...props}
-          src={imageSrc}
-          alt={alt}
-          className={cn(
-            "transition-all duration-500 object-cover",
-            isLoading ? "opacity-0 scale-105" : "opacity-100 scale-100",
-            enableHoverEffects && "group-hover:scale-105",
-            roundedClasses[rounded],
-            className,
-          )}
-          placeholder={placeholder}
-          blurDataURL={blurDataURL}
-          sizes={sizes}
-          quality={quality}
-          priority={priority}
-          onLoad={handleLoad}
-          onError={handleError}
-          unoptimized={
-            typeof imageSrc === "string" && imageSrc.startsWith("http")
-          }
-        />
-      )}
+      {!hasError &&
+        (onImageClick ? (
+          <button
+            type="button"
+            className="block w-full border-0 bg-transparent p-0 text-left"
+            aria-label={alt || translate("viewImage")}
+            onClick={onImageClick}
+          >
+            {imageElement}
+          </button>
+        ) : (
+          imageElement
+        ))}
 
       {/* Overlay */}
       {renderOverlay()}
@@ -339,7 +360,7 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
           className={cn(
             "absolute inset-0 ring-2 ring-gray-500/0 transition-all duration-300 pointer-events-none",
             roundedClasses[rounded],
-            isHovered && "ring-gray-500/30",
+            "group-hover:ring-gray-500/30",
           )}
         />
       )}

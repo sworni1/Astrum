@@ -15,6 +15,7 @@ export default function ProductOverviewSkeleton() {
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="mx-auto w-full h-full lg:sticky lg:top-24 lg:self-start">
           <Carousel
+            aria-hidden="true"
             opts={{
               align: "start",
               loop: true,
@@ -30,9 +31,12 @@ export default function ProductOverviewSkeleton() {
               </CarouselItem>
             </CarouselContent>
             <div className="absolute inset-x-0 bottom-4 flex justify-center gap-2">
-              {[...Array(3)].map((_, index) => (
+              {Array.from(
+                { length: 3 },
+                (_, index) => `carousel-indicator-${index + 1}`,
+              ).map((id) => (
                 <span
-                  key={index}
+                  key={id}
                   className="block h-2 w-2 rounded-full bg-white/50"
                 />
               ))}
@@ -47,8 +51,11 @@ export default function ProductOverviewSkeleton() {
           <div className="flex flex-wrap items-center gap-4">
             <Skeleton className="h-8 w-24" />
             <div className="flex items-center gap-1">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-5 w-5 rounded-sm" />
+              {Array.from(
+                { length: 5 },
+                (_, index) => `rating-star-${index + 1}`,
+              ).map((id) => (
+                <Skeleton key={id} className="h-5 w-5 rounded-sm" />
               ))}
               <Skeleton className="ml-2 h-4 w-16" />
             </div>
@@ -74,8 +81,11 @@ export default function ProductOverviewSkeleton() {
               </AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-2 py-2">
-                  {[...Array(4)].map((_, i) => (
-                    <Skeleton key={i} className="h-4 w-full" />
+                  {Array.from(
+                    { length: 4 },
+                    (_, index) => `feature-${index + 1}`,
+                  ).map((id) => (
+                    <Skeleton key={id} className="h-4 w-full" />
                   ))}
                 </div>
               </AccordionContent>
@@ -87,8 +97,11 @@ export default function ProductOverviewSkeleton() {
               </AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-3 py-2">
-                  {[...Array(4)].map((_, i) => (
-                    <div key={i} className="grid grid-cols-2 gap-4">
+                  {Array.from(
+                    { length: 4 },
+                    (_, index) => `specification-${index + 1}`,
+                  ).map((id) => (
+                    <div key={id} className="grid grid-cols-2 gap-4">
                       <Skeleton className="h-4 w-full" />
                       <Skeleton className="h-4 w-full" />
                     </div>
@@ -103,8 +116,11 @@ export default function ProductOverviewSkeleton() {
               </AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-2 py-2">
-                  {[...Array(3)].map((_, i) => (
-                    <Skeleton key={i} className="h-4 w-full" />
+                  {Array.from(
+                    { length: 3 },
+                    (_, index) => `shipping-${index + 1}`,
+                  ).map((id) => (
+                    <Skeleton key={id} className="h-4 w-full" />
                   ))}
                 </div>
               </AccordionContent>

@@ -198,6 +198,22 @@ describe("AuthService", () => {
       expect(events.requestAccountConfirmation).toHaveBeenCalledWith({
         userId: "user-123",
         email: "new@astrum.test",
+        locale: "en",
+      });
+    });
+
+    it("AC-9: carries the language of the page that registered", async () => {
+      prisma.user.create.mockResolvedValue({
+        id: "user-123",
+        email: "new@astrum.test",
+      });
+
+      await service.register({ ...dto }, undefined, "ru");
+
+      expect(events.requestAccountConfirmation).toHaveBeenCalledWith({
+        userId: "user-123",
+        email: "new@astrum.test",
+        locale: "ru",
       });
     });
 
@@ -313,6 +329,7 @@ describe("AuthService", () => {
       expect(events.requestAccountConfirmation).toHaveBeenCalledWith({
         userId: "user-123",
         email: "a@b.c",
+        locale: "en",
       });
     });
 

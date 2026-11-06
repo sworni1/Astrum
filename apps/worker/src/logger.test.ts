@@ -4,7 +4,10 @@ import { describeError } from "./logger";
 
 test("AC-4: an AggregateError reports the message hidden one level down", () => {
   const refused = new AggregateError(
-    [new Error("connect ECONNREFUSED ::1:5672"), new Error("connect ECONNREFUSED 127.0.0.1:5672")],
+    [
+      new Error("connect ECONNREFUSED ::1:5672"),
+      new Error("connect ECONNREFUSED 127.0.0.1:5672"),
+    ],
     "",
   );
 

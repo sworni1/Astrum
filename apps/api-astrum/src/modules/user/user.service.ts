@@ -4,6 +4,7 @@ import { Prisma, type User } from "../../../generated/prisma/client";
 import { UserStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
+import { DEFAULT_LETTER_LOCALE, type LetterLocale } from "../../events/locale";
 import { publishConfirmationRequested } from "../../events/publisher";
 import { revokeSession } from "../../session/revokeSession";
 import { getSessionStore, type SessionStore } from "../../session/sessionStore";
@@ -34,7 +35,11 @@ export class UserService {
     return user;
   }
 
-  async updateUser(userId: User["id"], dto: UpdateUserDto) {
+  async updateUser(
+    userId: User["id"],
+    dto: UpdateUserDto,
+    locale: LetterLocale = DEFAULT_LETTER_LOCALE,
+  ) {
     const user = await prisma.user.findUnique({
       where: {
         id: userId,
@@ -106,6 +111,7 @@ export class UserService {
       await publishConfirmationRequested({
         userId: updatedUser.id,
         email: updatedUser.email,
+        locale,
       });
     }
 
@@ -158,7 +164,7 @@ export class UserService {
           id: userId,
         },
       });
-    } catch (error) {
+    } catch {
       throw new Error(`User not found`);
     }
   }

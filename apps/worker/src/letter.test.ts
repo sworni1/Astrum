@@ -1,16 +1,35 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { CONFIRMATION_SUBJECT, buildConfirmationLetter } from "./letter";
+import { buildConfirmationLetter, resolveLetterLocale } from "./letter";
+import { enCopy } from "./letters/en";
+import { ruCopy } from "./letters/ru";
 
 const LINK = "https://shop.example/api-gateway/auth/confirm?token=abc";
 
-test("AC-6: the letter carries a Russian subject and both parts", () => {
+test("AC-9: a letter without a language is English and carries both parts", () => {
   const letter = buildConfirmationLetter(LINK);
 
-  assert.equal(letter.subject, CONFIRMATION_SUBJECT);
-  assert.match(letter.subject, /Подтвердите/);
+  assert.equal(letter.subject, enCopy.subject);
+  assert.match(letter.subject, /Confirm/);
   assert.ok(letter.text.length > 0);
   assert.ok(letter.html.startsWith("<div"));
+});
+
+test("AC-9: the Russian language keeps the Russian subject", () => {
+  const letter = buildConfirmationLetter(LINK, "ru");
+
+  assert.equal(letter.subject, ruCopy.subject);
+  assert.ok(letter.text.includes(ruCopy.intro));
+});
+
+test("AC-10: an unknown language falls back to English", () => {
+  assert.equal(resolveLetterLocale("de"), "en");
+  assert.equal(resolveLetterLocale(undefined), "en");
+  assert.equal(resolveLetterLocale("ru"), "ru");
+
+  const letter = buildConfirmationLetter(LINK, resolveLetterLocale("de"));
+
+  assert.equal(letter.subject, enCopy.subject);
 });
 
 test("AC-6: exactly one link, the same in both parts", () => {

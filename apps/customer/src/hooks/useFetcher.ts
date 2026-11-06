@@ -1,14 +1,31 @@
 "use client";
 
 import axios, { type AxiosInstance } from "axios";
-import { useCallback, useMemo, useState } from "react";
+import { createTranslator, useTranslations } from "next-intl";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import en from "../../messages/en.json";
 import { requestConfirmationForCurrentUser } from "../common/helpers/confirmEmail";
 import { deleteSession } from "../common/helpers/session";
 import { showToast } from "../common/helpers/showToast";
+import { acceptLanguage } from "../i18n/config";
 
 const authServiceUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL;
 
 const SIGN_IN_PATH = "/auth/signin";
+
+type ErrorsTranslator = ReturnType<typeof useTranslations<"errors">>;
+
+/** Messages for a toast raised before any screen has mounted. */
+const fallbackTranslator = createTranslator({
+  locale: "en",
+  messages: en,
+  namespace: "errors",
+}) as ErrorsTranslator;
+
+let activeTranslator: ErrorsTranslator | undefined;
+
+const translateErrors = (): ErrorsTranslator =>
+  activeTranslator ?? fallbackTranslator;
 
 /** The session is really gone: the cookie cannot be used any more. */
 const SESSION_GONE_CODES = [
@@ -46,7 +63,7 @@ const refusalCode = (error: unknown): string | undefined => {
   return typeof code === "string" ? code : undefined;
 };
 
-const endSessionHere = async (): Promise<void> => {
+const endSessionHere = async (t: ErrorsTranslator): Promise<void> => {
   if (sessionEnded) {
     return;
   }
@@ -56,8 +73,8 @@ const endSessionHere = async (): Promise<void> => {
   await deleteSession();
 
   showToast({
-    title: "Сессия завершена, войдите снова",
-    description: "Текущая сессия больше не действует.",
+    title: t("sessionEndedTitle"),
+    description: t("sessionEndedText"),
     type: "error",
   });
 
@@ -66,7 +83,10 @@ const endSessionHere = async (): Promise<void> => {
   window.location.href = SIGN_IN_PATH;
 };
 
-const handleRefusal = async (error: unknown): Promise<void> => {
+const handleRefusal = async (
+  error: unknown,
+  t: ErrorsTranslator,
+): Promise<void> => {
   const code = refusalCode(error);
 
   if (!code) {
@@ -77,8 +97,8 @@ const handleRefusal = async (error: unknown): Promise<void> => {
     if (!storeWarningShown) {
       storeWarningShown = true;
       showToast({
-        title: "Сервис сессий недоступен",
-        description: "Сессия цела, повторите запрос через минуту.",
+        title: t("sessionStoreTitle"),
+        description: t("sessionStoreText"),
         type: "warning",
       });
     }
@@ -90,12 +110,11 @@ const handleRefusal = async (error: unknown): Promise<void> => {
     if (!confirmationWarningShown) {
       confirmationWarningShown = true;
       showToast({
-        title: "Подтвердите почту",
-        description:
-          "Заказы и отзывы откроются после клика по ссылке из письма.",
+        title: t("emailNotConfirmedTitle"),
+        description: t("emailNotConfirmedText"),
         type: "warning",
         action: {
-          label: "Отправить письмо",
+          label: t("resendAction"),
           onClick: () => {
             void requestConfirmationForCurrentUser();
           },
@@ -107,11 +126,13 @@ const handleRefusal = async (error: unknown): Promise<void> => {
   }
 
   if (SESSION_GONE_CODES.includes(code)) {
-    await endSessionHere();
+    await endSessionHere(t);
   }
 };
 
-const createAxiosInstance = (): AxiosInstance => {
+const createAxiosInstance = (
+  translator: () => ErrorsTranslator,
+): AxiosInstance => {
   const instance = axios.create({
     withCredentials: true,
     baseURL: authServiceUrl,
@@ -121,6 +142,11 @@ const createAxiosInstance = (): AxiosInstance => {
     },
   });
 
+  instance.interceptors.request.use((config) => {
+    config.headers.set("Accept-Language", acceptLanguage()["Accept-Language"]);
+    return config;
+  });
+
   instance.interceptors.response.use(
     (response) => {
       storeWarningShown = false;
@@ -128,7 +154,7 @@ const createAxiosInstance = (): AxiosInstance => {
       return response;
     },
     async (error: unknown) => {
-      await handleRefusal(error);
+      await handleRefusal(error, translator());
       return await Promise.reject(error);
     },
   );
@@ -137,7 +163,15 @@ const createAxiosInstance = (): AxiosInstance => {
 };
 
 export const useFetcher = () => {
-  const [fetcher] = useState<AxiosInstance>(createAxiosInstance);
+  const t = useTranslations("errors");
+
+  useEffect(() => {
+    activeTranslator = t;
+  }, [t]);
+
+  const [fetcher] = useState<AxiosInstance>(() =>
+    createAxiosInstance(translateErrors),
+  );
   const getData = useCallback(
     async (url: string) => {
       try {

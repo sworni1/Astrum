@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +17,8 @@ import { useUser } from "../../../../../hooks";
 
 const DeleteAccountForm = () => {
   const { deleteAccountTrigger } = useUser();
+  const t = useTranslations("profile");
+  const common = useTranslations("common");
 
   const handleDeleteAccount = () => {
     deleteAccountTrigger();
@@ -23,29 +26,28 @@ const DeleteAccountForm = () => {
 
   return (
     <div className="mt-8 pt-4">
-      <h2 className="text-xl font-medium ">Delete account</h2>
+      <h2 className="text-xl font-medium ">{t("deleteTitle")}</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Click the button below to delete your account.
+        {t("deleteSubtitle")}
       </p>
 
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button type="button" variant="destructive" className="mt-4">
-            Delete account
+            {t("deleteButton")}
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle>{t("sureTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete your
-              account and remove your data from our servers.
+              {t("deleteWarning")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{common("cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={() => handleDeleteAccount()}>
-              Confirm
+              {common("confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

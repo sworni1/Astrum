@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { handleErrors } from "../../common/helpers/errorHandler";
+import type { AuthenticatedUserRequest } from "../../common/types/jwt.payload";
 import { CartService } from "./cart.service";
 
 const cartService = new CartService();
@@ -8,7 +9,7 @@ const cartService = new CartService();
 export class CartController {
   async getCart(req: Request, res: Response) {
     try {
-      const userId = (req as any).userId;
+      const { userId } = req as AuthenticatedUserRequest;
 
       const cart = await cartService.getCart(userId);
 
@@ -20,7 +21,7 @@ export class CartController {
 
   async addProductToCart(req: Request, res: Response) {
     try {
-      const userId = (req as any).userId;
+      const { userId } = req as AuthenticatedUserRequest;
 
       const cartItem = await cartService.addProductToCart(userId, req.body);
 
@@ -32,8 +33,8 @@ export class CartController {
 
   async changeProductCartQuantity(req: Request, res: Response) {
     try {
-      const userId = (req as any).userId;
-      const productId = req.params["productId"] as string;
+      const { userId } = req as AuthenticatedUserRequest;
+      const productId = req.params.productId as string;
 
       const cartItem = await cartService.changeProductCartQuantity(
         userId,
@@ -49,8 +50,8 @@ export class CartController {
 
   async deleteProductFromCart(req: Request, res: Response) {
     try {
-      const userId = (req as any).userId;
-      const productId = req.params["productId"] as string;
+      const { userId } = req as AuthenticatedUserRequest;
+      const productId = req.params.productId as string;
 
       const deletedProduct = await cartService.deleteProductFromCart(
         userId,

@@ -1,4 +1,5 @@
 # Verify: Session store in Redis · spec 0004 · updated 2026-11-04
+
 _Steps derived from spec 0004 acceptance criteria. `/check verify` runs these; `/test` locks the durable ones._
 
 Steps marked `[x]` were exercised against the dev stack on 2026-11-04 during the build, with the evidence noted beside them. Steps marked `[ ]` were not run.

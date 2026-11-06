@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { ProductCartProps } from "../../../../../common/types/product.types";
 import { Card, CardContent } from "../../../../../components/ui/card";
 import { ToggleWishlistItemButton } from "../../../../general/ProductCard/actions";
@@ -20,9 +21,11 @@ const CartCard = ({
   isSelected = false,
   onSelectionChange,
 }: ProductCartProps) => {
+  const t = useTranslations("cart");
+
   return (
     <Card
-      className={`overflow-hidden p-0 transition-all ${isSelected ? "border-1 border-primary" : ""}`}
+      className={`overflow-hidden p-0 transition-all ${isSelected ? "border border-primary" : ""}`}
     >
       <CardContent className="p-0">
         <div className="flex h-full flex-col md:flex-row">
@@ -50,7 +53,7 @@ const CartCard = ({
                   {"Grey"} • {15}
                 </p>
                 <p className="text-sm font-medium mt-1">
-                  ${price.toFixed(2)} each
+                  {t("eachPrice", { price: price.toFixed(2) })}
                 </p>
               </div>
 

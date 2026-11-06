@@ -1,4 +1,4 @@
-import { connect, type ChannelModel, type ConfirmChannel } from "amqplib";
+import { type ChannelModel, type ConfirmChannel, connect } from "amqplib";
 import { logger } from "../common/helpers/logger";
 import { describeError } from "./describe-error";
 import {
@@ -6,6 +6,7 @@ import {
   EVENTS_EXCHANGE,
   PUBLISH_TIMEOUT_MS,
 } from "./events.constants";
+import { DEFAULT_LETTER_LOCALE, type LetterLocale } from "./locale";
 
 let connection: ChannelModel | undefined;
 let channel: ConfirmChannel | undefined;
@@ -23,7 +24,9 @@ const withTimeout = async <T>(
       new Promise<never>((_resolve, reject) => {
         timer = setTimeout(
           () =>
-            reject(new Error(`the broker did not answer within ${timeoutMs} ms`)),
+            reject(
+              new Error(`the broker did not answer within ${timeoutMs} ms`),
+            ),
           timeoutMs,
         );
       }),
@@ -46,7 +49,10 @@ const open = async (): Promise<ConfirmChannel> => {
   const confirmed = await opened.createConfirmChannel();
 
   opened.on("error", (error: Error) => {
-    logger.error({ event: "rabbit.connection.error", reason: describeError(error) });
+    logger.error({
+      event: "rabbit.connection.error",
+      reason: describeError(error),
+    });
   });
 
   opened.on("close", () => {
@@ -108,9 +114,11 @@ const reset = async (): Promise<void> => {
 export const publishConfirmationRequested = async ({
   userId,
   email,
+  locale = DEFAULT_LETTER_LOCALE,
 }: {
   userId: string;
   email: string;
+  locale?: LetterLocale;
 }): Promise<void> => {
   try {
     await withTimeout(
@@ -125,6 +133,7 @@ export const publishConfirmationRequested = async ({
               userId,
               email,
               requestedAt: new Date().toISOString(),
+              locale,
             }),
           ),
           { persistent: true, contentType: "application/json" },

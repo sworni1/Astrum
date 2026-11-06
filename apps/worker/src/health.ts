@@ -21,7 +21,7 @@ export const createHealthServer = ({
   hasSmtp,
 }: HealthServerOptions): HealthServer => {
   const server: Server = createServer((req, res) => {
-    if (!req.url || !req.url.startsWith("/health")) {
+    if (!req.url?.startsWith("/health")) {
       res.writeHead(404, { "content-type": "application/json" });
       res.end(JSON.stringify({ status: "not_found" }));
       return;

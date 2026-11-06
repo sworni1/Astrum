@@ -1,6 +1,25 @@
 import { subYears } from "date-fns";
 import { describe, expect, it } from "vitest";
-import { MIN_AGE_YEARS, registerFormSchema } from "./auth.scheme";
+import en from "../../../messages/en.json";
+import ru from "../../../messages/ru.json";
+import { createRegisterFormSchema, MIN_AGE_YEARS } from "./auth.scheme";
+import type { ValidationTranslator } from "./translator";
+
+const translatorFor = (catalog: typeof en.validation) => {
+  const translate = (
+    key: keyof typeof catalog,
+    values?: Record<string, unknown>,
+  ) =>
+    Object.entries(values ?? {}).reduce(
+      (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+      catalog[key],
+    );
+
+  return translate as unknown as ValidationTranslator;
+};
+
+const enSchema = createRegisterFormSchema(translatorFor(en.validation));
+const ruSchema = createRegisterFormSchema(translatorFor(ru.validation));
 
 const validCredentials = {
   email: "vanyanikitin84@gmail.com",
@@ -9,11 +28,11 @@ const validCredentials = {
   gender: "Male" as const,
 };
 
-describe("registerFormSchema", () => {
-  it("принимает дату рождения ровно в минимальный возраст", () => {
+describe("createRegisterFormSchema", () => {
+  it("accepts a date of birth exactly at the minimum age", () => {
     const dateOfBirth = subYears(new Date(), MIN_AGE_YEARS);
 
-    const result = registerFormSchema.safeParse({
+    const result = enSchema.safeParse({
       ...validCredentials,
       dateOfBirth,
     });
@@ -21,10 +40,10 @@ describe("registerFormSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("отклоняет дату рождения младше минимального возраста", () => {
+  it("refuses a date of birth under the minimum age", () => {
     const dateOfBirth = subYears(new Date(), MIN_AGE_YEARS - 1);
 
-    const result = registerFormSchema.safeParse({
+    const result = enSchema.safeParse({
       ...validCredentials,
       dateOfBirth,
     });
@@ -36,10 +55,23 @@ describe("registerFormSchema", () => {
     );
   });
 
-  it("отклоняет будущую дату рождения", () => {
+  it("speaks the language it was built for", () => {
+    const dateOfBirth = subYears(new Date(), MIN_AGE_YEARS - 1);
+
+    const result = ruSchema.safeParse({
+      ...validCredentials,
+      dateOfBirth,
+    });
+
+    expect(result.error?.issues[0]?.message).toBe(
+      ru.validation.minAge.replace("{age}", String(MIN_AGE_YEARS)),
+    );
+  });
+
+  it("refuses a future date of birth", () => {
     const dateOfBirth = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    const result = registerFormSchema.safeParse({
+    const result = enSchema.safeParse({
       ...validCredentials,
       dateOfBirth,
     });
@@ -47,8 +79,8 @@ describe("registerFormSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("требует дату рождения и гендер", () => {
-    const result = registerFormSchema.safeParse({
+  it("requires a date of birth and a gender", () => {
+    const result = enSchema.safeParse({
       email: validCredentials.email,
       password: validCredentials.password,
     });

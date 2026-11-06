@@ -25,14 +25,17 @@ const readRequired = (
   return value;
 };
 
-const withoutTrailingSlash = (value: string): string => value.replace(/\/+$/, "");
+const withoutTrailingSlash = (value: string): string =>
+  value.replace(/\/+$/, "");
 
 /**
  * Configuration is validated before the process connects to anything, so a
  * missing variable is a boot failure with a readable reason instead of a
  * worker that silently never sends a letter.
  */
-export const loadConfig = (env: NodeJS.ProcessEnv = process.env): WorkerConfig => {
+export const loadConfig = (
+  env: NodeJS.ProcessEnv = process.env,
+): WorkerConfig => {
   const port = Number(env.WORKER_PORT ?? DEFAULT_WORKER_PORT);
 
   if (!Number.isInteger(port) || port <= 0) {

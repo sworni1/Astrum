@@ -46,6 +46,11 @@
       "unsafeParameterDecoratorsEnabled": true
     }
   },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
   "html": {
     "formatter": {
       "indentScriptAndStyle": false,
