@@ -1,33 +1,33 @@
 # Astrum
 
-E-commerce платформа в монорепо: витрина на Next.js, API-шлюз на Express, отдельный сервис аутентификации на NestJS и общая схема данных на Prisma + PostgreSQL. Всё разворачивается одним `docker compose` — каждый слой, кроме БД, работает в нескольких репликах за одним балансировщиком.
+An e-commerce platform in a monorepo: a Next.js storefront, an Express API gateway, a separate NestJS authentication service and one shared Prisma plus PostgreSQL data schema. Everything runs with a single `docker compose`, and every layer except the database runs in several replicas behind one balancer.
 
-> **Стадия: MVP в разработке.** Каталог, корзина, аккаунт, оформление заказа и подтверждение почты работают: цену, состав и остатки заказа решает сервер, повторная отправка не создаёт второй заказ. В работе остальная часть сквозного сценария: методы доставки из API, статусы и панель продавца, выдача и оплата.
+> **Stage: MVP in progress.** The catalogue, the cart, the account, checkout and email confirmation work: the server decides the price, the contents and the stock of an order, and a repeated submit does not create a second order. The rest of the end to end flow is still ahead: delivery methods from the API, order statuses and the seller panel, fulfilment and payment.
 
-## Что работает
+## What works
 
-- **Каталог** — 4,7 тыс. товаров (демо-данные), 10 категорий, карточка с характеристиками, рекомендации, курсорная пагинация, поиск внутри категории
-- **Аккаунт** — регистрация и вход (argon2), сессия в HttpOnly-cookie, защищённые маршруты на витрине и на API
-- **Подтверждение почты** — письмо со ссылкой на 24 часа уходит через брокер и воркер, экран «проверьте почту» и повторная отправка с лимитом; пока аккаунт `PENDING`, заказы, отзывы и правка профиля закрыты
-- **Профиль** — редактирование данных, смена пароля, удаление аккаунта
-- **Корзина и вишлист** — добавление, изменение количества с контролем остатка, удаление, выбор позиций для оформления
-- **Заказы** — сервер решает цену, состав и остатки: строки несут только `productId` и `quantity`, суммы считаются в `Decimal`, остаток списывается в транзакции, отказ приходит кодом (`OUT_OF_STOCK`, `CART_MISMATCH`); повторная отправка с тем же `Idempotency-Key` возвращает первый заказ, заказанные строки корзины уходят на сервере, карточка заказа доступна только владельцу. Отмена заказа работает, остальные переходы статусов и выдача ещё не реализованы
-- **Отзывы** — API с проверкой покупки (только после `DELIVERED`), уникальностью на позицию и модерацией; экран отзывов пока на моках
+- **Catalogue**: 4.7 thousand products (demo data), 10 categories, a product page with specifications, recommendations, cursor pagination and search inside a category
+- **Account**: registration and sign in (argon2), the session in an HttpOnly cookie, guarded routes on the storefront and on the API
+- **Email confirmation**: a letter with a 24 hour link goes through the broker and the worker, the storefront shows a check your mail screen and offers a resend with a rate limit; while the account is `PENDING`, orders, reviews and profile edits stay closed
+- **Profile**: editing the data, changing the password, deleting the account
+- **Cart and wishlist**: adding, changing the quantity with a stock check, removing, selecting the lines for checkout
+- **Orders**: the server decides the price, the contents and the stock; lines carry only `productId` and `quantity`, the sums are `Decimal`, the stock is taken in a transaction and a refusal comes as a code (`OUT_OF_STOCK`, `CART_MISMATCH`); a repeated submit with the same `Idempotency-Key` returns the first order, the ordered cart lines are cleared on the server, and the order page opens for its owner only. Cancelling an order works; the other status transitions and fulfilment are not built yet
+- **Reviews**: an API with a purchase check (only after `DELIVERED`), one review per order line and moderation; the review screen still runs on mock data
 
-## Архитектура
+## Architecture
 
-Один Caddy выполняет две роли: публичный вход и внутренний балансировщик перед шлюзом. Между слоями нет прямых обращений «по одному адресу» — каждый переход идёт через него, поэтому реплики API тоже распределяются. Сессии всех реплик сходятся в Redis, письма подтверждения — через RabbitMQ в отдельный воркер.
+One Caddy plays two roles: the public entry point and the internal balancer in front of the gateway. No layer calls another one directly at a single address, every hop goes through Caddy, so the API replicas are balanced too. The sessions of all replicas meet in Redis, and confirmation letters go through RabbitMQ into a separate worker.
 
 ```
-браузер
+browser
   │  HttpOnly cookie __auth
   ▼
-proxy (Caddy) · :80 / :443          публичный вход, TLS
+proxy (Caddy) · :80 / :443         public entry point, TLS
   ▼
 apps/customer ×2   Next.js 16 · :3000 (standalone)
   │  /api-gateway/*  →  proxy:3580
   ▼
-proxy (Caddy) · :3580               внутри сети, наружу не публикуется
+proxy (Caddy) · :3580              inside the network, never published
   ▼
 apps/api-astrum ×3   Express 5 · :3580 ─── /api/auth ───▶ apps/auth-astrum   NestJS 11 · :4580
   │            │                                                  │
@@ -45,108 +45,108 @@ apps/api-astrum ×3   Express 5 · :3580 ─── /api/auth ───▶ apps/a
                       packages/Astrum-db
 ```
 
-Реплики не держат состояния в процессе: сессия — это подписанный JWT в cookie плюс одна запись `session:<sid>` в Redis, которую шлюз читает на каждом защищённом запросе, поэтому выход отзывает сессию сразу на всех трёх репликах. Redis живёт в той же сети compose, без тома и без персистентности: перезапуск контейнера завершает все живые сессии. Caddy находит реплики через DNS compose (`dynamic a`), проверяет каждую по `GET /health` (Postgres и Redis) и выводит из ротации упавшую; на время окна проверки включён ретрай на соседнюю реплику. Пул соединений Prisma ограничен переменной `DB_POOL_SIZE`, миграции накатывает отдельный одноразовый сервис до старта приложений.
+Replicas keep no state in the process: a session is a signed JWT in a cookie plus one `session:<sid>` record in Redis that the gateway reads on every guarded request, so signing out revokes the session at once on all three replicas. Redis lives in the same compose network without a volume and without persistence: a container restart ends every live session. Caddy finds the replicas through compose DNS (`dynamic a`), checks each one with `GET /health` (Postgres and Redis) and drops a failed replica from rotation, with a retry to a neighbouring replica while a check window runs. The Prisma connection pool is capped by `DB_POOL_SIZE`, and a separate one shot service applies the migrations before the applications start.
 
-Подтверждение почты идёт через брокер: `apps/auth-astrum` публикует событие `account.confirmation.requested` в обменник `astrum.events` после регистрации и повторной отправки, шлюз делает то же после смены адреса, а `apps/worker` забирает его из очереди `mail.confirmation`, выпускает одноразовую ссылку на 24 часа (в базе только sha256 токена, сам токен остаётся в письме) и отправляет письмо через SMTP, а без `SMTP_URL` пишет его в каталог `MAIL_OUTBOX_DIR`. Неудачная отправка возвращается в очередь с задержкой 60, 300 и 900 секунд, после четвёртой попытки письмо попадает в `mail.confirmation.dead` с текстом последней ошибки. Пока аккаунт в статусе `PENDING`, шлюз отвечает `403 EMAIL_NOT_CONFIRMED` на заказы, отзывы и правку профиля; вход, каталог и корзина открыты. В прод-стеке роль SMTP играет Mailpit, его интерфейс открыт на `http://localhost:8025`.
+Email confirmation goes through the broker: `apps/auth-astrum` publishes an `account.confirmation.requested` event into the `astrum.events` exchange after registration and after a resend, the gateway does the same after an address change, and `apps/worker` takes it from the `mail.confirmation` queue, mints a one time 24 hour link (the database keeps only the sha256 of the token, the token itself stays in the letter) and sends the letter over SMTP; without `SMTP_URL` it writes the letter into `MAIL_OUTBOX_DIR`. A failed delivery returns to a waiting queue after 60, 300 and 900 seconds, and after the fourth attempt the letter lands in `mail.confirmation.dead` with the text of the last error. While an account is `PENDING`, the gateway answers `403 EMAIL_NOT_CONFIRMED` for orders, reviews and profile edits; sign in, the catalogue and the cart stay open. In the production stack Mailpit plays the SMTP role, and its interface is open at `http://localhost:8025`.
 
-| Сервис     | Порт   | Доступ                       | Реплик |
-| ---------- | ------ | ---------------------------- | ------ |
-| `proxy`    | 80/443 | снаружи                      | 1      |
-| `customer` | 3000   | только внутри `astrum`       | 2      |
-| `api`      | 3580   | только внутри, через `proxy` | 3      |
-| `auth`     | 4580   | только внутри                | 1      |
-| `worker`   | 5580   | только внутри                | 1      |
-| `rabbitmq` | 5672   | только внутри                | 1      |
-| `mailpit`  | 8025   | снаружи, только в прод-стеке | 1      |
-| `redis`    | 6379   | внутри сети, в dev на хосте  | 1      |
-| `db`       | 5432   | только внутри                | 1      |
+| Service    | Port   | Reachable                     | Replicas |
+| ---------- | ------ | ----------------------------- | -------- |
+| `proxy`    | 80/443 | from outside                  | 1        |
+| `customer` | 3000   | inside `astrum` only          | 2        |
+| `api`      | 3580   | inside only, through `proxy`  | 3        |
+| `auth`     | 4580   | inside only, from `api`       | 1        |
+| `worker`   | 5580   | inside only                   | 1        |
+| `rabbitmq` | 5672   | inside only                   | 1        |
+| `mailpit`  | 8025   | from outside, prod stack only | 1        |
+| `redis`    | 6379   | inside the network, on the host in dev | 1 |
+| `db`       | 5432   | inside only                   | 1        |
 
-Обоснование выбора и отвергнутые альтернативы (Swarm, nginx, Traefik) — в [ADR-0003](docs/adr/0003-container-topology-and-load-balancing.md).
+The reasoning behind the choice and the rejected alternatives (Swarm, nginx, Traefik) live in [ADR-0003](docs/adr/0003-container-topology-and-load-balancing.md).
 
-## Стек
+## Stack
 
-| Слой           | Технологии                                                                          |
-| -------------- | ----------------------------------------------------------------------------------- |
-| Витрина        | Next.js 16 (App Router), React 19, TypeScript 7, Tailwind 4, shadcn/ui              |
-| Данные на UI   | SWR, React Hook Form + Zod                                                          |
-| API-шлюз       | Express 5, Prisma 7, class-validator                                                |
-| Аутентификация | NestJS 11, Passport JWT, argon2, Swagger                                            |
-| Сессии         | Redis 7 (ioredis): запись `session:<sid>` на срок токена                            |
-| События        | RabbitMQ 4 (amqplib): обменник `astrum.events`, ретраи и dead letter queue          |
-| Почта          | `apps/worker` на nodemailer, SMTP или Mailpit с интерфейсом на 8025                 |
-| База данных    | PostgreSQL 16, Prisma 7                                                             |
-| Инфраструктура | pnpm workspaces, Turborepo, Docker Compose с репликами за Caddy, husky + commitlint |
+| Layer            | Technologies                                                                    |
+| ---------------- | ------------------------------------------------------------------------------- |
+| Storefront       | Next.js 16 (App Router), React 19, TypeScript 7, Tailwind 4, shadcn/ui          |
+| Data in the UI   | SWR, React Hook Form with Zod                                                    |
+| API gateway      | Express 5, Prisma 7, class-validator                                            |
+| Authentication   | NestJS 11, Passport JWT, argon2, Swagger                                         |
+| Sessions         | Redis 7 (ioredis): one `session:<sid>` record for the life of the token         |
+| Events           | RabbitMQ 4 (amqplib): the `astrum.events` exchange, retries and a dead letter queue |
+| Mail             | `apps/worker` on nodemailer, SMTP or Mailpit with its interface on 8025         |
+| Database         | PostgreSQL 16, Prisma 7                                                         |
+| Infrastructure   | pnpm workspaces, Turborepo, Docker Compose with replicas behind Caddy, husky and commitlint |
 
-## Дорожная карта
+## Roadmap
 
-- [x] Каталог, карточка товара, поиск, рекомендации
-- [x] Аккаунт, профиль, сессия
-- [x] Корзина и вишлист
-- [x] Контейнеризация: реплики за одним входом, health-check, graceful shutdown
-- [x] Серверный пересчёт цены и остатков в заказе: цена и имя из товара, одна транзакция, отказ при нехватке
-- [x] Оформление заказа: очистка серверной корзины и идемпотентность повторной отправки
-- [x] Session store в Redis: сессия хранится на сервере, шлюз проверяет её в Redis на каждом запросе, выход отзывает сессию и срабатывает сразу на всех репликах (спека [0004](docs/specs/_root/0004-session-store-in-redis/index.md))
-  - [x] Схема сессии: в токен добавляется id сессии, в Redis запись с TTL на срок токена (было в JWT только `userId` на 1 день, а cookie жила 7 дней)
-  - [x] Redis в обоих compose-файлах и в `.env.example` с `.env.prod.example`: адрес `redis:6379` для `api` и `auth`, зависимость клиента в манифестах (витрине хранилище не нужно, она зовёт шлюз)
-  - [x] Auth: запись сессии при регистрации и входе, маршрут `POST /api/auth/logout` с удалением записи, отзыв текущей сессии при смене пароля и удалении аккаунта
-  - [x] Шлюз: `authenticateToken` проверяет сессию в Redis после проверки подписи, отозванный токен отвечает `401` на любой из трёх реплик `api`
-  - [x] Витрина: выход сначала зовёт `logout` в API и только потом стирает cookie
-- [x] Подтверждение аккаунта по email, через брокер и воркер (спека [0005](docs/specs/_root/0005-account-confirmation-by-email/index.md))
-  - [x] Схема: `User.status` (`PENDING` / `ACTIVE`) и таблица токенов подтверждения с TTL и одноразовым использованием (24 часа, в базе только sha256 токена)
-  - [x] RabbitMQ в обоих compose-файлах, событие `account.confirmation.requested` из auth-сервиса после регистрации и из шлюза после смены адреса, повторная публикация по запросу покупателя
-  - [x] Воркер `apps/worker`: очередь писем, повторные попытки с задержкой 60, 300 и 900 секунд, dead letter queue, транспорт SMTP или тестовый (письмо в файл)
-  - [x] Шлюз и auth: `GET /api/auth/confirm?token=...` с исходами `ok`, `used`, `expired` и `invalid`, заказы, отзывы и правка профиля закрыты, пока аккаунт в статусе `PENDING`
-  - [x] Витрина: экран «проверьте почту» и повторная отправка письма с ограничением частоты (3 раза на 15 минут на адрес, 10 в час на IP)
-- [ ] Статусы заказа и панель продавца
-- [ ] Выдача покупателю: самовывоз или подтверждение получения
-- [ ] Оплата через тестовый провайдер и письма о заказе
-- [ ] Отзывы целиком, модерация пока выключена
-  - [ ] Написание: форма на карточке товара после `DELIVERED`, рейтинги (общий, качество, доставка, соответствие) и текст уходят в API, отзыв сразу `APPROVED`
-  - [ ] Лайки отзывов: таблица `ReviewLike` с уникальностью на пару (отзыв, покупатель), счётчик в ответе, переключатель в UI
-  - [ ] Комментарии к отзывам: ответы покупателей под отзывом (`ReviewComment`), список и добавление, отдельно от ответа магазина `ReviewResponse`
-  - [ ] Витрина отзывов: списки и формы перестают жить на моках, средний рейтинг и количество считаются из базы
-- [ ] e2e-тесты сценария заказа, CI
+- [x] Catalogue, product page, search, recommendations
+- [x] Account, profile, session
+- [x] Cart and wishlist
+- [x] Containers: replicas behind one entry point, health check, graceful shutdown
+- [x] Server side recalculation of the order price and stock: price and name from the product, one transaction, a refusal when the stock runs short
+- [x] Checkout: clearing the server side cart and an idempotent repeated submit
+- [x] Session store in Redis: the session lives on the server, the gateway checks it in Redis on every request, and signing out revokes the session at once on every replica (spec [0004](docs/specs/_root/0004-session-store-in-redis/index.md))
+  - [x] Session schema: the token gains a session id, and Redis keeps a record with a TTL as long as the token (before, the JWT carried only `userId` for one day while the cookie lived seven)
+  - [x] Redis in both compose files and in `.env.example` with `.env.prod.example`: the address `redis:6379` for `api` and `auth`, and the client dependency in the manifests (the storefront needs no store, it calls the gateway)
+  - [x] Auth: writing the session on registration and sign in, the `POST /api/auth/logout` route that removes the record, and revoking the current session on a password change and on account deletion
+  - [x] Gateway: `authenticateToken` checks the session in Redis after the signature, and a revoked token answers `401` on any of the three `api` replicas
+  - [x] Storefront: signing out calls `logout` in the API first and only then clears the cookie
+- [x] Account confirmation by email, through the broker and the worker (spec [0005](docs/specs/_root/0005-account-confirmation-by-email/index.md))
+  - [x] Schema: `User.status` (`PENDING` / `ACTIVE`) and a confirmation token table with a TTL and single use (24 hours, only the sha256 of the token in the database)
+  - [x] RabbitMQ in both compose files, the `account.confirmation.requested` event from the auth service after registration and from the gateway after an address change, and a republish on the customer request
+  - [x] The `apps/worker` worker: the mail queue, retries after 60, 300 and 900 seconds, a dead letter queue, and an SMTP or a test transport (the letter goes into a file)
+  - [x] Gateway and auth: `GET /api/auth/confirm?token=...` with the outcomes `ok`, `used`, `expired` and `invalid`, and orders, reviews and profile edits closed while the account is `PENDING`
+  - [x] Storefront: the check your mail screen and a resend with a rate limit (3 per 15 minutes per address, 10 per hour per IP)
+- [ ] Order statuses and the seller panel
+- [ ] Fulfilment: pickup or a receipt confirmation
+- [ ] Payment through a test provider and order letters
+- [ ] Reviews in full, moderation is off for now
+  - [ ] Writing: a form on the product page after `DELIVERED`, ratings (overall, quality, delivery, match) and the text go to the API, and the review is `APPROVED` at once
+  - [ ] Review likes: a `ReviewLike` table with one row per review and customer, the count in the response, a toggle in the UI
+  - [ ] Review comments: customer replies under a review (`ReviewComment`), the list and the form, separate from the shop answer `ReviewResponse`
+  - [ ] The review storefront: the lists and forms stop running on mocks, and the average rating and the count come from the database
+- [ ] End to end tests of the order flow, CI
 
-## Быстрый старт
+## Quick start
 
-Нужны Node 24+, pnpm 12.8+ и Docker.
+You need Node 24+, pnpm 12.8+ and Docker.
 
-### Разработка
+### Development
 
 ```bash
 pnpm install
-cp .env.example .env     # заполните JWT_SECRET и пароль БД
-pnpm db:up               # Postgres 16 и Redis 7 в Docker
+cp .env.example .env     # fill in JWT_SECRET and the database password
+pnpm db:up               # Postgres 16 and Redis 7 in Docker
 pnpm prisma:migrate:deploy
 pnpm db:generate
-pnpm dev                 # Postgres, Redis, RabbitMQ и Mailpit в Docker, затем витрина :3000 · API :3580 · auth :4580 · worker :5580
+pnpm dev                 # Postgres, Redis, RabbitMQ and Mailpit in Docker, then storefront :3000 · API :3580 · auth :4580 · worker :5580
 ```
 
-Демо-каталог загружается из xlsx скриптом `seed:excel`; сами файлы базы в репозиторий не входят, поэтому после чистого клона магазин пустой.
+The demo catalogue is loaded from an xlsx file by the `seed:excel` script; the database files stay out of the repository, so a fresh clone starts with an empty shop.
 
-### Весь стек в Docker
+### The whole stack in Docker
 
 ```bash
-cp .env.prod.example .env.prod   # заполните пароль БД и JWT_SECRET
-pnpm docker:prod:build           # собрать образы
-pnpm docker:prod:up              # http://localhost, почта на :8025
-pnpm docker:prod:logs            # логи всех сервисов
-pnpm docker:prod:down            # остановить
+cp .env.prod.example .env.prod   # fill in the database password and JWT_SECRET
+pnpm docker:prod:build           # build the images
+pnpm docker:prod:up              # http://localhost, mail on :8025
+pnpm docker:prod:logs            # every service log
+pnpm docker:prod:down            # stop the stack
 ```
 
-- Домен задаётся в **корневом `.env`** (`DOMAIN=http://localhost` локально, `DOMAIN=example.com` на хостинге → Caddy сам выпустит сертификат). Переменные контейнеров живут отдельно, в `.env.prod` — это разные слои подстановки.
-- Адреса сервисов внутри сети — имена compose (`db`, `auth`, `api`, `proxy`), не `localhost`.
-- Реплик больше: `docker compose -f docker-compose.prod.yml up -d --no-deps --scale api=5 api`.
-- `pnpm dev` и `docker:prod:up` делят один том Postgres (`POSTGRES_VOLUME`), одновременно их запускать нельзя.
+- The domain lives in the **root `.env`** (`DOMAIN=http://localhost` locally, `DOMAIN=example.com` on a host, and Caddy issues the certificate itself). The container variables live separately in `.env.prod`, because these are two different substitution layers.
+- Inside the network the services answer at compose names (`db`, `auth`, `api`, `proxy`), never at `localhost`.
+- More replicas: `docker compose -f docker-compose.prod.yml up -d --no-deps --scale api=5 api`.
+- `pnpm dev` and `docker:prod:up` share one Postgres volume (`POSTGRES_VOLUME`), so they must never run at the same time.
 
-## Документация
+## Documentation
 
-- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) — разработка: скрипты, хуки, конвенции, переменные окружения, чеклист готовности к MVP
-- [docs/adr/](docs/adr/README.md) — архитектурные решения и их обоснование
-- [docs/specs/](docs/specs/) — спеки фич: контракт, обоснование и лог проверки
-- [docs/scope/](docs/scope/index.md) — живой скоуп по воркспейсам и статусы фич
-- [docs/changelog/](docs/changelog/) — журнал изменений по датам
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): development notes on scripts, hooks, conventions, environment variables and the checklist for MVP readiness
+- [docs/adr/](docs/adr/README.md): architecture decisions and their reasoning
+- [docs/specs/](docs/specs/): feature specs with the contract, the reasoning and the verification log
+- [docs/scope/](docs/scope/index.md): the living scope per workspace and the feature statuses
+- [docs/changelog/](docs/changelog/): the change log by date
 
-## Автор
+## Author
 
-Иван Никитин · [github.com/sworni1](https://github.com/sworni1)
+Ivan Nikitin · [github.com/sworni1](https://github.com/sworni1)

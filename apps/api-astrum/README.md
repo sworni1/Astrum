@@ -1,23 +1,23 @@
 # api-astrum
 
-Express API для Astrum (порт по умолчанию **3580**).
+The Express API for Astrum (default port **3580**).
 
-## Запуск из корня монорепо
+## Running it from the monorepo root
 
 ```bash
 pnpm dev:api
 ```
 
-## Переменные окружения
+## Environment variables
 
-Скопируй `.env.example` в `.env` и подставь значения.
+Copy `.env.example` into `.env` and fill in the values.
 
-| Переменная         | Назначение                                          |
-| ------------------ | --------------------------------------------------- |
-| `DATABASE_URL`     | PostgreSQL                                          |
-| `JWT_SECRET`       | Подпись JWT                                         |
-| `AUTH_SERVICE_URL` | URL сервиса auth (например `http://localhost:4580`) |
+| Variable           | Purpose                                              |
+| ------------------ | ---------------------------------------------------- |
+| `DATABASE_URL`     | PostgreSQL                                           |
+| `JWT_SECRET`       | JWT signing                                          |
+| `AUTH_SERVICE_URL` | The auth service URL (for example `http://localhost:4580`) |
 
-## Связанные пакеты
+## Related packages
 
-- Prisma и схема: `packages/Astrum-db`
+- Prisma and the schema: `packages/Astrum-db`
