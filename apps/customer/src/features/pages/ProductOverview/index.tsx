@@ -36,35 +36,38 @@ export default function ProductOverview() {
       title: t("failed"),
       type: "error",
     });
+    return null;
   }
+
+  if (!product) return <ProductOverviewSkeleton />;
 
   return (
     <>
       <div className="container mx-auto px-4 py-8">
         <div className="grid gap-8 lg:grid-cols-2">
-          <ProductGallery images={product!.images} />
+          <ProductGallery images={product.images} />
           <div className="flex flex-col gap-4">
             <h1 className="text-2xl font-bold sm:text-3xl">{product?.name}</h1>
 
             <div className="flex items-center gap-4">
               <span className="text-3xl font-bold">
-                {product?.price} {getCurrencyEmoji(product!.currency)}
+                {product.price} {getCurrencyEmoji(product.currency)}
               </span>
               <div className="flex items-center gap-1">
-                {Array(5)
-                  .fill(null)
-                  .map((_, i) => (
+                {Array.from({ length: 5 }, (_, index) => index + 1).map(
+                  (star) => (
                     <Star
-                      key={i}
+                      key={`rating-star-${star}`}
                       className="h-5 w-5 fill-primary text-primary"
                     />
-                  ))}
+                  ),
+                )}
                 <Link
                   href="#reviews"
                   className="ml-2 text-sm text-muted-foreground hover:text-primary"
                 >
                   {t("reviewsCount", {
-                    count: product?._count ? product._count.impressions : 0,
+                    count: product._count ? product._count.impressions : 0,
                   })}
                 </Link>
               </div>
@@ -73,14 +76,14 @@ export default function ProductOverview() {
             <div className="flex gap-4">
               <ToggleWishlistItemButton
                 productId={productId}
-                isWishlisted={product!.isWishlisted}
+                isWishlisted={product.isWishlisted}
                 size="lg"
               />
 
               <AddToCartWithQuantity
-                quantity={product!.quantity}
+                quantity={product.quantity}
                 size="sm"
-                quantityInCart={product!.quantityInCart}
+                quantityInCart={product.quantityInCart}
                 productId={productId}
               />
             </div>

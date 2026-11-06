@@ -12,10 +12,10 @@ pnpm dev:api
 
 Copy `.env.example` into `.env` and fill in the values.
 
-| Variable           | Purpose                                              |
-| ------------------ | ---------------------------------------------------- |
-| `DATABASE_URL`     | PostgreSQL                                           |
-| `JWT_SECRET`       | JWT signing                                          |
+| Variable           | Purpose                                                    |
+| ------------------ | ---------------------------------------------------------- |
+| `DATABASE_URL`     | PostgreSQL                                                 |
+| `JWT_SECRET`       | JWT signing                                                |
 | `AUTH_SERVICE_URL` | The auth service URL (for example `http://localhost:4580`) |
 
 ## Related packages

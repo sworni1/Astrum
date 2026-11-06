@@ -81,7 +81,9 @@ export default function Cart() {
 
   if (!cart || cart.length === 0) {
     return (
-      <div className="text-center py-20 text-muted-foreground">{t("empty")}</div>
+      <div className="text-center py-20 text-muted-foreground">
+        {t("empty")}
+      </div>
     );
   }
 
@@ -172,7 +174,9 @@ export default function Cart() {
                   <span>{t("itemsValue", { count: cart.length })}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>{t("selectedItems", { count: selectedItems.size })}</span>
+                  <span>
+                    {t("selectedItems", { count: selectedItems.size })}
+                  </span>
                   <span>${selectedSubtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-muted-foreground">

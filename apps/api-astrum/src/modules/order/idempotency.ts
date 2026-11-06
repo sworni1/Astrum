@@ -22,7 +22,11 @@ const invalidKeyError = (constraint: string) =>
     422,
     ORDER_ERROR_CODES.validation,
     "The Idempotency-Key header is not valid.",
-    { errors: [{ property: IDEMPOTENCY_HEADER, constraints: { matches: constraint } }] },
+    {
+      errors: [
+        { property: IDEMPOTENCY_HEADER, constraints: { matches: constraint } },
+      ],
+    },
   );
 
 /**

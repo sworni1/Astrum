@@ -36,7 +36,9 @@ const LogOutForm = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("sureTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>{t("logoutWarning")}</AlertDialogDescription>
+            <AlertDialogDescription>
+              {t("logoutWarning")}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{common("cancel")}</AlertDialogCancel>

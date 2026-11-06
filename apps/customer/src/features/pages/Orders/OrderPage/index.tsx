@@ -40,12 +40,7 @@ type Props = {
   orderId: string;
 };
 
-type LabelKey =
-  | "pending"
-  | "confirmed"
-  | "shipped"
-  | "delivered"
-  | "canceled";
+type LabelKey = "pending" | "confirmed" | "shipped" | "delivered" | "canceled";
 
 const STATUS_KEYS: Record<OrderStatus, LabelKey> = {
   [OrderStatus.PENDING]: "pending",
@@ -201,7 +196,7 @@ export default function OrderPage({ orderId }: Props) {
         title: t("cancelSuccess"),
         type: "success",
       });
-    } catch (error) {
+    } catch {
       showToast({
         title: t("cancelFailed"),
         type: "error",
@@ -276,7 +271,9 @@ export default function OrderPage({ orderId }: Props) {
                   {t(`status.${STATUS_KEYS[order.status]}`)}
                 </Badge>
                 <span className="text-muted-foreground text-sm">
-                  {order.paymentStatus === "PAID" ? t("paid") : t("paymentPending")}
+                  {order.paymentStatus === "PAID"
+                    ? t("paid")
+                    : t("paymentPending")}
                 </span>
               </div>
 
@@ -378,10 +375,10 @@ export default function OrderPage({ orderId }: Props) {
             <CardContent className="pt-0">
               {/* Mobile: Horizontal */}
               <div className="flex items-center justify-between lg:hidden mb-6">
-                {statusSteps.map((step, idx) => {
+                {statusSteps.map((step) => {
                   const Icon = step.icon;
                   return (
-                    <div key={idx} className="flex flex-col items-center">
+                    <div key={step.key} className="flex flex-col items-center">
                       <div
                         className={`w-12 h-12 rounded-full mb-2 flex items-center text-white justify-center ${
                           step.active ? "bg-green-500" : "bg-gray-600"
@@ -408,10 +405,13 @@ export default function OrderPage({ orderId }: Props) {
                 <div className="absolute top-5 left-5 right-5 h-0.5 bg-gray-500"></div>
                 <div className="absolute top-5 left-5 w-1/3 h-0.5 bg-green-500"></div>
                 <div className="relative flex justify-between">
-                  {statusSteps.map((step, idx) => {
+                  {statusSteps.map((step) => {
                     const Icon = step.icon;
                     return (
-                      <div key={idx} className="flex flex-col items-center">
+                      <div
+                        key={step.key}
+                        className="flex flex-col items-center"
+                      >
                         <div
                           className={`w-10 h-10 rounded-full mb-3 flex items-center text-white justify-center ${
                             step.active ? "bg-green-500" : "bg-gray-600"
@@ -481,8 +481,8 @@ export default function OrderPage({ orderId }: Props) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(order.orderItems || []).map((item, idx) => (
-                  <TableRow key={idx}>
+                {(order.orderItems || []).map((item) => (
+                  <TableRow key={item.id}>
                     <TableCell className="py-4">
                       <div className="flex items-center gap-6">
                         <div className="relative group">
@@ -538,7 +538,9 @@ export default function OrderPage({ orderId }: Props) {
                     </TableCell>
                     <TableCell className="text-center py-4">
                       <Badge className="text-xs">
-                        {t(`itemStatus.${ITEM_STATUS_KEYS[item.status] ?? "pending"}`)}
+                        {t(
+                          `itemStatus.${ITEM_STATUS_KEYS[item.status] ?? "pending"}`,
+                        )}
                       </Badge>
                     </TableCell>
                   </TableRow>

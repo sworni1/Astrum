@@ -23,7 +23,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { type SignInCredentials, createSignInFormSchema } from "../../../common";
+import {
+  createSignInFormSchema,
+  type SignInCredentials,
+} from "../../../common";
 import { useAuth } from "../../../hooks";
 
 export default function SignIn() {

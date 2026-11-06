@@ -4,7 +4,7 @@ import { Clock, Mail, MailCheck, MailWarning, MailX } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, type ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,14 +21,13 @@ import ResendForm from "./ResendForm";
 type Outcome = "ok" | "expired" | "used" | "invalid";
 
 const isOutcome = (value: string | null): value is Outcome =>
-  value === "ok" || value === "expired" || value === "used" || value === "invalid";
+  value === "ok" ||
+  value === "expired" ||
+  value === "used" ||
+  value === "invalid";
 
 type ViewKeys = {
-  title:
-    | "okTitle"
-    | "expiredTitle"
-    | "usedTitle"
-    | "invalidTitle";
+  title: "okTitle" | "expiredTitle" | "usedTitle" | "invalidTitle";
   text: "okText" | "expiredText" | "usedText" | "invalidText";
 };
 
@@ -99,7 +98,9 @@ export default function ConfirmEmail() {
           <OutcomeIcon>
             <OutcomeGlyph className="size-5" aria-hidden="true" />
           </OutcomeIcon>
-          <CardTitle className="text-2xl">{t(VIEW_KEYS[outcome].title)}</CardTitle>
+          <CardTitle className="text-2xl">
+            {t(VIEW_KEYS[outcome].title)}
+          </CardTitle>
           <CardDescription>{t(VIEW_KEYS[outcome].text)}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

@@ -57,17 +57,17 @@ The auth service publishes one event when an address needs a letter, a new `apps
 
 **Data model sketch**:
 
-| Entity | Fields | Constraints |
-|---|---|---|
-| `User` (existing) | `status UserStatus @default(PENDING)` | one row per account; the enum has `PENDING` and `ACTIVE` |
+| Entity             | Fields                                                                                                                                                   | Constraints                                                                           |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `User` (existing)  | `status UserStatus @default(PENDING)`                                                                                                                    | one row per account; the enum has `PENDING` and `ACTIVE`                              |
 | `EmailToken` (new) | `id` uuid pk, `userId` string fk, `email` string, `tokenHash` string, `expiresAt` DateTime, `usedAt` DateTime nullable, `createdAt` DateTime default now | unique on `tokenHash`; index on `userId`; relation to `User` with `onDelete: Cascade` |
 
 Redis keys, outside the schema. The account status has no entry here: it is a column, read on demand.
 
-| Key | Value | TTL | Written by |
-|---|---|---|---|
-| `rl:confirm:email:<email>` | counter | 900 | auth (resend) |
-| `rl:confirm:ip:<ip>` | counter | 3600 | auth (resend) |
+| Key                        | Value   | TTL  | Written by    |
+| -------------------------- | ------- | ---- | ------------- |
+| `rl:confirm:email:<email>` | counter | 900  | auth (resend) |
+| `rl:confirm:ip:<ip>`       | counter | 3600 | auth (resend) |
 
 **State transitions**:
 
@@ -82,36 +82,36 @@ token:     created --confirm--> used (usedAt set)
 
 **API surface**:
 
-| Endpoint | Method | Key inputs | Key outputs | Auth | Key errors |
-|---|---|---|---|---|---|
-| `/api/auth/register` | POST | email, password, gender, dateOfBirth, nickName (opt) | `{ token, expiresIn }` | public | 403 `EMAIL_TAKEN`, 400 validation (including the age rule) |
-| `/api/auth/signin` | POST | email, password | `{ token, expiresIn }` | public | 403 wrong credentials (unchanged) |
-| `/api/auth/confirm` | GET | `token` query | 302 to `${STOREFRONT_URL}/auth/confirm-email?status=<value>` | public | none: every outcome is a redirect |
-| `/api/auth/confirm/resend` | POST | email | 204 without body | public, rate limited | 400 invalid address |
-| `/api/users/me` | GET | none | profile plus `status` | session | 401 (existing) |
-| `/api/users/me` | PATCH | nickName (opt), email (opt) | profile plus `status` | session | 403 `EMAIL_NOT_CONFIRMED`, 400 `EMAIL_UNCHANGED`, 409 `EMAIL_TAKEN` |
-| `/api/orders` | POST | unchanged | order | session and `ACTIVE` | 403 `EMAIL_NOT_CONFIRMED` plus the existing order errors |
-| `/api/products/:productId/reviews` | POST | unchanged | review | session and `ACTIVE` | 403 `EMAIL_NOT_CONFIRMED` plus the existing review errors |
-| worker `/health` | GET | none | `{ rabbit, smtp }` | none (internal network) | 503 while the broker connection is not ready |
+| Endpoint                           | Method | Key inputs                                           | Key outputs                                                  | Auth                    | Key errors                                                          |
+| ---------------------------------- | ------ | ---------------------------------------------------- | ------------------------------------------------------------ | ----------------------- | ------------------------------------------------------------------- |
+| `/api/auth/register`               | POST   | email, password, gender, dateOfBirth, nickName (opt) | `{ token, expiresIn }`                                       | public                  | 403 `EMAIL_TAKEN`, 400 validation (including the age rule)          |
+| `/api/auth/signin`                 | POST   | email, password                                      | `{ token, expiresIn }`                                       | public                  | 403 wrong credentials (unchanged)                                   |
+| `/api/auth/confirm`                | GET    | `token` query                                        | 302 to `${STOREFRONT_URL}/auth/confirm-email?status=<value>` | public                  | none: every outcome is a redirect                                   |
+| `/api/auth/confirm/resend`         | POST   | email                                                | 204 without body                                             | public, rate limited    | 400 invalid address                                                 |
+| `/api/users/me`                    | GET    | none                                                 | profile plus `status`                                        | session                 | 401 (existing)                                                      |
+| `/api/users/me`                    | PATCH  | nickName (opt), email (opt)                          | profile plus `status`                                        | session                 | 403 `EMAIL_NOT_CONFIRMED`, 400 `EMAIL_UNCHANGED`, 409 `EMAIL_TAKEN` |
+| `/api/orders`                      | POST   | unchanged                                            | order                                                        | session and `ACTIVE`    | 403 `EMAIL_NOT_CONFIRMED` plus the existing order errors            |
+| `/api/products/:productId/reviews` | POST   | unchanged                                            | review                                                       | session and `ACTIVE`    | 403 `EMAIL_NOT_CONFIRMED` plus the existing review errors           |
+| worker `/health`                   | GET    | none                                                 | `{ rabbit, smtp }`                                           | none (internal network) | 503 while the broker connection is not ready                        |
 
 **Value sourcing** (every value each action produces, computes or displays names where it comes from):
 
-| Action | Value produced or displayed | Source |
-|---|---|---|
-| register | `status` of the new account | `User.status` default `PENDING`, AC-1 |
-| register | the address the event carries | the `email` column of the created row |
-| worker | raw token | `crypto.randomBytes(32)` in base64url, in memory only |
-| worker | `tokenHash` | sha256 hex of the raw token |
-| worker | `expiresAt` | send time plus the 86400 second constant |
-| worker | the link in the letter | `${STOREFRONT_URL}` plus `/api-gateway/auth/confirm?token=<raw>` |
-| worker | sender address | `MAIL_FROM` |
-| confirm | the user the token belongs to | `EmailToken.userId` found by `tokenHash` |
-| confirm | the `status` value carried to the page | the row's `usedAt` and `expiresAt`, plus `User.status` |
-| gateway gate | the account status | `User.status` column, read by primary key |
-| screen shown after registration | the address the letter went to | the `email` field of `GET /api/users/me`, because that screen is reached signed in; without a session the page shows only the outcome from the query |
-| resend | the counter identity | the request body `email`, lowercased, plus `req.ip` |
-| profile read | `status` shown to the storefront | `User.status` column |
-| banner and forms | whether the account is confirmed | the `status` field of `GET /api/users/me` |
+| Action                          | Value produced or displayed            | Source                                                                                                                                               |
+| ------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| register                        | `status` of the new account            | `User.status` default `PENDING`, AC-1                                                                                                                |
+| register                        | the address the event carries          | the `email` column of the created row                                                                                                                |
+| worker                          | raw token                              | `crypto.randomBytes(32)` in base64url, in memory only                                                                                                |
+| worker                          | `tokenHash`                            | sha256 hex of the raw token                                                                                                                          |
+| worker                          | `expiresAt`                            | send time plus the 86400 second constant                                                                                                             |
+| worker                          | the link in the letter                 | `${STOREFRONT_URL}` plus `/api-gateway/auth/confirm?token=<raw>`                                                                                     |
+| worker                          | sender address                         | `MAIL_FROM`                                                                                                                                          |
+| confirm                         | the user the token belongs to          | `EmailToken.userId` found by `tokenHash`                                                                                                             |
+| confirm                         | the `status` value carried to the page | the row's `usedAt` and `expiresAt`, plus `User.status`                                                                                               |
+| gateway gate                    | the account status                     | `User.status` column, read by primary key                                                                                                            |
+| screen shown after registration | the address the letter went to         | the `email` field of `GET /api/users/me`, because that screen is reached signed in; without a session the page shows only the outcome from the query |
+| resend                          | the counter identity                   | the request body `email`, lowercased, plus `req.ip`                                                                                                  |
+| profile read                    | `status` shown to the storefront       | `User.status` column                                                                                                                                 |
+| banner and forms                | whether the account is confirmed       | the `status` field of `GET /api/users/me`                                                                                                            |
 
 **Key invariants**:
 

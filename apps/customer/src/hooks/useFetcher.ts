@@ -4,10 +4,10 @@ import axios, { type AxiosInstance } from "axios";
 import { createTranslator, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import en from "../../messages/en.json";
-import { acceptLanguage } from "../i18n/config";
 import { requestConfirmationForCurrentUser } from "../common/helpers/confirmEmail";
 import { deleteSession } from "../common/helpers/session";
 import { showToast } from "../common/helpers/showToast";
+import { acceptLanguage } from "../i18n/config";
 
 const authServiceUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL;
 

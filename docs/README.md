@@ -4,13 +4,13 @@ Project documentation lives here and stays tracked in git.
 
 ## Layout
 
-| Path             | Holds                                                                       |
-| ---------------- | --------------------------------------------------------------------------- |
-| `DEVELOPMENT.md` | Development guide: scripts, hooks, commit convention, environment, MVP gaps |
-| `adr/`           | Architecture decision records, one file per irreversible decision           |
-| `changelog/`     | Dated change entries, one file per working session                          |
+| Path             | Holds                                                                                                     |
+| ---------------- | --------------------------------------------------------------------------------------------------------- |
+| `DEVELOPMENT.md` | Development guide: scripts, hooks, commit convention, environment, MVP gaps                               |
+| `adr/`           | Architecture decision records, one file per irreversible decision                                         |
+| `changelog/`     | Dated change entries, one file per working session                                                        |
 | `specs/`         | Feature specs, created by /architect or /scope: `NNNN-title/index.md` plus `rationale.md` and `verify.md` |
-| `scope/`         | Living scope, created by /scope when needed                                 |
+| `scope/`         | Living scope, created by /scope when needed                                                               |
 
 `specs/` and `scope/` appear the first time a spec or a scope is written; there is no empty placeholder folder for them.
 

@@ -1,11 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { decrypt } from "./common/helpers/session";
 
-const publicRoutes = [
-  "/auth/signin",
-  "/auth/register",
-  "/auth/confirm-email",
-];
+const publicRoutes = ["/auth/signin", "/auth/register", "/auth/confirm-email"];
 
 export default async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;

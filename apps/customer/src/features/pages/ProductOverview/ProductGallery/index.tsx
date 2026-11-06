@@ -22,14 +22,14 @@ type Props = {
 function ProductGallery({ images }: Props) {
   const t = useTranslations("product");
   const safeImages = React.useMemo<string[]>(
-    () => images.filter(Boolean),
+    () => Array.from(new Set(images.filter(Boolean))),
     [images],
   );
   const slides = safeImages.length > 0 ? safeImages : [""];
 
   const [api, setApi] = React.useState<CarouselApi>();
   const [current, setCurrent] = React.useState<number>(0);
-  const [imageErrors, setImageErrors] = React.useState<Record<number, boolean>>(
+  const [imageErrors, setImageErrors] = React.useState<Record<string, boolean>>(
     {},
   );
 
@@ -48,11 +48,13 @@ function ProductGallery({ images }: Props) {
   React.useEffect(() => {
     setCurrent(0);
     setImageErrors({});
-    api?.scrollTo(0);
-  }, [api, safeImages.length]);
+    if (safeImages.length > 0) api?.scrollTo(0);
+  }, [api, safeImages]);
 
-  const handleImageError = (index: number) => {
-    setImageErrors((prev) => (prev[index] ? prev : { ...prev, [index]: true }));
+  const handleImageError = (src: string) => {
+    setImageErrors((previous) =>
+      previous[src] ? previous : { ...previous, [src]: true },
+    );
   };
 
   const scrollTo = React.useCallback(
@@ -67,16 +69,23 @@ function ProductGallery({ images }: Props) {
       <Carousel
         setApi={setApi}
         className="w-full"
+        aria-label={t("gallery")}
         opts={{ align: "start", loop: slides.length > 1 }}
       >
         <CarouselContent>
           {slides.map((src, index) => (
-            <CarouselItem key={`${src}-${index}`}>
+            <CarouselItem
+              key={src || "empty-image"}
+              aria-label={t("gallerySlide", {
+                current: index + 1,
+                total: slides.length,
+              })}
+            >
               <AspectRatio
                 ratio={4 / 3}
                 className="relative overflow-hidden rounded-xl border bg-muted"
               >
-                {src && !imageErrors[index] ? (
+                {src && !imageErrors[src] ? (
                   <Image
                     src={src}
                     alt={t("imageAlt", { index: index + 1 })}
@@ -84,7 +93,7 @@ function ProductGallery({ images }: Props) {
                     unoptimized
                     className="object-contain"
                     priority={index === 0}
-                    onError={() => handleImageError(index)}
+                    onError={() => handleImageError(src)}
                   />
                 ) : (
                   <Skeleton className="h-full w-full" />
@@ -100,7 +109,7 @@ function ProductGallery({ images }: Props) {
       <div className="flex gap-2 overflow-x-auto pb-2">
         {slides.map((src, index) => (
           <button
-            key={`thumb-${src}-${index}`}
+            key={`thumbnail-${src || "empty-image"}`}
             onClick={() => scrollTo(index)}
             type="button"
             aria-label={t("openImage", { index: index + 1 })}
@@ -111,14 +120,14 @@ function ProductGallery({ images }: Props) {
                 : "border-transparent hover:border-muted-foreground/50",
             )}
           >
-            {src && !imageErrors[index] ? (
+            {src && !imageErrors[src] ? (
               <Image
                 src={src}
                 alt=""
                 fill
                 unoptimized
                 className="object-cover"
-                onError={() => handleImageError(index)}
+                onError={() => handleImageError(src)}
               />
             ) : (
               <Skeleton className="h-full w-full" />

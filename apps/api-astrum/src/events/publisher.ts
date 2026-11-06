@@ -1,4 +1,4 @@
-import { connect, type ChannelModel, type ConfirmChannel } from "amqplib";
+import { type ChannelModel, type ConfirmChannel, connect } from "amqplib";
 import { logger } from "../common/helpers/logger";
 import { describeError } from "./describe-error";
 import {
@@ -24,7 +24,9 @@ const withTimeout = async <T>(
       new Promise<never>((_resolve, reject) => {
         timer = setTimeout(
           () =>
-            reject(new Error(`the broker did not answer within ${timeoutMs} ms`)),
+            reject(
+              new Error(`the broker did not answer within ${timeoutMs} ms`),
+            ),
           timeoutMs,
         );
       }),
@@ -47,7 +49,10 @@ const open = async (): Promise<ConfirmChannel> => {
   const confirmed = await opened.createConfirmChannel();
 
   opened.on("error", (error: Error) => {
-    logger.error({ event: "rabbit.connection.error", reason: describeError(error) });
+    logger.error({
+      event: "rabbit.connection.error",
+      reason: describeError(error),
+    });
   });
 
   opened.on("close", () => {

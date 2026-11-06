@@ -9,20 +9,20 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 
 ## At a glance
 
-| #   | Feature                                   | Phase   | Status  |
-| --- | ----------------------------------------- | ------- | ------- |
-| 1   | Order price and stock on the server       | Slice 1 | done |
-| 2   | Idempotent checkout and cart clearing     | Slice 1 | done |
-| 3   | Shipping methods from the API             | Slice 1 | planned |
-| 4   | Order statuses with seller ownership      | Slice 2 | planned |
-| 5   | Seller order panel                        | Slice 2 | planned |
-| 6   | Customer cancel on the order screen       | Slice 2 | planned |
-| 7   | Pickup handover                           | Slice 3 | planned |
-| 8   | Reviews on the product screen             | Slice 4 | planned |
-| 9   | Order flow end to end test and CI         | Slice 4 | planned |
-| 10  | Session store in Redis                    | Slice 5 | done |
-| 11  | Account confirmation by email             | Slice 6 | in-progress |
-| 12  | English interface by default              | Slice 7 | in-progress |
+| #   | Feature                               | Phase   | Status      |
+| --- | ------------------------------------- | ------- | ----------- |
+| 1   | Order price and stock on the server   | Slice 1 | done        |
+| 2   | Idempotent checkout and cart clearing | Slice 1 | done        |
+| 3   | Shipping methods from the API         | Slice 1 | planned     |
+| 4   | Order statuses with seller ownership  | Slice 2 | planned     |
+| 5   | Seller order panel                    | Slice 2 | planned     |
+| 6   | Customer cancel on the order screen   | Slice 2 | planned     |
+| 7   | Pickup handover                       | Slice 3 | planned     |
+| 8   | Reviews on the product screen         | Slice 4 | planned     |
+| 9   | Order flow end to end test and CI     | Slice 4 | planned     |
+| 10  | Session store in Redis                | Slice 5 | done        |
+| 11  | Account confirmation by email         | Slice 6 | in-progress |
+| 12  | English interface by default          | Slice 7 | in-progress |
 
 ## Slice 1: the order thread
 

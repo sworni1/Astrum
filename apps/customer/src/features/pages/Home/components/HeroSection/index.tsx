@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Button } from "../../../../../components/ui/button";
 
@@ -19,15 +20,21 @@ const HeroSection = async () => {
           <Button>{t("heroCta")}</Button>
         </div>
         <div className="hidden md:col-span-5 md:mt-0 md:flex">
-          <img
+          <Image
             className="dark:hidden"
             src="https://flowbite.s3.amazonaws.com/blocks/e-commerce/girl-shopping-list.svg"
             alt={t("heroImageAlt")}
+            width={500}
+            height={500}
+            unoptimized
           />
-          <img
+          <Image
             className="hidden dark:block"
             src="https://flowbite.s3.amazonaws.com/blocks/e-commerce/girl-shopping-list-dark.svg"
             alt={t("heroImageAlt")}
+            width={500}
+            height={500}
+            unoptimized
           />
         </div>
       </div>

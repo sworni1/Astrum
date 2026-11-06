@@ -70,46 +70,46 @@ Decisions taken here rather than asked (each with the runner up):
 
 **Data model sketch**:
 
-| Entity | Field | Type | Rule |
-| --- | --- | --- | --- |
-| `Order` | `idempotencyKey` | `String?` | the `Idempotency-Key` of the request that created it; `NULL` when the request carried none |
-| `Order` | `idempotencyHash` | `String?` `@db.VarChar(64)` | sha256 hex of the canonical request body; `NULL` when there is no key |
-| `Order` | `@@unique([userId, idempotencyKey])` | index | one order per customer per key; `NULL` rows are distinct, so orders without a key are unaffected |
-| `CartItem` | unchanged | | read, then deleted or decreased inside the order transaction |
+| Entity     | Field                                | Type                        | Rule                                                                                             |
+| ---------- | ------------------------------------ | --------------------------- | ------------------------------------------------------------------------------------------------ |
+| `Order`    | `idempotencyKey`                     | `String?`                   | the `Idempotency-Key` of the request that created it; `NULL` when the request carried none       |
+| `Order`    | `idempotencyHash`                    | `String?` `@db.VarChar(64)` | sha256 hex of the canonical request body; `NULL` when there is no key                            |
+| `Order`    | `@@unique([userId, idempotencyKey])` | index                       | one order per customer per key; `NULL` rows are distinct, so orders without a key are unaffected |
+| `CartItem` | unchanged                            |                             | read, then deleted or decreased inside the order transaction                                     |
 
 No new table, no new relation. The migration is one file and adds two nullable columns plus one unique index.
 
 **State transitions** (a checkout request):
 
-| State | How it is entered | Answer |
-| --- | --- | --- |
-| fresh | no row for `(userId, key)`, or no key at all | `201` with the new order |
-| replay | a row exists on any path and the fingerprint matches | `200` with that order, `Idempotent-Replay: true` |
-| conflict | a row exists and the fingerprint differs | `409` `IDEMPOTENCY_KEY_REUSED`, nothing written |
-| refused | any order rule from spec 0001 fails and no row exists under the key | the spec 0001 code, nothing written, no key stored |
+| State    | How it is entered                                                   | Answer                                             |
+| -------- | ------------------------------------------------------------------- | -------------------------------------------------- |
+| fresh    | no row for `(userId, key)`, or no key at all                        | `201` with the new order                           |
+| replay   | a row exists on any path and the fingerprint matches                | `200` with that order, `Idempotent-Replay: true`   |
+| conflict | a row exists and the fingerprint differs                            | `409` `IDEMPOTENCY_KEY_REUSED`, nothing written    |
+| refused  | any order rule from spec 0001 fails and no row exists under the key | the spec 0001 code, nothing written, no key stored |
 
 **API surface**:
 
-| Endpoint | Method | Key inputs | Key outputs | Auth | Key errors |
-| --- | --- | --- | --- | --- | --- |
-| `/api/orders` | POST | header `Idempotency-Key`: string (optional); body `CreateOrderDto` (unchanged) | `201` new order, or `200` replay with `Idempotent-Replay: true` | `__auth` cookie | `409` `IDEMPOTENCY_KEY_REUSED`, `422` `VALIDATION`, plus the spec 0001 codes (`OUT_OF_STOCK`, `CART_MISMATCH`, `MIXED_CURRENCY`, `UNKNOWN_SHIPPING_METHOD`, `404`) |
+| Endpoint      | Method | Key inputs                                                                     | Key outputs                                                     | Auth            | Key errors                                                                                                                                                         |
+| ------------- | ------ | ------------------------------------------------------------------------------ | --------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/api/orders` | POST   | header `Idempotency-Key`: string (optional); body `CreateOrderDto` (unchanged) | `201` new order, or `200` replay with `Idempotent-Replay: true` | `__auth` cookie | `409` `IDEMPOTENCY_KEY_REUSED`, `422` `VALIDATION`, plus the spec 0001 codes (`OUT_OF_STOCK`, `CART_MISMATCH`, `MIXED_CURRENCY`, `UNKNOWN_SHIPPING_METHOD`, `404`) |
 
 **Value sourcing**:
 
-| Action | Value produced / displayed | Source |
-| --- | --- | --- |
-| create, new order | stored key | the `Idempotency-Key` request header, validated by `readIdempotencyKey` |
-| create, new order | stored fingerprint | derived: sha256 of the canonical JSON of the validated DTO after `mergeOrderLines` |
-| create, canonical body | the normalised delivery date | derived: `new Date(dto.deliveryDate).toISOString()`, because the DTO holds a string at runtime |
-| create, new order | order id, status, total, currency, lines | the `Order` and `OrderItem` rows written in the transaction (spec 0001) |
-| create, any answer | the order answered | the `Order` row found by `(userId, idempotencyKey)` |
-| create, keyed refusal | whether the refusal is really a replay | the `Order` row re-read by `(userId, idempotencyKey)` on the plain client, three attempts 100 ms apart (AC-6) |
-| create, replay | the `Idempotent-Replay` header | derived: the `replay` flag returned by `OrderService.createOrder` |
-| create, replay | the screen the customer lands on | the replay body `id`, read by `useCheckout` |
-| create, success | which cart rows to delete or decrease | the `CartItem` rows read inside the transaction plus the merged ordered quantities |
-| create, out of stock | remaining availability | re-read after the rollback (`outOfStockError`, spec 0001) |
-| every order answer | which columns reach JSON | `order.mapper.ts`, which drops `idempotencyKey` and `idempotencyHash` (AC-12) |
-| storefront | the key sent | `useCheckout`, 16 random bytes as hex, held in a ref until a terminal answer |
+| Action                 | Value produced / displayed               | Source                                                                                                        |
+| ---------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| create, new order      | stored key                               | the `Idempotency-Key` request header, validated by `readIdempotencyKey`                                       |
+| create, new order      | stored fingerprint                       | derived: sha256 of the canonical JSON of the validated DTO after `mergeOrderLines`                            |
+| create, canonical body | the normalised delivery date             | derived: `new Date(dto.deliveryDate).toISOString()`, because the DTO holds a string at runtime                |
+| create, new order      | order id, status, total, currency, lines | the `Order` and `OrderItem` rows written in the transaction (spec 0001)                                       |
+| create, any answer     | the order answered                       | the `Order` row found by `(userId, idempotencyKey)`                                                           |
+| create, keyed refusal  | whether the refusal is really a replay   | the `Order` row re-read by `(userId, idempotencyKey)` on the plain client, three attempts 100 ms apart (AC-6) |
+| create, replay         | the `Idempotent-Replay` header           | derived: the `replay` flag returned by `OrderService.createOrder`                                             |
+| create, replay         | the screen the customer lands on         | the replay body `id`, read by `useCheckout`                                                                   |
+| create, success        | which cart rows to delete or decrease    | the `CartItem` rows read inside the transaction plus the merged ordered quantities                            |
+| create, out of stock   | remaining availability                   | re-read after the rollback (`outOfStockError`, spec 0001)                                                     |
+| every order answer     | which columns reach JSON                 | `order.mapper.ts`, which drops `idempotencyKey` and `idempotencyHash` (AC-12)                                 |
+| storefront             | the key sent                             | `useCheckout`, 16 random bytes as hex, held in a ref until a terminal answer                                  |
 
 **Key invariants**:
 

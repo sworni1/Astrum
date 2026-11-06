@@ -8,7 +8,12 @@ import type { AuthenticatedRequest } from "../common/types/jwt.payload";
 const describeError = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
-const refuse = (res: Response, status: number, code: string, message: string) => {
+const refuse = (
+  res: Response,
+  status: number,
+  code: string,
+  message: string,
+) => {
   res.status(status).json({ code, message });
 };
 

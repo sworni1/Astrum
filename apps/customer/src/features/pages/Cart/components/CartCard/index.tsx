@@ -25,7 +25,7 @@ const CartCard = ({
 
   return (
     <Card
-      className={`overflow-hidden p-0 transition-all ${isSelected ? "border-1 border-primary" : ""}`}
+      className={`overflow-hidden p-0 transition-all ${isSelected ? "border border-primary" : ""}`}
     >
       <CardContent className="p-0">
         <div className="flex h-full flex-col md:flex-row">

@@ -19,6 +19,11 @@ import { getSessionStore } from "./session/sessionStore";
 const app: Express = express();
 const sessionStore = getSessionStore();
 const authenticateToken = createAuthenticateToken(sessionStore);
+const authServiceUrl = process.env.AUTH_SERVICE_URL;
+
+if (!authServiceUrl) {
+  throw new Error("AUTH_SERVICE_URL is required");
+}
 
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
@@ -39,7 +44,7 @@ app.use((_req, res, next) => {
   next();
 });
 
-app.use("/api/auth", proxyOptions(process.env.AUTH_SERVICE_URL!));
+app.use("/api/auth", proxyOptions(authServiceUrl));
 
 app.use(express.json({ limit: "10mb" }));
 app.use(

@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useTransition } from "react";
 import { cn } from "@/lib/utils";
 import { setLocale } from "../common/actions/locale";
-import { locales, type Locale } from "../i18n/config";
+import { type Locale, locales } from "../i18n/config";
 
 type Props = {
   className?: string;

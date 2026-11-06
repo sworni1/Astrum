@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { buildConfirmationLetter, resolveLetterLocale } from "./letter";
 import { enCopy } from "./letters/en";
 import { ruCopy } from "./letters/ru";
-import { buildConfirmationLetter, resolveLetterLocale } from "./letter";
 
 const LINK = "https://shop.example/api-gateway/auth/confirm?token=abc";
 

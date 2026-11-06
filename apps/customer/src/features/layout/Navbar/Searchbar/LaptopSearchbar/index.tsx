@@ -85,8 +85,8 @@ const LaptopSearchbar = () => {
                   <SelectContent>
                     <SelectGroup>
                       <SelectItem value="all">{t("allCategories")}</SelectItem>
-                      {categoryList.map((category, idx) => (
-                        <SelectItem key={idx} value={category.href}>
+                      {categoryList.map((category) => (
+                        <SelectItem key={category.href} value={category.href}>
                           {category.name}
                         </SelectItem>
                       ))}

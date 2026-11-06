@@ -4,11 +4,8 @@ import { Prisma, type User } from "../../../generated/prisma/client";
 import { UserStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
+import { DEFAULT_LETTER_LOCALE, type LetterLocale } from "../../events/locale";
 import { publishConfirmationRequested } from "../../events/publisher";
-import {
-  DEFAULT_LETTER_LOCALE,
-  type LetterLocale,
-} from "../../events/locale";
 import { revokeSession } from "../../session/revokeSession";
 import { getSessionStore, type SessionStore } from "../../session/sessionStore";
 import type {
@@ -167,7 +164,7 @@ export class UserService {
           id: userId,
         },
       });
-    } catch (error) {
+    } catch {
       throw new Error(`User not found`);
     }
   }

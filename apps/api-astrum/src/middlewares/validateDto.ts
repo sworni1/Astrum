@@ -1,4 +1,4 @@
-import { plainToInstance } from "class-transformer";
+import { type ClassConstructor, plainToInstance } from "class-transformer";
 import { type ValidationError, validate } from "class-validator";
 import type { NextFunction, Request, Response } from "express";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
@@ -10,8 +10,8 @@ type ValidateDtoOptions = {
   code?: string;
 };
 
-export const validateDto = (
-  dtoClass: any,
+export const validateDto = <T extends object>(
+  dtoClass: ClassConstructor<T>,
   options: ValidateDtoOptions = {},
 ) => {
   const status = options.status ?? StatusCodes.BAD_REQUEST;

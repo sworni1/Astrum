@@ -1,7 +1,15 @@
-import { randomUUID } from "crypto";
-import { readdirSync } from "fs";
-import { join } from "path";
+import { randomUUID } from "node:crypto";
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
 import XLSX from "xlsx";
+import {
+  Currency,
+  type Prisma,
+  ProductCategory,
+  ProductStatus,
+  ProductVisibility,
+  PropertyLabel,
+} from "../generated/prisma/client";
 import { prisma } from "../lib/prisma";
 
 const PRODUCTS_PER_FILE = 500;
@@ -11,95 +19,95 @@ const URL_CONCURRENCY = 100;
 const URL_TIMEOUT_MS = 2000;
 const PLACEHOLDER_IMAGE = "https://placehold.co/400x300?text=No+Image";
 
-const CATEGORY_MAP: Record<string, string> = {
-  "Детские товары и игрушки": "Toys",
-  "Инструмент и садовая техника": "Home",
-  "Офис и канцелярия": "Office",
-  "Компьютерная техника": "Electronics",
-  "Крупная бытовая техника": "Home",
-  "Мелкая бытовая техника": "Home",
-  "Мобильные и связь": "Electronics",
-  "Дом и ремонт": "Home",
-  "ТВ и видеотехника": "Electronics",
-  "Авто и мото": "Automotive",
+const CATEGORY_MAP: Record<string, ProductCategory> = {
+  "Детские товары и игрушки": ProductCategory.Toys,
+  "Инструмент и садовая техника": ProductCategory.Home,
+  "Офис и канцелярия": ProductCategory.Office,
+  "Компьютерная техника": ProductCategory.Electronics,
+  "Крупная бытовая техника": ProductCategory.Home,
+  "Мелкая бытовая техника": ProductCategory.Home,
+  "Мобильные и связь": ProductCategory.Electronics,
+  "Дом и ремонт": ProductCategory.Home,
+  "ТВ и видеотехника": ProductCategory.Electronics,
+  "Авто и мото": ProductCategory.Automotive,
 };
 
-const PROPERTY_EXACT: Record<string, string> = {
-  Цвет: "Color",
-  Размер: "Size",
-  Гарантия: "Warranty",
-  "Класс энергопотребления": "EnergyEfficiency",
-  "Встроенная память": "StorageCapacity",
-  "Емкость накопителя": "StorageCapacity",
-  "Тип накопителя": "StorageCapacity",
-  "Предустановленная ОС": "OperatingSystem",
-  "Операционная система": "OperatingSystem",
-  "Модель процессора": "Processor",
-  "Серия процессора": "Processor",
-  "Частота процессора": "Processor",
-  "Объем видеопамяти": "GraphicsCard",
-  "Графический процессор": "GraphicsCard",
-  "Емкость аккумулятора": "BatteryLife",
-  "Емкость батареи": "BatteryLife",
-  "Напряжение батареи": "BatteryLife",
-  "Тип аккумулятора": "BatteryLife",
-  Тип: "Type",
-  "Тип устройства": "Type",
-  Устройство: "Type",
-  Мощность: "Power",
-  "Мощность (Вт)": "Power",
-  "Потребляемая мощность": "Power",
-  "Мощность подключения": "Power",
-  "Максимальные обороты": "Power",
-  Функции: "Features",
-  "Функции и возможности": "Features",
-  Дополнительно: "Features",
-  Комплектация: "Features",
-  Насадки: "Features",
-  Управление: "Control",
-  "Уровень шума": "NoiseLevel",
-  "Источник питания": "PowerSource",
-  Питание: "PowerSource",
-  Объем: "Capacity",
-  "Объем двигателя": "Capacity",
-  "Емкость чаши": "Capacity",
-  Установка: "Installation",
-  "Тип монтажа": "Installation",
-  "Количество скоростей": "Speed",
-  "Скорость цепи": "Speed",
-  "Частота смены кадров": "Speed",
-  Конструкция: "Construction",
-  "Оперативная память": "RAM",
-  "Тип памяти": "RAM",
-  "Частота памяти": "RAM",
-  Коммуникации: "Connectivity",
-  "Wi-Fi": "Connectivity",
-  HDMI: "Connectivity",
-  "LAN (RJ-45)": "Connectivity",
-  Bluetooth: "Connectivity",
-  "Порты подключения": "Connectivity",
-  Назначение: "Type",
-  "Принцип работы": "Type",
-  Сезон: "Type",
+const PROPERTY_EXACT: Record<string, PropertyLabel> = {
+  Цвет: PropertyLabel.Color,
+  Размер: PropertyLabel.Size,
+  Гарантия: PropertyLabel.Warranty,
+  "Класс энергопотребления": PropertyLabel.EnergyEfficiency,
+  "Встроенная память": PropertyLabel.StorageCapacity,
+  "Емкость накопителя": PropertyLabel.StorageCapacity,
+  "Тип накопителя": PropertyLabel.StorageCapacity,
+  "Предустановленная ОС": PropertyLabel.OperatingSystem,
+  "Операционная система": PropertyLabel.OperatingSystem,
+  "Модель процессора": PropertyLabel.Processor,
+  "Серия процессора": PropertyLabel.Processor,
+  "Частота процессора": PropertyLabel.Processor,
+  "Объем видеопамяти": PropertyLabel.GraphicsCard,
+  "Графический процессор": PropertyLabel.GraphicsCard,
+  "Емкость аккумулятора": PropertyLabel.BatteryLife,
+  "Емкость батареи": PropertyLabel.BatteryLife,
+  "Напряжение батареи": PropertyLabel.BatteryLife,
+  "Тип аккумулятора": PropertyLabel.BatteryLife,
+  Тип: PropertyLabel.Type,
+  "Тип устройства": PropertyLabel.Type,
+  Устройство: PropertyLabel.Type,
+  Мощность: PropertyLabel.Power,
+  "Мощность (Вт)": PropertyLabel.Power,
+  "Потребляемая мощность": PropertyLabel.Power,
+  "Мощность подключения": PropertyLabel.Power,
+  "Максимальные обороты": PropertyLabel.Power,
+  Функции: PropertyLabel.Features,
+  "Функции и возможности": PropertyLabel.Features,
+  Дополнительно: PropertyLabel.Features,
+  Комплектация: PropertyLabel.Features,
+  Насадки: PropertyLabel.Features,
+  Управление: PropertyLabel.Control,
+  "Уровень шума": PropertyLabel.NoiseLevel,
+  "Источник питания": PropertyLabel.PowerSource,
+  Питание: PropertyLabel.PowerSource,
+  Объем: PropertyLabel.Capacity,
+  "Объем двигателя": PropertyLabel.Capacity,
+  "Емкость чаши": PropertyLabel.Capacity,
+  Установка: PropertyLabel.Installation,
+  "Тип монтажа": PropertyLabel.Installation,
+  "Количество скоростей": PropertyLabel.Speed,
+  "Скорость цепи": PropertyLabel.Speed,
+  "Частота смены кадров": PropertyLabel.Speed,
+  Конструкция: PropertyLabel.Construction,
+  "Оперативная память": PropertyLabel.RAM,
+  "Тип памяти": PropertyLabel.RAM,
+  "Частота памяти": PropertyLabel.RAM,
+  Коммуникации: PropertyLabel.Connectivity,
+  "Wi-Fi": PropertyLabel.Connectivity,
+  HDMI: PropertyLabel.Connectivity,
+  "LAN (RJ-45)": PropertyLabel.Connectivity,
+  Bluetooth: PropertyLabel.Connectivity,
+  "Порты подключения": PropertyLabel.Connectivity,
+  Назначение: PropertyLabel.Type,
+  "Принцип работы": PropertyLabel.Type,
+  Сезон: PropertyLabel.Type,
 };
 
-const PROPERTY_KEYWORD: [string, string][] = [
-  ["Материал", "Material"],
-  ["Габариты", "Dimensions"],
-  ["Размеры", "Dimensions"],
-  ["Вес", "Weight"],
-  ["Диагональ", "ScreenSize"],
-  ["Дисплей", "Display"],
-  ["Разрешение", "Display"],
-  ["Покрытие экрана", "Display"],
-  ["Видеокарт", "GraphicsCard"],
-  ["процессор", "Processor"],
-  ["USB", "Connectivity"],
-  ["Thunderbolt", "Connectivity"],
-  ["Мощность", "Power"],
+const PROPERTY_KEYWORD: [string, PropertyLabel][] = [
+  ["Материал", PropertyLabel.Material],
+  ["Габариты", PropertyLabel.Dimensions],
+  ["Размеры", PropertyLabel.Dimensions],
+  ["Вес", PropertyLabel.Weight],
+  ["Диагональ", PropertyLabel.ScreenSize],
+  ["Дисплей", PropertyLabel.Display],
+  ["Разрешение", PropertyLabel.Display],
+  ["Покрытие экрана", PropertyLabel.Display],
+  ["Видеокарт", PropertyLabel.GraphicsCard],
+  ["процессор", PropertyLabel.Processor],
+  ["USB", PropertyLabel.Connectivity],
+  ["Thunderbolt", PropertyLabel.Connectivity],
+  ["Мощность", PropertyLabel.Power],
 ];
 
-function mapPropertyLabel(ruLabel: string): string | null {
+function mapPropertyLabel(ruLabel: string): PropertyLabel | null {
   const exact = PROPERTY_EXACT[ruLabel];
   if (exact) return exact;
 
@@ -114,7 +122,7 @@ function parsePrice(raw: unknown): number | null {
   if (raw == null || raw === "") return null;
   const cleaned = String(raw).replace(/\s/g, "").replace(",", ".");
   const num = parseFloat(cleaned);
-  return isNaN(num) || num <= 0 ? null : num;
+  return Number.isNaN(num) || num <= 0 ? null : num;
 }
 
 function extractStars(desc: string): number {
@@ -136,14 +144,19 @@ function cleanDescription(desc: string): string {
   return cleaned.trim();
 }
 
-function parseHtmlProperties(html: string): { label: string; value: string }[] {
+function parseHtmlProperties(
+  html: string,
+): { label: PropertyLabel; value: string }[] {
   if (!html) return [];
-  const results: { label: string; value: string }[] = [];
+  const results: { label: PropertyLabel; value: string }[] = [];
   const seen = new Set<string>();
 
   const regex = /<td>([^<]*)<\/td>\s*<td>([^<]*)<\/td>/gi;
-  let match;
-  while ((match = regex.exec(html)) !== null) {
+  let match: RegExpExecArray | null;
+  while (true) {
+    match = regex.exec(html);
+    if (match === null) break;
+
     const ruLabel = match[1].trim();
     const value = match[2].trim();
     if (!ruLabel || !value) continue;
@@ -220,35 +233,8 @@ interface ExcelRow {
   [key: string]: unknown;
 }
 
-interface ProductRecord {
-  id: string;
-  businessId: string;
-  name: string;
-  quantity: number;
-  description: string | null;
-  price: number;
-  discount: number | null;
-  stars: number;
-  popularity: number;
-  category: string;
-  subcategory: string | null;
-  currency: string;
-  isDeleted: boolean;
-  isOutOfStock: boolean;
-  visibility: string;
-  status: string;
-  images: string[];
-  previewImage: string;
-  sales: number;
-  views: number;
-}
-
-interface PropertyRecord {
-  id: string;
-  label: string;
-  value: string;
-  productId: string;
-}
+type ProductRecord = Prisma.ProductCreateManyInput;
+type PropertyRecord = Prisma.ProductPropertyCreateManyInput;
 
 const BUSINESS_IDS = Array.from({ length: 20 }, (_, i) => `biz_excel_${i + 1}`);
 
@@ -258,12 +244,12 @@ function pickBusinessId(index: number): string {
 
 async function flushProducts(products: ProductRecord[]) {
   if (products.length === 0) return;
-  await prisma.product.createMany({ data: products as any[] });
+  await prisma.product.createMany({ data: products });
 }
 
 async function flushProperties(properties: PropertyRecord[]) {
   if (properties.length === 0) return;
-  await prisma.productProperty.createMany({ data: properties as any[] });
+  await prisma.productProperty.createMany({ data: properties });
 }
 
 async function main() {
@@ -296,7 +282,7 @@ async function main() {
     >();
 
     for (const row of rows) {
-      const sku = String(row["Артикул"] ?? "").trim();
+      const sku = String(row.Артикул ?? "").trim();
       if (!sku) continue;
 
       const modSku = String(row["Артикул модификации"] ?? "").trim();
@@ -305,7 +291,8 @@ async function main() {
         grouped.set(sku, { base: null, firstColor: null });
       }
 
-      const group = grouped.get(sku)!;
+      const group = grouped.get(sku);
+      if (!group) continue;
       if (!modSku) {
         group.base = row;
       } else if (!group.firstColor) {
@@ -334,9 +321,9 @@ async function main() {
       if (allCandidates.length >= CANDIDATES_PER_FILE) break;
       const row = group.base;
       if (!row) continue;
-      if (!parsePrice(row["Цена"])) continue;
+      if (!parsePrice(row.Цена)) continue;
       if (!String(row["Имя товара"] ?? "").trim()) continue;
-      const ruCat = String(row["Категория"] ?? "").trim();
+      const ruCat = String(row.Категория ?? "").trim();
       if (!CATEGORY_MAP[ruCat]) continue;
 
       const rawUrls = extractImageUrls(row["Ссылки на фото (через пробел)"]);
@@ -382,19 +369,20 @@ async function main() {
 
     for (const { group, rawUrls } of selected) {
       const row = group.base;
-      const price = parsePrice(row["Цена"])!;
+      const price = parsePrice(row.Цена);
+      if (price === null) continue;
       const name = String(row["Имя товара"]).trim();
-      const category = CATEGORY_MAP[String(row["Категория"]).trim()];
+      const category = CATEGORY_MAP[String(row.Категория).trim()];
 
       const aliveUrls = rawUrls.filter((u) => aliveSet.has(u));
       const imageUrls = aliveUrls.length > 0 ? aliveUrls : [PLACEHOLDER_IMAGE];
 
-      const rawDesc = String(row["Описание"] ?? "");
+      const rawDesc = String(row.Описание ?? "");
       const stars = extractStars(rawDesc);
       const description = cleanDescription(rawDesc) || null;
       const quantity = Math.max(
         0,
-        parseInt(String(row["Количество"] ?? "0"), 10) || 0,
+        parseInt(String(row.Количество ?? "0"), 10) || 0,
       );
 
       const oldPrice = parsePrice(row["Цена старая"]);
@@ -425,11 +413,11 @@ async function main() {
         popularity: Math.round(stars * quantity * 0.5 * 100) / 100,
         category,
         subcategory,
-        currency: "RUB",
+        currency: Currency.RUB,
         isDeleted: false,
         isOutOfStock: quantity === 0,
-        visibility: "Public",
-        status: "Published",
+        visibility: ProductVisibility.Public,
+        status: ProductStatus.Published,
         images: imageUrls,
         previewImage: imageUrls[0],
         sales: 0,
@@ -451,7 +439,7 @@ async function main() {
         });
       }
 
-      const brand = String(row["Производитель"] ?? "").trim();
+      const brand = String(row.Производитель ?? "").trim();
       if (brand && !seenLabels.has("Brand")) {
         propertyBatch.push({
           id: randomUUID(),

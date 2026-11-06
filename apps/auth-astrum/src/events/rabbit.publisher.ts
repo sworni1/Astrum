@@ -1,6 +1,6 @@
 import { Injectable, Logger, type OnModuleDestroy } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { connect, type ChannelModel, type ConfirmChannel } from "amqplib";
+import { type ChannelModel, type ConfirmChannel, connect } from "amqplib";
 import { describeError } from "./describe-error";
 import { EVENTS_EXCHANGE, PUBLISH_TIMEOUT_MS } from "./events.constants";
 

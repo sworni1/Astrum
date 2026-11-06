@@ -37,30 +37,28 @@ describe("readIdempotencyKey", () => {
         status: 422,
         code: "VALIDATION",
         details: {
-          errors: [
-            expect.objectContaining({ property: "Idempotency-Key" }),
-          ],
+          errors: [expect.objectContaining({ property: "Idempotency-Key" })],
         },
       }) as never,
     );
   });
 
   it("отказывает ключу длиннее 128 символов (AC-4)", () => {
-    expect(() => readIdempotencyKey({ "idempotency-key": "a".repeat(129) })).toThrow(
-      AppError,
-    );
-    expect(readIdempotencyKey({ "idempotency-key": "a".repeat(128) })).toHaveLength(
-      128,
-    );
+    expect(() =>
+      readIdempotencyKey({ "idempotency-key": "a".repeat(129) }),
+    ).toThrow(AppError);
+    expect(
+      readIdempotencyKey({ "idempotency-key": "a".repeat(128) }),
+    ).toHaveLength(128);
   });
 
   it("отказывает символу вне алфавита ключа (AC-4)", () => {
-    expect(() => readIdempotencyKey({ "idempotency-key": "key with space" })).toThrow(
-      AppError,
-    );
-    expect(() => readIdempotencyKey({ "idempotency-key": "key+plus123" })).toThrow(
-      AppError,
-    );
+    expect(() =>
+      readIdempotencyKey({ "idempotency-key": "key with space" }),
+    ).toThrow(AppError);
+    expect(() =>
+      readIdempotencyKey({ "idempotency-key": "key+plus123" }),
+    ).toThrow(AppError);
   });
 });
 

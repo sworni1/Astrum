@@ -1,5 +1,5 @@
 import { logger } from "../common/helpers/logger";
-import { loggedSid, sessionKey, type SessionStore } from "./sessionStore";
+import { loggedSid, type SessionStore, sessionKey } from "./sessionStore";
 
 const describeError = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);

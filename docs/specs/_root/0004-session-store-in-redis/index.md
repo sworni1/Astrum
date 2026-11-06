@@ -63,14 +63,14 @@ Decisions taken here rather than asked (each with the runner up):
 
 **Data model sketch**:
 
-| Piece | Shape |
-| --- | --- |
-| JWT payload | `{ userId: string, sid: string }` plus `iat` and `exp` |
-| Redis key | `session:<sid>` |
-| Redis value | JSON `{ "userId": string, "createdAt": string (ISO 8601), "userAgent": string \| null }` |
-| Expiry | 86400 seconds, set in the writing command (`SET ... EX 86400`) |
-| Secondary index | none in this spec; a `user:<id>:sessions` set is deferred to Follow-up |
-| Gone from the store | token refused with `401 SESSION_REVOKED` |
+| Piece               | Shape                                                                                    |
+| ------------------- | ---------------------------------------------------------------------------------------- |
+| JWT payload         | `{ userId: string, sid: string }` plus `iat` and `exp`                                   |
+| Redis key           | `session:<sid>`                                                                          |
+| Redis value         | JSON `{ "userId": string, "createdAt": string (ISO 8601), "userAgent": string \| null }` |
+| Expiry              | 86400 seconds, set in the writing command (`SET ... EX 86400`)                           |
+| Secondary index     | none in this spec; a `user:<id>:sessions` set is deferred to Follow-up                   |
+| Gone from the store | token refused with `401 SESSION_REVOKED`                                                 |
 
 **State transitions**:
 
@@ -82,33 +82,33 @@ live   --TTL expiry--> absent
 
 **API surface**:
 
-| Endpoint | Method | Key inputs | Key outputs | Auth | Key errors |
-| --- | --- | --- | --- | --- | --- |
-| `/api/auth/register`, `/api/auth/signin` | POST | existing DTO | `{ token, expiresIn }`, token now carries `sid`; one Redis `SET ... EX` before the answer | none | unchanged (`403` on bad credentials) |
-| `/api/auth/logout` | POST | `__auth` cookie | `204`, no body | cookie, verified; missing or invalid still `204` | none in the body; a store failure is logged and still answers `204` |
-| every router behind `authenticateToken` | any | `__auth` cookie | unchanged | signature plus `session:<sid>` | `401 SESSION_REVOKED`, `401 SESSION_STORE_UNAVAILABLE` |
-| `/api/users/me/password` | PATCH | `oldPassword`, `newPassword` | unchanged | signature plus session | `401` as above, existing password errors unchanged |
-| `/api/users/me` | DELETE | none | unchanged | signature plus session | `401` as above |
-| `/health` (`api`, `auth`) | GET | none | `{ status: "ok", instance }` | none | `503` when Postgres or Redis does not answer |
+| Endpoint                                 | Method | Key inputs                   | Key outputs                                                                               | Auth                                             | Key errors                                                          |
+| ---------------------------------------- | ------ | ---------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------- |
+| `/api/auth/register`, `/api/auth/signin` | POST   | existing DTO                 | `{ token, expiresIn }`, token now carries `sid`; one Redis `SET ... EX` before the answer | none                                             | unchanged (`403` on bad credentials)                                |
+| `/api/auth/logout`                       | POST   | `__auth` cookie              | `204`, no body                                                                            | cookie, verified; missing or invalid still `204` | none in the body; a store failure is logged and still answers `204` |
+| every router behind `authenticateToken`  | any    | `__auth` cookie              | unchanged                                                                                 | signature plus `session:<sid>`                   | `401 SESSION_REVOKED`, `401 SESSION_STORE_UNAVAILABLE`              |
+| `/api/users/me/password`                 | PATCH  | `oldPassword`, `newPassword` | unchanged                                                                                 | signature plus session                           | `401` as above, existing password errors unchanged                  |
+| `/api/users/me`                          | DELETE | none                         | unchanged                                                                                 | signature plus session                           | `401` as above                                                      |
+| `/health` (`api`, `auth`)                | GET    | none                         | `{ status: "ok", instance }`                                                              | none                                             | `503` when Postgres or Redis does not answer                        |
 
 **Value sourcing**:
 
-| Action | Value produced / displayed | Source |
-| --- | --- | --- |
-| sign in | `sid` in the token | `crypto.randomBytes(32).toString("base64url")` at sign time |
-| sign in | record expiry | fixed 86400 seconds, the same constant as the token lifetime (`expiresIn: "1d"`) |
-| sign in | `userAgent` in the record | the `User-Agent` request header on the auth call, truncated to 512 |
-| sign in | `createdAt` in the record | `new Date().toISOString()` at write time |
-| gateway check | `userId` to compare with the record | the verified token payload (`decoded.userId`) |
-| gateway check | route and method in the log line | `req.method` and `req.baseUrl + req.path` on the Express request (`req.route` is undefined in a mounted middleware) |
-| gateway refusal | which of the four codes to answer | the branch taken: no cookie, failed signature, store read failure, or a record check |
-| sign in, register | whether a token is issued at all | the result of the session write: a rejected write answers `503` and issues none |
-| gateway refusal | `code` in the body | the branch: `SESSION_REVOKED` or `SESSION_STORE_UNAVAILABLE` |
-| logout | key to delete | `sid` from the verified `__auth` cookie |
-| password change, account delete | key to delete | `sid` from the verified token of the same request |
-| storefront toast | the reason shown to the customer | the gateway `code` on the `401` answer |
-| storefront logout | whether the remote call worked | the server action's awaited `fetch` result and its `AbortSignal.timeout(2000)` |
-| storefront session end | where the handling is attached and how it runs once | a module level flag in `createAxiosInstance` (`useFetcher.ts`), reset on a successful sign in |
+| Action                          | Value produced / displayed                          | Source                                                                                                              |
+| ------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| sign in                         | `sid` in the token                                  | `crypto.randomBytes(32).toString("base64url")` at sign time                                                         |
+| sign in                         | record expiry                                       | fixed 86400 seconds, the same constant as the token lifetime (`expiresIn: "1d"`)                                    |
+| sign in                         | `userAgent` in the record                           | the `User-Agent` request header on the auth call, truncated to 512                                                  |
+| sign in                         | `createdAt` in the record                           | `new Date().toISOString()` at write time                                                                            |
+| gateway check                   | `userId` to compare with the record                 | the verified token payload (`decoded.userId`)                                                                       |
+| gateway check                   | route and method in the log line                    | `req.method` and `req.baseUrl + req.path` on the Express request (`req.route` is undefined in a mounted middleware) |
+| gateway refusal                 | which of the four codes to answer                   | the branch taken: no cookie, failed signature, store read failure, or a record check                                |
+| sign in, register               | whether a token is issued at all                    | the result of the session write: a rejected write answers `503` and issues none                                     |
+| gateway refusal                 | `code` in the body                                  | the branch: `SESSION_REVOKED` or `SESSION_STORE_UNAVAILABLE`                                                        |
+| logout                          | key to delete                                       | `sid` from the verified `__auth` cookie                                                                             |
+| password change, account delete | key to delete                                       | `sid` from the verified token of the same request                                                                   |
+| storefront toast                | the reason shown to the customer                    | the gateway `code` on the `401` answer                                                                              |
+| storefront logout               | whether the remote call worked                      | the server action's awaited `fetch` result and its `AbortSignal.timeout(2000)`                                      |
+| storefront session end          | where the handling is attached and how it runs once | a module level flag in `createAxiosInstance` (`useFetcher.ts`), reset on a successful sign in                       |
 
 **Key invariants**:
 

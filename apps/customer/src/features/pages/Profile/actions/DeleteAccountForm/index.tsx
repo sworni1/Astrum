@@ -40,7 +40,9 @@ const DeleteAccountForm = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("sureTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>{t("deleteWarning")}</AlertDialogDescription>
+            <AlertDialogDescription>
+              {t("deleteWarning")}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{common("cancel")}</AlertDialogCancel>

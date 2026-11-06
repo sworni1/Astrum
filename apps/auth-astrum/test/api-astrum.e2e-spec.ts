@@ -5,10 +5,10 @@ import {
 } from "@nestjs/common";
 import { Test, type TestingModule } from "@nestjs/testing";
 import request from "supertest";
-import apiApp from "../../api-astrum/src/app";
 import { prisma } from "../../api-astrum/lib/prisma";
-import { PrismaService } from "../src/prisma/prisma.service";
+import apiApp from "../../api-astrum/src/app";
 import { AppModule as AuthAppModule } from "../src/app.module";
+import { PrismaService } from "../src/prisma/prisma.service";
 
 jest.setTimeout(30000);
 

@@ -18,8 +18,12 @@ client.interceptors.request.use((config) => {
  * unknown address from a known one. The address travels lowercased because
  * that is the identity the rate limit counts.
  */
-export const requestConfirmationEmail = async (email: string): Promise<void> => {
-  await client.post("/auth/confirm/resend", { email: email.trim().toLowerCase() });
+export const requestConfirmationEmail = async (
+  email: string,
+): Promise<void> => {
+  await client.post("/auth/confirm/resend", {
+    email: email.trim().toLowerCase(),
+  });
 };
 
 export const requestConfirmationForCurrentUser = async (): Promise<void> => {

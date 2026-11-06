@@ -59,13 +59,14 @@ export function MobileMenuSheet({
               <span>{t("categories")}</span>
             </Link>
 
-            <div
+            <button
+              type="button"
               className="p-2 rounded-md hover:bg-muted transition flex items-center space-x-3"
               onClick={() => setTheme(theme === "light" ? "dark" : "light")}
             >
               <ThemeSwitcher size={24} />
               <span>{t("theme")}</span>
-            </div>
+            </button>
 
             <Link
               href="/wishlist"

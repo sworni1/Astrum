@@ -41,15 +41,9 @@ export const buildConfirmationLetter = (
   const copy = CATALOG[locale];
   const safeLink = escapeHtml(link);
 
-  const text = [
-    copy.greeting,
-    "",
-    copy.intro,
-    "",
-    link,
-    "",
-    copy.hint,
-  ].join("\n");
+  const text = [copy.greeting, "", copy.intro, "", link, "", copy.hint].join(
+    "\n",
+  );
 
   const html = [
     '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#111111">',

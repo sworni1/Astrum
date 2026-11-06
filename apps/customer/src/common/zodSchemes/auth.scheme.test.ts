@@ -1,12 +1,15 @@
-import { describe, expect, it } from "vitest";
 import { subYears } from "date-fns";
+import { describe, expect, it } from "vitest";
 import en from "../../../messages/en.json";
 import ru from "../../../messages/ru.json";
 import { createRegisterFormSchema, MIN_AGE_YEARS } from "./auth.scheme";
 import type { ValidationTranslator } from "./translator";
 
 const translatorFor = (catalog: typeof en.validation) => {
-  const translate = (key: keyof typeof catalog, values?: Record<string, unknown>) =>
+  const translate = (
+    key: keyof typeof catalog,
+    values?: Record<string, unknown>,
+  ) =>
     Object.entries(values ?? {}).reduce(
       (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
       catalog[key],

@@ -70,6 +70,8 @@
     "shippingReturns": "30-day return policy",
     "shippingTime": "2-5 business days delivery",
     "imageAlt": "Product image {index}",
+    "gallery": "Product image gallery",
+    "gallerySlide": "Slide {current} of {total}",
     "openImage": "Open image {index}",
     "failed": "Failed to load product details"
   },

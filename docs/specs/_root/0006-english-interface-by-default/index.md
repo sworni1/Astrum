@@ -55,12 +55,12 @@ No Prisma model and no migration. The feature adds three pieces of state:
 
 **API surface**:
 
-| Endpoint or action | Method | Key inputs | Key outputs | Auth | Key errors |
-|---|---|---|---|---|---|
-| `/api/auth/register` (proxied by the gateway) | POST | the existing body, plus `Accept-Language: en` or `ru` | `token`, `expiresIn` | public | `403 EMAIL_TAKEN`, `400` validation |
-| `/api/auth/confirm/resend` | POST | `email`, plus `Accept-Language` | `204` whatever happens | public | none visible by design |
-| `/api/users/me` (address change path) | PATCH | the existing profile body, plus `Accept-Language` | the user | session | `400`, `409 EMAIL_TAKEN` |
-| `setLocale(locale)` in `apps/customer/src/common/actions/locale.ts` | server action | `'en'` or `'ru'` | none, writes the cookie and revalidates | works for guests too | an unknown value is ignored |
+| Endpoint or action                                                  | Method        | Key inputs                                            | Key outputs                             | Auth                 | Key errors                          |
+| ------------------------------------------------------------------- | ------------- | ----------------------------------------------------- | --------------------------------------- | -------------------- | ----------------------------------- |
+| `/api/auth/register` (proxied by the gateway)                       | POST          | the existing body, plus `Accept-Language: en` or `ru` | `token`, `expiresIn`                    | public               | `403 EMAIL_TAKEN`, `400` validation |
+| `/api/auth/confirm/resend`                                          | POST          | `email`, plus `Accept-Language`                       | `204` whatever happens                  | public               | none visible by design              |
+| `/api/users/me` (address change path)                               | PATCH         | the existing profile body, plus `Accept-Language`     | the user                                | session              | `400`, `409 EMAIL_TAKEN`            |
+| `setLocale(locale)` in `apps/customer/src/common/actions/locale.ts` | server action | `'en'` or `'ru'`                                      | none, writes the cookie and revalidates | works for guests too | an unknown value is ignored         |
 
 No new HTTP endpoint, no new URL segment, and the `proxy.ts` matcher keeps its shape. The gateway forwards `/api/auth` with `http-proxy-middleware`, which passes request headers through, so the language reaches the auth service unchanged.
 
@@ -71,16 +71,16 @@ Two mechanics are pinned so the build cannot drift from them:
 
 **Value sourcing** (every value each action produces, computes or displays, with its source):
 
-| Action | Value produced or displayed | Source |
-|---|---|---|
-| any screen | the current language | `NEXT_LOCALE` cookie read in `apps/customer/src/i18n/request.ts`, `en` when missing or unknown |
-| any screen | every visible string | `messages/<locale>.json`, resolved by the component through `useTranslations` or `getTranslations` |
-| the switcher | the chosen language | the `<select>` value in the client component, validated again in the `setLocale` action |
-| the layout and page metadata | `lang` attribute and title | `getLocale()` in the root layout and in `generateMetadata` |
-| order and profile dates | the formatted date | the date field from the gateway response, formatted by `useFormatter` with the current language and the browser time zone |
-| register, resend, address change | the language of the letter | `Accept-Language` set by the storefront request helpers from `NEXT_LOCALE`, explicitly `en` when the cookie is missing (never the browser default), carried in the event payload to the worker |
-| a letter request with no usable header | the letter language | constant `en` |
-| README and documentation | English text | static rewrite, no runtime source |
+| Action                                 | Value produced or displayed | Source                                                                                                                                                                                         |
+| -------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| any screen                             | the current language        | `NEXT_LOCALE` cookie read in `apps/customer/src/i18n/request.ts`, `en` when missing or unknown                                                                                                 |
+| any screen                             | every visible string        | `messages/<locale>.json`, resolved by the component through `useTranslations` or `getTranslations`                                                                                             |
+| the switcher                           | the chosen language         | the `<select>` value in the client component, validated again in the `setLocale` action                                                                                                        |
+| the layout and page metadata           | `lang` attribute and title  | `getLocale()` in the root layout and in `generateMetadata`                                                                                                                                     |
+| order and profile dates                | the formatted date          | the date field from the gateway response, formatted by `useFormatter` with the current language and the browser time zone                                                                      |
+| register, resend, address change       | the language of the letter  | `Accept-Language` set by the storefront request helpers from `NEXT_LOCALE`, explicitly `en` when the cookie is missing (never the browser default), carried in the event payload to the worker |
+| a letter request with no usable header | the letter language         | constant `en`                                                                                                                                                                                  |
+| README and documentation               | English text                | static rewrite, no runtime source                                                                                                                                                              |
 
 **Key invariants**:
 

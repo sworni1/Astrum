@@ -49,33 +49,33 @@ Replicas keep no state in the process: a session is a signed JWT in a cookie plu
 
 Email confirmation goes through the broker: `apps/auth-astrum` publishes an `account.confirmation.requested` event into the `astrum.events` exchange after registration and after a resend, the gateway does the same after an address change, and `apps/worker` takes it from the `mail.confirmation` queue, mints a one time 24 hour link (the database keeps only the sha256 of the token, the token itself stays in the letter) and sends the letter over SMTP; without `SMTP_URL` it writes the letter into `MAIL_OUTBOX_DIR`. A failed delivery returns to a waiting queue after 60, 300 and 900 seconds, and after the fourth attempt the letter lands in `mail.confirmation.dead` with the text of the last error. While an account is `PENDING`, the gateway answers `403 EMAIL_NOT_CONFIRMED` for orders, reviews and profile edits; sign in, the catalogue and the cart stay open. In the production stack Mailpit plays the SMTP role, and its interface is open at `http://localhost:8025`.
 
-| Service    | Port   | Reachable                     | Replicas |
-| ---------- | ------ | ----------------------------- | -------- |
-| `proxy`    | 80/443 | from outside                  | 1        |
-| `customer` | 3000   | inside `astrum` only          | 2        |
-| `api`      | 3580   | inside only, through `proxy`  | 3        |
-| `auth`     | 4580   | inside only, from `api`       | 1        |
-| `worker`   | 5580   | inside only                   | 1        |
-| `rabbitmq` | 5672   | inside only                   | 1        |
-| `mailpit`  | 8025   | from outside, prod stack only | 1        |
-| `redis`    | 6379   | inside the network, on the host in dev | 1 |
-| `db`       | 5432   | inside only                   | 1        |
+| Service    | Port   | Reachable                              | Replicas |
+| ---------- | ------ | -------------------------------------- | -------- |
+| `proxy`    | 80/443 | from outside                           | 1        |
+| `customer` | 3000   | inside `astrum` only                   | 2        |
+| `api`      | 3580   | inside only, through `proxy`           | 3        |
+| `auth`     | 4580   | inside only, from `api`                | 1        |
+| `worker`   | 5580   | inside only                            | 1        |
+| `rabbitmq` | 5672   | inside only                            | 1        |
+| `mailpit`  | 8025   | from outside, prod stack only          | 1        |
+| `redis`    | 6379   | inside the network, on the host in dev | 1        |
+| `db`       | 5432   | inside only                            | 1        |
 
 The reasoning behind the choice and the rejected alternatives (Swarm, nginx, Traefik) live in [ADR-0003](docs/adr/0003-container-topology-and-load-balancing.md).
 
 ## Stack
 
-| Layer            | Technologies                                                                    |
-| ---------------- | ------------------------------------------------------------------------------- |
-| Storefront       | Next.js 16 (App Router), React 19, TypeScript 7, Tailwind 4, shadcn/ui          |
-| Data in the UI   | SWR, React Hook Form with Zod                                                    |
-| API gateway      | Express 5, Prisma 7, class-validator                                            |
-| Authentication   | NestJS 11, Passport JWT, argon2, Swagger                                         |
-| Sessions         | Redis 7 (ioredis): one `session:<sid>` record for the life of the token         |
-| Events           | RabbitMQ 4 (amqplib): the `astrum.events` exchange, retries and a dead letter queue |
-| Mail             | `apps/worker` on nodemailer, SMTP or Mailpit with its interface on 8025         |
-| Database         | PostgreSQL 16, Prisma 7                                                         |
-| Infrastructure   | pnpm workspaces, Turborepo, Docker Compose with replicas behind Caddy, husky and commitlint |
+| Layer          | Technologies                                                                                |
+| -------------- | ------------------------------------------------------------------------------------------- |
+| Storefront     | Next.js 16 (App Router), React 19, TypeScript 7, Tailwind 4, shadcn/ui                      |
+| Data in the UI | SWR, React Hook Form with Zod                                                               |
+| API gateway    | Express 5, Prisma 7, class-validator                                                        |
+| Authentication | NestJS 11, Passport JWT, argon2, Swagger                                                    |
+| Sessions       | Redis 7 (ioredis): one `session:<sid>` record for the life of the token                     |
+| Events         | RabbitMQ 4 (amqplib): the `astrum.events` exchange, retries and a dead letter queue         |
+| Mail           | `apps/worker` on nodemailer, SMTP or Mailpit with its interface on 8025                     |
+| Database       | PostgreSQL 16, Prisma 7                                                                     |
+| Infrastructure | pnpm workspaces, Turborepo, Docker Compose with replicas behind Caddy, husky and commitlint |
 
 ## Roadmap
 

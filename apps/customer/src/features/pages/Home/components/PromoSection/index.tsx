@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
@@ -10,15 +11,21 @@ const PromoSection = async () => {
       <div className="mx-auto grid max-w-screen-xl rounded-lg p-4 md:p-8 lg:grid-cols-12 lg:gap-8 lg:p-16 xl:gap-16">
         <div className="lg:col-span-5 lg:mt-0">
           <Link href="/">
-            <img
+            <Image
               className="mb-4 h-56 w-56 dark:hidden sm:h-96 sm:w-96 md:h-full md:w-full"
               src="https://flowbite.s3.amazonaws.com/blocks/e-commerce/imac-components.svg"
               alt={t("promoImageAlt")}
+              width={800}
+              height={800}
+              unoptimized
             />
-            <img
+            <Image
               className="mb-4 hidden dark:block md:h-full"
               src="https://flowbite.s3.amazonaws.com/blocks/e-commerce/imac-components-dark.svg"
               alt={t("promoImageAlt")}
+              width={800}
+              height={800}
+              unoptimized
             />
           </Link>
         </div>

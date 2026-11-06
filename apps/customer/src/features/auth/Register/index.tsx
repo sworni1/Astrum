@@ -15,7 +15,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { createRegisterFormSchema, type SignUpCredentials } from "../../../common";
+import {
+  createRegisterFormSchema,
+  type SignUpCredentials,
+} from "../../../common";
 import {
   Form,
   FormControl,

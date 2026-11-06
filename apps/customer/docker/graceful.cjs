@@ -7,11 +7,9 @@ const SHUTDOWN_TIMEOUT_MS = 10_000;
 const originalListen = http.Server.prototype.listen;
 
 http.Server.prototype.listen = function listen(...args) {
-  const server = this;
-
   const shutdown = () => {
     console.log("[customer] SIGTERM received, draining connections");
-    server.close(() => process.exit(0));
+    this.close(() => process.exit(0));
     setTimeout(() => process.exit(1), SHUTDOWN_TIMEOUT_MS).unref();
   };
 

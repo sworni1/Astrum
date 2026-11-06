@@ -35,7 +35,7 @@ export class WishlistService {
       );
 
       return wishlistWithData;
-    } catch (error) {
+    } catch {
       throw new Error(`getWishlist error`);
     }
   }
@@ -53,7 +53,7 @@ export class WishlistService {
         isWishlisted: true,
         quantityInCart: cartItem ? cartItem.quantity : 0,
       };
-    } catch (error) {
+    } catch {
       throw new Error(`addProductToWishlist error`);
     }
   }
@@ -70,7 +70,7 @@ export class WishlistService {
         isWishlisted: false,
         quantityInCart: cartItem ? cartItem.quantity : 0,
       };
-    } catch (error) {
+    } catch {
       throw new Error(`deleteProductFromWishlist error`);
     }
   }

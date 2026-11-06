@@ -32,7 +32,7 @@ export default function Profile() {
         <Separator className="my-4" />
 
         {!profileIsLoading && profileData ? (
-          <EditProfileForm profileData={profileData!} />
+          <EditProfileForm profileData={profileData} />
         ) : (
           <EditProfileFormSkeleton />
         )}

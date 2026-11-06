@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import type { ProductCategory } from "../../../generated/prisma/enums";
 import { handleErrors } from "../../common/helpers/errorHandler";
 import { productCategoryMap } from "../../common/helpers/productCategoryMap";
+import type { AuthenticatedUserRequest } from "../../common/types/jwt.payload";
 import { ProductService } from "./product.service";
 
 const productService = new ProductService();
@@ -10,8 +11,8 @@ const productService = new ProductService();
 export class ProductController {
   async getProduct(req: Request, res: Response) {
     try {
-      const userId = (req as any).userId;
-      const productId = req.params["productId"] as string;
+      const { userId } = req as AuthenticatedUserRequest;
+      const productId = req.params.productId as string;
 
       const product = await productService.getProduct(userId, productId);
 
@@ -23,7 +24,7 @@ export class ProductController {
 
   async getRecommendations(req: Request, res: Response) {
     try {
-      const userId = (req as any).userId;
+      const { userId } = req as AuthenticatedUserRequest;
       const { cursor } = req.query;
 
       const products = await productService.getRecommendations(
@@ -40,8 +41,8 @@ export class ProductController {
 
   async getCategoryProducts(req: Request, res: Response) {
     try {
-      const userId = (req as any).userId;
-      const category = req.params["category"] as string;
+      const { userId } = req as AuthenticatedUserRequest;
+      const category = req.params.category as string;
 
       const { cursor, search_query } = req.query;
 

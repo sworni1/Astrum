@@ -1,6 +1,6 @@
+import { fileURLToPath } from "node:url";
 import { PrismaPg } from "@prisma/adapter-pg";
 import dotenv from "dotenv";
-import { fileURLToPath } from "url";
 import { PrismaClient } from "../generated/prisma/client";
 
 if (!process.env.DATABASE_URL) {

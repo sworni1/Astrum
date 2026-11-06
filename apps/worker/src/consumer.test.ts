@@ -21,7 +21,13 @@ const buildMessage = (headers?: Record<string, unknown>): ConsumeMessage =>
   ({
     content: event,
     properties: { headers },
-    fields: { consumerTag: "tag", deliveryTag: 1, redelivered: false, exchange: "", routingKey: "" },
+    fields: {
+      consumerTag: "tag",
+      deliveryTag: 1,
+      redelivered: false,
+      exchange: "",
+      routingKey: "",
+    },
   }) as unknown as ConsumeMessage;
 
 const buildHarness = (send: () => Promise<void>) => {
@@ -35,7 +41,11 @@ const buildHarness = (send: () => Promise<void>) => {
     nack: () => {
       state.nacks += 1;
     },
-    sendToQueue: (queue: string, _content: Buffer, options: { headers?: Record<string, unknown> }) => {
+    sendToQueue: (
+      queue: string,
+      _content: Buffer,
+      options: { headers?: Record<string, unknown> },
+    ) => {
       sent.push({ queue, headers: options?.headers ?? {} });
       return true;
     },
@@ -69,7 +79,8 @@ const buildHarness = (send: () => Promise<void>) => {
   return { handler, sent, state };
 };
 
-const failing = () => Promise.reject(new Error("connect ECONNREFUSED ::1:1025"));
+const failing = () =>
+  Promise.reject(new Error("connect ECONNREFUSED ::1:1025"));
 const succeeding = () => Promise.resolve();
 
 test("AC-7: the first failure waits 60 s and hands over attempt 2", async () => {

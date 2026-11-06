@@ -44,57 +44,57 @@ interface Review {
 }
 
 const DEMO_REVIEWS: Review[] = [
-    {
-      id: 1,
-      userName: "Emma Davis",
-      userAvatar:
-        "https://notion-avatars.netlify.app/api/avatar?preset=female-1",
-      date: "2024-03-20",
-      rating: 5,
-      content:
-        "I was blown away by the quality of this product. It's clear that a lot of thought and care went into its design. The attention to detail is remarkable, and it's been an absolute pleasure to use. I've already recommended it to several friends who are equally impressed with their purchases.",
-      likes: 8,
-      comments: 2,
-    },
-    {
-      id: 2,
-      userName: "Anuj Mishra",
-      userAvatar: "https://notion-avatars.netlify.app/api/avatar?preset=male-1",
-      date: "2023-12-16",
-      rating: 5,
-      content:
-        "The customer service experience was exceptional from start to finish. When I had questions about my order, the team responded promptly and went above and beyond to ensure I was completely satisfied. It's rare to find such dedication to customer happiness these days.",
-      likes: 10,
-      comments: 5,
-    },
-    {
-      id: 3,
-      userName: "Robert Karmazov",
-      userAvatar: "https://notion-avatars.netlify.app/api/avatar?preset=male-2",
-      date: "2023-10-24",
-      rating: 5,
-      content:
-        "I was hesitant about the price at first, but after using this product for several weeks, I can confidently say it's worth every penny. The quality and durability are outstanding, and it's made a noticeable difference in my daily routine. I'm already planning to purchase more items from this store.",
-      likes: 4,
-      comments: 0,
-    },
-    {
-      id: 4,
-      userName: "Sophia Chen",
-      userAvatar:
-        "https://notion-avatars.netlify.app/api/avatar?preset=female-2",
-      date: "2024-05-15",
-      rating: 4,
-      content:
-        "This is a fantastic product that has really improved my daily routine. The quality is excellent and it's very user-friendly. The only reason I'm not giving it 5 stars is that I wish it came in more color options. Other than that, it's been a great purchase and I would definitely recommend it to others.",
-      likes: 6,
-      comments: 1,
-    },
+  {
+    id: 1,
+    userName: "Emma Davis",
+    userAvatar: "https://notion-avatars.netlify.app/api/avatar?preset=female-1",
+    date: "2024-03-20",
+    rating: 5,
+    content:
+      "I was blown away by the quality of this product. It's clear that a lot of thought and care went into its design. The attention to detail is remarkable, and it's been an absolute pleasure to use. I've already recommended it to several friends who are equally impressed with their purchases.",
+    likes: 8,
+    comments: 2,
+  },
+  {
+    id: 2,
+    userName: "Anuj Mishra",
+    userAvatar: "https://notion-avatars.netlify.app/api/avatar?preset=male-1",
+    date: "2023-12-16",
+    rating: 5,
+    content:
+      "The customer service experience was exceptional from start to finish. When I had questions about my order, the team responded promptly and went above and beyond to ensure I was completely satisfied. It's rare to find such dedication to customer happiness these days.",
+    likes: 10,
+    comments: 5,
+  },
+  {
+    id: 3,
+    userName: "Robert Karmazov",
+    userAvatar: "https://notion-avatars.netlify.app/api/avatar?preset=male-2",
+    date: "2023-10-24",
+    rating: 5,
+    content:
+      "I was hesitant about the price at first, but after using this product for several weeks, I can confidently say it's worth every penny. The quality and durability are outstanding, and it's made a noticeable difference in my daily routine. I'm already planning to purchase more items from this store.",
+    likes: 4,
+    comments: 0,
+  },
+  {
+    id: 4,
+    userName: "Sophia Chen",
+    userAvatar: "https://notion-avatars.netlify.app/api/avatar?preset=female-2",
+    date: "2024-05-15",
+    rating: 4,
+    content:
+      "This is a fantastic product that has really improved my daily routine. The quality is excellent and it's very user-friendly. The only reason I'm not giving it 5 stars is that I wish it came in more color options. Other than that, it's been a great purchase and I would definitely recommend it to others.",
+    likes: 6,
+    comments: 1,
+  },
 ];
 
 interface ReviewsProps {
   productId: string;
 }
+
+const REVIEWS_PER_PAGE = 2;
 
 const Reviews = ({ productId }: ReviewsProps) => {
   const t = useTranslations("reviews");
@@ -108,15 +108,13 @@ const Reviews = ({ productId }: ReviewsProps) => {
     email: "",
     review: "",
   });
-  const reviewsPerPage = 2; // Show only 2 reviews per page
-
   // Calculate pagination
-  const totalPages = Math.ceil(DEMO_REVIEWS.length / reviewsPerPage);
+  const totalPages = Math.ceil(DEMO_REVIEWS.length / REVIEWS_PER_PAGE);
   const currentReviews = useMemo<Review[]>(() => {
-    const startIndex = (currentPage - 1) * reviewsPerPage;
-    const endIndex = startIndex + reviewsPerPage;
+    const startIndex = (currentPage - 1) * REVIEWS_PER_PAGE;
+    const endIndex = startIndex + REVIEWS_PER_PAGE;
     return DEMO_REVIEWS.slice(startIndex, endIndex);
-  }, [currentPage, reviewsPerPage]);
+  }, [currentPage]);
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -166,21 +164,25 @@ const Reviews = ({ productId }: ReviewsProps) => {
                       <div className="text-muted-foreground mt-1 flex items-center gap-2 text-sm">
                         <div
                           className="flex"
-                          aria-label={t("ratedOutOf", { rating: review.rating })}
+                          role="img"
+                          aria-label={t("ratedOutOf", {
+                            rating: review.rating,
+                          })}
                         >
-                          {Array(5)
-                            .fill(0)
-                            .map((_, i) => (
-                              <Star
-                                key={i}
-                                className={cn(
-                                  "size-4",
-                                  i < review.rating
-                                    ? "fill-foreground text-foreground"
-                                    : "text-foreground fill-transparent",
-                                )}
-                              />
-                            ))}
+                          {Array.from(
+                            { length: 5 },
+                            (_, index) => index + 1,
+                          ).map((star) => (
+                            <Star
+                              key={`review-star-${star}`}
+                              className={cn(
+                                "size-4",
+                                star <= review.rating
+                                  ? "fill-foreground text-foreground"
+                                  : "text-foreground fill-transparent",
+                              )}
+                            />
+                          ))}
                         </div>
                         <span>•</span>
                         <time
@@ -210,9 +212,7 @@ const Reviews = ({ productId }: ReviewsProps) => {
                       }))
                     }
                     className="h-8 px-3 text-xs text-muted-foreground hover:bg-primary/10 hover:text-primary cursor-pointer"
-                    aria-label={
-                      isLiked[review.id] ? t("unlike") : t("like")
-                    }
+                    aria-label={isLiked[review.id] ? t("unlike") : t("like")}
                   >
                     <ThumbsUp
                       className={cn(
@@ -248,14 +248,17 @@ const Reviews = ({ productId }: ReviewsProps) => {
                     }
                   />
                 </PaginationItem>
-                {Array.from({ length: totalPages }).map((_, i) => (
-                  <PaginationItem key={i}>
+                {Array.from(
+                  { length: totalPages },
+                  (_, index) => index + 1,
+                ).map((page) => (
+                  <PaginationItem key={page}>
                     <PaginationLink
-                      onClick={() => setCurrentPage(i + 1)}
-                      isActive={currentPage === i + 1}
+                      onClick={() => setCurrentPage(page)}
+                      isActive={currentPage === page}
                       className="cursor-pointer"
                     >
-                      {i + 1}
+                      {page}
                     </PaginationLink>
                   </PaginationItem>
                 ))}
@@ -279,9 +282,7 @@ const Reviews = ({ productId }: ReviewsProps) => {
         <div className="lg:sticky lg:top-8 lg:h-fit">
           <Card className="border-2 transition-colors">
             <CardHeader>
-              <CardTitle id="review-form-heading">
-                {t("formTitle")}
-              </CardTitle>
+              <CardTitle id="review-form-heading">{t("formTitle")}</CardTitle>
               <CardDescription>{t("formDescription")}</CardDescription>
             </CardHeader>
             <CardContent>

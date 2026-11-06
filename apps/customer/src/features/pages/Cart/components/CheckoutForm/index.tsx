@@ -58,8 +58,16 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
 
   // Temporary shipping methods - should be fetched from API
   const shippingMethods = [
-    { id: "cmf3vpjoi0000vdqkkwrasuzx", name: t("shippingStandard"), price: 5.99 },
-    { id: "cmf3vq53t0001vdqk50gx74qz", name: t("shippingExpress"), price: 12.99 },
+    {
+      id: "cmf3vpjoi0000vdqkkwrasuzx",
+      name: t("shippingStandard"),
+      price: 5.99,
+    },
+    {
+      id: "cmf3vq53t0001vdqk50gx74qz",
+      name: t("shippingExpress"),
+      price: 12.99,
+    },
   ];
   const shippingMethodsLoading = false;
 

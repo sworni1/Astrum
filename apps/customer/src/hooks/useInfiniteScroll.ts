@@ -91,6 +91,6 @@ export const useInfiniteScroll = ({ data, isValidating, setSize }: Props) => {
       products,
       hasNextPage,
     }),
-    [products, hasNextPage, observerRef],
+    [products, hasNextPage],
   );
 };

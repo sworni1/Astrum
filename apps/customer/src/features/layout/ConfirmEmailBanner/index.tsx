@@ -37,9 +37,7 @@ export default function ConfirmEmailBanner() {
             disabled={isCoolingDown || isSending}
             onClick={() => void send(profileData.email)}
           >
-            {isCoolingDown
-              ? t("resendIn", { seconds: cooldown })
-              : t("resend")}
+            {isCoolingDown ? t("resendIn", { seconds: cooldown }) : t("resend")}
           </Button>
           <Button asChild size="sm" variant="ghost">
             <Link href="/auth/confirm-email">{t("bannerDetails")}</Link>

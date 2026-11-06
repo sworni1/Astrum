@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "node:crypto";
 import {
   ForbiddenException,
   Injectable,
@@ -8,7 +9,6 @@ import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 import * as argon from "argon2";
-import { createHash, randomBytes } from "node:crypto";
 import type { User } from "../../generated/prisma/client";
 import type { ConfirmOutcome } from "../config/auth.config";
 import { EventsService } from "../events/events.service";
@@ -278,7 +278,7 @@ export class AuthService {
       select: { id: true, email: true, status: true },
     });
 
-    if (!user || user.status !== "PENDING") {
+    if (user?.status !== "PENDING") {
       return;
     }
 

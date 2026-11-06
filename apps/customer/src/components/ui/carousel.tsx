@@ -1,3 +1,5 @@
+// biome-ignore-all lint/a11y/useSemanticElements: Carousel region and slides follow the WAI-ARIA carousel pattern.
+
 "use client";
 
 import useEmblaCarousel, {

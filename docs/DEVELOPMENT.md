@@ -8,15 +8,15 @@ Node 24+, pnpm 12.8+, Docker.
 
 ## Applications and ports
 
-| Application            | Stack                | Port        | Purpose                                     |
-| ---------------------- | -------------------- | ----------- | ------------------------------------------- |
-| `apps/customer`        | Next.js 16           | 3000        | Storefront (B2C)                            |
-| `apps/api-astrum`      | Express 5 + Prisma 7 | 3580        | API gateway (orchestrator)                  |
-| `apps/auth-astrum`     | NestJS 11 + Prisma 7 | 4580        | Authentication and users                    |
-| `apps/worker`          | Node 24 + amqplib    | 5580        | Confirmation letters from the queue         |
-| `packages/Astrum-db`   | Prisma client + seed | none        | Shared database schema, client and xlsx seed |
-| `astrum-redis` (dev)   | Redis 7              | 6379        | Session store                               |
-| `astrum-rabbit` (dev)  | RabbitMQ 4           | 5672, 15672 | The `astrum.events` exchange, console on 15672 |
+| Application            | Stack                | Port        | Purpose                                               |
+| ---------------------- | -------------------- | ----------- | ----------------------------------------------------- |
+| `apps/customer`        | Next.js 16           | 3000        | Storefront (B2C)                                      |
+| `apps/api-astrum`      | Express 5 + Prisma 7 | 3580        | API gateway (orchestrator)                            |
+| `apps/auth-astrum`     | NestJS 11 + Prisma 7 | 4580        | Authentication and users                              |
+| `apps/worker`          | Node 24 + amqplib    | 5580        | Confirmation letters from the queue                   |
+| `packages/Astrum-db`   | Prisma client + seed | none        | Shared database schema, client and xlsx seed          |
+| `astrum-redis` (dev)   | Redis 7              | 6379        | Session store                                         |
+| `astrum-rabbit` (dev)  | RabbitMQ 4           | 5672, 15672 | The `astrum.events` exchange, console on 15672        |
 | `astrum-mailpit` (dev) | Mailpit              | 1025, 8025  | SMTP receiver for letters and a web interface on 8025 |
 
 ## Architecture and the order flow
@@ -106,12 +106,12 @@ The server now decides the price, the contents and the stock of an order: `POST 
 
 `POST /api/orders` accepts an optional `Idempotency-Key` header: 8 to 128 characters from `[A-Za-z0-9_-]`, otherwise `422` with `{ "code": "VALIDATION", "errors": [{ "property": "Idempotency-Key", ... }] }`. The key and a sha256 fingerprint of the normalized body (lines sorted by `productId`, the date brought to UTC) are written into `Order.idempotencyKey` and `Order.idempotencyHash` by the same `create` that writes the order.
 
-| Request                                                    | Answer                                                                     |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------- |
-| a new key                                                  | `201`, the order is created                                                |
-| the same key and the same body                             | `200`, the same `id`, the header `Idempotent-Replay: true`, nothing is written |
-| the same key and another body                              | `409 IDEMPOTENCY_KEY_REUSED`, nothing is written                           |
-| a key shorter than 8, longer than 128 or with a stray character | `422 VALIDATION`                                                       |
+| Request                                                         | Answer                                                                         |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| a new key                                                       | `201`, the order is created                                                    |
+| the same key and the same body                                  | `200`, the same `id`, the header `Idempotent-Replay: true`, nothing is written |
+| the same key and another body                                   | `409 IDEMPOTENCY_KEY_REUSED`, nothing is written                               |
+| a key shorter than 8, longer than 128 or with a stray character | `422 VALIDATION`                                                               |
 
 The unique index on `(userId, idempotencyKey)` handles the race: the losing request re-reads the key on a plain client (three attempts 100 ms apart) and gets the winner order instead of a refusal. The ordered cart lines are removed or decreased in the same transaction that takes the stock; lines that are not in the order stay untouched. The storefront generates the key from 16 random bytes, keeps it in a `useRef` until the final answer (resets it after `2xx` and any `4xx`, keeps it after a timeout or `5xx`) and never repeats on its own after a `409`.
 
@@ -147,23 +147,23 @@ The storefront answers in English by default and keeps Russian behind a switcher
 
 ## Scripts
 
-| Script                         | Purpose                                                                    |
-| ------------------------------ | -------------------------------------------------------------------------- |
+| Script                         | Purpose                                                                              |
+| ------------------------------ | ------------------------------------------------------------------------------------ |
 | `pnpm dev`                     | Postgres, Redis, RabbitMQ and Mailpit in Docker plus every application in watch mode |
-| `pnpm dev:customer`            | the storefront only                                                        |
-| `pnpm dev:api`                 | the API gateway only                                                       |
-| `pnpm dev:auth`                | the auth service only                                                      |
-| `pnpm build`                   | build every package through Turborepo                                      |
-| `pnpm quality-gate`            | check-types, lint and test                                                 |
-| `pnpm format`                  | `biome format --write` across the repository                               |
-| `pnpm db:generate`             | generate the Prisma client                                                 |
-| `pnpm prisma:migrate:dev`      | a new migration in dev                                                     |
-| `pnpm prisma:migrate:deploy`   | apply the migrations                                                       |
-| `pnpm prisma:studio`           | Prisma Studio                                                              |
-| `pnpm db:up` / `pnpm db:rm`    | start or remove the Postgres and Redis containers                          |
-| `pnpm docker:prod:build`       | build the images of the prod stack                                         |
-| `pnpm docker:prod:up` / `down` | start or stop the prod stack                                               |
-| `pnpm docker:prod:scale`       | rebuild and restart the api replicas                                       |
+| `pnpm dev:customer`            | the storefront only                                                                  |
+| `pnpm dev:api`                 | the API gateway only                                                                 |
+| `pnpm dev:auth`                | the auth service only                                                                |
+| `pnpm build`                   | build every package through Turborepo                                                |
+| `pnpm quality-gate`            | check-types, lint and test                                                           |
+| `pnpm format`                  | `biome format --write` across the repository                                         |
+| `pnpm db:generate`             | generate the Prisma client                                                           |
+| `pnpm prisma:migrate:dev`      | a new migration in dev                                                               |
+| `pnpm prisma:migrate:deploy`   | apply the migrations                                                                 |
+| `pnpm prisma:studio`           | Prisma Studio                                                                        |
+| `pnpm db:up` / `pnpm db:rm`    | start or remove the Postgres and Redis containers                                    |
+| `pnpm docker:prod:build`       | build the images of the prod stack                                                   |
+| `pnpm docker:prod:up` / `down` | start or stop the prod stack                                                         |
+| `pnpm docker:prod:scale`       | rebuild and restart the api replicas                                                 |
 
 The worker has no root script of its own: `pnpm --filter @astrum/worker dev`.
 
@@ -171,14 +171,14 @@ The worker has no root script of its own: `pnpm --filter @astrum/worker dev`.
 
 ## Code quality
 
-| Script              | Purpose                                                                   |
-| ------------------- | ------------------------------------------------------------------------- |
-| `pnpm lint`         | ESLint in `customer` and `auth`; a stub in `api`, `db` and `worker`       |
-| `pnpm check-types`  | `tsc --noEmit` across every package                                       |
+| Script              | Purpose                                                                          |
+| ------------------- | -------------------------------------------------------------------------------- |
+| `pnpm lint`         | ESLint in `customer` and `auth`; a stub in `api`, `db` and `worker`              |
+| `pnpm check-types`  | `tsc --noEmit` across every package                                              |
 | `pnpm test`         | jest in `api` and `auth`, vitest in `customer`, `node:test` in `db` and `worker` |
-| `pnpm quality-gate` | check-types, lint and test                                                |
-| `pnpm format`       | Biome, formatting across the repository                                   |
-| `pnpm format:check` | Biome, a check without writing                                            |
+| `pnpm quality-gate` | check-types, lint and test                                                       |
+| `pnpm format`       | Biome, formatting across the repository                                          |
+| `pnpm format:check` | Biome, a check without writing                                                   |
 
 Husky hooks:
 
@@ -202,14 +202,14 @@ Validation comes from commitlint (`.husky/commit-msg`, `commitlint.config.js`).
 
 ## Environment variables
 
-| File                            | Keys                                                                                                                                                                                                                                                                                                                       |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.env.example`                  | `POSTGRES_*`, `DATABASE_URL`, `API_PORT`, `AUTH_PORT`, `WORKER_PORT`, `JWT_SECRET`, `DB_POOL_SIZE`, `REDIS_URL`, `RABBITMQ_URL`, `SMTP_URL`, `MAIL_FROM`, `STOREFRONT_URL`, `MAIL_OUTBOX_DIR`, `AUTH_SERVICE_URL`, `API_GATEWAY_INTERNAL_URL`, `NEXT_PUBLIC_API_GATEWAY_URL`                                                |
+| File                            | Keys                                                                                                                                                                                                                                                                                                                             |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.env.example`                  | `POSTGRES_*`, `DATABASE_URL`, `API_PORT`, `AUTH_PORT`, `WORKER_PORT`, `JWT_SECRET`, `DB_POOL_SIZE`, `REDIS_URL`, `RABBITMQ_URL`, `SMTP_URL`, `MAIL_FROM`, `STOREFRONT_URL`, `MAIL_OUTBOX_DIR`, `AUTH_SERVICE_URL`, `API_GATEWAY_INTERNAL_URL`, `NEXT_PUBLIC_API_GATEWAY_URL`                                                     |
 | `.env.prod.example`             | `POSTGRES_*`, `DATABASE_URL` (`db:5432`), `JWT_SECRET`, `DB_POOL_SIZE`, `AUTH_SERVICE_URL`, `REDIS_URL` with `REDIS_PASSWORD`, `API_GATEWAY_INTERNAL_URL`, `NEXT_PUBLIC_API_GATEWAY_URL`, `RABBITMQ_URL` with `RABBITMQ_USER` / `RABBITMQ_PASSWORD`, `SMTP_URL`, `MAIL_FROM`, `STOREFRONT_URL`, `WORKER_PORT`, `MAIL_OUTBOX_DIR` |
-| `apps/api-astrum/.env.example`  | `DATABASE_URL`, `JWT_SECRET`, `AUTH_SERVICE_URL`, `API_PORT`, `REDIS_URL`, `RABBITMQ_URL`                                                                                                                                                                                                                                   |
-| `apps/auth-astrum/.env.example` | `DATABASE_URL`, `JWT_SECRET`, `AUTH_PORT`, `REDIS_URL`, `RABBITMQ_URL`, `STOREFRONT_URL`                                                                                                                                                                                                                                    |
-| `apps/worker/.env.example`      | `DATABASE_URL`, `RABBITMQ_URL`, `MAIL_FROM`, `STOREFRONT_URL`, `SMTP_URL`, `WORKER_PORT`, `MAIL_OUTBOX_DIR`                                                                                                                                                                                                                 |
-| `apps/customer/.env.example`    | `NEXT_PUBLIC_API_GATEWAY_URL`, `JWT_SECRET`, `NODE_ENV`                                                                                                                                                                                                                                                                    |
+| `apps/api-astrum/.env.example`  | `DATABASE_URL`, `JWT_SECRET`, `AUTH_SERVICE_URL`, `API_PORT`, `REDIS_URL`, `RABBITMQ_URL`                                                                                                                                                                                                                                        |
+| `apps/auth-astrum/.env.example` | `DATABASE_URL`, `JWT_SECRET`, `AUTH_PORT`, `REDIS_URL`, `RABBITMQ_URL`, `STOREFRONT_URL`                                                                                                                                                                                                                                         |
+| `apps/worker/.env.example`      | `DATABASE_URL`, `RABBITMQ_URL`, `MAIL_FROM`, `STOREFRONT_URL`, `SMTP_URL`, `WORKER_PORT`, `MAIL_OUTBOX_DIR`                                                                                                                                                                                                                      |
+| `apps/customer/.env.example`    | `NEXT_PUBLIC_API_GATEWAY_URL`, `JWT_SECRET`, `NODE_ENV`                                                                                                                                                                                                                                                                          |
 
 `JWT_SECRET` must match in every service. Only `NEXT_PUBLIC_*` values reach the browser. `REDIS_URL` is required for `api` and `auth`: the process does not start without it. `RABBITMQ_URL` is required for `worker`, which dies on start, while `api` and `auth` read it on a publish, so an unreachable broker leaves a log line instead of a failed request. In `.env.prod.example` the `REDIS_PASSWORD` next to `REDIS_URL` feeds `--requirepass`.
 
