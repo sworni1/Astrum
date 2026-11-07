@@ -82,7 +82,7 @@ The order screen shows an order status and a cancel action. The gateway only han
 - [ ] Verify it: `/check verify order statuses with seller ownership`
 - [ ] Test it: `/test order statuses with seller ownership`
 - [ ] Review it (fresh model): `/check review order statuses with seller ownership`
-- [ ] Document it: `/document order statuses with seller ownership`
+- [x] Document it: `/document order statuses with seller ownership` (2026-11-07: `CHANGELOG.md`)
   code in `apps/api-astrum/src/modules/order`, `apps/api-astrum/src/modules/product`, `packages/Astrum-db/prisma/migrations/20261107230000_business_ownership_snapshot`, `packages/Astrum-db/prisma/migrations/20261107230100_business_ownership_constraints`
   spec [0002](../../specs/_root/0002-order-cancel.md)
 
