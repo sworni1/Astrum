@@ -69,7 +69,8 @@ export class ProductController {
 
   async createProduct(req: Request, res: Response) {
     try {
-      const userData = await productService.createProduct(req.body);
+      const { userId } = req as AuthenticatedUserRequest;
+      const userData = await productService.createProduct(userId, req.body);
 
       res.status(StatusCodes.OK).json(userData);
     } catch (err) {

@@ -431,6 +431,7 @@ const makeCancelableOrder = (overrides: Record<string, unknown> = {}) => ({
 });
 
 const createCancelTx = (order: Record<string, unknown> | null) => ({
+  $queryRaw: jest.fn().mockResolvedValue([{ id: "order-1" }]),
   order: {
     findFirst: jest.fn().mockResolvedValue(order),
     update: jest.fn().mockResolvedValue(order),
@@ -438,7 +439,10 @@ const createCancelTx = (order: Record<string, unknown> | null) => ({
       .fn()
       .mockResolvedValue({ ...(order ?? {}), status: "CANCELED" }),
   },
-  orderItem: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+  orderItem: {
+    updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    findMany: jest.fn().mockResolvedValue([{ status: "CANCELED" }]),
+  },
   product: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
 });
 
@@ -476,7 +480,10 @@ describe("OrderService.updateOrderStatus", () => {
       data: { status: "CANCELED", paymentStatus: "CANCELLED" },
     });
     expect(tx.orderItem.updateMany).toHaveBeenCalledWith({
-      where: { orderId: "order-1" },
+      where: {
+        orderId: "order-1",
+        status: { in: ["PENDING", "CONFIRMED"] },
+      },
       data: { status: "CANCELLED" },
     });
     expect(tx.product.updateMany).toHaveBeenCalledWith({
@@ -499,7 +506,14 @@ describe("OrderService.updateOrderStatus", () => {
   });
 
   it("отказывает отмене отгруженного заказа и не трогает склад (AC-4)", async () => {
-    prepare(makeCancelableOrder({ status: "SHIPPED" }));
+    prepare(
+      makeCancelableOrder({
+        status: "SHIPPED",
+        OrderItem: [
+          { id: "line-1", productId: "p-1", quantity: 2, status: "SHIPPED" },
+        ],
+      }),
+    );
 
     const error = await new OrderService()
       .updateOrderStatus("order-1", "user-1", "CANCELED")

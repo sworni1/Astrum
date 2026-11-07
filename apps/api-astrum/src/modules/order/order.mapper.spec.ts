@@ -10,7 +10,13 @@ const order = {
   totalPrice: new Prisma.Decimal("70.95"),
   currency: "RUB",
   shippingMethod: { name: "Standard", price: 5.99 },
-  orderItems: [{ id: "line-1", price: new Prisma.Decimal("19.99") }],
+  orderItems: [
+    {
+      id: "line-1",
+      price: new Prisma.Decimal("19.99"),
+      businessId: "private-business",
+    },
+  ],
 };
 
 describe("order mapper", () => {
@@ -21,6 +27,7 @@ describe("order mapper", () => {
     expect(json).not.toHaveProperty("idempotencyHash");
     expect(json.totalPrice).toBe(70.95);
     expect(json.orderItems[0].price).toBe(19.99);
+    expect(json.orderItems[0]).not.toHaveProperty("businessId");
   });
 
   it("не отдаёт ключ и отпечаток в списке заказов (AC-12)", () => {

@@ -14,7 +14,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | 1   | Order price and stock on the server   | Slice 1 | done        |
 | 2   | Idempotent checkout and cart clearing | Slice 1 | done        |
 | 3   | Shipping methods from the API         | Slice 1 | planned     |
-| 4   | Order statuses with seller ownership  | Slice 2 | planned     |
+| 4   | Order statuses with seller ownership  | Slice 2 | in-progress |
 | 5   | Seller order panel                    | Slice 2 | planned     |
 | 6   | Customer cancel on the order screen   | Slice 2 | planned     |
 | 7   | Pickup handover                       | Slice 3 | planned     |
@@ -69,16 +69,27 @@ The checkout form carries two hardcoded ids that exist in one demo database only
 
 ## Slice 2: statuses and the seller
 
-### 4. Order statuses with seller ownership · planned · GA
+### 4. Order statuses with seller ownership · in-progress · GA
 
-The order screens already draw a status timeline and a cancel button, but no route changes a status, and an order line records no seller.
-**Done when:** each line stores the seller of its product at creation, a seller reads and moves only their own lines, a status change follows the allowed transitions, cancelling a line returns the stock, and an illegal transition is refused with a readable message.
-- [ ] Design it (spec): `/architect order statuses with seller ownership`
+The order screen shows an order status and a cancel action. The gateway only handles customer cancellation today. A client hook calls a route for line status changes, but the gateway has no such route. Products have a business id, but an order line does not record its seller.
+**Done when:** each ordered line is tied to its seller; sellers can read and change only their own lines; allowed line status changes and their effect on the order status are clear and enforced; cancellation returns stock once; and invalid changes get a clear response.
+- [x] Design it (spec): `/architect order statuses with seller ownership`
+- [x] Build it: `/develop order statuses with seller ownership` (2026-11-07: API quality gate passed with 92 tests including database integration, database types passed)
+  - [x] Business ownership schema, legacy backfill and checkout snapshots (AC-1 to AC-4)
+  - [x] Seller order reads, pagination and ownership enforcement (AC-5, AC-7)
+  - [x] Line transitions, customer cancellation, order status and atomic stock returns (AC-6, AC-8 to AC-12)
+  - [x] Feature flag, error mapping, structured logs and rollout checks (AC-7, AC-13, AC-14)
+- [ ] Verify it: `/check verify order statuses with seller ownership`
+- [ ] Test it: `/test order statuses with seller ownership`
+- [ ] Review it (fresh model): `/check review order statuses with seller ownership`
+- [ ] Document it: `/document order statuses with seller ownership`
+  code in `apps/api-astrum/src/modules/order`, `apps/api-astrum/src/modules/product`, `packages/Astrum-db/prisma/migrations/20261107230000_business_ownership_snapshot`, `packages/Astrum-db/prisma/migrations/20261107230100_business_ownership_constraints`
+  spec [0002](../../specs/_root/0002-order-cancel.md)
 
-### 5. Seller order panel · planned
+### 5. Seller order panel · planned · needs a decision · GA
 
-A seller has no surface at all today, so the lines that must be fulfilled are invisible to them.
-**Done when:** a seller signs in, sees their lines grouped by order, moves a line through its allowed statuses, and never sees a line of another seller.
+A seller account, role and panel do not exist yet. Products have a business id, but it is not linked to an authenticated seller. The current order screens only show customer orders.
+**Done when:** a seller can sign in; sees only their own order lines grouped by order; can use clear actions to move eligible lines through the agreed status flow; and requests for another seller's lines are refused.
 - [ ] Design it (spec): `/architect seller order panel`
 
 ### 6. Customer cancel on the order screen · planned

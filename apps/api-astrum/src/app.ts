@@ -10,6 +10,7 @@ import { createAuthenticateToken } from "./middlewares/authenticateToken";
 import corsOptions from "./middlewares/corsOptions";
 import cartRoutes from "./modules/cart/cart.routes";
 import orderRoutes from "./modules/order/order.routes";
+import sellerOrderRoutes from "./modules/order/seller-order.routes";
 import productRoutes from "./modules/product/product.routes";
 import { reviewsRouter } from "./modules/reviews/reviews.routes";
 import userRoutes from "./modules/user/user.routes";
@@ -70,6 +71,7 @@ app.use("/api/products", authenticateToken, productRoutes);
 app.use("/api/wishlist", authenticateToken, wishlistRoutes);
 app.use("/api/cart", authenticateToken, cartRoutes);
 app.use("/api/orders", authenticateToken, orderRoutes);
+app.use("/api", authenticateToken, sellerOrderRoutes);
 app.use("/api/reviews", authenticateToken, reviewsRouter);
 
 app.get("/", (_req, res) => {

@@ -1,9 +1,9 @@
-import { randomUUID } from "node:crypto";
 import type {
   Product,
   ProductCategory,
 } from "../../../generated/prisma/client";
 import { prisma } from "../../../lib/prisma";
+import { AppError } from "../../common/helpers/appError";
 import { getWishlistAndCartItem } from "../../common/helpers/getWishlistAndCart";
 import {
   productPreviewPublicSelect,
@@ -108,9 +108,22 @@ export class ProductService {
 
   getCategoryProducts = this.getRecommendations;
 
-  async createProduct(dto: CreateProductDto) {
+  async createProduct(userId: string, dto: CreateProductDto) {
+    const business = await prisma.business.findUnique({
+      where: { ownerUserId: userId },
+      select: { id: true },
+    });
+
+    if (!business) {
+      throw new AppError(
+        403,
+        "SELLER_NOT_ASSIGNED",
+        "No business is assigned to this seller.",
+      );
+    }
+
     const product = await prisma.product.create({
-      data: { businessId: randomUUID(), ...dto },
+      data: { ...dto, businessId: business.id },
     });
 
     return product;
