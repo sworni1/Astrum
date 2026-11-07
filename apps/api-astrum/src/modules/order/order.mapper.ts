@@ -5,10 +5,11 @@ import type { OrderDetail } from "./order.service";
 const toMoney = (value: Order["totalPrice"]): number =>
   Number(value.toFixed(2));
 
-const toLineJson = (item: OrderItem) => ({
-  ...item,
-  price: toMoney(item.price),
-});
+const toLineJson = (item: OrderItem) => {
+  const { businessId: _businessId, ...visible } = item;
+
+  return { ...visible, price: toMoney(item.price) };
+};
 
 type OrderRow = Pick<Order, "idempotencyKey" | "idempotencyHash">;
 

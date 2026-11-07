@@ -1,6 +1,9 @@
+import type { ClassConstructor } from "class-transformer";
 import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { CreateOrderDto } from "../modules/order/dto/create-order.dto";
+import { UpdateOrderItemStatusDto } from "../modules/order/dto/update-order-item-status.dto";
+import { CreateProductDto } from "../modules/product/dto/create-product.dto";
 import { validateDto } from "./validateDto";
 
 type RunOptions = {
@@ -8,7 +11,11 @@ type RunOptions = {
   code?: string;
 };
 
-const runValidation = async (body: unknown, options?: RunOptions) => {
+const runValidationWith = async <T extends object>(
+  dtoClass: ClassConstructor<T>,
+  body: unknown,
+  options?: RunOptions,
+) => {
   const req = { body } as Request;
   const res = {
     status: jest.fn().mockReturnThis(),
@@ -16,10 +23,13 @@ const runValidation = async (body: unknown, options?: RunOptions) => {
   } as unknown as jest.Mocked<Response>;
   const next = jest.fn();
 
-  await validateDto(CreateOrderDto, options)(req, res, next);
+  await validateDto(dtoClass, options)(req, res, next);
 
   return { req, res, next };
 };
+
+const runValidation = (body: unknown, options?: RunOptions) =>
+  runValidationWith(CreateOrderDto, body, options);
 
 const validBody = {
   deliveryAddress: "Lenina 1",
@@ -100,5 +110,35 @@ describe("validateDto", () => {
     );
 
     expect(res.status).toHaveBeenCalledWith(StatusCodes.UNPROCESSABLE_ENTITY);
+  });
+
+  it("strips a caller supplied business id from product creation (AC-3)", async () => {
+    const { req, next } = await runValidationWith(CreateProductDto, {
+      name: "Drill",
+      description: "A useful power drill",
+      quantity: 3,
+      price: 19.99,
+      category: "Home",
+      currency: "RUB",
+      previewImage: "https://cdn.test/drill.png",
+      businessId: "untrusted-business",
+    });
+
+    expect(next).toHaveBeenCalled();
+    expect(req.body).not.toHaveProperty("businessId");
+  });
+
+  it("rejects a line status outside the enum with validation code (AC-7)", async () => {
+    const { res, next } = await runValidationWith(
+      UpdateOrderItemStatusDto,
+      { status: "NOT_A_STATUS" },
+      { status: StatusCodes.UNPROCESSABLE_ENTITY, code: "VALIDATION" },
+    );
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(StatusCodes.UNPROCESSABLE_ENTITY);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ code: "VALIDATION" }),
+    );
   });
 });

@@ -20,9 +20,19 @@ model User {
   preferredCategories String[]
   dateOfBirth         DateTime
   status              UserStatus          @default(PENDING)
+  business            Business?
   lastViewedProduct   LastViewedProduct[]
   reviews             Review[]
   emailTokens         EmailToken[]
+}
+
+model Business {
+  id          String       @id
+  ownerUserId String?      @unique
+  createdAt   DateTime     @default(now())
+  owner       User?        @relation(fields: [ownerUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  products    Product[]
+  orderItems  OrderItem[]
 }
 
 model LastViewedProduct {
@@ -95,6 +105,9 @@ model Product {
   reviews       Review[]
   reviewCount   Int               @default(0)
   averageRating Float             @default(0)
+  business      Business          @relation(fields: [businessId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([businessId])
 }
 
 model ProductProperty {
@@ -141,10 +154,13 @@ model OrderItem {
   receiptDate  DateTime?
   status       OrderItemStatus @default(PENDING)
   userId       String
+  businessId   String
   order        Order           @relation(fields: [orderId], references: [id])
+  business     Business        @relation(fields: [businessId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   review       Review?
 
   @@index([orderId])
+  @@index([businessId, orderId])
 }
 
 model ShippingMethod {

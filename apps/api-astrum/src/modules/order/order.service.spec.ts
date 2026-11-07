@@ -15,6 +15,7 @@ import { mergeOrderLines, OrderService } from "./order.service";
 
 type ProductRow = {
   id: string;
+  businessId: string;
   name: string;
   previewImage: string;
   price: number;
@@ -34,6 +35,7 @@ const prismaMock = prisma as unknown as {
 
 const makeProduct = (overrides: Partial<ProductRow> = {}): ProductRow => ({
   id: "p-1",
+  businessId: "business-1",
   name: "Drill",
   previewImage: "http://cdn/drill.png",
   price: 19.99,
@@ -137,11 +139,17 @@ describe("OrderService.createOrder", () => {
     jest.restoreAllMocks();
   });
 
-  it("берёт цену, имя и картинку из товара и пишет заказ в одной транзакции (AC-1, AC-2, AC-3)", async () => {
+  it("snapshots each product business on its order line (AC-4)", async () => {
     tx.product.findMany.mockResolvedValue([
-      makeProduct({ id: "p-1", price: 19.99, quantity: 10 }),
+      makeProduct({
+        id: "p-1",
+        businessId: "business-1",
+        price: 19.99,
+        quantity: 10,
+      }),
       makeProduct({
         id: "p-2",
+        businessId: "business-2",
         name: "Saw",
         previewImage: "http://cdn/saw.png",
         price: 5.49,
@@ -173,10 +181,12 @@ describe("OrderService.createOrder", () => {
         previewImage: "http://cdn/drill.png",
         quantity: 3,
         currency: "RUB",
+        businessId: "business-1",
         userId: "user-1",
       }),
       expect.objectContaining({
         productId: "p-2",
+        businessId: "business-2",
         quantity: 2,
         currency: "RUB",
       }),
@@ -431,6 +441,7 @@ const makeCancelableOrder = (overrides: Record<string, unknown> = {}) => ({
 });
 
 const createCancelTx = (order: Record<string, unknown> | null) => ({
+  $queryRaw: jest.fn().mockResolvedValue([{ id: "order-1" }]),
   order: {
     findFirst: jest.fn().mockResolvedValue(order),
     update: jest.fn().mockResolvedValue(order),
@@ -438,7 +449,10 @@ const createCancelTx = (order: Record<string, unknown> | null) => ({
       .fn()
       .mockResolvedValue({ ...(order ?? {}), status: "CANCELED" }),
   },
-  orderItem: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+  orderItem: {
+    updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    findMany: jest.fn().mockResolvedValue([{ status: "CANCELED" }]),
+  },
   product: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
 });
 
@@ -476,7 +490,10 @@ describe("OrderService.updateOrderStatus", () => {
       data: { status: "CANCELED", paymentStatus: "CANCELLED" },
     });
     expect(tx.orderItem.updateMany).toHaveBeenCalledWith({
-      where: { orderId: "order-1" },
+      where: {
+        orderId: "order-1",
+        status: { in: ["PENDING", "CONFIRMED"] },
+      },
       data: { status: "CANCELLED" },
     });
     expect(tx.product.updateMany).toHaveBeenCalledWith({
@@ -499,7 +516,14 @@ describe("OrderService.updateOrderStatus", () => {
   });
 
   it("отказывает отмене отгруженного заказа и не трогает склад (AC-4)", async () => {
-    prepare(makeCancelableOrder({ status: "SHIPPED" }));
+    prepare(
+      makeCancelableOrder({
+        status: "SHIPPED",
+        OrderItem: [
+          { id: "line-1", productId: "p-1", quantity: 2, status: "SHIPPED" },
+        ],
+      }),
+    );
 
     const error = await new OrderService()
       .updateOrderStatus("order-1", "user-1", "CANCELED")

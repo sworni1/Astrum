@@ -5,7 +5,10 @@ import type {
   ShippingMethod,
 } from "../../../generated/prisma/client";
 import { Prisma } from "../../../generated/prisma/client";
-import type { OrderStatus } from "../../../generated/prisma/enums";
+import type {
+  OrderItemStatus,
+  OrderStatus,
+} from "../../../generated/prisma/enums";
 import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
 import { logger } from "../../common/helpers/logger";
@@ -17,11 +20,18 @@ import {
   REPLAY_ATTEMPTS,
   REPLAY_RETRY_DELAY_MS,
 } from "./order.constants";
+import {
+  lockOrder,
+  ORDER_TRANSACTION_OPTIONS,
+  recomputeOrderStatus,
+  returnOrderStock,
+} from "./order-status.helpers";
 
 type OrderLine = { productId: string; quantity: number };
 
 type PricedLine = {
   productId: string;
+  businessId: string;
   name: string;
   previewImage: string;
   quantity: number;
@@ -46,14 +56,18 @@ export type OrderDetail = Omit<Order, "shippingMethod"> & {
 /** A create answers with the order and whether it came from a replay (spec 0003). */
 export type CreateOrderResult = { order: OrderDetail; replay: boolean };
 
-const TRANSACTION_OPTIONS = {
-  maxWait: 5000,
-  timeout: 10000,
-  isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
-};
+const STOCK_RETURN_STATUSES: readonly OrderItemStatus[] = [
+  "PENDING",
+  "CONFIRMED",
+];
 
-/** Only these two can still become CANCELED; everything later is feature 4 (AC-4). */
-const CANCELABLE_STATUSES: OrderStatus[] = ["PENDING", "CONFIRMED"];
+const CUSTOMER_CANCELLATION_BLOCKERS: readonly OrderItemStatus[] = [
+  "SHIPPED",
+  "DELIVERED",
+  "RETURNED",
+  "BACKORDERED",
+  "REPLACED",
+];
 
 const ORDER_DETAIL_INCLUDE = { OrderItem: true, shippingMethod: true } as const;
 
@@ -78,6 +92,7 @@ const sleep = (ms: number): Promise<void> =>
 
 const PRODUCT_SELECT = {
   id: true,
+  businessId: true,
   name: true,
   previewImage: true,
   price: true,
@@ -185,7 +200,7 @@ export class OrderService {
     try {
       const result = await prisma.$transaction(
         (tx) => this.buildOrder(tx, userId, dto, lines, idempotency),
-        TRANSACTION_OPTIONS,
+        ORDER_TRANSACTION_OPTIONS,
       );
 
       this.logCreated(result, userId, idempotency);
@@ -341,7 +356,7 @@ export class OrderService {
 
     const order = await prisma.$transaction(
       (tx) => this.cancelOrder(tx, orderId, userId),
-      TRANSACTION_OPTIONS,
+      ORDER_TRANSACTION_OPTIONS,
     );
 
     logger.info({
@@ -360,6 +375,8 @@ export class OrderService {
     orderId: string,
     userId: string,
   ): Promise<OrderDetail> {
+    await lockOrder(tx, orderId);
+
     const current = await tx.order.findFirst({
       where: { id: orderId, userId },
       include: ORDER_DETAIL_INCLUDE,
@@ -374,33 +391,38 @@ export class OrderService {
       return toOrderDetail(current);
     }
 
-    if (!CANCELABLE_STATUSES.includes(current.status)) {
+    const blockedLine = current.OrderItem.find((item) =>
+      CUSTOMER_CANCELLATION_BLOCKERS.includes(item.status),
+    );
+
+    if (blockedLine) {
       throw new AppError(
         409,
         ORDER_ERROR_CODES.invalidTransition,
-        `A ${current.status} order can no longer be cancelled.`,
-        { from: current.status, to: "CANCELED" },
+        `An order with a ${blockedLine.status} line can no longer be cancelled.`,
+        { from: blockedLine.status, to: "CANCELED" },
       );
     }
 
-    await tx.order.update({
-      where: { id: current.id },
-      data: {
-        status: "CANCELED",
-        // Nothing was charged for a pending payment, and a cancelled order is never charged.
-        paymentStatus:
-          current.paymentStatus === "PENDING"
-            ? "CANCELLED"
-            : current.paymentStatus,
-      },
-    });
-
     await tx.orderItem.updateMany({
-      where: { orderId: current.id },
+      where: {
+        orderId: current.id,
+        status: { in: ["PENDING", "CONFIRMED"] },
+      },
       data: { status: "CANCELLED" },
     });
 
-    await this.returnStock(tx, current.OrderItem);
+    await returnOrderStock(
+      tx,
+      current.OrderItem.filter((item) =>
+        STOCK_RETURN_STATUSES.includes(item.status),
+      ),
+    );
+    await recomputeOrderStatus(
+      tx,
+      current.id,
+      current.paymentStatus === "PENDING" ? "CANCELLED" : undefined,
+    );
 
     return toOrderDetail(
       await tx.order.findFirstOrThrow({
@@ -414,18 +436,6 @@ export class OrderService {
    * An increment cannot fail, so a product removed from the catalogue keeps a
    * zero count instead of breaking the cancel (AC-2).
    */
-  private async returnStock(
-    tx: Prisma.TransactionClient,
-    items: OrderItem[],
-  ): Promise<void> {
-    for (const item of items) {
-      await tx.product.updateMany({
-        where: { id: item.productId },
-        data: { quantity: { increment: item.quantity }, isOutOfStock: false },
-      });
-    }
-  }
-
   private async buildOrder(
     tx: Prisma.TransactionClient,
     userId: string,
@@ -497,6 +507,7 @@ export class OrderService {
             quantity: line.quantity,
             price: line.unitPrice,
             currency: line.currency,
+            businessId: line.businessId,
             userId,
           })),
         },
@@ -658,6 +669,7 @@ export class OrderService {
 
       return {
         productId: product.id,
+        businessId: product.businessId,
         name: product.name,
         previewImage: product.previewImage,
         quantity: line.quantity,

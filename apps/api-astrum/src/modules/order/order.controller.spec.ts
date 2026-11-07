@@ -6,6 +6,7 @@ import { Prisma } from "../../../generated/prisma/client";
 import { AppError } from "../../common/helpers/appError";
 import { OrderController } from "./order.controller";
 import { OrderService } from "./order.service";
+import { SellerOrderService } from "./seller-order.service";
 
 const createMockResponse = (): jest.Mocked<Response> => {
   const res = {
@@ -188,5 +189,80 @@ describe("OrderController", () => {
       from: "SHIPPED",
       to: "CANCELED",
     });
+  });
+
+  it("returns seller orders with numeric prices and caller pagination (AC-5)", async () => {
+    const createdAt = new Date("2026-11-07T10:00:00.000Z");
+    const item = {
+      id: "line-1",
+      productId: "product-1",
+      name: "Drill",
+      previewImage: "https://cdn.test/drill.png",
+      quantity: 2,
+      price: new Prisma.Decimal("19.99"),
+      currency: "RUB",
+      status: "PENDING",
+    };
+    const getSellerOrders = jest
+      .spyOn(SellerOrderService.prototype, "getSellerOrders")
+      .mockResolvedValue({
+        orders: [{ id: "order-1", createdAt, orderItems: [item] }],
+        page: 2,
+        limit: 10,
+        total: 1,
+        totalPages: 1,
+      } as never);
+    const res = createMockResponse();
+
+    await new OrderController().getSellerOrders(
+      createRequest({ query: { page: "2", limit: "10" } }),
+      res,
+    );
+
+    expect(getSellerOrders).toHaveBeenCalledWith("user-1", "2", "10");
+    expect(res.status).toHaveBeenCalledWith(StatusCodes.OK);
+    expect(res.json).toHaveBeenCalledWith({
+      page: 2,
+      limit: 10,
+      total: 1,
+      totalPages: 1,
+      orders: [
+        {
+          id: "order-1",
+          createdAt,
+          orderItems: [{ ...item, price: 19.99 }],
+        },
+      ],
+    });
+  });
+
+  it("returns an updated seller line with a numeric price (AC-7)", async () => {
+    const item = {
+      id: "line-1",
+      orderId: "order-1",
+      productId: "product-1",
+      name: "Drill",
+      previewImage: "https://cdn.test/drill.png",
+      quantity: 2,
+      price: new Prisma.Decimal("19.99"),
+      currency: "RUB",
+      status: "CONFIRMED",
+    };
+    const updateStatus = jest
+      .spyOn(SellerOrderService.prototype, "updateSellerOrderItemStatus")
+      .mockResolvedValue(item as never);
+    const res = createMockResponse();
+
+    await new OrderController().updateSellerOrderItemStatus(
+      createRequest({
+        params: { orderItemId: "line-1" },
+        body: { status: "CONFIRMED" },
+      }),
+      res,
+    );
+
+    expect(updateStatus).toHaveBeenCalledWith("line-1", "user-1", "CONFIRMED");
+    expect(res.status).toHaveBeenCalledWith(StatusCodes.OK);
+    expect(res.json).toHaveBeenCalledWith({ ...item, price: 19.99 });
   });
 });

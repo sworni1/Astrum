@@ -28,6 +28,7 @@ describeWithDatabase("OrderService against a real database", () => {
     }) as CreateOrderDto;
 
   beforeAll(async () => {
+    await prisma.business.create({ data: { id: userId } });
     const shipping = await prisma.shippingMethod.create({
       data: { name: `Test delivery ${userId}`, price: 5.99 },
     });
@@ -59,6 +60,7 @@ describeWithDatabase("OrderService against a real database", () => {
     await prisma.order.deleteMany({ where: { userId } });
     await prisma.cartItem.deleteMany({ where: { userId } });
     await prisma.product.deleteMany({ where: { id: productId } });
+    await prisma.business.delete({ where: { id: userId } });
     await prisma.shippingMethod.deleteMany({ where: { id: shippingMethodId } });
     await prisma.$disconnect();
   });
@@ -129,8 +131,9 @@ describeWithDatabase("OrderService against a real database", () => {
     expect(lines._sum.quantity).toBe(6);
   }, 60000);
 
-  it("возвращает остаток при отмене и не добавляет его второй раз (AC-1, AC-2, AC-5)", async () => {
+  it("restores stock once and cancels pending payment with the order (AC-9, AC-10, AC-11, AC-12)", async () => {
     const localUser = `cancel-test-${Date.now()}`;
+    await prisma.business.create({ data: { id: localUser } });
     const product = await prisma.product.create({
       data: {
         businessId: localUser,
@@ -185,6 +188,7 @@ describeWithDatabase("OrderService against a real database", () => {
     await prisma.order.deleteMany({ where: { userId: localUser } });
     await prisma.cartItem.deleteMany({ where: { userId: localUser } });
     await prisma.product.delete({ where: { id: product.id } });
+    await prisma.business.delete({ where: { id: localUser } });
   }, 30000);
 });
 
@@ -209,6 +213,7 @@ describeWithDatabase("Idempotent checkout against a real database", () => {
     orderQty: number;
   }) => {
     const owner = `idem-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    await prisma.business.create({ data: { id: owner } });
     const product = await prisma.product.create({
       data: {
         businessId: owner,
@@ -247,6 +252,7 @@ describeWithDatabase("Idempotent checkout against a real database", () => {
     await prisma.order.deleteMany({ where: { userId: owner } });
     await prisma.cartItem.deleteMany({ where: { userId: owner } });
     await prisma.product.delete({ where: { id: productId } });
+    await prisma.business.delete({ where: { id: owner } });
   };
 
   it("два запроса с одним ключом дают один заказ, одно списание и одну очистку (AC-2, AC-6, AC-5)", async () => {

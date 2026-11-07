@@ -10,20 +10,27 @@ const order = {
   totalPrice: new Prisma.Decimal("70.95"),
   currency: "RUB",
   shippingMethod: { name: "Standard", price: 5.99 },
-  orderItems: [{ id: "line-1", price: new Prisma.Decimal("19.99") }],
+  orderItems: [
+    {
+      id: "line-1",
+      price: new Prisma.Decimal("19.99"),
+      businessId: "private-business",
+    },
+  ],
 };
 
 describe("order mapper", () => {
-  it("не отдаёт ключ и отпечаток в ответе на создание и повтор (AC-12)", () => {
+  it("keeps seller ownership snapshots private in customer responses (AC-4, AC-12)", () => {
     const json = toOrderJson(order as never);
 
     expect(json).not.toHaveProperty("idempotencyKey");
     expect(json).not.toHaveProperty("idempotencyHash");
     expect(json.totalPrice).toBe(70.95);
     expect(json.orderItems[0].price).toBe(19.99);
+    expect(json.orderItems[0]).not.toHaveProperty("businessId");
   });
 
-  it("не отдаёт ключ и отпечаток в списке заказов (AC-12)", () => {
+  it("keeps idempotency fields private in customer order lists (AC-12)", () => {
     const [json] = toOrderListJson([
       {
         id: "order-1",
