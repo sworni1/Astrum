@@ -15,6 +15,7 @@ import { mergeOrderLines, OrderService } from "./order.service";
 
 type ProductRow = {
   id: string;
+  businessId: string;
   name: string;
   previewImage: string;
   price: number;
@@ -34,6 +35,7 @@ const prismaMock = prisma as unknown as {
 
 const makeProduct = (overrides: Partial<ProductRow> = {}): ProductRow => ({
   id: "p-1",
+  businessId: "business-1",
   name: "Drill",
   previewImage: "http://cdn/drill.png",
   price: 19.99,
@@ -137,11 +139,17 @@ describe("OrderService.createOrder", () => {
     jest.restoreAllMocks();
   });
 
-  it("берёт цену, имя и картинку из товара и пишет заказ в одной транзакции (AC-1, AC-2, AC-3)", async () => {
+  it("snapshots each product business on its order line (AC-4)", async () => {
     tx.product.findMany.mockResolvedValue([
-      makeProduct({ id: "p-1", price: 19.99, quantity: 10 }),
+      makeProduct({
+        id: "p-1",
+        businessId: "business-1",
+        price: 19.99,
+        quantity: 10,
+      }),
       makeProduct({
         id: "p-2",
+        businessId: "business-2",
         name: "Saw",
         previewImage: "http://cdn/saw.png",
         price: 5.49,
@@ -173,10 +181,12 @@ describe("OrderService.createOrder", () => {
         previewImage: "http://cdn/drill.png",
         quantity: 3,
         currency: "RUB",
+        businessId: "business-1",
         userId: "user-1",
       }),
       expect.objectContaining({
         productId: "p-2",
+        businessId: "business-2",
         quantity: 2,
         currency: "RUB",
       }),

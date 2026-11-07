@@ -30,7 +30,7 @@ describe("ProductService.createProduct", () => {
     jest.clearAllMocks();
   });
 
-  it("uses the business assigned to the authenticated user", async () => {
+  it("uses the business assigned to the authenticated user (AC-3)", async () => {
     prismaMock.business.findUnique.mockResolvedValue({ id: "owned-business" });
     prismaMock.product.create.mockImplementation(({ data }) =>
       Promise.resolve(data),
@@ -41,12 +41,16 @@ describe("ProductService.createProduct", () => {
       businessId: "untrusted-business",
     } as CreateProductDto);
 
+    expect(prismaMock.business.findUnique).toHaveBeenCalledWith({
+      where: { ownerUserId: "seller-1" },
+      select: { id: true },
+    });
     expect(prismaMock.product.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ businessId: "owned-business" }),
     });
   });
 
-  it("refuses product creation when the user has no assigned business", async () => {
+  it("refuses product creation when the user has no assigned business (AC-3)", async () => {
     prismaMock.business.findUnique.mockResolvedValue(null);
 
     await expect(

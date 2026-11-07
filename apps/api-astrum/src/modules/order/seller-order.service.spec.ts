@@ -9,7 +9,9 @@ jest.mock("../../../lib/prisma", () => ({
 
 import { Prisma } from "../../../generated/prisma/client";
 import { prisma } from "../../../lib/prisma";
+import { logger } from "../../common/helpers/logger";
 import { SellerOrderService } from "./seller-order.service";
+import { ORDER_TRANSACTION_OPTIONS } from "./order-status.helpers";
 
 const prismaMock = prisma as unknown as {
   $transaction: jest.Mock;
@@ -69,7 +71,7 @@ describe("SellerOrderService", () => {
     jest.restoreAllMocks();
   });
 
-  it("limits seller reads to owned lines and caps pagination", async () => {
+  it("returns only owned order lines and caps pagination (AC-5)", async () => {
     prismaMock.business.findUnique.mockResolvedValue({ id: "business-1" });
     prismaMock.$queryRaw.mockResolvedValue([{ total: 3 }]);
     prismaMock.order.findMany.mockResolvedValue([
@@ -92,6 +94,20 @@ describe("SellerOrderService", () => {
       total: 3,
       totalPages: 1,
     });
+    expect(result.orders[0]).toMatchObject({
+      id: "order-1",
+      createdAt: new Date("2026-11-07T10:00:00.000Z"),
+      orderItems: [
+        {
+          id: "line-1",
+          productId: "product-1",
+          name: "Drill",
+          quantity: 2,
+          currency: "RUB",
+          status: "PENDING",
+        },
+      ],
+    });
     expect(prismaMock.order.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
@@ -100,24 +116,37 @@ describe("SellerOrderService", () => {
           },
         },
         orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+        select: expect.objectContaining({
+          OrderItem: expect.objectContaining({
+            where: { business: { is: { ownerUserId: "seller-1" } } },
+            orderBy: { id: "asc" },
+          }),
+        }),
         skip: 50,
         take: 50,
       }),
     );
   });
 
-  it("rejects malformed pagination and users without a business", async () => {
-    await expect(
-      new SellerOrderService().getSellerOrders("seller-1", "1.5", "20"),
-    ).rejects.toMatchObject({ status: 422, code: "VALIDATION" });
+  it.each(["0", "-1", "1.5", "nope", "9007199254740992"])(
+    "rejects invalid page values such as %s (AC-5)",
+    async (page) => {
+      await expect(
+        new SellerOrderService().getSellerOrders("seller-1", page, "20"),
+      ).rejects.toMatchObject({ status: 422, code: "VALIDATION" });
+    },
+  );
+
+  it("rejects users without an assigned business (AC-5)", async () => {
     prismaMock.business.findUnique.mockResolvedValue(null);
     await expect(
       new SellerOrderService().getSellerOrders("seller-1"),
     ).rejects.toMatchObject({ status: 403, code: "SELLER_NOT_ASSIGNED" });
   });
 
-  it("advances an owned line and derives its parent order status", async () => {
+  it("advances an owned line and derives its parent order status (AC-6, AC-8, AC-11)", async () => {
     const tx = setTransaction(sellerLine());
+    const info = jest.spyOn(logger, "info").mockImplementation(() => undefined);
     const result = await new SellerOrderService().updateSellerOrderItemStatus(
       "line-1",
       "seller-1",
@@ -136,9 +165,26 @@ describe("SellerOrderService", () => {
       where: { id: "order-1" },
       data: { status: "CONFIRMED" },
     });
+    expect(prismaMock.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      ORDER_TRANSACTION_OPTIONS,
+    );
+    expect(info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "seller.order_item.status_changed",
+        userId: "seller-1",
+        orderId: "order-1",
+        orderItemId: "line-1",
+        targetStatus: "CONFIRMED",
+        resultCode: "OK",
+      }),
+    );
+    const loggedFields = info.mock.calls[0][0];
+    expect(loggedFields).not.toHaveProperty("deliveryAddress");
+    expect(loggedFields).not.toHaveProperty("paymentDetails");
   });
 
-  it("returns stock only once when an owned line is cancelled", async () => {
+  it("returns stock only once when an owned line is cancelled (AC-9)", async () => {
     const tx = setTransaction(sellerLine("CONFIRMED"));
     tx.orderItem.findFirst
       .mockResolvedValueOnce(sellerLine("CONFIRMED"))
@@ -164,9 +210,30 @@ describe("SellerOrderService", () => {
     });
   });
 
-  it("hides another seller's line as not found", async () => {
+  it("rejects a disallowed line transition without writes (AC-6, AC-7)", async () => {
+    const tx = setTransaction(sellerLine("SHIPPED"));
+
+    await expect(
+      new SellerOrderService().updateSellerOrderItemStatus(
+        "line-1",
+        "seller-1",
+        "CANCELLED",
+      ),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: "INVALID_STATUS_TRANSITION",
+      details: { from: "SHIPPED", to: "CANCELLED" },
+    });
+
+    expect(tx.orderItem.update).not.toHaveBeenCalled();
+    expect(tx.product.updateMany).not.toHaveBeenCalled();
+    expect(tx.order.update).not.toHaveBeenCalled();
+  });
+
+  it("hides another seller's line as not found and logs no private data (AC-7, AC-14)", async () => {
     const tx = setTransaction(null);
     tx.orderItem.findUnique.mockResolvedValue({ orderId: "order-1" });
+    const warn = jest.spyOn(logger, "warn").mockImplementation(() => undefined);
 
     await expect(
       new SellerOrderService().updateSellerOrderItemStatus(
@@ -179,5 +246,42 @@ describe("SellerOrderService", () => {
       code: "ORDER_ITEM_NOT_FOUND",
     });
     expect(tx.orderItem.update).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "seller.order_item.status_refused",
+        userId: "other-seller",
+        orderId: "order-1",
+        orderItemId: "line-1",
+        targetStatus: "CONFIRMED",
+        resultCode: "ORDER_ITEM_NOT_FOUND",
+      }),
+    );
+    const loggedFields = warn.mock.calls[0][0];
+    expect(loggedFields).not.toHaveProperty("deliveryAddress");
+    expect(loggedFields).not.toHaveProperty("paymentDetails");
+  });
+
+  it("logs a null order id when the requested line is missing (AC-14)", async () => {
+    const tx = setTransaction(null);
+    const warn = jest.spyOn(logger, "warn").mockImplementation(() => undefined);
+
+    await expect(
+      new SellerOrderService().updateSellerOrderItemStatus(
+        "missing-line",
+        "seller-1",
+        "CONFIRMED",
+      ),
+    ).rejects.toMatchObject({
+      status: 404,
+      code: "ORDER_ITEM_NOT_FOUND",
+    });
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderId: null,
+        orderItemId: "missing-line",
+        resultCode: "ORDER_ITEM_NOT_FOUND",
+      }),
+    );
   });
 });

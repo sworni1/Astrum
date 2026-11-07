@@ -79,9 +79,9 @@ The order screen shows an order status and a cancel action. The gateway only han
   - [x] Seller order reads, pagination and ownership enforcement (AC-5, AC-7)
   - [x] Line transitions, customer cancellation, order status and atomic stock returns (AC-6, AC-8 to AC-12)
   - [x] Feature flag, error mapping, structured logs and rollout checks (AC-7, AC-13, AC-14)
-- [ ] Verify it: `/check verify order statuses with seller ownership`
-- [ ] Test it: `/test order statuses with seller ownership`
-- [ ] Review it (fresh model): `/check review order statuses with seller ownership`
+- [x] Verify it: `/check verify order statuses with seller ownership` (2026-11-07: live API and Postgres checks passed for all 14 ACs)
+- [x] Test it: `/test order statuses with seller ownership`
+- [x] Review it (fresh model): `/check review order statuses with seller ownership`
 - [x] Document it: `/document order statuses with seller ownership` (2026-11-07: `CHANGELOG.md`)
   code in `apps/api-astrum/src/modules/order`, `apps/api-astrum/src/modules/product`, `packages/Astrum-db/prisma/migrations/20261107230000_business_ownership_snapshot`, `packages/Astrum-db/prisma/migrations/20261107230100_business_ownership_constraints`
   spec [0002](../../specs/_root/0002-order-cancel.md)

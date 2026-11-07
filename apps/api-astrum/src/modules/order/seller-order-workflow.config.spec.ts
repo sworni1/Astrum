@@ -6,7 +6,7 @@ import {
 } from "./seller-order-workflow.config";
 
 describe("parseSellerOrderWorkflowEnabled", () => {
-  it("defaults to disabled and accepts only literal boolean strings", () => {
+  it("defaults to disabled and accepts only literal boolean strings (AC-13)", () => {
     expect(parseSellerOrderWorkflowEnabled(undefined)).toBe(false);
     expect(parseSellerOrderWorkflowEnabled("false")).toBe(false);
     expect(parseSellerOrderWorkflowEnabled("true")).toBe(true);
@@ -24,7 +24,7 @@ describe("createRequireSellerOrderWorkflow", () => {
     jest.restoreAllMocks();
   });
 
-  it("returns 503 while disabled and passes through while enabled", () => {
+  it("returns 503 while disabled and passes through while enabled (AC-13, AC-14)", () => {
     const req = {
       body: { status: "CONFIRMED" },
       params: { orderItemId: "line-1" },
@@ -58,6 +58,9 @@ describe("createRequireSellerOrderWorkflow", () => {
         resultCode: "SELLER_ORDER_WORKFLOW_DISABLED",
       }),
     );
+    const loggedFields = warn.mock.calls[0][0];
+    expect(loggedFields).not.toHaveProperty("deliveryAddress");
+    expect(loggedFields).not.toHaveProperty("paymentDetails");
 
     createRequireSellerOrderWorkflow(true)(
       req as unknown as Request,

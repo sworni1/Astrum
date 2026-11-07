@@ -131,7 +131,7 @@ describeWithDatabase("OrderService against a real database", () => {
     expect(lines._sum.quantity).toBe(6);
   }, 60000);
 
-  it("возвращает остаток при отмене и не добавляет его второй раз (AC-1, AC-2, AC-5)", async () => {
+  it("restores stock once and cancels pending payment with the order (AC-9, AC-10, AC-11, AC-12)", async () => {
     const localUser = `cancel-test-${Date.now()}`;
     await prisma.business.create({ data: { id: localUser } });
     const product = await prisma.product.create({

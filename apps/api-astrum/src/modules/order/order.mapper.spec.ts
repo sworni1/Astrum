@@ -20,7 +20,7 @@ const order = {
 };
 
 describe("order mapper", () => {
-  it("не отдаёт ключ и отпечаток в ответе на создание и повтор (AC-12)", () => {
+  it("keeps seller ownership snapshots private in customer responses (AC-4, AC-12)", () => {
     const json = toOrderJson(order as never);
 
     expect(json).not.toHaveProperty("idempotencyKey");
@@ -30,7 +30,7 @@ describe("order mapper", () => {
     expect(json.orderItems[0]).not.toHaveProperty("businessId");
   });
 
-  it("не отдаёт ключ и отпечаток в списке заказов (AC-12)", () => {
+  it("keeps idempotency fields private in customer order lists (AC-12)", () => {
     const [json] = toOrderListJson([
       {
         id: "order-1",

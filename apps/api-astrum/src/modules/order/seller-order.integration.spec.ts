@@ -110,7 +110,7 @@ describeWithDatabase("Seller order workflow against Postgres", () => {
     await prisma.$disconnect();
   });
 
-  it("scopes reads, enforces transitions and derives order status", async () => {
+  it("snapshots ownership, scopes seller reads, and enforces transitions (AC-4 to AC-9, AC-12)", async () => {
     const sellerProduct = await createProduct(
       businessId,
       `${suffix} drill`,
@@ -137,6 +137,7 @@ describeWithDatabase("Seller order workflow against Postgres", () => {
       throw new Error("Order creation did not return both expected lines.");
     }
 
+    expect(sellerLine.businessId).toBe(businessId);
     const sellers = new SellerOrderService();
     const orders = await sellers.getSellerOrders(sellerId);
     expect(orders.total).toBe(1);
@@ -216,7 +217,7 @@ describeWithDatabase("Seller order workflow against Postgres", () => {
     expect(restored.isOutOfStock).toBe(false);
   }, 30000);
 
-  it("does not restore stock for a line marked out of stock", async () => {
+  it("does not restore stock for a line marked out of stock (AC-9)", async () => {
     const product = await createProduct(businessId, `${suffix} unavailable`, 3);
     const order = await placeOrder(customerId, [
       { productId: product.id, quantity: 2 },
@@ -237,7 +238,7 @@ describeWithDatabase("Seller order workflow against Postgres", () => {
     expect(updatedOrder.status).toBe("CANCELED");
   }, 30000);
 
-  it("serializes duplicate line cancels and preserves concurrent stock returns", async () => {
+  it("serializes duplicate cancels and preserves concurrent stock returns (AC-9, AC-11)", async () => {
     const product = await createProduct(businessId, `${suffix} shared`, 3);
     const firstOrder = await placeOrder(customerId, [
       { productId: product.id, quantity: 1 },
