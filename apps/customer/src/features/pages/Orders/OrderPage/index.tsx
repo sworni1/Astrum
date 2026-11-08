@@ -17,7 +17,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getCurrencyEmoji, showToast } from "../../../../common";
+import { getCurrencyEmoji, itemStatusKey, showToast } from "../../../../common";
 import {
   OrderStatus,
   PaymentMethod,
@@ -48,29 +48,6 @@ const STATUS_KEYS: Record<OrderStatus, LabelKey> = {
   [OrderStatus.SHIPPED]: "shipped",
   [OrderStatus.DELIVERED]: "delivered",
   [OrderStatus.CANCELED]: "canceled",
-};
-
-type ItemStatusKey =
-  | "pending"
-  | "confirmed"
-  | "outOfStock"
-  | "cancelled"
-  | "shipped"
-  | "delivered"
-  | "returned"
-  | "backordered"
-  | "replaced";
-
-const ITEM_STATUS_KEYS: Record<string, ItemStatusKey> = {
-  PENDING: "pending",
-  CONFIRMED: "confirmed",
-  OUT_OF_STOCK: "outOfStock",
-  CANCELLED: "cancelled",
-  SHIPPED: "shipped",
-  DELIVERED: "delivered",
-  RETURNED: "returned",
-  BACKORDERED: "backordered",
-  REPLACED: "replaced",
 };
 
 const PAYMENT_KEYS: Record<
@@ -539,7 +516,7 @@ export default function OrderPage({ orderId }: Props) {
                     <TableCell className="text-center py-4">
                       <Badge className="text-xs">
                         {t(
-                          `itemStatus.${ITEM_STATUS_KEYS[item.status] ?? "pending"}`,
+                          `itemStatus.${itemStatusKey(item.status) ?? "pending"}`,
                         )}
                       </Badge>
                     </TableCell>

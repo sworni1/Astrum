@@ -33,7 +33,8 @@
     "allCategories": "All",
     "cartFailed": "Failed to load cart",
     "wishlistFailed": "Failed to load wishlist",
-    "ordersFailed": "Failed to load orders"
+    "ordersFailed": "Failed to load orders",
+    "sales": "Sales"
   },
   "footer": {
     "about": "About",
@@ -371,5 +372,66 @@
     "title": "Something’s missing.",
     "text": "Sorry, we can’t find that page. You’ll find lots to explore on the home page.",
     "back": "Back to Homepage"
+  },
+  "seller": {
+    "title": "Sales",
+    "subtitle": "The order lines your shop has to fulfil.",
+    "found": "{count, plural, one {# order} other {# orders}}",
+    "orderNumber": "Order #{number}",
+    "statusCount": "{status}: {count}",
+    "productFallback": "Product {id}",
+    "retry": "Try again",
+    "columns": {
+      "product": "Product",
+      "quantity": "Quantity",
+      "unitPrice": "Unit price",
+      "subtotal": "Subtotal",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "actions": {
+      "confirm": "Confirm",
+      "outOfStock": "Out of stock",
+      "cancel": "Cancel",
+      "ship": "Ship",
+      "deliver": "Deliver"
+    },
+    "dialog": {
+      "cancelTitle": "Cancel this line?",
+      "cancelText": "{product}: the quantity goes back to stock, and this screen cannot undo it.",
+      "outOfStockTitle": "Mark this line out of stock?",
+      "outOfStockText": "{product}: no stock changes, and the line closes for this order.",
+      "keep": "Keep the line",
+      "confirm": "Confirm"
+    },
+    "pagination": {
+      "label": "Order pages",
+      "back": "Back",
+      "next": "Next",
+      "pageOf": "Page {page} of {totalPages}"
+    },
+    "states": {
+      "loadingLabel": "Loading the order lines",
+      "notSellerTitle": "This account does not sell",
+      "notSellerText": "No business is assigned to this account, so there are no order lines to work through.",
+      "disabledTitle": "Order intake is not switched on",
+      "disabledText": "Seller order handling is switched off on this shop. Ask the operator to turn it on.",
+      "failureTitle": "The order lines could not be loaded",
+      "failureText": "The shop did not answer. Try again in a moment.",
+      "emptyTitle": "Nothing to fulfil",
+      "emptyText": "No order holds a line from your shop yet.",
+      "pendingTitle": "Confirm your email address",
+      "pendingText": "You can read the queue now. Statuses open for change once the address is confirmed."
+    },
+    "toasts": {
+      "invalidTransition": "Somebody already moved this line from {from} to {to}. The queue is refreshed.",
+      "orderItemNotFound": "This line no longer exists. The queue is refreshed.",
+      "validation": "The change was rejected as invalid.",
+      "emailNotConfirmed": "Confirm the email address before changing a status.",
+      "workflowDisabled": "Seller order handling is switched off on this shop.",
+      "accountStatusUnavailable": "The account state could not be read.",
+      "generic": "The change did not go through.",
+      "retry": "Try again"
+    }
   }
 }

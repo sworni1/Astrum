@@ -6,11 +6,12 @@ type Props = {
   count?: number;
   href: string;
   loading?: boolean;
+  label?: string;
 };
 
-const NavItem = ({ icon, count, href, loading }: Props) => {
+const NavItem = ({ icon, count, href, loading, label }: Props) => {
   return (
-    <Link href={href}>
+    <Link href={href} aria-label={label} title={label}>
       <div className="relative inline-flex align-middle">
         {icon}
         {loading
