@@ -25,6 +25,7 @@ export class UserService {
         dateOfBirth: true,
         gender: true,
         status: true,
+        business: { select: { id: true } },
       },
     });
 
@@ -32,7 +33,9 @@ export class UserService {
       throw new Error("User not found");
     }
 
-    return user;
+    const { business, ...profile } = user;
+
+    return { ...profile, isSeller: business !== null };
   }
 
   async updateUser(
