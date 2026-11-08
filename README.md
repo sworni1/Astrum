@@ -1,8 +1,10 @@
 # Astrum
 
+[English](README.md) · [Русский](README.ru.md)
+
 An e-commerce platform in a monorepo: a Next.js storefront, an Express API gateway, a separate NestJS authentication service and one shared Prisma plus PostgreSQL data schema. Everything runs with a single `docker compose`, and every layer except the database runs in several replicas behind one balancer.
 
-> **Stage: MVP in progress.** The catalogue, the cart, the account, checkout and email confirmation work: the server decides the price, the contents and the stock of an order, and a repeated submit does not create a second order. The rest of the end to end flow is still ahead: delivery methods from the API, order statuses and the seller panel, fulfilment and payment.
+> **Stage: MVP in progress.** The catalogue, the cart, the account, checkout and email confirmation work: the server decides the price, the contents and the stock of an order, and a repeated submit does not create a second order. The rest of the end to end flow is still ahead: delivery methods from the API, fulfilment and payment.
 
 ## What works
 
@@ -11,7 +13,7 @@ An e-commerce platform in a monorepo: a Next.js storefront, an Express API gatew
 - **Email confirmation**: a letter with a 24 hour link goes through the broker and the worker, the storefront shows a check your mail screen and offers a resend with a rate limit; while the account is `PENDING`, orders, reviews and profile edits stay closed
 - **Profile**: editing the data, changing the password, deleting the account
 - **Cart and wishlist**: adding, changing the quantity with a stock check, removing, selecting the lines for checkout
-- **Orders**: the server decides the price, the contents and the stock; lines carry only `productId` and `quantity`, the sums are `Decimal`, the stock is taken in a transaction and a refusal comes as a code (`OUT_OF_STOCK`, `CART_MISMATCH`); a repeated submit with the same `Idempotency-Key` returns the first order, the ordered cart lines are cleared on the server, and the order page opens for its owner only. Cancelling an order works; the other status transitions and fulfilment are not built yet
+- **Orders**: the server decides the price, the contents and the stock; lines carry only `productId` and `quantity`, the sums are `Decimal`, the stock is taken in a transaction and a refusal comes as a code (`OUT_OF_STOCK`, `CART_MISMATCH`); a repeated submit with the same `Idempotency-Key` returns the first order, the ordered cart lines are cleared on the server, and the order page opens for its owner only. Order cancellation and status transitions work; fulfilment is not built yet
 - **Reviews**: an API with a purchase check (only after `DELIVERED`), one review per order line and moderation; the review screen still runs on mock data
 
 ## Architecture
@@ -97,7 +99,7 @@ The reasoning behind the choice and the rejected alternatives (Swarm, nginx, Tra
   - [x] The `apps/worker` worker: the mail queue, retries after 60, 300 and 900 seconds, a dead letter queue, and an SMTP or a test transport (the letter goes into a file)
   - [x] Gateway and auth: `GET /api/auth/confirm?token=...` with the outcomes `ok`, `used`, `expired` and `invalid`, and orders, reviews and profile edits closed while the account is `PENDING`
   - [x] Storefront: the check your mail screen and a resend with a rate limit (3 per 15 minutes per address, 10 per hour per IP)
-- [ ] Order statuses and the seller panel
+- [x] Order statuses and the seller panel
 - [ ] Fulfilment: pickup or a receipt confirmation
 - [ ] Payment through a test provider and order letters
 - [ ] Reviews in full, moderation is off for now
