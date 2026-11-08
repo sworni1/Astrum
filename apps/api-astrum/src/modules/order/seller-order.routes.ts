@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
+import { requireActiveAccount } from "../../middlewares/requireActiveAccount";
 import { validateDto } from "../../middlewares/validateDto";
 import { ORDER_ERROR_CODES } from "./order.constants";
 import { OrderController } from "./order.controller";
@@ -16,6 +17,7 @@ sellerOrderRoutes.get(
 );
 sellerOrderRoutes.patch(
   "/order-items/:orderItemId/status",
+  requireActiveAccount,
   requireSellerOrderWorkflow,
   validateDto(UpdateOrderItemStatusDto, {
     status: StatusCodes.UNPROCESSABLE_ENTITY,

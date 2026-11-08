@@ -8,4 +8,5 @@ export type UserData = {
   gender: Gender;
   dateOfBirth: Date;
   status: UserStatus;
+  isSeller: boolean;
 };

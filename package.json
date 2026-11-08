@@ -24,6 +24,7 @@
     "db:up": "docker compose up astrum-db astrum-redis -d",
     "db:rm": "docker compose rm astrum-db -s -f -v",
     "db:restart": "pnpm db:rm && pnpm db:up && timeout 2 && pnpm prisma:migrate:deploy",
+    "db:assign-business": "pnpm --filter @astrum/db assign-business",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:prod:build": "docker compose -f docker-compose.prod.yml build",

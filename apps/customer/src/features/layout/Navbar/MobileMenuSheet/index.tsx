@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
+import { Store } from "lucide-react";
 import { FiPackage } from "react-icons/fi";
 import { MdFavoriteBorder, MdOutlineShoppingCart } from "react-icons/md";
 import { TbCategory } from "react-icons/tb";
@@ -26,6 +27,7 @@ interface MobileMenuSheetProps {
   cartCount?: number;
   orderCount?: number;
   orderIsLoading?: boolean;
+  isSeller?: boolean;
 }
 
 export function MobileMenuSheet({
@@ -37,6 +39,7 @@ export function MobileMenuSheet({
   cartIsLoading,
   orderCount,
   orderIsLoading,
+  isSeller,
 }: MobileMenuSheetProps) {
   const t = useTranslations("nav");
   const { setTheme, theme } = useTheme();
@@ -118,6 +121,17 @@ export function MobileMenuSheet({
                     </span>
                   )}
             </Link>
+
+            {isSeller && (
+              <Link
+                href="/seller/orders"
+                className="flex w-full items-center space-x-3 p-2 rounded-md hover:bg-muted transition"
+                onClick={() => onOpenChange(false)}
+              >
+                <Store size={24} />
+                <span>{t("sales")}</span>
+              </Link>
+            )}
 
             <Link
               href="/profile"

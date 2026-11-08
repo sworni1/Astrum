@@ -38,7 +38,7 @@ const SELLER_ORDER_ITEM_SELECT = {
   status: true,
 } as const;
 
-const ALLOWED_LINE_TRANSITIONS: Record<
+export const ALLOWED_LINE_TRANSITIONS: Record<
   OrderItemStatus,
   readonly OrderItemStatus[]
 > = {

@@ -1,3 +1,5 @@
+import type { Currency } from "./product.types";
+
 // Enums - matching database schema exactly
 export enum OrderStatus {
   PENDING = "PENDING",
@@ -108,5 +110,30 @@ export interface OrdersResponse {
   total: number;
   page: number;
   limit: number;
+  totalPages: number;
+}
+
+export interface SellerOrderLine {
+  id: string;
+  productId: string;
+  name: string;
+  previewImage: string;
+  quantity: number;
+  price: number;
+  currency: Currency;
+  status: OrderItemStatus;
+}
+
+export interface SellerOrderGroup {
+  id: string;
+  createdAt: string;
+  orderItems: SellerOrderLine[];
+}
+
+export interface SellerOrdersPage {
+  orders: SellerOrderGroup[];
+  page: number;
+  limit: number;
+  total: number;
   totalPages: number;
 }

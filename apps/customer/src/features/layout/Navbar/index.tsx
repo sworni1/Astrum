@@ -7,12 +7,18 @@ import { FiPackage } from "react-icons/fi";
 import { LuMenu } from "react-icons/lu";
 import { MdFavoriteBorder, MdOutlineShoppingCart } from "react-icons/md";
 import { TbCategory } from "react-icons/tb";
+import { Store } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { showToast } from "../../../common";
 import LocaleSwitcher from "../../../components/LocaleSwitcher";
 import ThemeSwitcher from "../../../components/ThemeSwitcher";
-import { useGetCart, useGetOrders, useGetWishlist } from "../../../hooks";
+import {
+  useGetCart,
+  useGetOrders,
+  useGetWishlist,
+  useUser,
+} from "../../../hooks";
 import { AcmeLogo } from "../../general/AcmeLogo";
 import { MobileMenuSheet } from "./MobileMenuSheet";
 import NavItem from "./NavItem";
@@ -28,6 +34,8 @@ export default function Navbar() {
     isLoading: ordersIsLoading,
     error: ordersError,
   } = useGetOrders();
+  const { profileData } = useUser();
+  const isSeller = profileData?.isSeller === true;
 
   if (cartError) {
     showToast({
@@ -91,7 +99,13 @@ export default function Navbar() {
             href={"/orders"}
             loading={ordersIsLoading}
           />
-
+          {isSeller && (
+            <NavItem
+              icon={<Store size={25} />}
+              href={"/seller/orders"}
+              label={t("sales")}
+            />
+          )}
           <Link href={"/profile"}>
             <Button
               variant="ghost"
@@ -122,6 +136,7 @@ export default function Navbar() {
             cartIsLoading={cartIsLoading}
             orderCount={orders?.length}
             orderIsLoading={ordersIsLoading}
+            isSeller={isSeller}
           />
         </div>
       </div>

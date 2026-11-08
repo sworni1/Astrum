@@ -15,7 +15,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | 2   | Idempotent checkout and cart clearing | Slice 1 | done        |
 | 3   | Shipping methods from the API         | Slice 1 | planned     |
 | 4   | Order statuses with seller ownership  | Slice 2 | in-progress |
-| 5   | Seller order panel                    | Slice 2 | planned     |
+| 5   | Seller order panel                    | Slice 2 | in-progress |
 | 6   | Customer cancel on the order screen   | Slice 2 | planned     |
 | 7   | Pickup handover                       | Slice 3 | planned     |
 | 8   | Reviews on the product screen         | Slice 4 | planned     |
@@ -86,11 +86,24 @@ The order screen shows an order status and a cancel action. The gateway only han
   code in `apps/api-astrum/src/modules/order`, `apps/api-astrum/src/modules/product`, `packages/Astrum-db/prisma/migrations/20261107230000_business_ownership_snapshot`, `packages/Astrum-db/prisma/migrations/20261107230100_business_ownership_constraints`
   spec [0002](../../specs/_root/0002-order-cancel.md)
 
-### 5. Seller order panel · planned · needs a decision · GA
+### 5. Seller order panel · in-progress · GA
 
-A seller account, role and panel do not exist yet. Products have a business id, but it is not linked to an authenticated seller. The current order screens only show customer orders.
+A seller has an API and no screen: the gateway answers the seller's own lines and accepts line status changes (spec 0002), while the storefront only shows customer orders and nothing tells a signed in user whether they sell.
 **Done when:** a seller can sign in; sees only their own order lines grouped by order; can use clear actions to move eligible lines through the agreed status flow; and requests for another seller's lines are refused.
-- [ ] Design it (spec): `/architect seller order panel`
+- [x] Design it (spec): `/architect seller order panel` — 2026-11-08: 16 acceptance criteria after a cross check
+- [x] Build it: `/develop seller order panel`
+  - [x] Identity and access: `isSeller` on the profile read, the account gate on the status route, the storefront type (AC-2, AC-13)
+  - [x] Thin thread: the page, the list hook and the refusal screens (AC-1, AC-4, AC-11)
+  - [x] The `Sales` navigation entry for sellers (AC-3)
+  - [x] Actions, dialogs, the mutation and coded refusals (AC-5 to AC-10)
+  - [x] Copy, density, mobile, accessibility, the assignment script and the tests (AC-12, AC-14 to AC-16)
+- [x] Verify it: `/check verify seller order panel` — 2026-11-08: all 23 steps of the spec's `verify.md` are closed against the live storefront and gateway; the last one open (AC-5, a page change replacing the rows with the skeleton) failed first, then was fixed with a reproduction test and re-checked live at 1500 ms latency on 21 orders, and the `placehold.co` thumbnails were fixed and seen decoding (19 of 19); log in the spec's `verify.md`
+- [x] Test it: `/test seller order panel`
+- [x] Review it (fresh model): `/check review seller order panel`
+- [x] Document it: `/document seller order panel` (2026-11-08: changelog entry in
+  `docs/changelog/2026-11-08-seller-order-panel.md`)
+  spec [0007](../../specs/_root/0007-seller-order-panel/index.md)
+  code in `apps/customer/src/app/(content)/seller/orders`, `apps/customer/src/features/pages/SellerOrders`, `apps/customer/src/hooks/order`, `apps/customer/src/features/layout/Navbar`, `apps/api-astrum/src/modules/user`, `apps/api-astrum/src/modules/order/seller-order.routes.ts`, `packages/Astrum-db/scripts`
 
 ### 6. Customer cancel on the order screen · planned
 
@@ -195,6 +208,10 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Storefront guard reading the session**: stops a revoked customer from seeing page shells before the first API call · from spec 0004 · needs a decision
 - **Cyrillic copy guard**: a check that refuses Cyrillic literals in `apps/customer/src`, so a hardcoded string cannot come back · from spec 0006
 - **Shareable Russian links**: a `[locale]` segment in the address, once a Russian page needs to be linked or crawled · from spec 0006 · needs a decision
+- **Seller list filter and order status**: a `status` query parameter and a `status` field in `GET /api/seller/orders`, extending spec 0002, AC-5 · from spec 0007
+- **Seller notifications**: a mail or a badge when a new line arrives · from spec 0007 · needs a decision
+- **Seller batch actions and seller onboarding**: act on several lines at once, and a screen instead of an administrative assignment · from spec 0007 · needs a decision
+- **Excel seed creates its businesses**: `seedFromExcel.ts` writes a product `businessId` without the matching `Business` row, which the foreign key added by spec 0002 rejects · from spec 0007
 
 ## Legend
 
