@@ -366,7 +366,11 @@
     "oldPasswordTooShort": "Old password must be at least 8 characters",
     "oldPasswordTooLong": "Old password cannot exceed 25 characters",
     "newPasswordTooShort": "New password must be at least 8 characters",
-    "newPasswordTooLong": "New password cannot exceed 25 characters"
+    "newPasswordTooLong": "New password cannot exceed 25 characters",
+    "shopNameRequired": "Enter the shop name",
+    "shopNameTooShort": "The name needs at least 2 characters",
+    "shopNameTooLong": "The name cannot exceed 60 characters",
+    "shopNameForbidden": "The name carries invisible characters"
   },
   "notFound": {
     "title": "Something’s missing.",
@@ -414,8 +418,9 @@
       "loadingLabel": "Loading the order lines",
       "notSellerTitle": "This account does not sell",
       "notSellerText": "No business is assigned to this account, so there are no order lines to work through.",
+      "notSellerAction": "Open your shop",
       "disabledTitle": "Order intake is not switched on",
-      "disabledText": "Seller order handling is switched off on this shop. Ask the operator to turn it on.",
+      "disabledText": "Seller order handling is switched off on this shop.",
       "failureTitle": "The order lines could not be loaded",
       "failureText": "The shop did not answer. Try again in a moment.",
       "emptyTitle": "Nothing to fulfil",
@@ -432,6 +437,35 @@
       "accountStatusUnavailable": "The account state could not be read.",
       "generic": "The change did not go through.",
       "retry": "Try again"
+    },
+    "onboarding": {
+      "title": "Open your shop",
+      "subtitle": "Name the shop once and it opens for this account.",
+      "loadingLabel": "Loading your account",
+      "failureTitle": "The account could not be loaded",
+      "failureText": "The profile did not answer. Try again in a moment.",
+      "retry": "Try again",
+      "nameLabel": "Shop name",
+      "nameHint": "2 to 60 characters. Extra spaces are trimmed.",
+      "submit": "Open the shop",
+      "submitting": "Opening the shop",
+      "pendingNotice": "Confirm your email address before you open a shop.",
+      "alreadyTitle": "Your shop is already open",
+      "alreadyText": "This account sells on Astrum.",
+      "alreadyAction": "Go to the sales panel",
+      "successTitle": "Your shop is open",
+      "successText": "The name below is stored on your shop.",
+      "successAction": "Go to the sales panel",
+      "successToast": "Your shop is open",
+      "profileSectionTitle": "Sell on Astrum",
+      "profileSectionText": "Open your own shop and start selling from this account.",
+      "profileSectionAction": "Open your shop",
+      "errors": {
+        "validation": "Check the shop name.",
+        "emailNotConfirmed": "Confirm the email address before opening the shop.",
+        "failureTitle": "The shop did not open",
+        "failureText": "The server did not answer. Try again in a moment."
+      }
     }
   }
 }
