@@ -28,7 +28,9 @@ describeWithDatabase("OrderService against a real database", () => {
     }) as CreateOrderDto;
 
   beforeAll(async () => {
-    await prisma.business.create({ data: { id: userId } });
+    await prisma.business.create({
+      data: { id: userId, name: `Shop ${userId}` },
+    });
     const shipping = await prisma.shippingMethod.create({
       data: { name: `Test delivery ${userId}`, price: 5.99 },
     });
@@ -133,7 +135,9 @@ describeWithDatabase("OrderService against a real database", () => {
 
   it("restores stock once and cancels pending payment with the order (AC-9, AC-10, AC-11, AC-12)", async () => {
     const localUser = `cancel-test-${Date.now()}`;
-    await prisma.business.create({ data: { id: localUser } });
+    await prisma.business.create({
+      data: { id: localUser, name: `Shop ${localUser}` },
+    });
     const product = await prisma.product.create({
       data: {
         businessId: localUser,
@@ -213,7 +217,9 @@ describeWithDatabase("Idempotent checkout against a real database", () => {
     orderQty: number;
   }) => {
     const owner = `idem-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    await prisma.business.create({ data: { id: owner } });
+    await prisma.business.create({
+      data: { id: owner, name: `Shop ${owner}` },
+    });
     const product = await prisma.product.create({
       data: {
         businessId: owner,
