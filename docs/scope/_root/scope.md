@@ -1,6 +1,6 @@
 # Scope: Astrum order flow
 
-One order moves through three places: the storefront (`apps/customer`), the gateway (`apps/api-astrum`) and the shared schema (`packages/Astrum-db`). The seller surface does not exist yet. This plan holds the whole order path, slice by slice, so the storefront and backend scopes stay about their own pages. Session state and account confirmation cross the same places plus the auth service and a new worker, so their slices live here too.
+One order moves through three places: the storefront (`apps/customer`), the gateway (`apps/api-astrum`) and the shared schema (`packages/Astrum-db`). This plan holds the whole order path, slice by slice, so the storefront and backend scopes stay about their own pages. The seller surface began with the order panel, spec 0007. Session state and account confirmation cross the same places plus the auth service and a new worker, so their slices live here too. Becoming a seller crosses the storefront, the gateway and one `Business` row, so it is planned here as well.
 
 **Build approach:** Tracer Bullet (every slice runs end to end through the storefront and the gateway).
 **Workflow:** Beta (after `/develop`: `/check verify`, then `/test`). Features that move money or stock, or guard access, carry a `· GA` tag.
@@ -23,6 +23,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | 10  | Session store in Redis                | Slice 5 | done        |
 | 11  | Account confirmation by email         | Slice 6 | in-progress |
 | 12  | English interface by default          | Slice 7 | in-progress |
+| 13  | Seller onboarding                     | Slice 8 | done        |
 
 ## Slice 1: the order thread
 
@@ -191,6 +192,26 @@ A visitor meets Russian in places: toasts and screens across ten storefront file
   spec [0006](../../specs/_root/0006-english-interface-by-default/index.md)
   code in `apps/customer/src/i18n`, `apps/customer/messages`, `apps/customer/src/components/LocaleSwitcher.tsx`, `apps/customer/src/common/actions`, `apps/worker/src/letters`
 
+## Slice 8: becoming a seller
+
+### 13. Seller onboarding · done · GA
+
+Becoming a seller today means an engineer runs `pnpm db:assign-business <email>`: it hands over an unassigned `Business` that owns products, creates one when none is free, and sets `ownerUserId`. Nothing in the product offers this, a `Business` row carries nothing but an id and a creation date, and the seller panel answers only after that script runs and only while `SELLER_ORDER_WORKFLOW_ENABLED` is on.
+**Done when:** a confirmed, signed in user becomes a seller from the storefront in one deliberate action, without anyone running a script or touching the database; the seller area and the seller endpoints answer for that account right away and after a reload, with `SELLER_ORDER_WORKFLOW_ENABLED` on; an unconfirmed account and a second attempt create nothing; and the account ends up owning exactly one shop of its own.
+- [x] Design it (spec): `/architect seller onboarding` (2026-11-09: 15 acceptance criteria after a cross check)
+- [x] Build it: `/develop seller onboarding` — 2026-11-09: schema, gateway, page and entry points built, `pnpm quality-gate` green, the migration applied and the schema confirmed live
+  - [x] Schema, migration and clients: `Business.name`, the three step migration, the script and fixtures, regenerate (AC-13)
+  - [x] Gateway endpoint: `POST /api/seller/onboarding` with the account gate, the name normalization, the idempotent repeat and its specs (AC-5 to AC-8)
+  - [x] Storefront page and hook: `/seller/onboarding`, the form, the states, the success card and the catalog keys (AC-1, AC-3, AC-4, AC-9 to AC-11)
+  - [x] Entry points, layout and tests: the profile section, the panel action, the accessibility pass and `pnpm quality-gate` (AC-2, AC-12, AC-14, AC-15)
+- [x] Verify it: `/check verify seller onboarding` — 2026-11-10: PASS, 17 of 17 verify steps ran, 15 acceptance criteria checked live (AC-3 and AC-10 owe two unobserved sub-states, listed in the spec `verify.md`)
+- [x] Test it: `/test seller onboarding`
+- [x] Review it (fresh model): `/check review seller onboarding`
+- [x] Document it: `/document seller onboarding` (2026-11-10: changelog entry in
+  `docs/changelog/2026-11-10-seller-onboarding.md`, roadmap line in `README.md` and `README.ru.md`)
+  spec [0008](../../specs/_root/0008-seller-onboarding/index.md)
+  code in `apps/api-astrum/src/modules/seller`, `apps/customer/src/features/pages/SellerOnboarding`, `apps/customer/src/features/pages/Profile/actions/SellOnAstrum`, `apps/customer/src/hooks/seller/useBecomeSeller.ts`, `packages/Astrum-db/prisma/schema.prisma`
+
 ## Deferred
 
 Kept so the plan stays honest, built only when the loop above runs.
@@ -210,8 +231,13 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Shareable Russian links**: a `[locale]` segment in the address, once a Russian page needs to be linked or crawled · from spec 0006 · needs a decision
 - **Seller list filter and order status**: a `status` query parameter and a `status` field in `GET /api/seller/orders`, extending spec 0002, AC-5 · from spec 0007
 - **Seller notifications**: a mail or a badge when a new line arrives · from spec 0007 · needs a decision
-- **Seller batch actions and seller onboarding**: act on several lines at once, and a screen instead of an administrative assignment · from spec 0007 · needs a decision
+- **Seller batch actions**: act on several lines at once · from spec 0007 · needs a decision
 - **Excel seed creates its businesses**: `seedFromExcel.ts` writes a product `businessId` without the matching `Business` row, which the foreign key added by spec 0002 rejects · from spec 0007
+- **Seller facing product management screen**: create, edit and publish products from the storefront; the gateway route and DTO exist · from spec 0008 · needs a decision
+- **Shop name policy**: reserved names, impersonation and moderation before a name is public · from spec 0008 · needs a decision
+- **Account gate on product creation**: `POST /api/products` runs behind `authenticateToken` only, with no account state gate · from spec 0008 · needs a decision
+- **AGENTS.md schema claim**: `packages/Astrum-db/AGENTS.md` and `apps/worker/AGENTS.md` call the auth and worker schemas byte identical; they are trimmed subsets · from spec 0008
+- **Shop ownership on account deletion**: `Business.ownerUserId` becomes null and the operator script can reassign the shop and its products · from spec 0008 · needs a decision
 
 ## Legend
 
