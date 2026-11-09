@@ -12,9 +12,12 @@ import {
 } from "../../common";
 import { createSession } from "../../common/helpers/session";
 import { resetSessionEnded, useFetcher } from "../useFetcher";
+import { useSessionCacheReset } from "../useSessionCacheReset";
 
 export const useAuth = () => {
   const { fetcher } = useFetcher();
+
+  const resetSessionCache = useSessionCacheReset();
 
   const router = useRouter();
 
@@ -40,6 +43,8 @@ export const useAuth = () => {
           setEmailTaken(false);
 
           await createSession(res.data.token);
+
+          await resetSessionCache();
 
           resetSessionEnded();
 
@@ -76,7 +81,7 @@ export const useAuth = () => {
         }
       }
     },
-    [goConfirmEmail, fetcher, t],
+    [goConfirmEmail, fetcher, resetSessionCache, t],
   );
 
   const handleSignIn: SubmitHandler<SignInCredentials> = useCallback(
@@ -87,7 +92,11 @@ export const useAuth = () => {
         if (res.status === 200) {
           await createSession(res.data.token);
 
+          await resetSessionCache();
+
           resetSessionEnded();
+
+          router.refresh();
 
           goNext();
 
@@ -121,7 +130,7 @@ export const useAuth = () => {
         }
       }
     },
-    [goNext, fetcher, t],
+    [goNext, fetcher, resetSessionCache, router, t],
   );
 
   return useMemo(

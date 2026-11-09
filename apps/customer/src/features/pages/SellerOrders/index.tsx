@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -62,6 +63,11 @@ export default function SellerOrders() {
       <StateScreen
         title={t("states.notSellerTitle")}
         text={t("states.notSellerText")}
+        action={
+          <Button asChild>
+            <Link href="/seller/onboarding">{t("states.notSellerAction")}</Link>
+          </Button>
+        }
       />
     );
   }

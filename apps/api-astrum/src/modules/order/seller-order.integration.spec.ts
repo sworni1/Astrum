@@ -83,8 +83,12 @@ describeWithDatabase("Seller order workflow against Postgres", () => {
     });
     await prisma.business.createMany({
       data: [
-        { id: businessId, ownerUserId: sellerId },
-        { id: otherBusinessId, ownerUserId: otherSellerId },
+        { id: businessId, name: `Shop ${businessId}`, ownerUserId: sellerId },
+        {
+          id: otherBusinessId,
+          name: `Shop ${otherBusinessId}`,
+          ownerUserId: otherSellerId,
+        },
       ],
     });
     const shipping = await prisma.shippingMethod.create({

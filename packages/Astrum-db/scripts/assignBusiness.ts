@@ -50,7 +50,9 @@ const assign = async (email: string) =>
     const businessId = free ?? `${BUSINESS_ID_PREFIX}${randomUUID()}`;
 
     if (!free) {
-      await tx.business.create({ data: { id: businessId } });
+      await tx.business.create({
+        data: { id: businessId, name: `Shop ${businessId.slice(-6)}` },
+      });
     }
 
     await tx.business.update({

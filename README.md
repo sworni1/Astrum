@@ -4,7 +4,7 @@
 
 An e-commerce platform in a monorepo: a Next.js storefront, an Express API gateway, a separate NestJS authentication service and one shared Prisma plus PostgreSQL data schema. Everything runs with a single `docker compose`, and every layer except the database runs in several replicas behind one balancer.
 
-> **Stage: MVP in progress.** The catalogue, the cart, the account, checkout and email confirmation work: the server decides the price, the contents and the stock of an order, and a repeated submit does not create a second order. The rest of the end to end flow is still ahead: delivery methods from the API, fulfilment and payment.
+> **Stage: MVP in progress.** The catalogue, the cart, the account, checkout and email confirmation work: the server decides the price, the contents and the stock of an order, and a repeated submit does not create a second order. A confirmed account can open its own shop from the profile page. The rest of the end to end flow is still ahead: delivery methods from the API, fulfilment and payment.
 
 ## What works
 
@@ -12,6 +12,7 @@ An e-commerce platform in a monorepo: a Next.js storefront, an Express API gatew
 - **Account**: registration and sign in (argon2), the session in an HttpOnly cookie, guarded routes on the storefront and on the API
 - **Email confirmation**: a letter with a 24 hour link goes through the broker and the worker, the storefront shows a check your mail screen and offers a resend with a rate limit; while the account is `PENDING`, orders, reviews and profile edits stay closed
 - **Profile**: editing the data, changing the password, deleting the account
+- **Selling**: a confirmed account opens its own shop from the profile page with one name and one button; the storefront and the gateway create exactly one shop per account, a repeated press answers with the existing shop and renames nothing, and the seller area appears without a reload
 - **Cart and wishlist**: adding, changing the quantity with a stock check, removing, selecting the lines for checkout
 - **Orders**: the server decides the price, the contents and the stock; lines carry only `productId` and `quantity`, the sums are `Decimal`, the stock is taken in a transaction and a refusal comes as a code (`OUT_OF_STOCK`, `CART_MISMATCH`); a repeated submit with the same `Idempotency-Key` returns the first order, the ordered cart lines are cleared on the server, and the order page opens for its owner only. Order cancellation and status transitions work; fulfilment is not built yet
 - **Reviews**: an API with a purchase check (only after `DELIVERED`), one review per order line and moderation; the review screen still runs on mock data
@@ -100,6 +101,10 @@ The reasoning behind the choice and the rejected alternatives (Swarm, nginx, Tra
   - [x] Gateway and auth: `GET /api/auth/confirm?token=...` with the outcomes `ok`, `used`, `expired` and `invalid`, and orders, reviews and profile edits closed while the account is `PENDING`
   - [x] Storefront: the check your mail screen and a resend with a rate limit (3 per 15 minutes per address, 10 per hour per IP)
 - [x] Order statuses and the seller panel
+- [x] Seller onboarding: a confirmed account opens its own shop from the storefront, and a second press opens nothing (spec [0008](docs/specs/_root/0008-seller-onboarding/index.md))
+  - [x] Schema: `Business.name` required, added in three steps so existing rows keep their data (a nullable column, then `Shop ` plus the last 6 characters of the id, then `NOT NULL`)
+  - [x] Gateway: `POST /api/seller/onboarding` behind the account gate, one shop per account through the unique index, and a repeat or a lost race answering with the stored shop
+  - [x] Storefront: the `/seller/onboarding` page with its five states, the `Sell on Astrum` section on the profile, and the action on the panel screen for an account that does not sell
 - [ ] Fulfilment: pickup or a receipt confirmation
 - [ ] Payment through a test provider and order letters
 - [ ] Reviews in full, moderation is off for now
