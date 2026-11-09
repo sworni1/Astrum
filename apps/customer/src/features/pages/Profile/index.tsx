@@ -10,6 +10,7 @@ import {
   DeleteAccountForm,
   EditProfileForm,
   LogOutForm,
+  SellOnAstrum,
 } from "./actions";
 
 export default function Profile() {
@@ -36,6 +37,12 @@ export default function Profile() {
         ) : (
           <EditProfileFormSkeleton />
         )}
+
+        {!profileIsLoading &&
+        !profileIsError &&
+        profileData?.isSeller === false ? (
+          <SellOnAstrum />
+        ) : null}
 
         <ChangePasswordForm />
         <LogOutForm />
