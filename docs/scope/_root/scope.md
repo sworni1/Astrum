@@ -212,6 +212,12 @@ Becoming a seller today means an engineer runs `pnpm db:assign-business <email>`
   spec [0008](../../specs/_root/0008-seller-onboarding/index.md)
   code in `apps/api-astrum/src/modules/seller`, `apps/customer/src/features/pages/SellerOnboarding`, `apps/customer/src/features/pages/Profile/actions/SellOnAstrum`, `apps/customer/src/hooks/seller/useBecomeSeller.ts`, `packages/Astrum-db/prisma/schema.prisma`
 
+## Fixed
+
+Bugs found while verifying a slice, recorded here once the fix lands so the plan stays honest.
+
+- **Previous account's data after an account switch** · fixed 2026-11-10 · from spec 0008 · `handleSignIn` and `handleRegister` (`apps/customer/src/hooks/auth/useAuth.ts`) and `useLogOut` (`apps/customer/src/hooks/useLogOut.ts`) drop the whole SWR store through `apps/customer/src/hooks/useSessionCacheReset.ts` before the next page renders, `router.refresh()` follows the cookie write on the sign in path, and three regression tests (`hooks/auth/useAuth.test.tsx`, `hooks/useLogOut.test.tsx`) fail without the fix · `docs/changelog/2026-11-10-session-cache-reset.md`
+
 ## Deferred
 
 Kept so the plan stays honest, built only when the loop above runs.
@@ -238,6 +244,7 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Account gate on product creation**: `POST /api/products` runs behind `authenticateToken` only, with no account state gate · from spec 0008 · needs a decision
 - **AGENTS.md schema claim**: `packages/Astrum-db/AGENTS.md` and `apps/worker/AGENTS.md` call the auth and worker schemas byte identical; they are trimmed subsets · from spec 0008
 - **Shop ownership on account deletion**: `Business.ownerUserId` becomes null and the operator script can reassign the shop and its products · from spec 0008 · needs a decision
+- **Seller workflow flag**: `SELLER_ORDER_WORKFLOW_ENABLED` gates `GET /api/seller/orders` and `PATCH /api/order-items/:orderItemId/status`, is read once at boot from `process.env` and defaults to `false` in the root, api and prod templates, so a fresh clone and a template deploy ship the seller panel dark while the storefront learns the state only from a `503`; either remove it together with the `disabled` screen and spec 0007 AC-11, or keep it as a kill switch with a `true` default, an owner, a review date and a state readout on `/api/users/me` or a config route · from spec 0008 · needs a decision
 
 ## Legend
 
