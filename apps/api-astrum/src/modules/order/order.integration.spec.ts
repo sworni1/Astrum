@@ -379,3 +379,142 @@ describeWithDatabase("Idempotent checkout against a real database", () => {
     await cleanup(owner, product.id);
   }, 30000);
 });
+
+describeWithDatabase(
+  "OrderService delivery snapshot against a real database",
+  () => {
+    const userId = `order-ship-${Date.now()}`;
+    const methodName = `Snapshot delivery ${userId}`;
+    let productId = "";
+    let shippingMethodId = "";
+
+    const dtoFor = (): CreateOrderDto =>
+      ({
+        deliveryAddress: "Lenina 1",
+        deliveryDate: new Date("2026-11-10T12:00:00.000Z") as never,
+        shippingMethodId,
+        paymentMethod: "CASH",
+        paymentDetails: "Cash on delivery",
+        orderItems: [{ productId, quantity: 1 }],
+      }) as CreateOrderDto;
+
+    beforeAll(async () => {
+      await prisma.business.create({
+        data: { id: userId, name: `Shop ${userId}` },
+      });
+      const method = await prisma.shippingMethod.create({
+        data: { name: methodName, price: 299, currency: "RUB", isActive: true },
+      });
+      shippingMethodId = method.id;
+
+      const product = await prisma.product.create({
+        data: {
+          businessId: userId,
+          name: `Snapshot drill ${userId}`,
+          quantity: 5,
+          price: 19.99,
+          currency: "RUB",
+          category: "Home",
+          previewImage: "http://cdn/snapshot-drill.png",
+          images: [],
+          visibility: "Public",
+          status: "Published",
+        },
+      });
+      productId = product.id;
+
+      await prisma.cartItem.create({
+        data: { userId, productId, quantity: 5 },
+      });
+    });
+
+    afterAll(async () => {
+      await prisma.orderItem.deleteMany({ where: { userId } });
+      await prisma.order.deleteMany({ where: { userId } });
+      await prisma.cartItem.deleteMany({ where: { userId } });
+      await prisma.product.deleteMany({ where: { id: productId } });
+      await prisma.business.delete({ where: { id: userId } });
+      await prisma.shippingMethod.deleteMany({
+        where: { id: shippingMethodId },
+      });
+      await prisma.$disconnect();
+    });
+
+    it("пишет снимок доставки и итог, а повтор отдаёт его после переоценки (AC-6, AC-7)", async () => {
+      const service = new OrderService();
+      const key = `ship-key-${Date.now()}`;
+
+      const first = await service.createOrder(userId, dtoFor(), key);
+
+      expect(first.replay).toBe(false);
+      expect(first.order.shippingMethodName).toBe(methodName);
+      expect(first.order.deliveryPrice.toFixed(2)).toBe("299.00");
+      expect(first.order.totalPrice.toFixed(2)).toBe("19.99");
+      expect(first.order.grandTotal.toFixed(2)).toBe("318.99");
+
+      const row = await prisma.order.findUniqueOrThrow({
+        where: { id: first.order.id },
+      });
+
+      expect(row.shippingMethodName).toBe(methodName);
+      expect(row.deliveryPrice.toFixed(2)).toBe("299.00");
+      expect(row.grandTotal.toFixed(2)).toBe("318.99");
+
+      await prisma.shippingMethod.update({
+        where: { id: shippingMethodId },
+        data: { price: 999 },
+      });
+
+      const replay = await service.createOrder(userId, dtoFor(), key);
+
+      expect(replay.replay).toBe(true);
+      expect(replay.order.id).toBe(first.order.id);
+      expect(replay.order.deliveryPrice.toFixed(2)).toBe("299.00");
+      expect(replay.order.grandTotal.toFixed(2)).toBe("318.99");
+
+      await prisma.shippingMethod.update({
+        where: { id: shippingMethodId },
+        data: { price: 299 },
+      });
+    });
+
+    it("отказывает выключенному методу и не пишет заказ (AC-5)", async () => {
+      await prisma.shippingMethod.update({
+        where: { id: shippingMethodId },
+        data: { isActive: false },
+      });
+
+      const error = await new OrderService()
+        .createOrder(userId, dtoFor())
+        .catch((caught: AppError) => caught);
+
+      expect((error as AppError).code).toBe("SHIPPING_METHOD_INACTIVE");
+      expect(
+        await prisma.order.count({ where: { userId, shippingMethodId } }),
+      ).toBe(1);
+
+      await prisma.shippingMethod.update({
+        where: { id: shippingMethodId },
+        data: { isActive: true },
+      });
+    });
+
+    it("отказывает методу в другой валюте (AC-5)", async () => {
+      await prisma.shippingMethod.update({
+        where: { id: shippingMethodId },
+        data: { currency: "USD" },
+      });
+
+      const error = await new OrderService()
+        .createOrder(userId, dtoFor())
+        .catch((caught: AppError) => caught);
+
+      expect((error as AppError).code).toBe("SHIPPING_CURRENCY_MISMATCH");
+
+      await prisma.shippingMethod.update({
+        where: { id: shippingMethodId },
+        data: { currency: "RUB" },
+      });
+    });
+  },
+);

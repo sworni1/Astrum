@@ -61,9 +61,13 @@ const makeDto = (overrides: Partial<CreateOrderDto> = {}): CreateOrderDto =>
 
 const createTx = () => ({
   shippingMethod: {
-    findUnique: jest
-      .fn()
-      .mockResolvedValue({ id: "ship-1", name: "Standard", price: 5.99 }),
+    findUnique: jest.fn().mockResolvedValue({
+      id: "ship-1",
+      name: "Standard",
+      price: new Prisma.Decimal("5.99"),
+      currency: "RUB",
+      isActive: true,
+    }),
   },
   product: {
     findMany: jest.fn(),
@@ -93,7 +97,9 @@ const createTx = () => ({
       deliveryAddress: data.deliveryAddress,
       deliveryDate: data.deliveryDate,
       shippingMethodId: data.shippingMethodId,
-      shippingMethod: { id: "ship-1", name: "Standard", price: 5.99 },
+      shippingMethodName: data.shippingMethodName,
+      deliveryPrice: data.deliveryPrice,
+      grandTotal: data.grandTotal,
       OrderItem: data.OrderItem.create.map(
         (line: Record<string, unknown>, index: number) => ({
           id: `line-${index}`,
@@ -201,7 +207,9 @@ describe("OrderService.createOrder", () => {
     });
 
     expect(order.orderItems).toHaveLength(2);
-    expect(order.shippingMethod).toEqual({ name: "Standard", price: 5.99 });
+    expect(createArgs.data.shippingMethodName).toBe("Standard");
+    expect(createArgs.data.deliveryPrice.toFixed(2)).toBe("5.99");
+    expect(createArgs.data.grandTotal.toFixed(2)).toBe("76.94");
   });
 
   it("округляет цену товара до двух знаков (AC-1)", async () => {
@@ -292,6 +300,95 @@ describe("OrderService.createOrder", () => {
 
     expect(tx.product.updateMany).not.toHaveBeenCalled();
     expect(tx.order.create).not.toHaveBeenCalled();
+  });
+
+  it("отказывает способу доставки, который выключен (AC-5)", async () => {
+    tx.shippingMethod.findUnique.mockResolvedValue({
+      id: "ship-1",
+      name: "Standard",
+      price: new Prisma.Decimal("299.00"),
+      currency: "RUB",
+      isActive: false,
+    });
+    tx.product.findMany.mockResolvedValue([makeProduct({ quantity: 10 })]);
+
+    await expectAppError(
+      new OrderService().createOrder("user-1", makeDto()),
+      "SHIPPING_METHOD_INACTIVE",
+    );
+
+    expect(tx.product.updateMany).not.toHaveBeenCalled();
+    expect(tx.order.create).not.toHaveBeenCalled();
+  });
+
+  it("отказывает способу доставки в другой валюте (AC-5)", async () => {
+    tx.shippingMethod.findUnique.mockResolvedValue({
+      id: "ship-1",
+      name: "Standard",
+      price: new Prisma.Decimal("299.00"),
+      currency: "USD",
+      isActive: true,
+    });
+    tx.product.findMany.mockResolvedValue([makeProduct({ quantity: 10 })]);
+
+    await expectAppError(
+      new OrderService().createOrder("user-1", makeDto()),
+      "SHIPPING_CURRENCY_MISMATCH",
+    );
+
+    expect(tx.product.updateMany).not.toHaveBeenCalled();
+    expect(tx.order.create).not.toHaveBeenCalled();
+  });
+
+  it("проверяет валюту заказа раньше способа доставки (AC-5)", async () => {
+    tx.shippingMethod.findUnique.mockResolvedValue({
+      id: "ship-1",
+      name: "Standard",
+      price: new Prisma.Decimal("299.00"),
+      currency: "RUB",
+      isActive: false,
+    });
+    tx.product.findMany.mockResolvedValue([
+      makeProduct({ id: "p-1", quantity: 10, currency: "RUB" }),
+      makeProduct({ id: "p-2", quantity: 10, currency: "USD" }),
+    ]);
+
+    const error = await new OrderService()
+      .createOrder(
+        "user-1",
+        makeDto({
+          orderItems: [
+            { productId: "p-1", quantity: 1 },
+            { productId: "p-2", quantity: 1 },
+          ],
+        }),
+      )
+      .catch((caught: AppError) => caught);
+
+    expect((error as AppError).code).toBe("MIXED_CURRENCY");
+    expect(tx.order.create).not.toHaveBeenCalled();
+  });
+
+  it("пишет имя, цену доставки и итог в сам заказ (AC-6)", async () => {
+    tx.shippingMethod.findUnique.mockResolvedValue({
+      id: "ship-1",
+      name: "Standard Delivery",
+      price: new Prisma.Decimal("299.00"),
+      currency: "RUB",
+      isActive: true,
+    });
+    tx.product.findMany.mockResolvedValue([
+      makeProduct({ price: 19.99, quantity: 10 }),
+    ]);
+
+    await new OrderService().createOrder("user-1", makeDto());
+
+    const data = tx.order.create.mock.calls[0][0].data;
+
+    expect(data.shippingMethodName).toBe("Standard Delivery");
+    expect(data.deliveryPrice.toFixed(2)).toBe("299.00");
+    expect(data.totalPrice.toFixed(2)).toBe("59.97");
+    expect(data.grandTotal.toFixed(2)).toBe("358.97");
   });
 
   it("отказывает заказу из товаров разных валют (AC-2)", async () => {
@@ -392,19 +489,21 @@ describe("OrderService.getOrderById", () => {
 
     expect(prismaMock.order.findFirst).toHaveBeenCalledWith({
       where: { id: "order-9", userId: "user-1" },
-      include: { OrderItem: true, shippingMethod: true },
+      include: { OrderItem: true },
     });
     expect((error as AppError).status).toBe(404);
     expect((error as AppError).code).toBe("ORDER_NOT_FOUND");
   });
 
-  it("возвращает строки заказа и способ доставки без служебного ключа", async () => {
+  it("возвращает строки заказа и снимок доставки без служебного ключа", async () => {
     prismaMock.order.findFirst.mockResolvedValue({
       id: "order-1",
       userId: "user-1",
       totalPrice: new Prisma.Decimal("70.95"),
       currency: "RUB",
-      shippingMethod: { id: "ship-1", name: "Standard", price: 5.99 },
+      shippingMethodName: "Standard",
+      deliveryPrice: new Prisma.Decimal("5.99"),
+      grandTotal: new Prisma.Decimal("76.94"),
       OrderItem: [{ id: "line-1", price: new Prisma.Decimal("19.99") }],
     });
 
@@ -413,8 +512,11 @@ describe("OrderService.getOrderById", () => {
     expect(order.orderItems).toEqual([
       { id: "line-1", price: new Prisma.Decimal("19.99") },
     ]);
-    expect(order.shippingMethod).toEqual({ name: "Standard", price: 5.99 });
+    expect(order.shippingMethodName).toBe("Standard");
+    expect(order.deliveryPrice.toFixed(2)).toBe("5.99");
+    expect(order.grandTotal.toFixed(2)).toBe("76.94");
     expect(order).not.toHaveProperty("OrderItem");
+    expect(order).not.toHaveProperty("shippingMethod");
   });
 });
 
@@ -426,7 +528,9 @@ const makeCancelableOrder = (overrides: Record<string, unknown> = {}) => ({
   totalPrice: new Prisma.Decimal("39.98"),
   currency: "RUB",
   shippingMethodId: "ship-1",
-  shippingMethod: { id: "ship-1", name: "Standard", price: 5.99 },
+  shippingMethodName: "Standard",
+  deliveryPrice: new Prisma.Decimal("5.99"),
+  grandTotal: new Prisma.Decimal("45.97"),
   OrderItem: [
     {
       id: "line-1",
@@ -582,7 +686,9 @@ describe("OrderService.createOrder with an idempotency key", () => {
     currency: "RUB",
     idempotencyKey: KEY,
     idempotencyHash: hash,
-    shippingMethod: { id: "ship-1", name: "Standard", price: 5.99 },
+    shippingMethodName: "Standard",
+    deliveryPrice: new Prisma.Decimal("5.99"),
+    grandTotal: new Prisma.Decimal("65.96"),
     OrderItem: [{ id: "line-1", price: new Prisma.Decimal("19.99") }],
     ...overrides,
   });
@@ -649,7 +755,7 @@ describe("OrderService.createOrder with an idempotency key", () => {
 
     expect(tx.order.findFirst).toHaveBeenCalledWith({
       where: { userId: "user-1", idempotencyKey: KEY },
-      include: { OrderItem: true, shippingMethod: true },
+      include: { OrderItem: true },
     });
   });
 

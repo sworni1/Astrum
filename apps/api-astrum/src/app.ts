@@ -14,6 +14,7 @@ import sellerOrderRoutes from "./modules/order/seller-order.routes";
 import productRoutes from "./modules/product/product.routes";
 import { reviewsRouter } from "./modules/reviews/reviews.routes";
 import sellerOnboardingRoutes from "./modules/seller/onboarding.routes";
+import shippingRoutes from "./modules/shipping/shipping.routes";
 import userRoutes from "./modules/user/user.routes";
 import wishlistRoutes from "./modules/wishlist/wishlist.routes";
 import { getSessionStore } from "./session/sessionStore";
@@ -72,7 +73,13 @@ app.use("/api/products", authenticateToken, productRoutes);
 app.use("/api/wishlist", authenticateToken, wishlistRoutes);
 app.use("/api/cart", authenticateToken, cartRoutes);
 app.use("/api/orders", authenticateToken, orderRoutes);
-app.use("/api", authenticateToken, sellerOrderRoutes, sellerOnboardingRoutes);
+app.use(
+  "/api",
+  authenticateToken,
+  sellerOrderRoutes,
+  sellerOnboardingRoutes,
+  shippingRoutes,
+);
 app.use("/api/reviews", authenticateToken, reviewsRouter);
 
 app.get("/", (_req, res) => {

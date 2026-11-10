@@ -55,6 +55,7 @@ The register screen accepts a birthday and a gender, but the date field has no m
 - [x] Verify it: `/check verify registration form age rule and date entry`
 - [x] Test it: `/test registration form age rule and date entry`
   code in `apps/customer/src/features/auth/Register/`, rule in `apps/customer/src/common/zodSchemes/auth.scheme.ts`
+  spec [0001](../../specs/0001-registration-minimum-age/index.md), the server rule; the date entry and calendar part was built without a spec
 
 ## Legend
 

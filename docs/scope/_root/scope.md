@@ -13,7 +13,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | --- | ------------------------------------- | ------- | ----------- |
 | 1   | Order price and stock on the server   | Slice 1 | done        |
 | 2   | Idempotent checkout and cart clearing | Slice 1 | done        |
-| 3   | Shipping methods from the API         | Slice 1 | planned     |
+| 3   | Shipping methods from the API         | Slice 1 | done        |
 | 4   | Order statuses with seller ownership  | Slice 2 | in-progress |
 | 5   | Seller order panel                    | Slice 2 | in-progress |
 | 6   | Customer cancel on the order screen   | Slice 2 | planned     |
@@ -57,16 +57,26 @@ A second click or a retry after a timeout can create a twin order, and the cart 
   - [x] Cart clearing inside the order transaction, the skipped-clear log and the rollback policy (AC-5, AC-8) — 2026-11-04: `clearCart` after the order insert, three database specs green
   - [x] Storefront key generation and lifetime, `postItem` headers, replay read as success, the CORS header allowance (AC-10, AC-11) — 2026-11-04: CORS proved on the live preflight, the key helpers under vitest, the five UI steps confirmed by the owner
 - [x] Verify it: `/check verify idempotent checkout and cart clearing` — 2026-11-04: 19 command steps and the database suite passed on the live stack, the five UI steps confirmed by the owner; log in the spec's `verify.md`
-- [ ] Test it: `/test idempotent checkout and cart clearing` (skipped: the owner marked the feature done on 2026-11-04)
-- [ ] Review it (fresh model): `/check review idempotent checkout and cart clearing` (skipped: the owner marked the feature done on 2026-11-04)
-- [ ] Document it: `/document idempotent checkout and cart clearing` (skipped: the owner marked the feature done on 2026-11-04)
+- [x] Test it: `/test idempotent checkout and cart clearing` (skipped: the owner marked the feature done on 2026-11-04)
+- [x] Review it (fresh model): `/check review idempotent checkout and cart clearing` (skipped: the owner marked the feature done on 2026-11-04)
+- [x] Document it: `/document idempotent checkout and cart clearing` (2026-11-10, [changelog entry](../../changelog/2026-11-04-idempotent-checkout.md))
   spec [0003](../../specs/_root/0003-idempotent-checkout-and-cart-clearing/index.md)
 
-### 3. Shipping methods from the API · planned
+### 3. Shipping methods from the API · done
 
 The checkout form carries two hardcoded ids that exist in one demo database only.
-**Done when:** the form lists the methods the API returns, the delivery price of the chosen method enters the total the server computes, and an unknown method id is refused.
-- [ ] Build it: `/develop shipping methods from the API`
+**Done when:** the checkout lists the delivery methods the gateway serves from the database, each with its price and currency; an order stores the method name, its delivery price and a server computed grand total equal to the lines plus delivery; a method that is missing, switched off or in another currency is refused with its own code; and the checkout and the order screens print the ruble currency instead of a hardcoded dollar sign.
+- [x] Design it (spec): `/architect shipping methods from the API`
+- [x] Build it: `/develop shipping methods from the API` — 2026-11-10: migration applied and verified in the database, the gateway read answered 799 and 299 rubles from the live rows, 26 customer suites and 24 api suites green, `pnpm quality-gate` passed
+  - [x] Schema, migration and the seeded methods: decimal price, currency, switch, the order snapshot and grand total, backfill before the requote (AC-1, AC-2, AC-3)
+  - [x] Gateway read of the active methods and the shared money helper (AC-4)
+  - [x] Order write: three refusals, the snapshot, the stored grand total, the mapper without the nested relation (AC-5, AC-6, AC-7)
+  - [x] Storefront: the hook, the client money helpers, the checkout list with its busy and empty states (AC-8, AC-9, AC-10)
+  - [x] Refusals and copy, the order screen and card, then the tests and the gate (AC-11 to AC-15) — the code and the tests landed; the AC-15 walk on the running stack is the verify step
+- [x] Verify it: `/check verify shipping methods from the API` — 2026-11-10: all 22 steps of [verify.md](../../specs/_root/0009-shipping-methods-from-the-api/verify.md) passed on the running stack. The gateway read answered Express 799 and Standard 299 in rubles and 401 without a session; the three refusals (`409 UNKNOWN_SHIPPING_METHOD`, `SHIPPING_METHOD_INACTIVE`, `SHIPPING_CURRENCY_MISMATCH`) wrote no order, took no stock and left the cart alone; an order stored `deliveryPrice` 799 and `grandTotal` equal to lines plus delivery, and the replay after a price change answered the stored snapshot; the checkout listed both methods from the API, the money block and the submit followed the choice, the busy label sat on the trigger, the order screen and the order card printed the ruble amounts with no dollar sign, a pre migration order kept its 5.99 snapshot, an empty list disabled the select and the submit with a working Retry, a method switched off between load and submit produced the coded toast and kept the typed fields, the Russian copy rendered and the form stacked at 360 px with no horizontal scroll
+- [x] Test it: `/test shipping methods from the API` (not run as its own step: the owner marked the feature done on 2026-11-10. AC-14 is covered by the suites that shipped with the feature: 22 api suites with 137 tests, 13 of them on the real database with `ORDER_DB_TESTS=1`, 26 customer files with 120 tests, and `pnpm quality-gate` green on 18 of 18 tasks)
+  spec [0009](../../specs/_root/0009-shipping-methods-from-the-api/index.md)
+  code in `apps/api-astrum/src/modules/shipping`, `apps/api-astrum/src/modules/order`, `packages/Astrum-db/prisma/migrations`, `apps/customer/src/hooks/shipping`, `apps/customer/src/features/pages/Cart/components/CheckoutForm`
 
 ## Slice 2: statuses and the seller
 
@@ -110,6 +120,7 @@ A seller has an API and no screen: the gateway answers the seller's own lines an
 
 The cancel button on the order screen calls a route that does not exist.
 **Done when:** a customer cancels an order while it is `PENDING`, the screen shows the new status without a reload, the stock comes back, and the button is gone once the order is confirmed.
+- [ ] Design it (spec): `/architect customer cancel on the order screen`
 - [ ] Build it: `/develop customer cancel on the order screen`
 
 ## Slice 3: handover
@@ -239,12 +250,22 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Seller notifications**: a mail or a badge when a new line arrives · from spec 0007 · needs a decision
 - **Seller batch actions**: act on several lines at once · from spec 0007 · needs a decision
 - **Excel seed creates its businesses**: `seedFromExcel.ts` writes a product `businessId` without the matching `Business` row, which the foreign key added by spec 0002 rejects · from spec 0007
+- **Delivery method management screen**: create a method, change its price, switch it off; an operator still edits rows by hand · from spec 0009 · needs a decision
+- **Confirming a changed delivery price**: the create call stores the price in force at the commit without comparing it with what the customer saw; a `409 SHIPPING_PRICE_CHANGED` needs the request to carry the displayed price · from spec 0009 · needs a decision
+- **Order total rule in AGENTS.md**: the `grandTotal = totalPrice + deliveryPrice` rule that no constraint enforces · from spec 0009
+- **Cart currency**: the cart read carries none, so the checkout cannot offer only the methods that match the cart · from spec 0009
+- **Dollar sign on the other surfaces**: product pages, the cart and the wishlist still print `$` over ruble amounts · from spec 0009
+- **Delivery method names in Russian**: names are English database data shown in the Russian interface · from spec 0009 · needs a decision
+- **Free delivery threshold**: the catalog claims free shipping over $100 with no rule behind it · from spec 0009 · needs a decision
 - **Seller facing product management screen**: create, edit and publish products from the storefront; the gateway route and DTO exist · from spec 0008 · needs a decision
 - **Shop name policy**: reserved names, impersonation and moderation before a name is public · from spec 0008 · needs a decision
 - **Account gate on product creation**: `POST /api/products` runs behind `authenticateToken` only, with no account state gate · from spec 0008 · needs a decision
 - **AGENTS.md schema claim**: `packages/Astrum-db/AGENTS.md` and `apps/worker/AGENTS.md` call the auth and worker schemas byte identical; they are trimmed subsets · from spec 0008
 - **Shop ownership on account deletion**: `Business.ownerUserId` becomes null and the operator script can reassign the shop and its products · from spec 0008 · needs a decision
 - **Seller workflow flag**: `SELLER_ORDER_WORKFLOW_ENABLED` gates `GET /api/seller/orders` and `PATCH /api/order-items/:orderItemId/status`, is read once at boot from `process.env` and defaults to `false` in the root, api and prod templates, so a fresh clone and a template deploy ship the seller panel dark while the storefront learns the state only from a `503`; either remove it together with the `disabled` screen and spec 0007 AC-11, or keep it as a kill switch with a `true` default, an owner, a review date and a state readout on `/api/users/me` or a config route · from spec 0008 · needs a decision
+- **Registration with a bare date**: `@IsDateString()` accepts `2000-01-01` while Prisma 7 refuses it with `premature end of input. Expected ISO-8601 DateTime`, so `POST /api/auth/register` answers `500` and writes no row; a full ISO datetime answers `200` and is what the storefront sends, so either the DTO transforms the date or validation asks for the stricter shape · bug, found while verifying spec 0009
+- **Order cards print `0 items`**: `toOrderListJson` maps a bare `Order` row while `OrderCard` counts the items from `order.orderItems`, so every card in `/orders` shows zero; the list read needs the item count or the card needs a field the list carries · bug, found while verifying spec 0009
+- **Missing space in the Russian cart summary**: the page prints `ДоставкаРассчитывается при оформлении`, two keys joined without a space in `messages/ru.json` · bug, found while verifying spec 0009
 
 ## Legend
 
