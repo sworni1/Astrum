@@ -122,6 +122,9 @@ model Order {
   deliveryDate     DateTime
   OrderItem        OrderItem[]
   shippingMethodId String
+  shippingMethodName String
+  deliveryPrice    Decimal        @db.Decimal(10, 2)
+  grandTotal       Decimal        @db.Decimal(10, 2)
   idempotencyKey   String?
   idempotencyHash  String?        @db.VarChar(64)
 
@@ -148,10 +151,12 @@ model OrderItem {
 }
 
 model ShippingMethod {
-  id    String  @id @default(cuid())
-  name  String  @unique
-  price Float
-  Order Order[]
+  id       String   @id @default(cuid())
+  name     String   @unique
+  price    Decimal  @db.Decimal(10, 2)
+  currency Currency @default(RUB)
+  isActive Boolean  @default(true)
+  Order    Order[]
 }
 
 enum PaymentMethod {
