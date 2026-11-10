@@ -228,6 +228,7 @@ Becoming a seller today means an engineer runs `pnpm db:assign-business <email>`
 Bugs found while verifying a slice, recorded here once the fix lands so the plan stays honest.
 
 - **Previous account's data after an account switch** · fixed 2026-11-10 · from spec 0008 · `handleSignIn` and `handleRegister` (`apps/customer/src/hooks/auth/useAuth.ts`) and `useLogOut` (`apps/customer/src/hooks/useLogOut.ts`) drop the whole SWR store through `apps/customer/src/hooks/useSessionCacheReset.ts` before the next page renders, `router.refresh()` follows the cookie write on the sign in path, and three regression tests (`hooks/auth/useAuth.test.tsx`, `hooks/useLogOut.test.tsx`) fail without the fix · `docs/changelog/2026-11-10-session-cache-reset.md`
+- **Skeleton instead of the profile and a missing confirmation banner after a session switch** · fixed 2026-11-10 · a follow-up of the row above · `apps/customer/src/hooks/useSessionCacheReset.ts` empties the store with `useSWRConfig().unload({ revalidate })` instead of a key-filtered `mutate`: that also deletes the SWR request markers and the payload `keepPreviousData` was holding, so a hook mounted inside the previous `dedupingInterval` fetches instead of deduping against the request of the account that left; sign in and register pass `revalidate: true`, log out keeps it off, and three regression tests in `hooks/useSessionCacheReset.test.tsx` fail without the fix · `docs/changelog/2026-11-10-session-cache-unload.md`
 
 ## Deferred
 
