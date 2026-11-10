@@ -16,7 +16,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | 3   | Shipping methods from the API         | Slice 1 | done        |
 | 4   | Order statuses with seller ownership  | Slice 2 | in-progress |
 | 5   | Seller order panel                    | Slice 2 | in-progress |
-| 6   | Customer cancel on the order screen   | Slice 2 | planned     |
+| 6   | Customer cancel on the order screen   | Slice 2 | in-progress |
 | 7   | Pickup handover                       | Slice 3 | planned     |
 | 8   | Reviews on the product screen         | Slice 4 | planned     |
 | 9   | Order flow end to end test and CI     | Slice 4 | planned     |
@@ -116,9 +116,9 @@ A seller has an API and no screen: the gateway answers the seller's own lines an
   spec [0007](../../specs/_root/0007-seller-order-panel/index.md)
   code in `apps/customer/src/app/(content)/seller/orders`, `apps/customer/src/features/pages/SellerOrders`, `apps/customer/src/hooks/order`, `apps/customer/src/features/layout/Navbar`, `apps/api-astrum/src/modules/user`, `apps/api-astrum/src/modules/order/seller-order.routes.ts`, `packages/Astrum-db/scripts`
 
-### 6. Customer cancel on the order screen · planned
+### 6. Customer cancel on the order screen · in-progress
 
-The cancel button on the order screen calls a route that does not exist.
+The cancel button on the order screen (`apps/customer/src/features/pages/Orders/OrderPage/index.tsx`) calls `PATCH /api/orders/:orderId/status`, which the gateway serves (feature 4, spec 0002, verified on the live API on 2026-11-07); the screen path itself has never been walked end to end, and the ladder has no verify step.
 **Done when:** a customer cancels an order while it is `PENDING`, the screen shows the new status without a reload, the stock comes back, and the button is gone once the order is confirmed.
 - [ ] Design it (spec): `/architect customer cancel on the order screen`
 - [ ] Build it: `/develop customer cancel on the order screen`
