@@ -1,7 +1,7 @@
 # 0008. Seller onboarding from the storefront
 
 **Date**: 2026-11-09
-**Status**: In Progress
+**Status**: Accepted
 
 ## Summary
 
