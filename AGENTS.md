@@ -26,7 +26,7 @@ pnpm db:generate            # prisma generate into packages/Astrum-db/generated
 pnpm prisma:migrate:dev     # create a migration
 pnpm db:up                  # Postgres and Redis containers
 pnpm docker:prod:build      # build the deployable images
-pnpm docker:prod:up         # full stack in replicas behind Caddy (80/443, mail UI 8025)
+pnpm docker:prod:up         # rebuild the images and start the full stack in replicas behind Caddy (80/443, mail UI 8025)
 pnpm docker:prod:down       # stop the stack
 pnpm docker:prod:logs       # follow every service log
 pnpm docker:prod:scale      # rebuild and restart the api replicas only
