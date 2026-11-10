@@ -101,14 +101,16 @@ afterEach(async () => {
 });
 
 describe("useAuth sign in", () => {
-  it("drops the whole SWR store when another account signs in", async () => {
+  it("drops the previous account and reads the new one", async () => {
     expect(read()).toEqual({ nick: "Alpha", calls: 1 });
+
+    getData.mockResolvedValue({ nickName: "Beta" });
 
     const button = container.querySelector<HTMLButtonElement>("[data-submit]");
     await act(async () => button?.click());
     await flush();
 
-    expect(read().nick).toBeUndefined();
+    expect(read()).toEqual({ nick: "Beta", calls: 2 });
   });
 
   it("writes the cookie before it clears the store and re-renders the server", async () => {

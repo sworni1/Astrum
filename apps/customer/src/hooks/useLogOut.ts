@@ -8,7 +8,7 @@ export const useLogOut = () => {
   const resetSessionCache = useSessionCacheReset();
 
   const logOut = useCallback(async () => {
-    await resetSessionCache();
+    resetSessionCache();
 
     await endSession();
   }, [resetSessionCache]);

@@ -44,7 +44,7 @@ export const useAuth = () => {
 
           await createSession(res.data.token);
 
-          await resetSessionCache();
+          resetSessionCache({ revalidate: true });
 
           resetSessionEnded();
 
@@ -92,7 +92,7 @@ export const useAuth = () => {
         if (res.status === 200) {
           await createSession(res.data.token);
 
-          await resetSessionCache();
+          resetSessionCache({ revalidate: true });
 
           resetSessionEnded();
 
