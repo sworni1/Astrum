@@ -1,9 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { getCurrencyEmoji } from "../../../../common/helpers";
+import { formatMoney } from "../../../../common/helpers";
 import { type Order, OrderStatus } from "../../../../common/types/order.types";
-import { Currency } from "../../../../common/types/product.types";
 import { Badge } from "../../../../components/ui/badge";
 import { Button } from "../../../../components/ui/button";
 import { Card, CardContent } from "../../../../components/ui/card";
@@ -65,8 +64,7 @@ const OrderCard = ({ order }: Props) => {
             <div className="text-right">
               <p className="text-sm text-muted-foreground">{t("totalPaid")}</p>
               <p className="font-bold text-lg">
-                {getCurrencyEmoji(Currency.USD)}
-                {order.totalPrice.toFixed(2)}
+                {formatMoney(order.grandTotal, order.currency)}
               </p>
             </div>
           </div>
@@ -74,9 +72,7 @@ const OrderCard = ({ order }: Props) => {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-                <p className="text-sm">
-                  {order.shippingMethod?.name || t("shippingMethodFallback")}
-                </p>
+                <p className="text-sm">{order.shippingMethodName}</p>
                 <Badge
                   className={`text-white px-2 py-0.5 rounded-md text-xs font-medium ${getStatusVariant(order.status)}`}
                 >

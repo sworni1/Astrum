@@ -5,8 +5,10 @@ import { CalendarIcon, CreditCard, Loader2, MapPin } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { formatMoney, showToast, toCurrency } from "@/common";
 import { PaymentMethod } from "@/common/types/order.types";
 import type { ProductCartProps } from "@/common/types/product.types";
+import { Currency } from "@/common/types/product.types";
 import {
   type CheckoutFormData,
   createCheckoutFormSchema,
@@ -36,7 +38,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useCheckout } from "@/hooks";
+import { useCheckout, useShippingMethods } from "@/hooks";
+import { refusalReaction } from "@/hooks/order/checkoutErrors";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -46,6 +49,12 @@ type Props = {
 
 const CheckoutForm = ({ cartItems, subtotal }: Props) => {
   const { handleCheckout } = useCheckout();
+  const {
+    methods,
+    isLoading: methodsLoading,
+    error: methodsError,
+    mutate: mutateMethods,
+  } = useShippingMethods();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const t = useTranslations("cart");
   const validation = useTranslations("validation");
@@ -55,21 +64,6 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
     () => createCheckoutFormSchema(validation),
     [validation],
   );
-
-  // Temporary shipping methods - should be fetched from API
-  const shippingMethods = [
-    {
-      id: "cmf3vpjoi0000vdqkkwrasuzx",
-      name: t("shippingStandard"),
-      price: 5.99,
-    },
-    {
-      id: "cmf3vq53t0001vdqk50gx74qz",
-      name: t("shippingExpress"),
-      price: 12.99,
-    },
-  ];
-  const shippingMethodsLoading = false;
 
   const form = useForm<CheckoutFormData>({
     resolver: zodResolver(schema),
@@ -86,31 +80,51 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
   const {
     control,
     handleSubmit,
+    setValue,
     watch,
     formState: { isValid },
   } = form;
 
   const selectedShippingMethodId = watch("shippingMethodId");
-  const selectedShipping = shippingMethods.find(
+  const paymentMethod = watch("paymentMethod");
+
+  // A failed request and an empty list leave the same usable state: no method
+  // to pick, and a retry next to the select (AC-10).
+  const methodsUnavailable =
+    methodsError !== null || (!methodsLoading && methods.length === 0);
+  const methodsBlocked = methodsLoading || methodsUnavailable;
+
+  const selectedMethod = methods.find(
     (method) => method.id === selectedShippingMethodId,
   );
-  const shippingPrice = selectedShipping?.price || 0;
+  const currency = toCurrency(
+    selectedMethod?.currency ?? methods[0]?.currency ?? Currency.RUB,
+  );
+  const shippingPrice = selectedMethod?.price ?? 0;
   const total = subtotal + shippingPrice;
-  const paymentMethod = watch("paymentMethod");
 
   const onSubmit = async (data: CheckoutFormData) => {
     setIsSubmitting(true);
     try {
-      console.log(data);
       await handleCheckout(data, cartItems);
+    } catch (error) {
+      const reaction = refusalReaction(error);
+
+      if (!reaction) {
+        return;
+      }
+
+      // An inactive or unknown method is gone from the list too, so the form
+      // refetches it and clears the choice while the typed fields stay (AC-11).
+      if (reaction.resetMethod) {
+        await mutateMethods();
+        setValue("shippingMethodId", "");
+      }
+
+      showToast({ title: t(reaction.key), type: "error" });
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  // Create a wrapper function that only takes the form data
-  const handleFormSubmit = (data: CheckoutFormData) => {
-    onSubmit(data);
   };
 
   return (
@@ -134,7 +148,7 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
                   {item.name} x {item.quantityInCart}
                 </span>
                 <span className="font-medium">
-                  ${(item.price * item.quantityInCart).toFixed(2)}
+                  {formatMoney(item.price * item.quantityInCart, currency)}
                 </span>
               </div>
             ))}
@@ -142,7 +156,7 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
         </div>
 
         <Form {...form}>
-          <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Delivery Address */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
@@ -179,30 +193,54 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
                 <FormItem>
                   <FormLabel>{t("shippingMethod")}</FormLabel>
                   <FormControl>
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={methodsBlocked}
+                    >
                       <SelectTrigger>
-                        <SelectValue placeholder={t("selectShippingMethod")} />
+                        <SelectValue
+                          placeholder={
+                            methodsLoading
+                              ? t("shippingLoading")
+                              : t("selectShippingMethod")
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
-                        {shippingMethodsLoading ? (
-                          <SelectItem value="loading" disabled>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          </SelectItem>
-                        ) : (
-                          shippingMethods.map((method) => (
-                            <SelectItem key={method.id} value={method.id}>
-                              <div className="flex flex-col">
-                                <div className="font-medium">{method.name}</div>
-                                <div className="text-sm text-muted-foreground">
-                                  ${method.price.toFixed(2)}
-                                </div>
+                        {methods.map((method) => (
+                          <SelectItem key={method.id} value={method.id}>
+                            <div className="flex flex-col">
+                              <div className="font-medium">{method.name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {formatMoney(
+                                  method.price,
+                                  toCurrency(method.currency),
+                                )}
                               </div>
-                            </SelectItem>
-                          ))
-                        )}
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </FormControl>
+                  {methodsUnavailable && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm text-destructive">
+                        {t("shippingUnavailable")}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          void mutateMethods();
+                        }}
+                      >
+                        {t("shippingRetry")}
+                      </Button>
+                    </div>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
@@ -313,26 +351,33 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
             )}
 
             {/* Order Summary */}
-            <div className="space-y-2 border-t pt-4">
-              <div className="flex justify-between text-sm">
-                <span>{t("subtotal")}</span>
-                <span>${subtotal.toFixed(2)}</span>
+            {methods.length > 0 && (
+              <div className="space-y-2 border-t pt-4">
+                <div className="flex justify-between text-sm">
+                  <span>{t("subtotal")}</span>
+                  <span>{formatMoney(subtotal, currency)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>{t("shipping")}</span>
+                  <span>{formatMoney(shippingPrice, currency)}</span>
+                </div>
+                <div className="flex justify-between font-medium">
+                  <span>{t("total")}</span>
+                  <span>{formatMoney(total, currency)}</span>
+                </div>
               </div>
-              <div className="flex justify-between text-sm">
-                <span>{t("shipping")}</span>
-                <span>${shippingPrice.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between font-medium">
-                <span>{t("total")}</span>
-                <span>${total.toFixed(2)}</span>
-              </div>
-            </div>
+            )}
 
             {/* Submit Button */}
             <Button
               type="submit"
               className="w-full"
-              disabled={!isValid || isSubmitting}
+              disabled={
+                !isValid ||
+                isSubmitting ||
+                methodsBlocked ||
+                selectedShippingMethodId === ""
+              }
             >
               {isSubmitting ? (
                 <>
@@ -342,7 +387,7 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
               ) : (
                 <>
                   <CreditCard className="mr-2 h-4 w-4" />
-                  {t("placeOrder", { price: total.toFixed(2) })}
+                  {t("placeOrder")}
                 </>
               )}
             </Button>

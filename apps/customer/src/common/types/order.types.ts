@@ -42,6 +42,7 @@ export interface ShippingMethod {
   id: string;
   name: string;
   price: number;
+  currency: Currency;
 }
 
 export interface OrderItem {
@@ -73,11 +74,14 @@ export interface Order {
   status: OrderStatus;
   createdAt: string; // ISO string from DB
   updatedAt: string; // ISO string from DB
-  shippingMethod?: ShippingMethod; // Optional to handle API inconsistencies
   deliveryAddress: string; // Simple string as in DB
   deliveryDate: Date; // ISO string from DB
   orderItems: OrderItem[]; // camelCase to match backend response
   shippingMethodId: string;
+  shippingMethodName: string; // Snapshot taken when the order was created
+  deliveryPrice: number; // Snapshot taken when the order was created
+  grandTotal: number; // totalPrice plus deliveryPrice, stored on the row
+  currency: Currency;
 }
 
 // DTOs for API calls

@@ -1,6 +1,5 @@
 "use client";
 
-import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useRef } from "react";
@@ -10,24 +9,8 @@ import type { CreateOrderItemDto } from "../../common/types/order.types";
 import type { ProductCartProps } from "../../common/types/product.types";
 import type { CheckoutFormData } from "../../common/zodSchemes/checkout.scheme";
 import { useFetcher } from "../useFetcher";
+import { checkoutRefusalOf } from "./checkoutErrors";
 import { createIdempotencyKey, isTerminalAnswer } from "./idempotency";
-
-type OrderErrorBody = {
-  code?: string;
-  message?: string;
-};
-
-const readErrorMessage = (error: unknown, fallback: string): string => {
-  if (axios.isAxiosError<OrderErrorBody>(error)) {
-    const message = error.response?.data?.message;
-
-    if (message) {
-      return message;
-    }
-  }
-
-  return error instanceof Error ? error.message : fallback;
-};
 
 export const useCheckout = () => {
   const { postItem } = useFetcher();
@@ -94,6 +77,14 @@ export const useCheckout = () => {
           idempotencyKey.current = null;
         }
 
+        // A delivery method refusal belongs to the form: it names the code,
+        // revalidates the list and shows one message, not two (AC-11).
+        const refusal = checkoutRefusalOf(error);
+
+        if (refusal) {
+          throw refusal;
+        }
+
         // A refused order means the cart or the stock moved, so reload both
         // before the customer sees the message and tries again.
         await Promise.all([mutate("/cart"), mutate("/orders")]);
@@ -101,7 +92,6 @@ export const useCheckout = () => {
         showToast({
           title: t("orderFailed"),
           type: "error",
-          description: readErrorMessage(error, t("orderFailed")),
         });
 
         throw error;

@@ -17,12 +17,11 @@ import { useFormatter, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getCurrencyEmoji, itemStatusKey, showToast } from "../../../../common";
+import { formatMoney, itemStatusKey, showToast } from "../../../../common";
 import {
   OrderStatus,
   PaymentMethod,
 } from "../../../../common/types/order.types";
-import { Currency } from "../../../../common/types/product.types";
 import { Separator } from "../../../../components/ui/separator";
 import {
   Table,
@@ -135,8 +134,6 @@ export default function OrderPage({ orderId }: Props) {
       </div>
     );
   }
-
-  console.log(order);
 
   if (error) {
     showToast({
@@ -288,14 +285,10 @@ export default function OrderPage({ orderId }: Props) {
                   {t("shippingMethod")}
                 </h3>
                 <div className="space-y-1 text-sm">
-                  <p className="font-medium">
-                    {order.shippingMethod?.name || t("shippingMethodFallback")}
-                  </p>
+                  <p className="font-medium">{order.shippingMethodName}</p>
                   <p className="text-muted-foreground">
                     {t("price", {
-                      price: `${getCurrencyEmoji(Currency.USD)}${
-                        order.shippingMethod?.price?.toFixed(2) || "0.00"
-                      }`,
+                      price: formatMoney(order.deliveryPrice, order.currency),
                     })}
                   </p>
                 </div>
@@ -312,17 +305,15 @@ export default function OrderPage({ orderId }: Props) {
             </CardHeader>
             <CardContent className="space-y-3 lg:space-y-4 pt-0">
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">{t("totalPrice")}</span>
+                <span className="text-muted-foreground">{t("subtotal")}</span>
                 <span className="font-medium">
-                  {getCurrencyEmoji(Currency.USD)}
-                  {order.totalPrice.toFixed(2)}
+                  {formatMoney(order.totalPrice, order.currency)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">{t("shipping")}</span>
                 <span className="font-medium">
-                  {getCurrencyEmoji(Currency.USD)}
-                  {order.shippingMethod?.price?.toFixed(2) || "0.00"}
+                  {formatMoney(order.deliveryPrice, order.currency)}
                 </span>
               </div>
               <Separator className="my-4" />
@@ -332,8 +323,7 @@ export default function OrderPage({ orderId }: Props) {
                     {t("total")}
                   </span>
                   <span className="font-semibold text-xl lg:text-lg">
-                    {getCurrencyEmoji(Currency.USD)}
-                    {order.totalPrice.toFixed(2)}
+                    {formatMoney(order.grandTotal, order.currency)}
                   </span>
                 </div>
               </div>
@@ -510,8 +500,7 @@ export default function OrderPage({ orderId }: Props) {
                       {item.quantity}
                     </TableCell>
                     <TableCell className="text-right py-4 font-medium">
-                      {getCurrencyEmoji(Currency.USD)}
-                      {item.price.toFixed(2)}
+                      {formatMoney(item.price, order.currency)}
                     </TableCell>
                     <TableCell className="text-center py-4">
                       <Badge className="text-xs">
