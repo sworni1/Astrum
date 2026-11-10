@@ -32,7 +32,9 @@ const orderDetail = {
   status: "PENDING",
   totalPrice: new Prisma.Decimal("70.95"),
   currency: "RUB",
-  shippingMethod: { name: "Standard", price: 5.99 },
+  shippingMethodName: "Standard",
+  deliveryPrice: new Prisma.Decimal("5.99"),
+  grandTotal: new Prisma.Decimal("76.94"),
   orderItems: [{ id: "line-1", price: new Prisma.Decimal("19.99") }],
 };
 
@@ -58,6 +60,9 @@ describe("OrderController", () => {
       expect.objectContaining({
         id: "order-1",
         totalPrice: 70.95,
+        deliveryPrice: 5.99,
+        grandTotal: 76.94,
+        shippingMethodName: "Standard",
         currency: "RUB",
         orderItems: [expect.objectContaining({ price: 19.99 })],
       }),
@@ -122,18 +127,28 @@ describe("OrderController", () => {
     });
   });
 
-  it("отдаёт список заказов с totalPrice числом (AC-9)", async () => {
-    jest
-      .spyOn(OrderService.prototype, "getOrdersByUserId")
-      .mockResolvedValue([
-        { id: "order-1", totalPrice: new Prisma.Decimal("10.00") },
-      ] as never);
+  it("отдаёт список заказов с тремя суммами числом (AC-7)", async () => {
+    jest.spyOn(OrderService.prototype, "getOrdersByUserId").mockResolvedValue([
+      {
+        id: "order-1",
+        totalPrice: new Prisma.Decimal("10.00"),
+        deliveryPrice: new Prisma.Decimal("299.00"),
+        grandTotal: new Prisma.Decimal("309.00"),
+      },
+    ] as never);
     const res = createMockResponse();
 
     await new OrderController().getOrdersByUserId(createRequest(), res);
 
     expect(res.status).toHaveBeenCalledWith(StatusCodes.OK);
-    expect(res.json).toHaveBeenCalledWith([{ id: "order-1", totalPrice: 10 }]);
+    expect(res.json).toHaveBeenCalledWith([
+      {
+        id: "order-1",
+        totalPrice: 10,
+        deliveryPrice: 299,
+        grandTotal: 309,
+      },
+    ]);
   });
 
   it("отвечает 200 на отмену заказа и отдаёт деньги числом (AC-1)", async () => {

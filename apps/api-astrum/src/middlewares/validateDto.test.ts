@@ -61,6 +61,21 @@ describe("validateDto", () => {
     ]);
   });
 
+  it("принимает тело с суммами заказа и не пропускает их дальше (AC-6)", async () => {
+    const { req, next } = await runValidation({
+      ...validBody,
+      shippingMethodName: "Free delivery",
+      deliveryPrice: 0,
+      grandTotal: 1,
+    });
+
+    expect(next).toHaveBeenCalled();
+    expect(req.body).not.toHaveProperty("shippingMethodName");
+    expect(req.body).not.toHaveProperty("deliveryPrice");
+    expect(req.body).not.toHaveProperty("grandTotal");
+    expect(req.body.shippingMethodId).toBe("ship-1");
+  });
+
   it("по умолчанию отвечает 400 и без кода", async () => {
     const { res, next } = await runValidation({ ...validBody, orderItems: [] });
 

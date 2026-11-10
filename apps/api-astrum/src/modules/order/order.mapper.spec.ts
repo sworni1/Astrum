@@ -9,7 +9,9 @@ const order = {
   idempotencyHash: "a".repeat(64),
   totalPrice: new Prisma.Decimal("70.95"),
   currency: "RUB",
-  shippingMethod: { name: "Standard", price: 5.99 },
+  shippingMethodName: "Standard",
+  deliveryPrice: new Prisma.Decimal("5.99"),
+  grandTotal: new Prisma.Decimal("76.94"),
   orderItems: [
     {
       id: "line-1",
@@ -26,6 +28,10 @@ describe("order mapper", () => {
     expect(json).not.toHaveProperty("idempotencyKey");
     expect(json).not.toHaveProperty("idempotencyHash");
     expect(json.totalPrice).toBe(70.95);
+    expect(json.deliveryPrice).toBe(5.99);
+    expect(json.grandTotal).toBe(76.94);
+    expect(json.shippingMethodName).toBe("Standard");
+    expect(json).not.toHaveProperty("shippingMethod");
     expect(json.orderItems[0].price).toBe(19.99);
     expect(json.orderItems[0]).not.toHaveProperty("businessId");
   });
@@ -37,11 +43,15 @@ describe("order mapper", () => {
         idempotencyKey: "key-abcdef",
         idempotencyHash: "a".repeat(64),
         totalPrice: new Prisma.Decimal("10.00"),
+        deliveryPrice: new Prisma.Decimal("299.00"),
+        grandTotal: new Prisma.Decimal("309.00"),
       } as Order,
     ]);
 
     expect(json).not.toHaveProperty("idempotencyKey");
     expect(json).not.toHaveProperty("idempotencyHash");
     expect(json.totalPrice).toBe(10);
+    expect(json.deliveryPrice).toBe(299);
+    expect(json.grandTotal).toBe(309);
   });
 });

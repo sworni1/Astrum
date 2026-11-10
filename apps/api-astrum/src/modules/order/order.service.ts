@@ -48,10 +48,7 @@ type RefusalItem = {
 type CartRow = { productId: string; quantity: number };
 
 /** What a create and a detail read answer with, in the shape the storefront reads. */
-export type OrderDetail = Omit<Order, "shippingMethod"> & {
-  shippingMethod: { name: string; price: number };
-  orderItems: OrderItem[];
-};
+export type OrderDetail = Order & { orderItems: OrderItem[] };
 
 /** A create answers with the order and whether it came from a replay (spec 0003). */
 export type CreateOrderResult = { order: OrderDetail; replay: boolean };
@@ -69,7 +66,7 @@ const CUSTOMER_CANCELLATION_BLOCKERS: readonly OrderItemStatus[] = [
   "REPLACED",
 ];
 
-const ORDER_DETAIL_INCLUDE = { OrderItem: true, shippingMethod: true } as const;
+const ORDER_DETAIL_INCLUDE = { OrderItem: true } as const;
 
 const orderNotFound = () =>
   new AppError(
@@ -169,19 +166,16 @@ export const mergeOrderLines = (items: OrderItemDto[]): OrderLine[] => {
   return lines;
 };
 
+/**
+ * The answer carries the snapshot columns the order row holds: the delivery
+ * method is named and priced at creation, so no relation is read here (AC-7).
+ */
 const toOrderDetail = (
-  order: Order & { OrderItem: OrderItem[]; shippingMethod: ShippingMethod },
+  order: Order & { OrderItem: OrderItem[] },
 ): OrderDetail => {
   const { OrderItem: orderItems, ...rest } = order;
 
-  return {
-    ...rest,
-    shippingMethod: {
-      name: order.shippingMethod.name,
-      price: order.shippingMethod.price,
-    },
-    orderItems,
-  };
+  return { ...rest, orderItems };
 };
 
 export class OrderService {
@@ -471,14 +465,7 @@ export class OrderService {
 
     const priced = this.priceLines(products, lines);
     const currency = this.resolveCurrency(priced);
-
-    if (!shippingMethod) {
-      throw new AppError(
-        409,
-        ORDER_ERROR_CODES.unknownShippingMethod,
-        "The selected delivery method does not exist.",
-      );
-    }
+    const delivery = this.assertShippingMethod(shippingMethod, currency);
 
     await this.takeStock(tx, lines);
 
@@ -486,6 +473,7 @@ export class OrderService {
       (total, line) => total.add(line.unitPrice.mul(line.quantity)),
       new Prisma.Decimal(0),
     );
+    const grandTotal = totalPrice.add(delivery.price);
 
     const created = await tx.order.create({
       data: {
@@ -497,6 +485,9 @@ export class OrderService {
         deliveryAddress: dto.deliveryAddress,
         deliveryDate: new Date(dto.deliveryDate),
         shippingMethodId: dto.shippingMethodId,
+        shippingMethodName: delivery.name,
+        deliveryPrice: delivery.price,
+        grandTotal,
         idempotencyKey: idempotency?.key ?? null,
         idempotencyHash: idempotency?.hash ?? null,
         OrderItem: {
@@ -512,7 +503,7 @@ export class OrderService {
           })),
         },
       },
-      include: { OrderItem: true, shippingMethod: true },
+      include: { OrderItem: true },
     });
 
     await this.clearCart(tx, created.id, userId, lines, cartRows);
@@ -702,6 +693,46 @@ export class OrderService {
     }
 
     return currency;
+  }
+
+  /**
+   * The method is read inside the transaction, so the price the order records
+   * is the price the row carries at that moment. An unknown id, a switched off
+   * row and a currency mismatch each answer their own code, in this order, and
+   * none of them writes anything (AC-5).
+   */
+  private assertShippingMethod(
+    method: ShippingMethod | null,
+    currency: Currency,
+  ): { name: string; price: Prisma.Decimal } {
+    if (!method) {
+      throw new AppError(
+        409,
+        ORDER_ERROR_CODES.unknownShippingMethod,
+        "The selected delivery method does not exist.",
+      );
+    }
+
+    if (!method.isActive) {
+      throw new AppError(
+        409,
+        ORDER_ERROR_CODES.shippingMethodInactive,
+        "The selected delivery method is no longer offered.",
+      );
+    }
+
+    if (method.currency !== currency) {
+      throw new AppError(
+        409,
+        ORDER_ERROR_CODES.shippingCurrencyMismatch,
+        "The selected delivery method is priced in another currency.",
+      );
+    }
+
+    return {
+      name: method.name,
+      price: new Prisma.Decimal(method.price).toDecimalPlaces(2),
+    };
   }
 
   /** Conditional update per line: zero rows touched means the stock is short. */

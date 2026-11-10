@@ -1,9 +1,6 @@
 import type { Order, OrderItem } from "../../../generated/prisma/client";
+import { toMoney } from "../../common/helpers/money";
 import type { OrderDetail } from "./order.service";
-
-/** Money reaches JSON as a number with at most two decimals (AC-9). */
-const toMoney = (value: Order["totalPrice"]): number =>
-  Number(value.toFixed(2));
 
 const toLineJson = (item: OrderItem) => {
   const { businessId: _businessId, ...visible } = item;
@@ -32,6 +29,8 @@ export const toOrderJson = (order: OrderDetail) => {
   return {
     ...visible,
     totalPrice: toMoney(order.totalPrice),
+    deliveryPrice: toMoney(order.deliveryPrice),
+    grandTotal: toMoney(order.grandTotal),
     orderItems: order.orderItems.map(toLineJson),
   };
 };
@@ -40,4 +39,6 @@ export const toOrderListJson = (orders: Order[]) =>
   orders.map((order) => ({
     ...withoutIdempotency(order),
     totalPrice: toMoney(order.totalPrice),
+    deliveryPrice: toMoney(order.deliveryPrice),
+    grandTotal: toMoney(order.grandTotal),
   }));

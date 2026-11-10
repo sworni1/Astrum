@@ -4,6 +4,8 @@ export const ORDER_ERROR_CODES = {
   cartMismatch: "CART_MISMATCH",
   mixedCurrency: "MIXED_CURRENCY",
   unknownShippingMethod: "UNKNOWN_SHIPPING_METHOD",
+  shippingMethodInactive: "SHIPPING_METHOD_INACTIVE",
+  shippingCurrencyMismatch: "SHIPPING_CURRENCY_MISMATCH",
   validation: "VALIDATION",
   notFound: "ORDER_NOT_FOUND",
   orderItemNotFound: "ORDER_ITEM_NOT_FOUND",
