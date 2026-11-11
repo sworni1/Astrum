@@ -47,12 +47,23 @@ export const resetSessionEnded = (): void => {
   sessionEnded = false;
 };
 
+/** A refusal code rides on a `401` and on a `403`; nothing else carries one. */
+const REFUSAL_STATUSES = [401, 403];
+
 const refusalCode = (error: unknown): string | undefined => {
-  if (!axios.isAxiosError(error) || error.response?.status !== 401) {
+  if (!axios.isAxiosError(error)) {
     return undefined;
   }
 
-  const data: unknown = error.response.data;
+  // The EMAIL_NOT_CONFIRMED branch below is a `403`, so reading only a `401`
+  // left it unreachable (spec 0012, AC-10).
+  const status = error.response?.status;
+
+  if (!status || !REFUSAL_STATUSES.includes(status)) {
+    return undefined;
+  }
+
+  const data: unknown = error.response?.data;
 
   if (typeof data !== "object" || data === null) {
     return undefined;

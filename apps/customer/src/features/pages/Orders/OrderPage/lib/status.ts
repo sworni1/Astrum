@@ -18,6 +18,18 @@ export const STATUS_KEYS: Record<OrderStatus, StatusLabelKey> = {
   [OrderStatus.CANCELED]: "canceled",
 };
 
+/**
+ * The statuses the gateway still accepts a cancel from (spec 0011, AC-1); every
+ * other status renders no cancel action at all.
+ */
+const CANCELLABLE_STATUSES: readonly OrderStatus[] = [
+  OrderStatus.PENDING,
+  OrderStatus.CONFIRMED,
+];
+
+export const canCancel = (status: OrderStatus): boolean =>
+  CANCELLABLE_STATUSES.includes(status);
+
 /** Badge background per status; an unknown status reads grey, never blank. */
 export const statusColor = (status: OrderStatus): string => {
   switch (status) {

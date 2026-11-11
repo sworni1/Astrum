@@ -4,6 +4,13 @@ import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useTransition } from "react";
 import { setLocale } from "@/common/actions/locale";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { type Locale, locales } from "@/i18n/config";
 import { cn } from "@/lib/utils";
 
@@ -29,22 +36,21 @@ export default function LocaleSwitcher({ className }: Props) {
   };
 
   return (
-    <select
-      aria-label={t("language")}
-      value={locale}
-      disabled={isPending}
-      onChange={(event) => change(event.target.value)}
-      className={cn(
-        "h-8 cursor-pointer rounded-md border border-border bg-background px-2 text-sm text-foreground",
-        isPending && "opacity-60",
-        className,
-      )}
-    >
-      {locales.map((value: Locale) => (
-        <option key={value} value={value}>
-          {t(value === "en" ? "english" : "russian")}
-        </option>
-      ))}
-    </select>
+    <Select value={locale} onValueChange={change} disabled={isPending}>
+      <SelectTrigger
+        aria-label={t("language")}
+        className={cn("cursor-pointer", isPending && "opacity-60", className)}
+      >
+        <SelectValue />
+      </SelectTrigger>
+
+      <SelectContent>
+        {locales.map((value: Locale) => (
+          <SelectItem key={value} value={value}>
+            {t(value === "en" ? "english" : "russian")}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

@@ -9,6 +9,7 @@ import {
   productPreviewPublicSelect,
   productPublicSelect,
 } from "../../common/prisma-selects/product.select";
+import { readReviewState } from "../reviews/review-state";
 import type { CreateProductDto } from "./dto/create-product.dto";
 
 export class ProductService {
@@ -32,6 +33,8 @@ export class ProductService {
       throw new Error("Product not found");
     }
 
+    const reviewState = await readReviewState(userId, productId);
+
     const { impressions, properties, _count, ...rest } = product;
 
     return {
@@ -44,6 +47,7 @@ export class ProductService {
       },
       isWishlisted: !!wishlistItem,
       quantityInCart: cartItem ? cartItem.quantity : 0,
+      reviewState,
     };
   }
 

@@ -14,11 +14,11 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | 1   | Order price and stock on the server   | Slice 1 | done        |
 | 2   | Idempotent checkout and cart clearing | Slice 1 | done        |
 | 3   | Shipping methods from the API         | Slice 1 | done        |
-| 4   | Order statuses with seller ownership  | Slice 2 | in-progress |
-| 5   | Seller order panel                    | Slice 2 | in-progress |
-| 6   | Customer cancel on the order screen   | Slice 2 | in-progress |
+| 4   | Order statuses with seller ownership  | Slice 2 | done        |
+| 5   | Seller order panel                    | Slice 2 | done        |
+| 6   | Customer cancel on the order screen   | Slice 2 | done        |
 | 7   | Pickup handover                       | Slice 3 | planned     |
-| 8   | Reviews on the product screen         | Slice 4 | planned     |
+| 8   | Reviews on the product screen         | Slice 4 | done        |
 | 9   | Order flow end to end test and CI     | Slice 4 | planned     |
 | 10  | Session store in Redis                | Slice 5 | done        |
 | 11  | Account confirmation by email         | Slice 6 | in-progress |
@@ -80,7 +80,7 @@ The checkout form carries two hardcoded ids that exist in one demo database only
 
 ## Slice 2: statuses and the seller
 
-### 4. Order statuses with seller ownership · in-progress · GA
+### 4. Order statuses with seller ownership · done · GA
 
 The order screen shows an order status and a cancel action. The gateway only handles customer cancellation today. A client hook calls a route for line status changes, but the gateway has no such route. Products have a business id, but an order line does not record its seller.
 **Done when:** each ordered line is tied to its seller; sellers can read and change only their own lines; allowed line status changes and their effect on the order status are clear and enforced; cancellation returns stock once; and invalid changes get a clear response.
@@ -97,7 +97,7 @@ The order screen shows an order status and a cancel action. The gateway only han
   code in `apps/api-astrum/src/modules/order`, `apps/api-astrum/src/modules/product`, `packages/Astrum-db/prisma/migrations/20261107230000_business_ownership_snapshot`, `packages/Astrum-db/prisma/migrations/20261107230100_business_ownership_constraints`
   spec [0002](../../specs/_root/0002-order-cancel.md)
 
-### 5. Seller order panel · in-progress · GA
+### 5. Seller order panel · done · GA
 
 A seller has an API and no screen: the gateway answers the seller's own lines and accepts line status changes (spec 0002), while the storefront only shows customer orders and nothing tells a signed in user whether they sell.
 **Done when:** a seller can sign in; sees only their own order lines grouped by order; can use clear actions to move eligible lines through the agreed status flow; and requests for another seller's lines are refused.
@@ -116,12 +116,21 @@ A seller has an API and no screen: the gateway answers the seller's own lines an
   spec [0007](../../specs/_root/0007-seller-order-panel/index.md)
   code in `apps/customer/src/app/(content)/seller/orders`, `apps/customer/src/features/pages/SellerOrders`, `apps/customer/src/hooks/order`, `apps/customer/src/features/layout/Navbar`, `apps/api-astrum/src/modules/user`, `apps/api-astrum/src/modules/order/seller-order.routes.ts`, `packages/Astrum-db/scripts`
 
-### 6. Customer cancel on the order screen · in-progress
+### 6. Customer cancel on the order screen · done
 
 The cancel button on the order screen (`apps/customer/src/features/pages/Orders/OrderPage/index.tsx`) calls `PATCH /api/orders/:orderId/status`, which the gateway serves (feature 4, spec 0002, verified on the live API on 2026-11-07); the screen path itself has never been walked end to end, and the ladder has no verify step.
-**Done when:** a customer cancels an order while it is `PENDING`, the screen shows the new status without a reload, the stock comes back, and the button is gone once the order is confirmed.
-- [ ] Design it (spec): `/architect customer cancel on the order screen`
-- [ ] Build it: `/develop customer cancel on the order screen`
+**Done when:** a customer cancels an order while it is `PENDING` or `CONFIRMED`, after one confirmation; the screen shows the new status without a reload; the stock comes back; the action is gone once no cancellable status remains; and a cancelled order prints what happened to its payment instead of claiming the payment is still pending.
+- [x] Design it (spec): `/architect customer cancel on the order screen`
+- [x] Build it: `/develop customer cancel on the order screen`
+  - [x] The gateway answer into the cache plus `revalidateOrder` through `allSettled` (AC-5, AC-6) — done: `src/hooks/order/useUpdateOrderStatus.ts`, the call order pinned by `useUpdateOrderStatus.test.tsx`
+  - [x] The `AlertDialog` with its keep and send controls, `XCircle`, the busy state that keeps focus, and the two eligible statuses (AC-1 to AC-4, AC-8, AC-10) — done: `components/CancelOrderDialog` (it owns its trigger and open state, so the header only decides whether to render it) plus `canCancel()` in `lib/status.ts`
+  - [x] The three outcomes, each re reading the order (AC-6) — done: `cancelRefusal` gained `cancelUnconfirmed`, every branch awaits `revalidateOrder`, covered in `useCancelOrder.test.tsx`
+  - [x] Payment labels and both catalogs, the two dead keys deleted (AC-7, AC-9) — done: `PAYMENT_STATUS_KEYS` in `lib/payment.ts`, both catalogs carry the new keys and lost `orders.paid` and `orders.paymentPending`
+  - [x] Tests including the two existing mocks (AC-11) — done: `pnpm --filter @astrum/customer test` 174 passed; the `verify.md` walk belongs to the `Verify it` row
+- [x] Verify it: `/check verify customer cancel on the order screen` — 2026-11-11, PASS on the running dev stack (24 of 25 verify steps exercised, every acceptance criterion met; the one skipped step is the 10000 ms timeout, same branch as the observed transport failure). Two premise corrections are recorded in `verify.md`: `AlertDialog` ignores an overlay click by design, so Escape and the keep control carry that clause.
+- [x] Test it: `/test customer cancel on the order screen` (not run as its own pass: the owner closed the slice on 2026-11-11. Coverage that exists: 174 tests in 40 files for `@astrum/customer`, the AC-11 scenarios named one by one in `CancelOrderDialog/index.test.tsx`, `OrderPageHeader/index.test.tsx`, `useCancelOrder.test.tsx`, `useUpdateOrderStatus.test.tsx`, `payment.test.ts` and `cancelDialogCopy.test.ts`, plus the live walk of 24 verify steps on the running stack)
+  spec [0011](../../specs/_root/0011-customer-cancel-on-the-order-screen/index.md)
+  code in `apps/customer/src/features/pages/Orders/OrderPage/` (header, dialog, cancel hook, payment table) and `apps/customer/messages`
 
 ## Slice 3: handover
 
@@ -133,11 +142,21 @@ Pickup is how this shop hands an order over, and nothing closes an order today.
 
 ## Slice 4: closing the loop
 
-### 8. Reviews on the product screen · planned
+### 8. Reviews on the product screen · done
 
 The review API already refuses a review without a `DELIVERED` purchase, while the product screen still renders mock reviews.
 **Done when:** the product screen shows the reviews and the rating summary from the API, a customer with a delivered line can write one review, and the form stays hidden for anyone who did not buy.
-- [ ] Design it (spec): `/architect reviews on the product screen`
+- [x] Design it (spec): `/architect reviews on the product screen` — 2026-11-11: 15 acceptance criteria after a cross check pass
+- [x] Build it: `/develop reviews on the product screen`
+  - [x] Gateway read: `reviewState` on the product answer, the shared serializer, the zero filled distribution, the `createdAt, id` ordering, the `after` check and the router param fix (AC-1, AC-7, AC-12)
+  - [x] Gateway write: `AppError` codes for every refusal, `APPROVED` on create, the path product, `getReviewById` off the bare `Error` (AC-11)
+  - [x] Storefront data layer and the thin thread: types, the two hooks, the real list, the card, the empty and error states (AC-2, AC-4, AC-6, AC-14)
+  - [x] Summary, the header line and the write dialog with its six refusal branches (AC-3, AC-5, AC-8, AC-9, AC-10)
+  - [x] Both catalogs and the test suites (AC-13, AC-15)
+- [x] Verify it: `/check verify reviews on the product screen` — 2026-11-11: the dedicated pass was waived when the owner marked the feature done. A walkthrough on the dev stack covered the empty state, both blocked states, the write dialog with its field messages, a written review, the summary and the mobile layout (1440x900 and 390x844); the rest of `verify.md` was not run, and the photo layout could not be seen because the local image optimizer answers `500`
+- [x] Test it: `/test reviews on the product screen` — 2026-11-11: no separate pass was run; the tests landed with the build, 31 gateway cases (`reviews/*.spec.ts`) and 36 storefront cases (feature, `reviewsKeys`, `create-review.scheme`), and `pnpm --filter @astrum/customer test` answers 209 passed
+  spec [0012](../../specs/_root/0012-reviews-on-the-product-screen/index.md)
+  code in `apps/api-astrum/src/modules/reviews`, `apps/api-astrum/src/modules/product`, `apps/customer/src/features/pages/ProductOverview`, `apps/customer/src/hooks/review`, `apps/customer/src/common/types/product.types.ts`, `apps/customer/messages`
 
 ### 9. Order flow end to end test and CI · planned
 
@@ -229,6 +248,7 @@ Bugs found while verifying a slice, recorded here once the fix lands so the plan
 
 - **Previous account's data after an account switch** · fixed 2026-11-10 · from spec 0008 · `handleSignIn` and `handleRegister` (`apps/customer/src/hooks/auth/useAuth.ts`) and `useLogOut` (`apps/customer/src/hooks/useLogOut.ts`) drop the whole SWR store through `apps/customer/src/hooks/useSessionCacheReset.ts` before the next page renders, `router.refresh()` follows the cookie write on the sign in path, and three regression tests (`hooks/auth/useAuth.test.tsx`, `hooks/useLogOut.test.tsx`) fail without the fix · `docs/changelog/2026-11-10-session-cache-reset.md`
 - **Skeleton instead of the profile and a missing confirmation banner after a session switch** · fixed 2026-11-10 · a follow-up of the row above · `apps/customer/src/hooks/useSessionCacheReset.ts` empties the store with `useSWRConfig().unload({ revalidate })` instead of a key-filtered `mutate`: that also deletes the SWR request markers and the payload `keepPreviousData` was holding, so a hook mounted inside the previous `dedupingInterval` fetches instead of deduping against the request of the account that left; sign in and register pass `revalidate: true`, log out keeps it off, and three regression tests in `hooks/useSessionCacheReset.test.tsx` fail without the fix · `docs/changelog/2026-11-10-session-cache-unload.md`
+- **Order list reads every item to render a card** · fixed 2026-11-11 · `GET /api/orders` now returns `orderItemsCount` and the first item's `previewImage`; the storefront card consumes those summary fields, while `GET /api/orders/:orderId` still returns all items · the API order tests and `apps/customer/src/features/pages/Orders/OrderCard/index.test.tsx`
 
 ## Deferred
 
@@ -265,8 +285,17 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Shop ownership on account deletion**: `Business.ownerUserId` becomes null and the operator script can reassign the shop and its products · from spec 0008 · needs a decision
 - **Seller workflow flag**: `SELLER_ORDER_WORKFLOW_ENABLED` gates `GET /api/seller/orders` and `PATCH /api/order-items/:orderItemId/status`, is read once at boot from `process.env` and defaults to `false` in the root, api and prod templates, so a fresh clone and a template deploy ship the seller panel dark while the storefront learns the state only from a `503`; either remove it together with the `disabled` screen and spec 0007 AC-11, or keep it as a kill switch with a `true` default, an owner, a review date and a state readout on `/api/users/me` or a config route · from spec 0008 · needs a decision
 - **Registration with a bare date**: `@IsDateString()` accepts `2000-01-01` while Prisma 7 refuses it with `premature end of input. Expected ISO-8601 DateTime`, so `POST /api/auth/register` answers `500` and writes no row; a full ISO datetime answers `200` and is what the storefront sends, so either the DTO transforms the date or validation asks for the stricter shape · bug, found while verifying spec 0009
-- **Order cards print `0 items`**: `toOrderListJson` maps a bare `Order` row while `OrderCard` counts the items from `order.orderItems`, so every card in `/orders` shows zero; the list read needs the item count or the card needs a field the list carries · bug, found while verifying spec 0009
+- **Account gate on order cancellation**: `PATCH /api/orders/:orderId/status` runs behind `authenticateToken` only, so an account whose status returned to `PENDING` can still cancel its own older order; spec 0011 keeps that on purpose, and it needs a rule if the account confirmation work ever gates every write · from spec 0011
+- **Dead catalog key for a list cancel**: `orders.cancelOrder` has no reader in either catalog, because the order list carries no cancel action (spec 0011, AC-1) · from spec 0011
+- **Print button without a handler** on the order screen header; spec 0011 leaves it alone · from spec 0011
+- **Duplicate cart add answers 500**: `POST /api/cart` with a product the cart already holds replies `{"message":"Internal Server Error"}` with status `500` instead of raising the quantity or refusing with a code; the storefront reaches the same product through `PATCH /api/cart/:productId`, so only a direct call sees it · bug, found while verifying spec 0011
 - **Missing space in the Russian cart summary**: the page prints `ДоставкаРассчитывается при оформлении`, two keys joined without a space in `messages/ru.json` · bug, found while verifying spec 0009
+- **Likes and comments on a review**: a reaction table, the endpoints and the counters behind the two controls this spec leaves visibly disabled · from spec 0012 · needs a decision
+- **Review moderation**: every review publishes on write, so `ReviewStatus.PENDING` and `REJECTED` are dead values and nothing can take an abusive review down · from spec 0012 · needs a decision
+- **Review count on the product card**: `ProductCard` prints `_count.impressions` as a review count and five stars whatever the rating is · from spec 0012
+- **Unmaintained product rating columns**: `Product.stars`, `reviewCount` and `averageRating` have no writer and `ReviewsService.updateProductAggregates` has no caller · from spec 0012 · needs a decision
+- **Raw review by id**: `GET /api/reviews/:reviewId` answers any customer's row including `userId` and reviews that are not approved · from spec 0012 · needs a decision
+- **Review photo upload**: the project has no file storage, so `photos` stays a URL list nobody fills · from spec 0012 · needs a decision
 
 ## Legend
 

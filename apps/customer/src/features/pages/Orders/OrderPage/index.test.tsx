@@ -25,6 +25,7 @@ vi.mock("@/hooks/order/useUpdateOrderStatus", () => ({
     updateOrderStatusTrigger: vi.fn(),
     updateOrderStatusIsMutating: false,
     updateOrderStatusError: null,
+    revalidateOrder: vi.fn(),
   }),
 }));
 

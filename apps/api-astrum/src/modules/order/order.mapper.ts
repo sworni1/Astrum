@@ -1,6 +1,6 @@
 import type { Order, OrderItem } from "../../../generated/prisma/client";
 import { toMoney } from "../../common/helpers/money";
-import type { OrderDetail } from "./order.service";
+import type { OrderDetail, OrderSummary } from "./order.service";
 
 const toLineJson = (item: OrderItem) => {
   const { businessId: _businessId, ...visible } = item;
@@ -35,7 +35,7 @@ export const toOrderJson = (order: OrderDetail) => {
   };
 };
 
-export const toOrderListJson = (orders: Order[]) =>
+export const toOrderListJson = (orders: OrderSummary[]) =>
   orders.map((order) => ({
     ...withoutIdempotency(order),
     totalPrice: toMoney(order.totalPrice),

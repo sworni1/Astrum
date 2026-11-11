@@ -1,93 +1,170 @@
-import { ReviewStatus } from "../../../generated/prisma/enums";
+import { Prisma } from "../../../generated/prisma/client";
+import { OrderItemStatus, ReviewStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../../lib/prisma";
+import { AppError } from "../../common/helpers/appError";
 import type { CreateReviewDto } from "./dto/create-review.dto";
+import {
+  REVIEW_ERROR_CODES,
+  REVIEW_PAGE_DEFAULT_LIMIT,
+  REVIEW_PAGE_MAX_LIMIT,
+} from "./reviews.constants";
+import {
+  buildDistribution,
+  roundAverageRating,
+  reviewRowSelect,
+  serializeReview,
+  type ReviewRow,
+} from "./review.serializer";
+
+export type ReviewPageQuery = {
+  after?: unknown;
+  limit?: unknown;
+};
+
+/** An integer clamped to 1 through 50, defaulting to 20 (AC-12). */
+const parseLimit = (raw: unknown): number => {
+  if (raw === undefined) {
+    return REVIEW_PAGE_DEFAULT_LIMIT;
+  }
+
+  const value = typeof raw === "number" ? raw : Number(raw);
+
+  if (!Number.isInteger(value)) {
+    throw new AppError(
+      400,
+      REVIEW_ERROR_CODES.invalidPagination,
+      "limit must be an integer",
+    );
+  }
+
+  return Math.min(Math.max(value, 1), REVIEW_PAGE_MAX_LIMIT);
+};
 
 export class ReviewsService {
   async createReview(userId: string, productId: string, dto: CreateReviewDto) {
-    // D-06: Проверка покупки — OrderItem должен быть DELIVERED
-    const orderItem = await prisma.orderItem.findUnique({
-      where: { id: dto.orderItemId },
+    // The purchase proof and the written row name the same product: the line is
+    // looked up inside this customer's own lines (spec 0012, AC-11).
+    const orderItem = await prisma.orderItem.findFirst({
+      where: { id: dto.orderItemId, userId },
+      select: { id: true, productId: true, status: true },
     });
 
     if (!orderItem) {
-      throw new Error("404: Order item not found");
-    }
-
-    const purchaseCheck = await prisma.orderItem.findFirst({
-      where: {
-        id: dto.orderItemId,
-        userId,
-        productId,
-        status: "DELIVERED",
-      },
-    });
-
-    if (!purchaseCheck) {
-      throw new Error(
-        "403: Review can only be created for delivered purchases",
+      throw new AppError(
+        404,
+        REVIEW_ERROR_CODES.orderItemNotFound,
+        "Order item not found",
       );
     }
 
-    // D-07: Проверка уникальности — один отзыв на OrderItem
-    const existing = await prisma.review.findUnique({
-      where: { orderItemId: dto.orderItemId },
-    });
-
-    if (existing) {
-      throw new Error("409: Review already exists for this order item");
+    if (orderItem.productId !== productId) {
+      throw new AppError(
+        403,
+        REVIEW_ERROR_CODES.productMismatch,
+        "The order item belongs to another product",
+      );
     }
 
-    // Создание отзыва со статусом PENDING (D-15)
-    const review = await prisma.review.create({
-      data: {
-        userId,
-        productId: dto.productId,
-        orderItemId: dto.orderItemId,
-        rating: dto.rating,
-        qualityRating: dto.qualityRating,
-        deliveryRating: dto.deliveryRating,
-        accuracyRating: dto.accuracyRating,
-        comment: dto.comment,
-        photos: dto.photos ?? [],
-        status: ReviewStatus.PENDING,
-      },
-    });
+    if (orderItem.status !== OrderItemStatus.DELIVERED) {
+      throw new AppError(
+        403,
+        REVIEW_ERROR_CODES.onlyAfterDelivery,
+        "Review can only be created for delivered purchases",
+      );
+    }
 
-    return review;
+    try {
+      const row = await prisma.review.create({
+        data: {
+          userId,
+          productId,
+          orderItemId: orderItem.id,
+          rating: dto.rating,
+          qualityRating: dto.qualityRating,
+          deliveryRating: dto.deliveryRating,
+          accuracyRating: dto.accuracyRating,
+          comment: dto.comment.trim(),
+          photos: dto.photos ?? [],
+          status: ReviewStatus.APPROVED,
+        },
+        select: reviewRowSelect,
+      });
+
+      return serializeReview(row as ReviewRow);
+    } catch (error) {
+      // The unique index on orderItemId decides the race: one 201, one 409.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        throw new AppError(
+          409,
+          REVIEW_ERROR_CODES.alreadyExists,
+          "Review already exists for this order item",
+        );
+      }
+
+      throw error;
+    }
   }
 
-  async getReviewsForProduct(
-    productId: string,
-    query: { after?: string; limit?: number },
-  ) {
-    // D-14: только APPROVED отзывы, курсорная пагинация D-8, сортировка D-9
-    const reviews = await prisma.review.findMany({
-      where: { productId, status: ReviewStatus.APPROVED },
-      take: query.limit || 20,
-      skip: query.after ? 1 : 0,
-      cursor: query.after ? { id: query.after } : undefined,
-      orderBy: { createdAt: "desc" },
-    });
+  async getReviewsForProduct(productId: string, query: ReviewPageQuery = {}) {
+    const limit = parseLimit(query.limit);
+    const after = query.after === undefined ? undefined : String(query.after);
 
-    let nextCursor: string | null = null;
-    if (reviews.length === (query.limit || 20)) {
-      nextCursor = reviews[reviews.length - 1].id;
+    if (after !== undefined) {
+      const cursorRow = await prisma.review.findFirst({
+        where: { id: after, productId, status: ReviewStatus.APPROVED },
+        select: { id: true },
+      });
+
+      if (!cursorRow) {
+        throw new AppError(
+          400,
+          REVIEW_ERROR_CODES.invalidCursor,
+          "after must be a review of this product",
+        );
+      }
     }
 
-    // D-14: Aggregate summary
-    const aggregate = await prisma.review.aggregate({
-      where: { productId, status: ReviewStatus.APPROVED },
-      _count: { id: true },
-      _avg: { rating: true },
-    });
+    const where = { productId, status: ReviewStatus.APPROVED };
+
+    const [rows, total, average, ratingGroups] = await Promise.all([
+      prisma.review.findMany({
+        where,
+        take: limit + 1,
+        ...(after ? { cursor: { id: after }, skip: 1 } : {}),
+        // createdAt alone is not unique, and a cursor over a non unique sort
+        // both repeats and skips rows (AC-12).
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        select: reviewRowSelect,
+      }),
+      prisma.review.count({ where }),
+      prisma.review.aggregate({ where, _avg: { rating: true } }),
+      prisma.review.groupBy({
+        by: ["rating"],
+        where,
+        _count: { _all: true },
+      }),
+    ]);
+
+    const hasNextPage = rows.length > limit;
+    const page = hasNextPage ? rows.slice(0, limit) : rows;
+    const nextCursor = hasNextPage ? page[page.length - 1].id : null;
 
     return {
-      reviews,
+      reviews: page.map((row) => serializeReview(row as ReviewRow)),
       nextCursor,
-      hasNextPage: !!nextCursor,
+      hasNextPage,
       aggregate: {
-        total: aggregate._count.id,
-        averageRating: aggregate._avg.rating ?? 0,
+        total,
+        averageRating: roundAverageRating(average._avg.rating as number | null),
+        distribution: buildDistribution(
+          ratingGroups.map((group) => ({
+            rating: group.rating,
+            count: group._count._all,
+          })),
+        ),
       },
     };
   }
@@ -98,13 +175,13 @@ export class ReviewsService {
     });
 
     if (!review) {
-      throw new Error("404: Review not found");
+      throw new AppError(404, REVIEW_ERROR_CODES.notFound, "Review not found");
     }
 
     return review;
   }
 
-  // D-11: Внутренний метод для обновления агрегатов (вызывается при модерации, Phase 3)
+  // Kept for a future moderation write; nothing calls it today (spec 0012, Follow up).
   async updateProductAggregates(productId: string) {
     await prisma.$transaction(async (tx) => {
       const aggregate = await tx.review.aggregate({

@@ -520,6 +520,38 @@ describe("OrderService.getOrderById", () => {
   });
 });
 
+describe("OrderService.getOrdersByUserId", () => {
+  it("loads an item count and one preview instead of every order item", async () => {
+    prismaMock.order.findMany.mockResolvedValue([
+      {
+        id: "order-1",
+        _count: { OrderItem: 2 },
+        OrderItem: [{ previewImage: "https://cdn.test/preview.png" }],
+      },
+    ]);
+
+    const orders = await new OrderService().getOrdersByUserId("user-1");
+
+    expect(prismaMock.order.findMany).toHaveBeenCalledWith({
+      where: { userId: "user-1" },
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: { select: { OrderItem: true } },
+        OrderItem: {
+          select: { previewImage: true },
+          orderBy: { id: "asc" },
+          take: 1,
+        },
+      },
+    });
+    expect(orders[0].orderItemsCount).toBe(2);
+    expect(orders[0].previewImage).toBe("https://cdn.test/preview.png");
+    expect(orders[0]).not.toHaveProperty("orderItems");
+    expect(orders[0]).not.toHaveProperty("OrderItem");
+    expect(orders[0]).not.toHaveProperty("_count");
+  });
+});
+
 const makeCancelableOrder = (overrides: Record<string, unknown> = {}) => ({
   id: "order-1",
   userId: "user-1",

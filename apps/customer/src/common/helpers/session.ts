@@ -11,11 +11,16 @@ const encodedKey = new TextEncoder().encode(secretKey);
 /** The cookie lives exactly as long as the token inside it. */
 const SESSION_LIFETIME_MS = 24 * 60 * 60 * 1000;
 const LOGOUT_TIMEOUT_MS = 2000;
+const SESSION_PROBE_TIMEOUT_MS = 2000;
 const GATEWAY_URL = (
   process.env.API_GATEWAY_INTERNAL_URL ?? "http://127.0.0.1:3580"
 ).replace(/\/+$/, "");
 
 export async function decrypt(session: string | undefined = "") {
+  if (!session) {
+    return undefined;
+  }
+
   try {
     const { payload } = await jwtVerify(session, encodedKey, {
       algorithms: ["HS256"],
@@ -80,13 +85,50 @@ export async function endSession(): Promise<void> {
   redirect("/auth/signin");
 }
 
-export const verifySession = cache(async () => {
+/**
+ * The signed cookie proves only that this shop issued it. The session record it
+ * points at lives in the gateway's store, so a token whose record is gone still
+ * verifies here, the screen renders, and every hook behind it then fetches its
+ * own refusal. One question to the gateway settles it before anything renders.
+ *
+ * A gateway that is down or slow must never lock the customer out: only an
+ * explicit `401` ends the session, any other outcome lets the screen load and
+ * report what it could not reach.
+ */
+const sessionWasDropped = async (cookie: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`${GATEWAY_URL}/api/users/me`, {
+      headers: { cookie: `__auth=${cookie}` },
+      signal: AbortSignal.timeout(SESSION_PROBE_TIMEOUT_MS),
+      cache: "no-store",
+    });
+
+    return response.status === 401;
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        event: "session.probe_failed",
+        reason: error instanceof Error ? error.message : String(error),
+      }),
+    );
+
+    return false;
+  }
+};
+
+export const readVerifiedSession = async () => {
   const cookie = (await cookies()).get("__auth")?.value;
   const session = await decrypt(cookie);
 
-  if (!session?.userId) {
+  if (!session?.userId || !cookie) {
+    redirect("/auth/signin");
+  }
+
+  if (await sessionWasDropped(cookie)) {
     redirect("/auth/signin");
   }
 
   return { isAuth: true, userId: session.userId, cookie };
-});
+};
+
+export const verifySession = cache(readVerifiedSession);

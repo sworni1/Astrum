@@ -134,6 +134,8 @@ describe("OrderController", () => {
         totalPrice: new Prisma.Decimal("10.00"),
         deliveryPrice: new Prisma.Decimal("299.00"),
         grandTotal: new Prisma.Decimal("309.00"),
+        orderItemsCount: 2,
+        previewImage: "https://cdn.test/preview.png",
       },
     ] as never);
     const res = createMockResponse();
@@ -147,6 +149,8 @@ describe("OrderController", () => {
         totalPrice: 10,
         deliveryPrice: 299,
         grandTotal: 309,
+        orderItemsCount: 2,
+        previewImage: "https://cdn.test/preview.png",
       },
     ]);
   });

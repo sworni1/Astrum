@@ -1,28 +1,10 @@
-import axios from "axios";
+import { refusalBody, refusalCode } from "@/common/helpers/apiRefusal";
 
 export type SellerErrorKind = "none" | "notSeller" | "disabled" | "failure";
 
-type RefusalBody = { code?: unknown; from?: unknown; to?: unknown };
+export const sellerRefusalBody = refusalBody;
 
-export const sellerRefusalBody = (error: unknown): RefusalBody => {
-  if (!axios.isAxiosError(error)) {
-    return {};
-  }
-
-  const data: unknown = error.response?.data;
-
-  if (typeof data !== "object" || data === null) {
-    return {};
-  }
-
-  return data as RefusalBody;
-};
-
-export const sellerErrorCode = (error: unknown): string | undefined => {
-  const { code } = sellerRefusalBody(error);
-
-  return typeof code === "string" ? code : undefined;
-};
+export const sellerErrorCode = refusalCode;
 
 /**
  * The list route answers three refusals the screen renders as a screen of

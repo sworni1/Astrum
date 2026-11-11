@@ -16,7 +16,7 @@ describe("ReviewsController.createReview", () => {
       json: jest.fn().mockReturnThis(),
     } as unknown as jest.Mocked<Response>;
     const req = Object.assign(Object.create(null) as Request, {
-      params: { id: "product-id" },
+      params: { productId: "product-id" },
       userId: "user-id",
       body: {},
     });

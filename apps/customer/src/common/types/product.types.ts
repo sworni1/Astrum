@@ -1,3 +1,5 @@
+import type { ReviewState } from "./review.types";
+
 export enum Currency {
   RUB = "RUB",
   USD = "USD",
@@ -163,4 +165,5 @@ export interface ProductOverview {
   };
   isWishlisted: boolean;
   quantityInCart: number;
+  reviewState: ReviewState;
 }

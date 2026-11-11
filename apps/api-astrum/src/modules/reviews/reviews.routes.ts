@@ -6,8 +6,10 @@ import { ReviewsController } from "./reviews.controller";
 
 const reviewsController = new ReviewsController();
 
-// productReviewsRouter — монтируется как /products/:id/reviews/*
-export const productReviewsRouter: Router = Router();
+// productReviewsRouter — mounted as /products/:productId/reviews/*
+// mergeParams is the whole reason the product id arrives: a child router does
+// not inherit its parent's params (spec 0012, AC-11).
+export const productReviewsRouter: Router = Router({ mergeParams: true });
 productReviewsRouter.get("/", reviewsController.getProductReviews);
 productReviewsRouter.post(
   "/",
