@@ -26,3 +26,11 @@ export const refusalCode = (error: unknown): string | undefined => {
 
   return typeof code === "string" ? code : undefined;
 };
+
+/**
+ * Whether the request got an answer at all. A timeout or a dropped connection
+ * leaves `response` unset, and that is the one case where the client cannot say
+ * whether the gateway acted (spec 0011, AC-6).
+ */
+export const refusalAnswered = (error: unknown): boolean =>
+  axios.isAxiosError(error) && error.response !== undefined;

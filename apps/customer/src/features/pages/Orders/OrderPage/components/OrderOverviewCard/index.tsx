@@ -1,11 +1,14 @@
 import { CreditCard, MapPin } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatMoney } from "@/common/helpers/money";
-import { type Order, PaymentStatus } from "@/common/types/order.types";
+import type { Order } from "@/common/types/order.types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import OrderStatusBadge from "@/features/pages/Orders/OrderPage/components/OrderStatusBadge";
-import { PAYMENT_KEYS } from "@/features/pages/Orders/OrderPage/lib/payment";
+import {
+  PAYMENT_KEYS,
+  paymentStatusKey,
+} from "@/features/pages/Orders/OrderPage/lib/payment";
 import { CARD_CLASS } from "@/features/pages/Orders/OrderPage/lib/styles";
 
 type Props = {
@@ -15,6 +18,7 @@ type Props = {
 /** Where the parcel goes, what pays for it, and how it ships. */
 const OrderOverviewCard = ({ order }: Props) => {
   const t = useTranslations("orders");
+  const paymentKey = paymentStatusKey(order.paymentStatus);
 
   return (
     <Card className={CARD_CLASS}>
@@ -22,9 +26,9 @@ const OrderOverviewCard = ({ order }: Props) => {
         <div className="flex items-center gap-3">
           <OrderStatusBadge status={order.status} />
           <span className="text-muted-foreground text-sm">
-            {order.paymentStatus === PaymentStatus.PAID
-              ? t("paid")
-              : t("paymentPending")}
+            {paymentKey
+              ? t(`paymentStatus.${paymentKey}`)
+              : order.paymentStatus}
           </span>
         </div>
 

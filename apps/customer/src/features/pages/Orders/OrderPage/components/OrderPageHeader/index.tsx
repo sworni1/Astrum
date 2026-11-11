@@ -1,8 +1,10 @@
-import { ArrowLeft, Edit, Loader2, Printer } from "lucide-react";
+import { ArrowLeft, Printer } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { type Order, OrderStatus } from "@/common/types/order.types";
+import type { Order } from "@/common/types/order.types";
 import { Button } from "@/components/ui/button";
+import CancelOrderDialog from "@/features/pages/Orders/OrderPage/components/CancelOrderDialog";
+import { canCancel } from "@/features/pages/Orders/OrderPage/lib/status";
 import {
   ICON_SIZE,
   OUTLINE_BUTTON_CLASS,
@@ -50,23 +52,12 @@ const OrderPageHeader = ({ order, isCancelling, onCancel }: Props) => {
           <Printer className={ICON_SIZE} />{" "}
           <span className="ml-1 lg:ml-2">{t("print")}</span>
         </Button>
-        {order.status === OrderStatus.PENDING && (
-          <Button
-            variant="outline"
-            size="sm"
-            className={OUTLINE_BUTTON_CLASS}
-            onClick={onCancel}
-            disabled={isCancelling}
-          >
-            {isCancelling ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <>
-                <Edit className={ICON_SIZE} />{" "}
-                <span className="ml-1 lg:ml-2">{t("cancel")}</span>
-              </>
-            )}
-          </Button>
+        {canCancel(order.status) && (
+          <CancelOrderDialog
+            order={order}
+            isCancelling={isCancelling}
+            onConfirm={onCancel}
+          />
         )}
       </div>
     </div>

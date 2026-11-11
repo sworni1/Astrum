@@ -37,9 +37,18 @@ describe("cancelRefusal", () => {
     ).toEqual({ key: "cancelFailed" });
   });
 
-  it("falls back for a transport error with no body", () => {
-    expect(cancelRefusal(new Error("network down"))).toEqual({
+  it("calls a body carrying 404 an answer, not a lost result", () => {
+    expect(cancelRefusal(refusal({ code: "ORDER_NOT_FOUND" }))).toEqual({
       key: "cancelFailed",
     });
+  });
+
+  it("says the result is unknown when the request got no answer at all", () => {
+    expect(cancelRefusal(new Error("network down"))).toEqual({
+      key: "cancelUnconfirmed",
+    });
+    expect(cancelRefusal({ isAxiosError: true, code: "ECONNABORTED" })).toEqual(
+      { key: "cancelUnconfirmed" },
+    );
   });
 });

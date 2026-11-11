@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { PaymentMethod } from "@/common/types/order.types";
-import { PAYMENT_KEYS } from "./payment";
+import { PaymentMethod, PaymentStatus } from "@/common/types/order.types";
+import { PAYMENT_KEYS, PAYMENT_STATUS_KEYS, paymentStatusKey } from "./payment";
 
 describe("PAYMENT_KEYS", () => {
   it("names one catalog key for every payment method", () => {
@@ -19,5 +19,29 @@ describe("PAYMENT_KEYS", () => {
     expect(PAYMENT_KEYS[PaymentMethod.CASH]).toBe("cash");
 
     expect(new Set(Object.values(PAYMENT_KEYS)).size).toBe(5);
+  });
+});
+
+describe("paymentStatusKey", () => {
+  it("names one catalog key for every payment status", () => {
+    expect(Object.values(PaymentStatus)).toHaveLength(5);
+
+    for (const status of Object.values(PaymentStatus)) {
+      expect(paymentStatusKey(status)).toBeTypeOf("string");
+    }
+
+    expect(new Set(Object.values(PAYMENT_STATUS_KEYS)).size).toBe(5);
+  });
+
+  it("gives a cancelled payment a label of its own beside Paid", () => {
+    expect(paymentStatusKey(PaymentStatus.PAID)).toBe("paid");
+    expect(paymentStatusKey(PaymentStatus.PENDING)).toBe("pending");
+    expect(paymentStatusKey(PaymentStatus.CANCELLED)).toBe("cancelled");
+    expect(paymentStatusKey(PaymentStatus.FAILED)).toBe("failed");
+    expect(paymentStatusKey(PaymentStatus.REFUNDED)).toBe("refunded");
+  });
+
+  it("prints a status outside the enum as it is", () => {
+    expect(paymentStatusKey("SOMETHING_NEW")).toBeUndefined();
   });
 });

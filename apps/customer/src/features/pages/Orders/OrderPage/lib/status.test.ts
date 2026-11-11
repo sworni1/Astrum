@@ -1,11 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { OrderStatus } from "@/common/types/order.types";
 import {
+  canCancel,
   DELIVERY_STEPS,
   deliverySteps,
   STATUS_KEYS,
   statusColor,
 } from "./status";
+
+describe("canCancel", () => {
+  it("offers the action at the two statuses the gateway accepts", () => {
+    expect(canCancel(OrderStatus.PENDING)).toBe(true);
+    expect(canCancel(OrderStatus.CONFIRMED)).toBe(true);
+  });
+
+  it("offers nothing once the parcel moved or the order is closed", () => {
+    expect(canCancel(OrderStatus.SHIPPED)).toBe(false);
+    expect(canCancel(OrderStatus.DELIVERED)).toBe(false);
+    expect(canCancel(OrderStatus.CANCELED)).toBe(false);
+  });
+});
 
 describe("STATUS_KEYS", () => {
   it("names one catalog key for every order status", () => {

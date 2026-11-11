@@ -163,8 +163,20 @@
     "placedOn": "Placed on {date}",
     "print": "Print",
     "cancel": "Cancel",
-    "paid": "Paid",
-    "paymentPending": "Payment Pending",
+    "cancelDialog": {
+      "text": "Every item that is not cancelled yet returns to stock, and this screen cannot undo the cancellation.",
+      "paymentPending": "The payment waiting to be taken is cancelled with the order.",
+      "keep": "Keep the order",
+      "confirm": "Cancel the order"
+    },
+    "cancelUnconfirmed": "The cancellation could not be confirmed. Reload the order to see whether it went through.",
+    "paymentStatus": {
+      "paid": "Paid",
+      "pending": "Payment pending",
+      "cancelled": "Payment cancelled",
+      "failed": "Payment failed",
+      "refunded": "Refunded"
+    },
     "deliveryAddress": "Delivery Address",
     "paymentMethod": "Payment Method",
     "shippingMethod": "Shipping Method",

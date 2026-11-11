@@ -3,16 +3,19 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useCancelOrder } from "./useCancelOrder";
 
-const { trigger, showToast } = vi.hoisted(() => ({
+const { trigger, revalidate, showToast, state } = vi.hoisted(() => ({
   trigger: vi.fn(),
+  revalidate: vi.fn(),
   showToast: vi.fn(),
+  state: { mutating: false },
 }));
 
 vi.mock("@/hooks/order/useUpdateOrderStatus", () => ({
   useUpdateOrderStatus: () => ({
     updateOrderStatusTrigger: trigger,
-    updateOrderStatusIsMutating: false,
+    updateOrderStatusIsMutating: state.mutating,
     updateOrderStatusError: null,
+    revalidateOrder: revalidate,
   }),
 }));
 
@@ -71,7 +74,9 @@ const click = async (button: HTMLButtonElement): Promise<void> => {
 describe("useCancelOrder", () => {
   beforeEach(() => {
     trigger.mockReset();
+    revalidate.mockReset();
     showToast.mockReset();
+    state.mutating = false;
   });
 
   afterEach(async () => {
@@ -90,9 +95,10 @@ describe("useCancelOrder", () => {
       title: "cancelSuccess",
       type: "success",
     });
+    expect(revalidate).not.toHaveBeenCalled();
   });
 
-  it("names the line status that blocks the cancel (spec 0002, AC-10)", async () => {
+  it("names the line status that blocks the cancel and re reads the order (spec 0011, AC-6)", async () => {
     trigger.mockRejectedValue(shippedRefusal);
     const button = await render("order-1");
 
@@ -102,10 +108,14 @@ describe("useCancelOrder", () => {
       title: "cancelBlockedByLine:itemStatus.shipped",
       type: "error",
     });
+    expect(revalidate).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps the generic failure for an unreadable error", async () => {
-    trigger.mockRejectedValue(new Error("network down"));
+  it("keeps the generic failure for an answer carrying an error", async () => {
+    trigger.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 404, data: { code: "ORDER_NOT_FOUND" } },
+    });
     const button = await render("order-1");
 
     await click(button);
@@ -114,5 +124,29 @@ describe("useCancelOrder", () => {
       title: "cancelFailed",
       type: "error",
     });
+    expect(revalidate).toHaveBeenCalledTimes(1);
+  });
+
+  it("says the result is unknown when no answer arrived, and still re reads", async () => {
+    trigger.mockRejectedValue(new Error("network down"));
+    const button = await render("order-1");
+
+    await click(button);
+
+    expect(showToast).toHaveBeenCalledWith({
+      title: "cancelUnconfirmed",
+      type: "error",
+    });
+    expect(revalidate).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends nothing on a second press while the request runs", async () => {
+    state.mutating = true;
+    const button = await render("order-1");
+
+    await click(button);
+
+    expect(trigger).not.toHaveBeenCalled();
+    expect(showToast).not.toHaveBeenCalled();
   });
 });
