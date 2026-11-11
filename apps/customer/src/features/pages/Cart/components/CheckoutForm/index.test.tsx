@@ -2,11 +2,24 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-type Method = { id: string; name: string; price: number; currency: string };
+type Method = {
+  id: string;
+  name: string;
+  price: number;
+  currency: string;
+  isPickup?: boolean;
+};
+type Point = { id: string; name: string; address: string };
 
 const state = vi.hoisted(() => ({
   shipping: {
     methods: [] as Method[],
+    isLoading: false,
+    error: null as unknown,
+    mutate: vi.fn(),
+  },
+  pickup: {
+    points: [] as Point[],
     isLoading: false,
     error: null as unknown,
     mutate: vi.fn(),
@@ -27,6 +40,10 @@ vi.mock("@/hooks/order/useCheckout", () => ({
 
 vi.mock("@/hooks/shipping/useShippingMethods", () => ({
   useShippingMethods: () => state.shipping,
+}));
+
+vi.mock("@/hooks/pickup/usePickupPoints", () => ({
+  usePickupPoints: () => state.pickup,
 }));
 
 vi.mock("@/common/helpers/showToast", () => ({ showToast: state.toast }));
@@ -78,6 +95,10 @@ describe("CheckoutForm delivery states", () => {
     state.shipping.isLoading = false;
     state.shipping.error = null;
     state.shipping.mutate = vi.fn();
+    state.pickup.points = [];
+    state.pickup.isLoading = false;
+    state.pickup.error = null;
+    state.pickup.mutate = vi.fn();
     state.checkout.handleCheckout = vi.fn();
     state.toast.mockReset();
   });
@@ -140,6 +161,30 @@ describe("CheckoutForm delivery states", () => {
 
     expect(text()).toContain("cart.placeOrder");
     expect(text()).not.toContain("${price}");
+    expect(submit().disabled).toBe(true);
+  });
+
+  it("держит поле адреса, пока способ не выбран, и не показывает поле точки (AC-6)", async () => {
+    state.shipping.methods = [
+      ...METHODS,
+      {
+        id: "sm-pickup",
+        name: "Pickup at the shop",
+        price: 0,
+        currency: "RUB",
+        isPickup: true,
+      },
+    ];
+    state.pickup.points = [
+      { id: "pp-1", name: "Central Pickup", address: "Tverskaya 12" },
+    ];
+
+    await render();
+
+    expect(container.querySelector("textarea")).not.toBeNull();
+    expect(text()).toContain("cart.fullAddress");
+    expect(text()).toContain("cart.deliveryAddress");
+    expect(text()).not.toContain("cart.pickupSelect");
     expect(submit().disabled).toBe(true);
   });
 });

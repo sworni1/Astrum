@@ -32,6 +32,18 @@ export const refusalToastFor = (error: unknown): RefusalToast => {
     return { key: "orderItemNotFound", retry: false };
   }
 
+  if (code === "NOTHING_TO_HAND_OVER") {
+    return { key: "nothingToHandOver", retry: false };
+  }
+
+  if (code === "HANDOVER_REQUIRES_PICKUP") {
+    return { key: "handoverRequiresPickup", retry: false };
+  }
+
+  if (code === "ORDER_NOT_FOUND") {
+    return { key: "orderNotFound", retry: false };
+  }
+
   if (code === "VALIDATION") {
     return { key: "validation", retry: false };
   }
@@ -60,6 +72,28 @@ export const showRefusalToast = (
 
   showToast({
     title: t(`toasts.${key}`, values),
+    type: "error",
+    ...(retry
+      ? { action: { label: t("toasts.retry"), onClick: onRetry } }
+      : {}),
+  });
+};
+
+/**
+ * The handover answers with its own wording for a fault: a `500` or a client
+ * timeout reads `handoverFailed`, while every coded refusal keeps its text
+ * (spec 0013, AC-13).
+ */
+export const showHandoverToast = (
+  error: unknown,
+  t: Translate,
+  onRetry: () => void,
+): void => {
+  const { key, values, retry } = refusalToastFor(error);
+  const toastKey = key === "generic" ? "handoverFailed" : key;
+
+  showToast({
+    title: t(`toasts.${toastKey}`, values),
     type: "error",
     ...(retry
       ? { action: { label: t("toasts.retry"), onClick: onRetry } }

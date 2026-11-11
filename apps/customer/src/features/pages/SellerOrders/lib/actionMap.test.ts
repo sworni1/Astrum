@@ -66,4 +66,27 @@ describe("seller line action map", () => {
     ]);
     expect(sellerLineActions(OrderItemStatus.SHIPPED)).toEqual(["deliver"]);
   });
+
+  it("offers no Deliver on a pickup group and keeps every other action (AC-13)", () => {
+    for (const status of Object.values(OrderItemStatus)) {
+      const courier = sellerLineActions(status);
+      const pickup = sellerLineActions(status, true);
+
+      expect({ status, pickup }).toEqual({
+        status,
+        pickup: courier.filter((action) => action !== "deliver"),
+      });
+    }
+
+    expect(sellerLineActions(OrderItemStatus.SHIPPED, true)).toEqual([]);
+    expect(sellerLineActions(OrderItemStatus.CONFIRMED, true)).toEqual([
+      "ship",
+      "cancel",
+    ]);
+    expect(sellerLineActions(OrderItemStatus.PENDING, true)).toEqual([
+      "confirm",
+      "outOfStock",
+      "cancel",
+    ]);
+  });
 });

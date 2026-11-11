@@ -58,6 +58,10 @@ const order: Order = {
   createdAt: "2026-11-01T10:00:00.000Z",
   updatedAt: "2026-11-01T10:00:00.000Z",
   deliveryAddress: "Some street 1",
+  pickupPointId: null,
+  pickupPointName: null,
+  pickupPointAddress: null,
+  handedOverAt: null,
   deliveryDate: new Date("2026-11-10T00:00:00.000Z"),
   orderItems: [
     {

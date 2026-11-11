@@ -1,5 +1,5 @@
 import { CreditCard, MapPin } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { formatMoney } from "@/common/helpers/money";
 import type { Order } from "@/common/types/order.types";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,7 +18,9 @@ type Props = {
 /** Where the parcel goes, what pays for it, and how it ships. */
 const OrderOverviewCard = ({ order }: Props) => {
   const t = useTranslations("orders");
+  const format = useFormatter();
   const paymentKey = paymentStatusKey(order.paymentStatus);
+  const isPickup = order.pickupPointId !== null;
 
   return (
     <Card className={CARD_CLASS}>
@@ -37,10 +39,28 @@ const OrderOverviewCard = ({ order }: Props) => {
         <div>
           <h3 className="text-lg font-medium mb-3 flex items-center gap-2">
             <MapPin className="h-5 w-5" />
-            {t("deliveryAddress")}
+            {isPickup ? t("pickupPoint") : t("deliveryAddress")}
           </h3>
           <div className="space-y-1 text-sm">
-            <p>{order.deliveryAddress}</p>
+            {isPickup ? (
+              <>
+                <p className="font-medium">{order.pickupPointName}</p>
+                <p className="text-muted-foreground">
+                  {order.pickupPointAddress}
+                </p>
+                {order.handedOverAt ? (
+                  <p className="text-muted-foreground">
+                    {t("handedOverAt", {
+                      date: format.dateTime(new Date(order.handedOverAt), {
+                        dateStyle: "long",
+                      }),
+                    })}
+                  </p>
+                ) : null}
+              </>
+            ) : (
+              <p>{order.deliveryAddress}</p>
+            )}
           </div>
         </div>
 

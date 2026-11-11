@@ -4,7 +4,7 @@ import {
   type SellerOrderLine,
   type SellerOrdersPage,
 } from "@/common/types/order.types";
-import { pageWithLine } from "./pageData";
+import { pageWithGroup, pageWithLine } from "./pageData";
 
 const line = (overrides: Partial<SellerOrderLine> = {}): SellerOrderLine => ({
   id: "line-1",
@@ -23,6 +23,11 @@ const page = (): SellerOrdersPage => ({
     {
       id: "order-1",
       createdAt: "2026-11-08T10:00:00.000Z",
+      isPickup: true,
+      pickupPointId: "pp-1",
+      pickupPointName: "Central Pickup",
+      pickupPointAddress: "Tverskaya 12",
+      handedOverAt: null,
       orderItems: [
         line(),
         line({
@@ -35,6 +40,11 @@ const page = (): SellerOrdersPage => ({
     {
       id: "order-2",
       createdAt: "2026-11-07T10:00:00.000Z",
+      isPickup: false,
+      pickupPointId: null,
+      pickupPointName: null,
+      pickupPointAddress: null,
+      handedOverAt: null,
       orderItems: [line({ id: "line-3", name: "Mug" })],
     },
   ],
@@ -103,5 +113,27 @@ describe("pageWithLine", () => {
     );
 
     expect(after).toEqual(before);
+  });
+
+  it("writes an answered pickup group over the one on screen (AC-13)", () => {
+    const before = page();
+    const answered = {
+      ...before.orders[0],
+      handedOverAt: "2026-12-01T10:00:00.000Z",
+      orderItems: [line({ id: "line-1", status: OrderItemStatus.DELIVERED })],
+    };
+
+    const after = pageWithGroup(before, answered);
+
+    expect(after.orders[0]).toEqual(answered);
+    expect(after.orders[1]).toEqual(before.orders[1]);
+    expect(before.orders[0].handedOverAt).toBeNull();
+  });
+
+  it("leaves the page alone when the answered group is not on it (AC-13)", () => {
+    const before = page();
+    const answered = { ...before.orders[0], id: "order-from-another-page" };
+
+    expect(pageWithGroup(before, answered)).toEqual(before);
   });
 });

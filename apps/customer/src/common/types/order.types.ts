@@ -43,6 +43,13 @@ export interface ShippingMethod {
   name: string;
   price: number;
   currency: Currency;
+  isPickup: boolean;
+}
+
+export interface PickupPoint {
+  id: string;
+  name: string;
+  address: string;
 }
 
 export interface OrderItem {
@@ -74,7 +81,7 @@ export interface Order {
   status: OrderStatus;
   createdAt: string; // ISO string from DB
   updatedAt: string; // ISO string from DB
-  deliveryAddress: string; // Simple string as in DB
+  deliveryAddress: string | null; // Simple string as in DB, null on a pickup order
   deliveryDate: Date; // ISO string from DB
   orderItems: OrderItem[]; // camelCase to match backend response
   shippingMethodId: string;
@@ -82,6 +89,10 @@ export interface Order {
   deliveryPrice: number; // Snapshot taken when the order was created
   grandTotal: number; // totalPrice plus deliveryPrice, stored on the row
   currency: Currency;
+  pickupPointId: string | null;
+  pickupPointName: string | null;
+  pickupPointAddress: string | null;
+  handedOverAt: string | null;
 }
 
 export type OrderListItem = Omit<Order, "orderItems"> & {
@@ -98,9 +109,10 @@ export interface CreateOrderItemDto {
 export interface CreateOrderDto {
   paymentMethod: PaymentMethod;
   paymentDetails?: string;
-  deliveryAddress: string; // Simple string as in DB
+  deliveryAddress: string | null; // null on a pickup order
   deliveryDate: Date; // Date type for form, converted to ISO string for API
   shippingMethodId: string;
+  pickupPointId?: string | null;
   orderItems: CreateOrderItemDto[]; // camelCase for backend compatibility
 }
 
@@ -136,6 +148,11 @@ export interface SellerOrderLine {
 export interface SellerOrderGroup {
   id: string;
   createdAt: string;
+  isPickup: boolean;
+  pickupPointId: string | null;
+  pickupPointName: string | null;
+  pickupPointAddress: string | null;
+  handedOverAt: string | null;
   orderItems: SellerOrderLine[];
 }
 

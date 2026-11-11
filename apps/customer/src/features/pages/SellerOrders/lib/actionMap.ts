@@ -39,8 +39,16 @@ export const SELLER_CONFIRMING_ACTIONS: readonly SellerAction[] = [
   "outOfStock",
 ];
 
-export const sellerLineActions = (status: string): readonly SellerAction[] =>
-  SELLER_LINE_ACTIONS[status] ?? [];
+export const sellerLineActions = (
+  status: string,
+  isPickup = false,
+): readonly SellerAction[] => {
+  const actions = SELLER_LINE_ACTIONS[status] ?? [];
+
+  // A pickup group hands the whole parcel over in one action, so the line rows
+  // offer no `Deliver` of their own (spec 0013, AC-13).
+  return isPickup ? actions.filter((action) => action !== "deliver") : actions;
+};
 
 export const isConfirmingAction = (action: SellerAction): boolean =>
   SELLER_CONFIRMING_ACTIONS.includes(action);

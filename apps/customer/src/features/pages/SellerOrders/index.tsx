@@ -3,13 +3,16 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
-import type { SellerOrderLine } from "@/common/types/order.types";
+import type {
+  SellerOrderGroup as SellerGroup,
+  SellerOrderLine,
+} from "@/common/types/order.types";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSellerOrders } from "@/hooks/seller/useSellerOrders";
 import { useUser } from "@/hooks/user/useUser";
 import { SELLER_GRID_CLASS } from "./lib/grid";
-import { pageWithLine } from "./lib/pageData";
+import { pageWithGroup, pageWithLine } from "./lib/pageData";
 import SellerOrderGroup from "./SellerOrderGroup";
 import { StateScreen } from "./StateScreen";
 
@@ -49,6 +52,14 @@ export default function SellerOrders() {
   const applyLine = async (line: SellerOrderLine): Promise<void> => {
     await mutate(
       (current) => (current ? pageWithLine(current, line) : undefined),
+      false,
+    );
+    await mutate();
+  };
+
+  const applyGroup = async (group: SellerGroup): Promise<void> => {
+    await mutate(
+      (current) => (current ? pageWithGroup(current, group) : undefined),
       false,
     );
     await mutate();
@@ -156,6 +167,8 @@ export default function SellerOrders() {
               actionsDisabled={actionsDisabled}
               onUpdated={applyLine}
               onRefused={reload}
+              onHandedOver={applyGroup}
+              onReload={reload}
             />
           ))}
         </div>

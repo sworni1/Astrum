@@ -30,12 +30,21 @@ const DeliveryStatusCard = ({ order }: Props) => {
             className="text-sm font-medium"
           />
           <span className="text-muted-foreground text-sm">
-            {t("deliveryDate", {
+            {t(order.pickupPointId !== null ? "pickupDate" : "deliveryDate", {
               date: format.dateTime(new Date(order.deliveryDate), {
                 dateStyle: "long",
               }),
             })}
           </span>
+          {order.handedOverAt ? (
+            <span className="text-muted-foreground text-sm">
+              {t("handedOverAt", {
+                date: format.dateTime(new Date(order.handedOverAt), {
+                  dateStyle: "long",
+                }),
+              })}
+            </span>
+          ) : null}
         </div>
       </CardContent>
     </Card>

@@ -43,12 +43,15 @@ export const useCheckout = () => {
           0,
         );
 
+        const pickupPointId = checkoutData.pickupPointId || undefined;
+
         const orderData = {
           paymentMethod: checkoutData.paymentMethod,
           paymentDetails: checkoutData.paymentDetails || "Online payment",
-          deliveryAddress: checkoutData.deliveryAddress,
+          deliveryAddress: pickupPointId ? null : checkoutData.deliveryAddress,
           deliveryDate: localDeliveryDate.toISOString(),
           shippingMethodId: checkoutData.shippingMethodId,
+          ...(pickupPointId ? { pickupPointId } : {}),
           orderItems,
         };
 
