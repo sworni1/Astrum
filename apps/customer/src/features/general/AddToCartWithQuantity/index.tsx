@@ -3,47 +3,51 @@
 import { Loader2, Minus, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
-import { showToast } from "../../../../../common";
-import { Button } from "../../../../../components/ui/button";
-import {
-  useAddProductToCart,
-  useChangeProductCartQuantity,
-  useDeleteProductFromCart,
-} from "../../../../../hooks/product/useCart";
+import { showToast } from "@/common/helpers/showToast";
+import { Button } from "@/components/ui/button";
+import { useAddProductToCart } from "@/hooks/product/useCart/useAddProductToCart";
+import { useChangeProductCartQuantity } from "@/hooks/product/useCart/useChangeProductCartQuantity";
+import { useDeleteProductFromCart } from "@/hooks/product/useCart/useDeleteProductFromCart";
+import { type StepperSize, stepperWidth } from "./lib/styles";
 
 type Props = {
   productId: string;
   quantity: number;
-  size: "full" | "sm";
   quantityInCart: number;
+  size?: StepperSize;
+  allowAdd?: boolean;
 };
 
 const AddToCartWithQuantity = ({
   productId,
   quantity,
-  size,
   quantityInCart,
+  size = "full",
+  allowAdd = true,
 }: Props) => {
   const t = useTranslations("cart");
-  const widthClass = size === "full" ? "w-full" : "w-full sm:w-[14rem]";
+  const widthClass = stepperWidth({ size });
 
-  const { addProductToCartTrigger, addProductToCartError } =
-    useAddProductToCart();
-  const { changeProductCartQuantityTrigger, changeProductCartQuantityError } =
+  const { addProductToCartTrigger } = useAddProductToCart();
+  const { changeProductCartQuantityTrigger } =
     useChangeProductCartQuantity(productId);
-  const { deleteProductFromCartTrigger, deleteProductFromCartError } =
-    useDeleteProductFromCart(productId);
+  const { deleteProductFromCartTrigger } = useDeleteProductFromCart(productId);
 
   const [localQuantity, setLocalQuantity] = useState(quantityInCart || 0);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLocalQuantity(quantityInCart);
+  }, [quantityInCart]);
 
   const handleAddToCart = async () => {
     try {
       setLoading(true);
       const res = await addProductToCartTrigger({ productId });
       setLocalQuantity(res.quantityInCart);
-    } catch (e) {
-      console.error("addToCart error", e);
+    } catch (error) {
+      console.error("addToCart error", error);
+      showToast({ title: t("addFailed"), type: "error" });
     } finally {
       setLoading(false);
     }
@@ -62,8 +66,9 @@ const AddToCartWithQuantity = ({
         await deleteProductFromCartTrigger();
         setLocalQuantity(0);
       }
-    } catch (e) {
-      console.error("minusProduct error", e);
+    } catch (error) {
+      console.error("minusProduct error", error);
+      showToast({ title: t("quantityFailed"), type: "error" });
     } finally {
       setLoading(false);
     }
@@ -72,45 +77,20 @@ const AddToCartWithQuantity = ({
   const handlePlusProduct = async () => {
     try {
       setLoading(true);
-      const newQuantity = localQuantity + 1;
-      if (newQuantity <= quantity) {
-        const res = await changeProductCartQuantityTrigger({
-          quantity: newQuantity,
-        });
-        setLocalQuantity(res.quantityInCart);
-      } else {
-        console.warn("Product quantity limit");
-      }
-    } catch (e) {
-      console.error("plusProduct error", e);
+      const res = await changeProductCartQuantityTrigger({
+        quantity: localQuantity + 1,
+      });
+      setLocalQuantity(res.quantityInCart);
+    } catch (error) {
+      console.error("plusProduct error", error);
+      showToast({ title: t("quantityFailed"), type: "error" });
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    setLocalQuantity(quantityInCart);
-  }, [quantityInCart]);
-
-  if (deleteProductFromCartError) {
-    showToast({
-      title: t("removeFailed"),
-      type: "error",
-    });
-  }
-
-  if (changeProductCartQuantityError) {
-    showToast({
-      title: t("quantityFailed"),
-      type: "error",
-    });
-  }
-
-  if (addProductToCartError) {
-    showToast({
-      title: t("addFailed"),
-      type: "error",
-    });
+  if (!allowAdd && localQuantity === 0) {
+    return null;
   }
 
   return (
@@ -120,7 +100,7 @@ const AddToCartWithQuantity = ({
           className={`inline-flex justify-around ${widthClass} items-center`}
         >
           {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin text-center" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <>
               <Button
@@ -138,7 +118,7 @@ const AddToCartWithQuantity = ({
                 variant="secondary"
                 size="icon"
                 onClick={handlePlusProduct}
-                disabled={loading || quantity === localQuantity}
+                disabled={loading || localQuantity >= quantity}
               >
                 <Plus className="h-4 w-4" />
               </Button>

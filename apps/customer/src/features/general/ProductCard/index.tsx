@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { memo } from "react";
 import { FaStar } from "react-icons/fa";
+import { formatMoney } from "@/common/helpers/money";
+import type { Currency, ProductCardProps } from "@/common/types/product.types";
 import OptimizedImage from "@/components/OptimizedImage";
 import {
   Card,
@@ -10,12 +12,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getCurrencyEmoji } from "../../../common";
-import type {
-  Currency,
-  ProductCardProps,
-} from "../../../common/types/product.types";
-import { AddToCartWithQuantity, ToggleWishlistItemButton } from "./actions";
+import AddToCartWithQuantity from "@/features/general/AddToCartWithQuantity";
+import ToggleWishlistItemButton from "./actions/ToggleWishlistItemButton";
 
 // Memoized star component to prevent unnecessary re-renders
 const StarRating = memo(
@@ -37,7 +35,7 @@ StarRating.displayName = "StarRating";
 const PriceDisplay = memo(
   ({ price, currency }: { price: number; currency: Currency }) => (
     <CardTitle className="text-2xl font-bold leading-tight text-gray-900 dark:text-white h-[40px]">
-      {price} {getCurrencyEmoji(currency)}
+      {formatMoney(price, currency)}
     </CardTitle>
   ),
 );
