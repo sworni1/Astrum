@@ -1,7 +1,7 @@
 # 0002. Order cancellation and seller owned order status
 
 **Date**: 2026-11-07
-**Status**: In Progress
+**Status**: Accepted
 
 ## Summary
 
