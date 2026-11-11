@@ -14,6 +14,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      "@messages": new URL("./messages", import.meta.url).pathname,
       "@": new URL("./src", import.meta.url).pathname,
     },
   },

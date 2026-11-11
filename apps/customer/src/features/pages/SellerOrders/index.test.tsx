@@ -8,7 +8,7 @@ const { getData, patchItem } = vi.hoisted(() => ({
   patchItem: vi.fn(),
 }));
 
-vi.mock("../../../hooks/useFetcher", () => ({
+vi.mock("@/hooks/useFetcher", () => ({
   useFetcher: () => ({
     fetcher: {},
     getData,
@@ -52,7 +52,7 @@ vi.mock("next/image", () => ({
   ),
 }));
 
-import SellerOrders from "./index";
+import SellerOrders from ".";
 
 let container: HTMLDivElement;
 let root: Root;

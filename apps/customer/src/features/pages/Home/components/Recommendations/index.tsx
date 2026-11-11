@@ -1,11 +1,11 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { showToast } from "../../../../../common";
-import { ProductCardsSkeleton } from "../../../../../components/skeletons";
-import { useInfiniteScroll } from "../../../../../hooks";
-import { useGetRecommendations } from "../../../../../hooks/product/useProducts";
-import ProductCard from "../../../../general/ProductCard";
+import { showToast } from "@/common/helpers/showToast";
+import ProductCardsSkeleton from "@/components/skeletons/ProductCardsSkeleton/ProductCardsSkeleton";
+import ProductCard from "@/features/general/ProductCard";
+import { useGetRecommendations } from "@/hooks/product/useProducts/useGetRecommendations";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 
 export default function Recommendations() {
   const t = useTranslations("home");

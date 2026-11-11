@@ -5,12 +5,12 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
+import { showToast } from "@/common/helpers/showToast";
 import {
   createShopNameSchema,
-  showToast,
   type ShopNameForm,
-} from "../../../common";
-import { Button } from "../../../components/ui/button";
+} from "@/common/zodSchemes/shop-name.scheme";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -19,12 +19,12 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "../../../components/ui/form";
-import { Input } from "../../../components/ui/input";
-import { Skeleton } from "../../../components/ui/skeleton";
-import { useBecomeSeller } from "../../../hooks/seller";
-import { sellerErrorCode } from "../../../hooks/seller/sellerError";
-import { useUser } from "../../../hooks/user";
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { sellerErrorCode } from "@/hooks/seller/sellerError";
+import { useBecomeSeller } from "@/hooks/seller/useBecomeSeller";
+import { useUser } from "@/hooks/user/useUser";
 
 export type OnboardingState =
   | "loading"

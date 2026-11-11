@@ -4,11 +4,12 @@ import { Package } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { itemStatusKey } from "@/common/helpers/itemStatus";
+import { formatMoney } from "@/common/helpers/money";
+import type { SellerOrderLine as Line } from "@/common/types/order.types";
 import { Badge } from "@/components/ui/badge";
-import { getCurrencyEmoji, itemStatusKey } from "../../../../common";
-import type { SellerOrderLine as Line } from "../../../../common/types/order.types";
-import { lineSubtotal } from "../format";
-import { SELLER_GRID_CLASS } from "../grid";
+import { lineSubtotal } from "@/features/pages/SellerOrders/lib/format";
+import { SELLER_GRID_CLASS } from "@/features/pages/SellerOrders/lib/grid";
 import { LineActions } from "./LineActions";
 
 type Props = {
@@ -73,8 +74,7 @@ const SellerOrderLineRow = ({
           {t("columns.unitPrice")}
         </span>
         <span className="text-sm tabular-nums">
-          {getCurrencyEmoji(line.currency)}
-          {line.price.toFixed(2)}
+          {formatMoney(line.price, line.currency)}
         </span>
       </div>
 
@@ -83,8 +83,7 @@ const SellerOrderLineRow = ({
           {t("columns.subtotal")}
         </span>
         <span className="text-sm font-medium tabular-nums">
-          {getCurrencyEmoji(line.currency)}
-          {lineSubtotal(line).toFixed(2)}
+          {formatMoney(lineSubtotal(line), line.currency)}
         </span>
       </div>
 

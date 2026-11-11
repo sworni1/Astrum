@@ -19,9 +19,9 @@ jest.mock("./seller-order-workflow.config", () => ({
 import type { AddressInfo } from "node:net";
 import { prisma } from "../../../lib/prisma";
 import { requireActiveAccount } from "../../middlewares/requireActiveAccount";
-import { requireSellerOrderWorkflow } from "./seller-order-workflow.config";
-import { SellerOrderService } from "./seller-order.service";
 import sellerOrderRoutes from "./seller-order.routes";
+import { SellerOrderService } from "./seller-order.service";
+import { requireSellerOrderWorkflow } from "./seller-order-workflow.config";
 
 const findUnique = prisma.user.findUnique as unknown as jest.Mock;
 

@@ -1,17 +1,15 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { showToast } from "../../../common";
-import { EditProfileFormSkeleton } from "../../../components/skeletons";
-import { Separator } from "../../../components/ui/separator";
-import { useUser } from "../../../hooks/user";
-import {
-  ChangePasswordForm,
-  DeleteAccountForm,
-  EditProfileForm,
-  LogOutForm,
-  SellOnAstrum,
-} from "./actions";
+import { showToast } from "@/common/helpers/showToast";
+import EditProfileFormSkeleton from "@/components/skeletons/EditProfileFormSkeleton";
+import { Separator } from "@/components/ui/separator";
+import { useUser } from "@/hooks/user/useUser";
+import ChangePasswordForm from "./actions/ChangePasswordForm";
+import DeleteAccountForm from "./actions/DeleteAccountForm";
+import EditProfileForm from "./actions/EditProfileForm";
+import LogOutForm from "./actions/LogOutForm";
+import SellOnAstrum from "./actions/SellOnAstrum";
 
 export default function Profile() {
   const { profileData, profileIsLoading, profileIsError } = useUser();

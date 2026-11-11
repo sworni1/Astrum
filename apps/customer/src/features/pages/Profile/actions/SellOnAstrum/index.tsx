@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Button } from "../../../../../components/ui/button";
+import { Button } from "@/components/ui/button";
 
 /** The profile entry point of the seller onboarding (spec 0008, AC-2). */
 const SellOnAstrum = () => {

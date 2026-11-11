@@ -2,7 +2,7 @@
 
 import { Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { showToast } from "../../../../../../../common";
+import { showToast } from "@/common/helpers/showToast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,9 +13,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "../../../../../../../components/ui/alert-dialog";
-import { Button } from "../../../../../../../components/ui/button";
-import { useDeleteProductFromCart } from "../../../../../../../hooks";
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { useDeleteProductFromCart } from "@/hooks/product/useCart/useDeleteProductFromCart";
 
 type Props = {
   id: string;

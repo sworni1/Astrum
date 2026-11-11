@@ -1,14 +1,17 @@
 "use client";
 
 import { useFormatter, useTranslations } from "next-intl";
-import { Badge } from "@/components/ui/badge";
-import { itemStatusKey } from "../../../../common";
+import { itemStatusKey } from "@/common/helpers/itemStatus";
 import type {
   SellerOrderGroup as Group,
   SellerOrderLine as Line,
-} from "../../../../common/types/order.types";
-import { browserTimeZone, countLinesByStatus } from "../format";
-import SellerOrderLineRow from "../SellerOrderLine";
+} from "@/common/types/order.types";
+import { Badge } from "@/components/ui/badge";
+import {
+  browserTimeZone,
+  countLinesByStatus,
+} from "@/features/pages/SellerOrders/lib/format";
+import SellerOrderLineRow from "@/features/pages/SellerOrders/SellerOrderLine";
 
 type Props = {
   order: Group;

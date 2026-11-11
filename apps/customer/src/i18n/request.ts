@@ -1,7 +1,7 @@
+import en from "@messages/en.json";
+import ru from "@messages/ru.json";
 import { cookies } from "next/headers";
 import { getRequestConfig } from "next-intl/server";
-import en from "../../messages/en.json";
-import ru from "../../messages/ru.json";
 import { LOCALE_COOKIE, type Locale, resolveLocale } from "./config";
 
 const CATALOGS: Record<Locale, typeof en> = { en, ru };

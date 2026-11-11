@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
+import { type SignInCredentials } from "@/common/types/auth.types";
+import { createSignInFormSchema } from "@/common/zodSchemes/auth.scheme";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -22,12 +24,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/auth/useAuth";
 import { cn } from "@/lib/utils";
-import {
-  createSignInFormSchema,
-  type SignInCredentials,
-} from "../../../common";
-import { useAuth } from "../../../hooks";
 
 export default function SignIn() {
   const { handleSignIn } = useAuth();

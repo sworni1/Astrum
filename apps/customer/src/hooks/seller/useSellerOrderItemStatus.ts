@@ -4,8 +4,8 @@ import useSWRMutation from "swr/mutation";
 import type {
   OrderItemStatus,
   SellerOrderLine,
-} from "../../common/types/order.types";
-import { useFetcher } from "../useFetcher";
+} from "@/common/types/order.types";
+import { useFetcher } from "@/hooks/useFetcher";
 
 export type SellerStatusChange = { status: OrderItemStatus };
 

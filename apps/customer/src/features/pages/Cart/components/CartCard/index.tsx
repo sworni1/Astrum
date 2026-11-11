@@ -3,10 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import type { ProductCartProps } from "../../../../../common/types/product.types";
-import { Card, CardContent } from "../../../../../components/ui/card";
-import { ToggleWishlistItemButton } from "../../../../general/ProductCard/actions";
-import AddToCartWithQuantity from "./actions/AddToCartWithQuantity";
+import type { ProductCartProps } from "@/common/types/product.types";
+import { Card, CardContent } from "@/components/ui/card";
+import AddToCartWithQuantity from "@/features/general/AddToCartWithQuantity";
+import ToggleWishlistItemButton from "@/features/general/ProductCard/actions/ToggleWishlistItemButton";
 import RemoveFromCartButton from "./actions/RemoveFromCartButton";
 import SelectionButton from "./actions/SelectionButton";
 
@@ -74,8 +74,9 @@ const CartCard = ({
               <AddToCartWithQuantity
                 productId={id}
                 quantity={quantity}
-                size={"sm"}
+                size="sm"
                 quantityInCart={quantityInCart}
+                allowAdd={false}
               />
             </div>
           </div>

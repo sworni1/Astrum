@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { getData } = vi.hoisted(() => ({ getData: vi.fn() }));
 
-vi.mock("../useFetcher", () => ({ useFetcher: () => ({ getData }) }));
+vi.mock("@/hooks/useFetcher", () => ({ useFetcher: () => ({ getData }) }));
 
 import { useSellerOrders } from "./useSellerOrders";
 

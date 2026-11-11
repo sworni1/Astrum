@@ -19,11 +19,11 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-vi.mock("../../common", () => ({ showToast }));
+vi.mock("@/common/helpers/showToast", () => ({ showToast }));
 
-vi.mock("../../common/helpers/session", () => ({ createSession }));
+vi.mock("@/common/helpers/session", () => ({ createSession }));
 
-vi.mock("../useFetcher", () => ({
+vi.mock("@/hooks/useFetcher", () => ({
   useFetcher: () => ({ fetcher: { post } }),
   resetSessionEnded: vi.fn(),
 }));

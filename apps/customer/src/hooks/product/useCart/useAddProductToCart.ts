@@ -2,7 +2,7 @@
 
 import { useSWRConfig } from "swr";
 import useSWRMutation from "swr/mutation";
-import { useFetcher } from "../../useFetcher";
+import { useFetcher } from "@/hooks/useFetcher";
 
 export const useAddProductToCart = () => {
   const { postItem } = useFetcher();

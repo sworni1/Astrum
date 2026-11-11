@@ -3,9 +3,9 @@
 import { MailWarning } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Button } from "../../../components/ui/button";
-import { useUser } from "../../../hooks/user";
-import { useResendConfirmation } from "../../../hooks/user/useResendConfirmation";
+import { Button } from "@/components/ui/button";
+import { useResendConfirmation } from "@/hooks/user/useResendConfirmation";
+import { useUser } from "@/hooks/user/useUser";
 
 /**
  * Shown on every content page while the account is unconfirmed. It sends

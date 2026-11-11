@@ -1,4 +1,6 @@
-import { HeroSection, PromoSection, Recommendations } from "./components";
+import HeroSection from "./components/HeroSection";
+import PromoSection from "./components/PromoSection";
+import Recommendations from "./components/Recommendations";
 
 const Home = () => {
   return (

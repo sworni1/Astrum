@@ -1,5 +1,6 @@
 "use client";
 
+import { Store } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -7,19 +8,16 @@ import { FiPackage } from "react-icons/fi";
 import { LuMenu } from "react-icons/lu";
 import { MdFavoriteBorder, MdOutlineShoppingCart } from "react-icons/md";
 import { TbCategory } from "react-icons/tb";
-import { Store } from "lucide-react";
+import { showToast } from "@/common/helpers/showToast";
+import LocaleSwitcher from "@/components/LocaleSwitcher";
+import ThemeSwitcher from "@/components/ThemeSwitcher";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { showToast } from "../../../common";
-import LocaleSwitcher from "../../../components/LocaleSwitcher";
-import ThemeSwitcher from "../../../components/ThemeSwitcher";
-import {
-  useGetCart,
-  useGetOrders,
-  useGetWishlist,
-  useUser,
-} from "../../../hooks";
-import { AcmeLogo } from "../../general/AcmeLogo";
+import { AcmeLogo } from "@/features/general/AcmeLogo";
+import { useGetOrders } from "@/hooks/order/useGetOrders";
+import { useGetCart } from "@/hooks/product/useCart/useGetCart";
+import { useGetWishlist } from "@/hooks/product/useWishlist/useGetWishlist";
+import { useUser } from "@/hooks/user/useUser";
 import { MobileMenuSheet } from "./MobileMenuSheet";
 import NavItem from "./NavItem";
 import Searchbar from "./Searchbar";

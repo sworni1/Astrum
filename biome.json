@@ -6,7 +6,18 @@
     "useIgnoreFile": true
   },
   "files": {
-    "ignoreUnknown": false
+    "ignoreUnknown": false,
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!.hermes",
+      "!**/.next",
+      "!**/dist",
+      "!**/coverage",
+      "!**/generated",
+      "!apps/auth-astrum",
+      "!docs"
+    ]
   },
   "formatter": {
     "enabled": true,

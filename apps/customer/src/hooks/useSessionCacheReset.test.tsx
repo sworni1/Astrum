@@ -1,6 +1,6 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { SWRConfig, type Cache } from "swr";
+import { type Cache, SWRConfig } from "swr";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { getData, endSession } = vi.hoisted(() => ({
@@ -8,7 +8,7 @@ const { getData, endSession } = vi.hoisted(() => ({
   endSession: vi.fn(),
 }));
 
-vi.mock("../common/helpers/session", () => ({ endSession }));
+vi.mock("@/common/helpers/session", () => ({ endSession }));
 
 vi.mock("./useFetcher", () => ({
   useFetcher: () => ({
@@ -18,8 +18,8 @@ vi.mock("./useFetcher", () => ({
   }),
 }));
 
-import { useSessionCacheReset } from "./useSessionCacheReset";
 import { useUser } from "./user/useUser";
+import { useSessionCacheReset } from "./useSessionCacheReset";
 
 type Snapshot = { nick: string | null; loading: boolean; calls: number };
 

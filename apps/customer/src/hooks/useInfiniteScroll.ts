@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import type {
   GetRecommendationsType,
   ProductCardProps,
-} from "../common/types/product.types";
+} from "@/common/types/product.types";
 
 type Props = {
   data: GetRecommendationsType[] | undefined;

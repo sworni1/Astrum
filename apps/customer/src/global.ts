@@ -1,4 +1,4 @@
-import type en from "../messages/en.json";
+import type en from "@messages/en.json";
 import type { Locale } from "./i18n/config";
 
 declare module "next-intl" {

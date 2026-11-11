@@ -1,13 +1,13 @@
 "use client";
 
+import en from "@messages/en.json";
 import axios, { type AxiosInstance } from "axios";
 import { createTranslator, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import en from "../../messages/en.json";
-import { requestConfirmationForCurrentUser } from "../common/helpers/confirmEmail";
-import { deleteSession } from "../common/helpers/session";
-import { showToast } from "../common/helpers/showToast";
-import { acceptLanguage } from "../i18n/config";
+import { requestConfirmationForCurrentUser } from "@/common/helpers/confirmEmail";
+import { deleteSession } from "@/common/helpers/session";
+import { showToast } from "@/common/helpers/showToast";
+import { acceptLanguage } from "@/i18n/config";
 
 const authServiceUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL;
 
@@ -79,7 +79,6 @@ const endSessionHere = async (t: ErrorsTranslator): Promise<void> => {
   });
 
   // A full reload is the point: it drops every cached answer of the ended session.
-  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
   window.location.href = SIGN_IN_PATH;
 };
 

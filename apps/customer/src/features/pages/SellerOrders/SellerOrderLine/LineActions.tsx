@@ -3,6 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import type { SellerOrderLine as Line } from "@/common/types/order.types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,15 +14,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { SellerOrderLine as Line } from "../../../../common/types/order.types";
-import { useSellerOrderItemStatus } from "../../../../hooks/seller";
 import {
   isConfirmingAction,
   SELLER_ACTION_TARGET,
-  sellerLineActions,
   type SellerAction,
-} from "../actionMap";
-import { showRefusalToast, type Translate } from "../refusals";
+  sellerLineActions,
+} from "@/features/pages/SellerOrders/lib/actionMap";
+import {
+  showRefusalToast,
+  type Translate,
+} from "@/features/pages/SellerOrders/lib/refusals";
+import { useSellerOrderItemStatus } from "@/hooks/seller/useSellerOrderItemStatus";
+import { DIALOG_COPY } from "./lib/dialogCopy";
 
 type Props = {
   line: Line;
@@ -29,14 +33,6 @@ type Props = {
   onUpdated: (line: Line) => Promise<void>;
   onRefused: () => Promise<void>;
 };
-
-const DIALOG_COPY = {
-  cancel: { title: "dialog.cancelTitle", text: "dialog.cancelText" },
-  outOfStock: {
-    title: "dialog.outOfStockTitle",
-    text: "dialog.outOfStockText",
-  },
-} as const;
 
 /**
  * The actions of one line, the one status change in flight and the dialog that

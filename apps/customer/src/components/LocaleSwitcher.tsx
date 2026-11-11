@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useTransition } from "react";
+import { setLocale } from "@/common/actions/locale";
+import { type Locale, locales } from "@/i18n/config";
 import { cn } from "@/lib/utils";
-import { setLocale } from "../common/actions/locale";
-import { type Locale, locales } from "../i18n/config";
 
 type Props = {
   className?: string;

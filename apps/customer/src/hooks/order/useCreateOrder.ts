@@ -2,9 +2,9 @@
 
 import { useSWRConfig } from "swr";
 import useSWRMutation from "swr/mutation";
-import type { CreateOrderDto, Order } from "../../common/types/order.types";
-import { useFetcher } from "../useFetcher";
-import { useUser } from "../user";
+import type { CreateOrderDto, Order } from "@/common/types/order.types";
+import { useFetcher } from "@/hooks/useFetcher";
+import { useUser } from "@/hooks/user/useUser";
 
 export type CreateOrderError = {
   message: string;

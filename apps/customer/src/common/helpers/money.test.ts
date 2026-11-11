@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Currency } from "../types/product.types";
+import { Currency } from "@/common/types/product.types";
 import { formatMoney, toCurrency } from "./money";
 
 describe("toCurrency", () => {

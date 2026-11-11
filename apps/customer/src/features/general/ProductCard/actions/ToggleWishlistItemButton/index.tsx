@@ -3,12 +3,10 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { MdFavorite, MdFavoriteBorder } from "react-icons/md";
-import { showToast } from "../../../../../common";
-import { Button } from "../../../../../components/ui/button";
-import {
-  useAddProductToWishlist,
-  useDeleteProductFromWishlist,
-} from "../../../../../hooks";
+import { showToast } from "@/common/helpers/showToast";
+import { Button } from "@/components/ui/button";
+import { useAddProductToWishlist } from "@/hooks/product/useWishlist/useAddProductToWishlist";
+import { useDeleteProductFromWishlist } from "@/hooks/product/useWishlist/useDeleteProductFromWishlist";
 
 type Props = {
   productId: string;

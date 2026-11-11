@@ -2,9 +2,9 @@
 
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { showToast } from "@/common/helpers/showToast";
 import { Card, CardContent } from "@/components/ui/card";
-import { showToast } from "../../../common";
-import { useGetOrders } from "../../../hooks/order";
+import { useGetOrders } from "@/hooks/order/useGetOrders";
 import OrderCard from "./OrderCard";
 
 export default function Orders() {

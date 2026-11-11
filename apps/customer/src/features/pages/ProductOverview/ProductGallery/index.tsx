@@ -4,7 +4,6 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import * as React from "react";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
-import { cn } from "@/lib/utils";
 import {
   Carousel,
   type CarouselApi,
@@ -12,8 +11,9 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
-} from "../../../../components/ui/carousel";
-import { Skeleton } from "../../../../components/ui/skeleton";
+} from "@/components/ui/carousel";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 type Props = {
   images: string[];

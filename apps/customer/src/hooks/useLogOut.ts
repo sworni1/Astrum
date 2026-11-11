@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { endSession } from "../common/helpers/session";
+import { endSession } from "@/common/helpers/session";
 import { useSessionCacheReset } from "./useSessionCacheReset";
 
 export const useLogOut = () => {

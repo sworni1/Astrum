@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
+import ProgressBarProvider from "@/components/providers/ProgressBarProvider";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
-import { ProgressBarProvider, ThemeProvider } from "../components/providers";
-import "./index.css";
+import "@/app/index.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 

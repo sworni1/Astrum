@@ -11,8 +11,8 @@
     "check-types": "turbo check-types",
     "test": "turbo test",
     "quality-gate": "turbo quality-gate",
-    "format": "biome format --write --ignore-unknown \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\" \"!**/node_modules/**\" \"!**/.next/**\" \"!**/dist/**\" \"!**/coverage/**\" \"!**/generated/**\"",
-    "format:check": "biome format --check --ignore-unknown \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\" \"!**/node_modules/**\" \"!**/.next/**\" \"!**/dist/**\" \"!**/coverage/**\" \"!**/generated/**\"",
+    "format": "biome format --write . && biome check --write --only=organizeImports .",
+    "format:check": "biome format .",
     "dev:customer": "turbo dev --filter=@astrum/customer",
     "dev:api": "turbo dev --filter=@astrum/api",
     "dev:auth": "turbo dev --filter=@astrum/auth",
@@ -35,7 +35,10 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,json,md,yml,yaml}": ["biome format --write"]
+    "*.{ts,tsx,js,jsx,json,md,yml,yaml}": [
+      "biome format --write",
+      "biome check --write --only=organizeImports"
+    ]
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.4",
@@ -44,7 +47,6 @@
     "@typescript/native": "npm:typescript@^7.0.2",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
-    "prettier": "^3.9.10",
     "turbo": "^2.11.10",
     "typescript": "npm:@typescript/typescript6@^6.0.2"
   },
