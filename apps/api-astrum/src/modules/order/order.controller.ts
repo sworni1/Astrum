@@ -12,6 +12,20 @@ const sellerOrderService = new SellerOrderService();
 const userIdOf = (req: Request): string =>
   (req as Request & { userId: string }).userId;
 
+type PriceRow = { price: { toFixed: (digits: number) => string } };
+
+/** The storefront reads an amount as a number, never as a decimal string. */
+const withNumberPrices = <G extends { orderItems: PriceRow[] }>(
+  group: G,
+): G =>
+  ({
+    ...group,
+    orderItems: group.orderItems.map((item) => ({
+      ...item,
+      price: Number(item.price.toFixed(2)),
+    })),
+  }) as G;
+
 export class OrderController {
   async createOrder(req: Request, res: Response) {
     try {
@@ -54,14 +68,21 @@ export class OrderController {
 
       res.status(StatusCodes.OK).json({
         ...pagination,
-        orders: orders.map(({ orderItems, ...order }) => ({
-          ...order,
-          orderItems: orderItems.map((item) => ({
-            ...item,
-            price: Number(item.price.toFixed(2)),
-          })),
-        })),
+        orders: orders.map(withNumberPrices),
       });
+    } catch (error) {
+      handleErrors(res, error);
+    }
+  }
+
+  async handOverOrder(req: Request, res: Response) {
+    try {
+      const order = await sellerOrderService.handOverOrder(
+        req.params.orderId as string,
+        userIdOf(req),
+      );
+
+      res.status(StatusCodes.OK).json({ order: withNumberPrices(order) });
     } catch (error) {
       handleErrors(res, error);
     }

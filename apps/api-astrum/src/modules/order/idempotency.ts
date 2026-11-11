@@ -82,14 +82,16 @@ export const attachIdempotencyKey = (
 /**
  * A stable rendering of the order fields that decide identity: keys in a fixed
  * order, lines sorted by productId, and the delivery date normalised so `+03:00`
- * and `Z` bodies fingerprint alike (AC-2, AC-3).
+ * and `Z` bodies fingerprint alike (AC-2, AC-3). A body that names a point
+ * hashes its address as null, because two pickup bodies that differ only in a
+ * typed address describe one order (AC-7).
  */
 export const canonicalOrderBody = (
   dto: CreateOrderDto,
   lines: LineForFingerprint[],
 ): string =>
   JSON.stringify({
-    deliveryAddress: dto.deliveryAddress,
+    deliveryAddress: dto.pickupPointId ? null : dto.deliveryAddress,
     deliveryDate: new Date(dto.deliveryDate).toISOString(),
     items: [...lines]
       .sort((left, right) =>
@@ -106,6 +108,7 @@ export const canonicalOrderBody = (
     paymentDetails: dto.paymentDetails,
     paymentMethod: dto.paymentMethod,
     shippingMethodId: dto.shippingMethodId,
+    ...(dto.pickupPointId ? { pickupPointId: dto.pickupPointId } : {}),
   });
 
 export const hashOrderBody = (body: string): string =>

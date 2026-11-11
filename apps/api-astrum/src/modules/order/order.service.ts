@@ -487,6 +487,11 @@ export class OrderService {
     const priced = this.priceLines(products, lines);
     const currency = this.resolveCurrency(priced);
     const delivery = this.assertShippingMethod(shippingMethod, currency);
+    const pickup = await this.resolvePickupPoint(
+      tx,
+      delivery.method,
+      dto.pickupPointId,
+    );
 
     await this.takeStock(tx, lines);
 
@@ -503,12 +508,15 @@ export class OrderService {
         currency,
         paymentMethod: dto.paymentMethod,
         paymentDetails: dto.paymentDetails,
-        deliveryAddress: dto.deliveryAddress,
+        deliveryAddress: pickup ? null : (dto.deliveryAddress ?? null),
         deliveryDate: new Date(dto.deliveryDate),
         shippingMethodId: dto.shippingMethodId,
         shippingMethodName: delivery.name,
         deliveryPrice: delivery.price,
         grandTotal,
+        pickupPointId: pickup?.id ?? null,
+        pickupPointName: pickup?.name ?? null,
+        pickupPointAddress: pickup?.address ?? null,
         idempotencyKey: idempotency?.key ?? null,
         idempotencyHash: idempotency?.hash ?? null,
         OrderItem: {
@@ -725,7 +733,7 @@ export class OrderService {
   private assertShippingMethod(
     method: ShippingMethod | null,
     currency: Currency,
-  ): { name: string; price: Prisma.Decimal } {
+  ): { method: ShippingMethod; name: string; price: Prisma.Decimal } {
     if (!method) {
       throw new AppError(
         409,
@@ -751,9 +759,66 @@ export class OrderService {
     }
 
     return {
+      method,
       name: method.name,
       price: new Prisma.Decimal(method.price).toDecimalPlaces(2),
     };
+  }
+
+  /**
+   * The point is read inside the transaction, after the method checks, in the
+   * order the spec fixes: a courier method that names a point, then a pickup
+   * method without one, then an unknown id, then a switched off row. A pickup
+   * order keeps the name and the address as a snapshot, so a rename or a
+   * closure never rewrites history (AC-7).
+   */
+  private async resolvePickupPoint(
+    tx: Prisma.TransactionClient,
+    method: ShippingMethod,
+    requestedPointId: string | undefined,
+  ): Promise<{ id: string; name: string; address: string } | null> {
+    if (!method.isPickup) {
+      if (requestedPointId === undefined) {
+        return null;
+      }
+
+      throw new AppError(
+        409,
+        ORDER_ERROR_CODES.pickupPointNotAllowed,
+        "The selected delivery method does not hand over at a pickup point.",
+      );
+    }
+
+    if (requestedPointId === undefined) {
+      throw new AppError(
+        409,
+        ORDER_ERROR_CODES.pickupPointRequired,
+        "The selected delivery method needs a pickup point.",
+      );
+    }
+
+    const point = await tx.pickupPoint.findUnique({
+      where: { id: requestedPointId },
+      select: { id: true, name: true, address: true, isActive: true },
+    });
+
+    if (!point) {
+      throw new AppError(
+        409,
+        ORDER_ERROR_CODES.unknownPickupPoint,
+        "The selected pickup point does not exist.",
+      );
+    }
+
+    if (!point.isActive) {
+      throw new AppError(
+        409,
+        ORDER_ERROR_CODES.pickupPointInactive,
+        "The selected pickup point is closed.",
+      );
+    }
+
+    return { id: point.id, name: point.name, address: point.address };
   }
 
   /** Conditional update per line: zero rows touched means the stock is short. */

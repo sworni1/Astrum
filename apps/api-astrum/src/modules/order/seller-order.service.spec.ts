@@ -78,6 +78,12 @@ describe("SellerOrderService", () => {
       {
         id: "order-1",
         createdAt: new Date("2026-11-07T10:00:00.000Z"),
+        isPickup: undefined,
+        shippingMethod: { isPickup: true },
+        pickupPointId: "pp-1",
+        pickupPointName: "Central Pickup",
+        pickupPointAddress: "Tverskaya 12",
+        handedOverAt: null,
         OrderItem: [sellerLine()],
       },
     ]);
@@ -97,6 +103,11 @@ describe("SellerOrderService", () => {
     expect(result.orders[0]).toMatchObject({
       id: "order-1",
       createdAt: new Date("2026-11-07T10:00:00.000Z"),
+      isPickup: true,
+      pickupPointId: "pp-1",
+      pickupPointName: "Central Pickup",
+      pickupPointAddress: "Tverskaya 12",
+      handedOverAt: null,
       orderItems: [
         {
           id: "line-1",

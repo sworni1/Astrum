@@ -6,6 +6,7 @@ const SHIPPING_METHOD_SELECT = {
   name: true,
   price: true,
   currency: true,
+  isPickup: true,
 } as const;
 
 export type ActiveShippingMethod = Prisma.ShippingMethodGetPayload<{

@@ -54,6 +54,18 @@ describe("order status helpers", () => {
     });
   });
 
+  it("возвращает посчитанный статус заказа (AC-11)", async () => {
+    const { client, mocks } = createTransaction();
+    mocks.orderItem.findMany.mockResolvedValue([
+      { status: "DELIVERED" },
+      { status: "DELIVERED" },
+    ]);
+
+    const status = await recomputeOrderStatus(client, "order-1");
+
+    expect(status).toBe("DELIVERED");
+  });
+
   it("returns stock with an atomic increment and clears the stock flag (AC-9)", async () => {
     const { client, mocks } = createTransaction();
 
