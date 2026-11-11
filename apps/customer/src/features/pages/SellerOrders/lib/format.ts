@@ -1,5 +1,5 @@
-import { OrderItemStatus } from "../../../common/types/order.types";
-import type { SellerOrderLine } from "../../../common/types/order.types";
+import type { SellerOrderLine } from "@/common/types/order.types";
+import { OrderItemStatus } from "@/common/types/order.types";
 
 let cachedTimeZone: string | undefined;
 

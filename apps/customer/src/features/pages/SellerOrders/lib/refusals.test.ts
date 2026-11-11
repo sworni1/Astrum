@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { showToast } = vi.hoisted(() => ({ showToast: vi.fn() }));
 
-vi.mock("../../../common", () => ({ showToast }));
+vi.mock("@/common/helpers/showToast", () => ({ showToast }));
 
 import { refusalToastFor, showRefusalToast } from "./refusals";
 

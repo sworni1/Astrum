@@ -1,40 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { formatMoney } from "../../../../common/helpers";
-import { type Order, OrderStatus } from "../../../../common/types/order.types";
-import { Badge } from "../../../../components/ui/badge";
-import { Button } from "../../../../components/ui/button";
-import { Card, CardContent } from "../../../../components/ui/card";
+import { formatMoney } from "@/common/helpers/money";
+import { type Order, OrderStatus } from "@/common/types/order.types";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { getStatusVariant, ORDER_STATUS_KEYS } from "./lib/status";
 
 type Props = {
   order: Order;
-};
-
-type StatusKey = "pending" | "confirmed" | "shipped" | "delivered" | "canceled";
-
-const STATUS_KEYS: Record<OrderStatus, StatusKey> = {
-  [OrderStatus.PENDING]: "pending",
-  [OrderStatus.CONFIRMED]: "confirmed",
-  [OrderStatus.SHIPPED]: "shipped",
-  [OrderStatus.DELIVERED]: "delivered",
-  [OrderStatus.CANCELED]: "canceled",
-};
-
-const getStatusVariant = (status: OrderStatus) => {
-  switch (status) {
-    case OrderStatus.PENDING:
-    case OrderStatus.CONFIRMED:
-      return "bg-yellow-500 hover:bg-yellow-500";
-    case OrderStatus.SHIPPED:
-      return "bg-blue-500 hover:bg-blue-500";
-    case OrderStatus.DELIVERED:
-      return "bg-green-500 hover:bg-green-500";
-    case OrderStatus.CANCELED:
-      return "bg-red-500 hover:bg-red-500";
-    default:
-      return "bg-gray-500 hover:bg-gray-500";
-  }
 };
 
 const OrderCard = ({ order }: Props) => {
@@ -76,7 +51,7 @@ const OrderCard = ({ order }: Props) => {
                 <Badge
                   className={`text-white px-2 py-0.5 rounded-md text-xs font-medium ${getStatusVariant(order.status)}`}
                 >
-                  {t(`status.${STATUS_KEYS[order.status]}`)}
+                  {t(`status.${ORDER_STATUS_KEYS[order.status]}`)}
                 </Badge>
               </div>
 

@@ -1,5 +1,5 @@
-import { showToast } from "../../../common";
-import { sellerErrorCode, sellerRefusalBody } from "../../../hooks/seller";
+import { showToast } from "@/common/helpers/showToast";
+import { sellerErrorCode, sellerRefusalBody } from "@/hooks/seller/sellerError";
 
 export type Translate = (
   key: string,

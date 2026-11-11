@@ -4,6 +4,9 @@ import { Star } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { formatMoney } from "@/common/helpers/money";
+import { showToast } from "@/common/helpers/showToast";
+import ProductOverviewSkeleton from "@/components/skeletons/ProductOverviewSkeleton";
 import {
   Accordion,
   AccordionContent,
@@ -11,13 +14,9 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Separator } from "@/components/ui/separator";
-import { getCurrencyEmoji, showToast } from "../../../common";
-import ProductOverviewSkeleton from "../../../components/skeletons/ProductOverviewSkeleton";
-import { useGetProduct } from "../../../hooks/product/useProducts";
-import {
-  AddToCartWithQuantity,
-  ToggleWishlistItemButton,
-} from "../../general/ProductCard/actions";
+import AddToCartWithQuantity from "@/features/general/AddToCartWithQuantity";
+import ToggleWishlistItemButton from "@/features/general/ProductCard/actions/ToggleWishlistItemButton";
+import { useGetProduct } from "@/hooks/product/useProducts/useGetProduct";
 import ProductGallery from "./ProductGallery";
 import Reviews from "./Reviews";
 
@@ -51,7 +50,7 @@ export default function ProductOverview() {
 
             <div className="flex items-center gap-4">
               <span className="text-3xl font-bold">
-                {product.price} {getCurrencyEmoji(product.currency)}
+                {formatMoney(product.price, product.currency)}
               </span>
               <div className="flex items-center gap-1">
                 {Array.from({ length: 5 }, (_, index) => index + 1).map(

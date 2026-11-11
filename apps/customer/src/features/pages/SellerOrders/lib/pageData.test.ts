@@ -3,7 +3,7 @@ import {
   OrderItemStatus,
   type SellerOrderLine,
   type SellerOrdersPage,
-} from "../../../common/types/order.types";
+} from "@/common/types/order.types";
 import { pageWithLine } from "./pageData";
 
 const line = (overrides: Partial<SellerOrderLine> = {}): SellerOrderLine => ({
@@ -25,7 +25,11 @@ const page = (): SellerOrdersPage => ({
       createdAt: "2026-11-08T10:00:00.000Z",
       orderItems: [
         line(),
-        line({ id: "line-2", name: "Whistle", status: OrderItemStatus.CONFIRMED }),
+        line({
+          id: "line-2",
+          name: "Whistle",
+          status: OrderItemStatus.CONFIRMED,
+        }),
       ],
     },
     {
@@ -51,9 +55,14 @@ describe("pageWithLine", () => {
       id: "line-1",
       status: OrderItemStatus.CANCELLED,
     });
-    expect(after.orders[0].orderItems[1]).toEqual(before.orders[0].orderItems[1]);
+    expect(after.orders[0].orderItems[1]).toEqual(
+      before.orders[0].orderItems[1],
+    );
     expect(after.orders[1]).toEqual(before.orders[1]);
-    expect(after.orders.map((order) => order.id)).toEqual(["order-1", "order-2"]);
+    expect(after.orders.map((order) => order.id)).toEqual([
+      "order-1",
+      "order-2",
+    ]);
   });
 
   it("keeps the page numbers the server sent (AC-5, AC-9)", () => {

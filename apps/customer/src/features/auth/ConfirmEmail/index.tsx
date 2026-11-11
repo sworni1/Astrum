@@ -1,11 +1,12 @@
 "use client";
 
-import { Clock, Mail, MailCheck, MailWarning, MailX } from "lucide-react";
+import { Mail, MailCheck } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type ReactNode, useEffect } from "react";
 import useSWR, { useSWRConfig } from "swr";
+import type { UserData } from "@/common/types/user.types";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,36 +15,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { UserData } from "../../../common";
-import { useFetcher } from "../../../hooks";
+import { useFetcher } from "@/hooks/useFetcher";
+import {
+  isOutcome,
+  OUTCOME_ICONS,
+  type Outcome,
+  VIEW_KEYS,
+} from "./lib/outcome";
 import ResendForm from "./ResendForm";
-
-type Outcome = "ok" | "expired" | "used" | "invalid";
-
-const isOutcome = (value: string | null): value is Outcome =>
-  value === "ok" ||
-  value === "expired" ||
-  value === "used" ||
-  value === "invalid";
-
-type ViewKeys = {
-  title: "okTitle" | "expiredTitle" | "usedTitle" | "invalidTitle";
-  text: "okText" | "expiredText" | "usedText" | "invalidText";
-};
-
-const VIEW_KEYS: Record<Outcome, ViewKeys> = {
-  ok: { title: "okTitle", text: "okText" },
-  expired: { title: "expiredTitle", text: "expiredText" },
-  used: { title: "usedTitle", text: "usedText" },
-  invalid: { title: "invalidTitle", text: "invalidText" },
-};
-
-const OUTCOME_ICONS: Record<Outcome, typeof MailCheck> = {
-  ok: MailCheck,
-  expired: Clock,
-  used: MailWarning,
-  invalid: MailX,
-};
 
 export default function ConfirmEmail() {
   const t = useTranslations("confirmEmail");

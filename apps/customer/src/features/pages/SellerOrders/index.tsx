@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
+import type { SellerOrderLine } from "@/common/types/order.types";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { SellerOrderLine } from "../../../common/types/order.types";
-import { useSellerOrders } from "../../../hooks/seller";
-import { useUser } from "../../../hooks/user";
-import { SELLER_GRID_CLASS } from "./grid";
-import { pageWithLine } from "./pageData";
+import { useSellerOrders } from "@/hooks/seller/useSellerOrders";
+import { useUser } from "@/hooks/user/useUser";
+import { SELLER_GRID_CLASS } from "./lib/grid";
+import { pageWithLine } from "./lib/pageData";
 import SellerOrderGroup from "./SellerOrderGroup";
 import { StateScreen } from "./StateScreen";
 

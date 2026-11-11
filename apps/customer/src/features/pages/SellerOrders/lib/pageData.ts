@@ -1,7 +1,7 @@
 import type {
   SellerOrderLine,
   SellerOrdersPage,
-} from "../../../common/types/order.types";
+} from "@/common/types/order.types";
 
 /** Writes one answered line into the page the client already holds. */
 export const pageWithLine = (

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { OrderItemStatus } from "../../../common/types/order.types";
+import { OrderItemStatus } from "@/common/types/order.types";
 import {
   isConfirmingAction,
   SELLER_ACTION_TARGET,

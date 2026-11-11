@@ -5,6 +5,15 @@ import Image, { type ImageProps } from "next/image";
 import { useTranslations } from "next-intl";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import {
+  ASPECT_RATIO_CLASSES,
+  type AspectRatio,
+  DEFAULT_BLUR_DATA_URL,
+  ROUNDED_CLASSES,
+  type Rounded,
+  SHADOW_CLASSES,
+  type Shadow,
+} from "./optimizedImage/styles";
 import { Skeleton } from "./ui/skeleton";
 
 interface OptimizedImageProps extends Omit<ImageProps, "onLoad" | "onError"> {
@@ -17,46 +26,14 @@ interface OptimizedImageProps extends Omit<ImageProps, "onLoad" | "onError"> {
   enableHoverEffects?: boolean;
   showOverlay?: boolean;
   overlayActions?: boolean;
-  aspectRatio?: "square" | "4/3" | "16/9" | "3/2" | "auto";
-  rounded?: "none" | "sm" | "md" | "lg" | "xl" | "full";
-  shadow?: "none" | "sm" | "md" | "lg" | "xl";
+  aspectRatio?: AspectRatio;
+  rounded?: Rounded;
+  shadow?: Shadow;
   errorVariant?: "minimal" | "detailed" | "retry";
   onImageClick?: () => void;
   onDownload?: () => void;
   onFullscreen?: () => void;
 }
-
-// Enhanced blur data URL for smoother loading
-const DEFAULT_BLUR_DATA_URL =
-  "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyuwjA2g+lbCRjf7dA=";
-
-// Aspect ratio classes
-const aspectRatioClasses = {
-  square: "aspect-square",
-  "4/3": "aspect-4/3",
-  "16/9": "aspect-video",
-  "3/2": "aspect-3/2",
-  auto: "",
-};
-
-// Rounded classes
-const roundedClasses = {
-  none: "",
-  sm: "rounded-sm",
-  md: "rounded-md",
-  lg: "rounded-lg",
-  xl: "rounded-xl",
-  full: "rounded-full",
-};
-
-// Shadow classes
-const shadowClasses = {
-  none: "",
-  sm: "shadow-sm",
-  md: "shadow-md",
-  lg: "shadow-lg",
-  xl: "shadow-xl",
-};
 
 const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
   src,
@@ -155,7 +132,7 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
       } else if (typeof imageSrc === "object" && "src" in imageSrc) {
         downloadUrl = imageSrc.src;
       } else {
-        console.warn("Cannot download: unsupported image source type");
+        console.error("Cannot download: unsupported image source type");
         return;
       }
 
@@ -303,7 +280,7 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
         "transition-all duration-500 object-cover",
         isLoading ? "opacity-0 scale-105" : "opacity-100 scale-100",
         enableHoverEffects && "group-hover:scale-105",
-        roundedClasses[rounded],
+        ROUNDED_CLASSES[rounded],
         className,
       )}
       placeholder={placeholder}
@@ -322,9 +299,9 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
       ref={imageRef}
       className={cn(
         "relative overflow-hidden group",
-        aspectRatioClasses[aspectRatio],
-        roundedClasses[rounded],
-        shadowClasses[shadow],
+        ASPECT_RATIO_CLASSES[aspectRatio],
+        ROUNDED_CLASSES[rounded],
+        SHADOW_CLASSES[shadow],
         enableHoverEffects &&
           "transform transition-all duration-300 hover:shadow-xl hover:scale-[1.02]",
         containerClassName,
@@ -359,7 +336,7 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
         <div
           className={cn(
             "absolute inset-0 ring-2 ring-gray-500/0 transition-all duration-300 pointer-events-none",
-            roundedClasses[rounded],
+            ROUNDED_CLASSES[rounded],
             "group-hover:ring-gray-500/30",
           )}
         />

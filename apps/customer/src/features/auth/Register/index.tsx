@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
+import { type SignUpCredentials } from "@/common/types/auth.types";
+import { createRegisterFormSchema } from "@/common/zodSchemes/auth.scheme";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,12 +15,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
-import {
-  createRegisterFormSchema,
-  type SignUpCredentials,
-} from "../../../common";
 import {
   Form,
   FormControl,
@@ -26,16 +22,18 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "../../../components/ui/form";
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../components/ui/select";
-import { useAuth } from "../../../hooks";
-import { useResendConfirmation } from "../../../hooks/user/useResendConfirmation";
+} from "@/components/ui/select";
+import { useAuth } from "@/hooks/auth/useAuth";
+import { useResendConfirmation } from "@/hooks/user/useResendConfirmation";
+import { cn } from "@/lib/utils";
 import { DateOfBirthField } from "./DateOfBirthField";
 
 export default function Register() {

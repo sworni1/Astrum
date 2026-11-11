@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   OrderItemStatus,
   type SellerOrderLine,
-} from "../../../common/types/order.types";
+} from "@/common/types/order.types";
 import { countLinesByStatus, lineSubtotal } from "./format";
 
 const line = (overrides: Partial<SellerOrderLine> = {}): SellerOrderLine => ({

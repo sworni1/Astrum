@@ -1,4 +1,4 @@
-import { OrderItemStatus } from "../../../common/types/order.types";
+import { OrderItemStatus } from "@/common/types/order.types";
 
 export type SellerAction =
   | "confirm"

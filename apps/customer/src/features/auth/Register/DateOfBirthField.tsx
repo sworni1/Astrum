@@ -1,22 +1,25 @@
 "use client";
 
-import { format, isValid, parse, subYears } from "date-fns";
+import { format, subYears } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { Button } from "../../../components/ui/button";
-import { Calendar } from "../../../components/ui/calendar";
-import { FormControl } from "../../../components/ui/form";
-import { Input } from "../../../components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { FormControl } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "../../../components/ui/popover";
-
-const DATE_FORMAT = "dd.MM.yyyy";
-const OLDEST_BIRTH_YEAR = 1900;
-const DEFAULT_AGE_YEARS = 18;
+} from "@/components/ui/popover";
+import {
+  DATE_FORMAT,
+  DEFAULT_AGE_YEARS,
+  maskDateInput,
+  OLDEST_BIRTH_YEAR,
+  parseDateInput,
+} from "./lib/dateInput";
 
 type DateOfBirthFieldProps = {
   name: string;
@@ -24,24 +27,6 @@ type DateOfBirthFieldProps = {
   onChange: (date?: Date) => void;
   onBlur: () => void;
 };
-
-function maskDateInput(raw: string): string {
-  const digits = raw.replace(/\D/g, "").slice(0, 8);
-
-  return [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)]
-    .filter((part) => part.length > 0)
-    .join(".");
-}
-
-function parseDateInput(text: string): Date | undefined {
-  if (text.length !== DATE_FORMAT.length) return undefined;
-
-  const parsed = parse(text, DATE_FORMAT, new Date());
-
-  if (!isValid(parsed)) return undefined;
-
-  return format(parsed, DATE_FORMAT) === text ? parsed : undefined;
-}
 
 export function DateOfBirthField({
   name,
