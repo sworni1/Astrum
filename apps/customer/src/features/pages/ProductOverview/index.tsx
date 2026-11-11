@@ -17,15 +17,22 @@ import { Separator } from "@/components/ui/separator";
 import AddToCartWithQuantity from "@/features/general/AddToCartWithQuantity";
 import ToggleWishlistItemButton from "@/features/general/ProductCard/actions/ToggleWishlistItemButton";
 import { useGetProduct } from "@/hooks/product/useProducts/useGetProduct";
+import { useProductReviews } from "@/hooks/review/useProductReviews";
+import { formatAverageRating } from "./Reviews/lib/distribution";
 import ProductGallery from "./ProductGallery";
 import Reviews from "./Reviews";
 
 export default function ProductOverview() {
   const t = useTranslations("product");
+  const reviewsT = useTranslations("reviews");
   const params = useParams<{ productId: string }>();
   const productId = params.productId;
 
   const { product, productIsLoading, productError } = useGetProduct(productId);
+  // The header and the block read one key, so the screen sends one request for
+  // the first page (spec 0012, AC-4, AC-5).
+  const { aggregate } = useProductReviews(productId);
+
   if (productIsLoading) {
     return <ProductOverviewSkeleton />;
   }
@@ -52,24 +59,30 @@ export default function ProductOverview() {
               <span className="text-3xl font-bold">
                 {formatMoney(product.price, product.currency)}
               </span>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: 5 }, (_, index) => index + 1).map(
-                  (star) => (
-                    <Star
-                      key={`rating-star-${star}`}
-                      className="h-5 w-5 fill-primary text-primary"
-                    />
-                  ),
-                )}
+              {aggregate ? (
                 <Link
                   href="#reviews"
-                  className="ml-2 text-sm text-muted-foreground hover:text-primary"
+                  className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground hover:text-primary"
                 >
-                  {t("reviewsCount", {
-                    count: product._count ? product._count.impressions : 0,
-                  })}
+                  <Star className="h-4 w-4 fill-primary text-primary" aria-hidden />
+                  {aggregate.total > 0 ? (
+                    <>
+                      <span>
+                        {reviewsT("summaryAverage", {
+                          average: formatAverageRating(aggregate.averageRating),
+                        })}
+                      </span>
+                      <span aria-hidden>•</span>
+                    </>
+                  ) : null}
+                  <span>{reviewsT("count", { count: aggregate.total })}</span>
                 </Link>
-              </div>
+              ) : (
+                <span
+                  aria-hidden
+                  className="inline-block h-5 w-40 animate-pulse rounded bg-muted"
+                />
+              )}
             </div>
 
             <div className="flex gap-4">
@@ -122,7 +135,7 @@ export default function ProductOverview() {
           </div>
         </div>
       </div>
-      <Reviews productId={productId} />
+      <Reviews productId={productId} reviewState={product.reviewState} />
     </>
   );
 }
