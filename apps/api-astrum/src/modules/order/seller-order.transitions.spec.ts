@@ -6,7 +6,7 @@ import { ALLOWED_LINE_TRANSITIONS } from "./seller-order.service";
 /**
  * The transition table of spec 0002, transcribed from its "Feature design"
  * section. The storefront keeps a mirror of it in
- * `apps/customer/src/features/pages/SellerOrders/actionMap.ts`; this test fails
+ * `apps/customer/src/features/pages/SellerOrders/lib/actionMap.ts`; this test fails
  * the gateway side the moment the two drift.
  */
 const SPEC_TABLE: Record<OrderItemStatus, readonly OrderItemStatus[]> = {

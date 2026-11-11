@@ -10,8 +10,8 @@ jest.mock("../../../lib/prisma", () => ({
 import { Prisma } from "../../../generated/prisma/client";
 import { prisma } from "../../../lib/prisma";
 import { logger } from "../../common/helpers/logger";
-import { SellerOrderService } from "./seller-order.service";
 import { ORDER_TRANSACTION_OPTIONS } from "./order-status.helpers";
+import { SellerOrderService } from "./seller-order.service";
 
 const prismaMock = prisma as unknown as {
   $transaction: jest.Mock;

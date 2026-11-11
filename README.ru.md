@@ -53,33 +53,33 @@ apps/api-astrum ×3   Express 5 · :3580 ─── /api/auth ───▶ apps/a
 
 Подтверждение почты проходит через брокер: после регистрации и повторной отправки `apps/auth-astrum` публикует событие `account.confirmation.requested` в exchange `astrum.events`; после смены адреса то же делает шлюз. `apps/worker` получает событие из очереди `mail.confirmation`, создаёт одноразовую ссылку на 24 часа (в базе хранится только sha256 токена, сам токен остаётся в письме) и отправляет письмо через SMTP. Если `SMTP_URL` не задан, письмо записывается в `MAIL_OUTBOX_DIR`. После неудачной отправки письмо возвращается в очередь ожидания через 60, 300 и 900 секунд; после четвёртой попытки оно попадает в `mail.confirmation.dead` вместе с текстом последней ошибки. Пока аккаунт имеет статус `PENDING`, шлюз возвращает `403 EMAIL_NOT_CONFIRMED` для запросов заказов, отзывов и изменения профиля; вход, каталог и корзина остаются доступны. В production-стеке Mailpit используется как SMTP-сервер, его интерфейс доступен по адресу `http://localhost:8025`.
 
-| Сервис    | Порт  | Доступность                         | Реплики |
-|-----------|-------|-------------------------------------|---------|
-| `proxy`   | 80/443 | извне                              | 1       |
-| `customer`| 3000  | только внутри `astrum`              | 2       |
-| `api`     | 3580  | только внутри, через `proxy`        | 3       |
-| `auth`    | 4580  | только внутри, из `api`             | 1       |
-| `worker`  | 5580  | только внутри                       | 1       |
-| `rabbitmq`| 5672  | только внутри                       | 1       |
-| `mailpit` | 8025  | извне, только в production-стеке    | 1       |
-| `redis`   | 6379  | внутри сети, в dev также с хоста    | 1       |
-| `db`      | 5432  | только внутри                       | 1       |
+| Сервис     | Порт   | Доступность                      | Реплики |
+| ---------- | ------ | -------------------------------- | ------- |
+| `proxy`    | 80/443 | извне                            | 1       |
+| `customer` | 3000   | только внутри `astrum`           | 2       |
+| `api`      | 3580   | только внутри, через `proxy`     | 3       |
+| `auth`     | 4580   | только внутри, из `api`          | 1       |
+| `worker`   | 5580   | только внутри                    | 1       |
+| `rabbitmq` | 5672   | только внутри                    | 1       |
+| `mailpit`  | 8025   | извне, только в production-стеке | 1       |
+| `redis`    | 6379   | внутри сети, в dev также с хоста | 1       |
+| `db`       | 5432   | только внутри                    | 1       |
 
 Обоснование выбора и рассмотренные альтернативы (Swarm, nginx, Traefik) описаны в [ADR-0003](docs/adr/0003-container-topology-and-load-balancing.md).
 
 ## Технологии
 
-| Уровень              | Технологии                                                                               |
-|----------------------|------------------------------------------------------------------------------------------|
-| Витрина              | Next.js 16 (App Router), React 19, TypeScript 7, Tailwind 4, shadcn/ui                    |
-| Данные в интерфейсе  | SWR, React Hook Form с Zod                                                               |
-| API-шлюз             | Express 5, Prisma 7, class-validator                                                     |
-| Аутентификация       | NestJS 11, Passport JWT, argon2, Swagger                                                 |
-| Сессии               | Redis 7 (ioredis): одна запись `session:<sid>` на время жизни токена                     |
-| События              | RabbitMQ 4 (amqplib): exchange `astrum.events`, повторы и очередь недоставленных сообщений |
-| Почта                | `apps/worker` на nodemailer, SMTP или Mailpit с интерфейсом на порту 8025                |
-| База данных          | PostgreSQL 16, Prisma 7                                                                  |
-| Инфраструктура       | pnpm workspaces, Turborepo, Docker Compose с репликами за Caddy, husky и commitlint      |
+| Уровень             | Технологии                                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------------ |
+| Витрина             | Next.js 16 (App Router), React 19, TypeScript 7, Tailwind 4, shadcn/ui                     |
+| Данные в интерфейсе | SWR, React Hook Form с Zod                                                                 |
+| API-шлюз            | Express 5, Prisma 7, class-validator                                                       |
+| Аутентификация      | NestJS 11, Passport JWT, argon2, Swagger                                                   |
+| Сессии              | Redis 7 (ioredis): одна запись `session:<sid>` на время жизни токена                       |
+| События             | RabbitMQ 4 (amqplib): exchange `astrum.events`, повторы и очередь недоставленных сообщений |
+| Почта               | `apps/worker` на nodemailer, SMTP или Mailpit с интерфейсом на порту 8025                  |
+| База данных         | PostgreSQL 16, Prisma 7                                                                    |
+| Инфраструктура      | pnpm workspaces, Turborepo, Docker Compose с репликами за Caddy, husky и commitlint        |
 
 ## План развития
 
