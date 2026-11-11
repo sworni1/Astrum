@@ -1,9 +1,9 @@
 "use client";
 
+import { Store } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
-import { Store } from "lucide-react";
 import { FiPackage } from "react-icons/fi";
 import { MdFavoriteBorder, MdOutlineShoppingCart } from "react-icons/md";
 import { TbCategory } from "react-icons/tb";

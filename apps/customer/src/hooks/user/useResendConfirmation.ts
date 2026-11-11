@@ -2,8 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
-import { showToast } from "../../common";
-import { requestConfirmationEmail } from "../../common/helpers/confirmEmail";
+import { requestConfirmationEmail } from "@/common/helpers/confirmEmail";
+import { showToast } from "@/common/helpers/showToast";
 
 export const RESEND_COOLDOWN_SECONDS = 60;
 

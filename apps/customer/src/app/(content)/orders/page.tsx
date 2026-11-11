@@ -1,4 +1,4 @@
-import Orders from "../../../features/pages/Orders";
+import Orders from "@/features/pages/Orders";
 
 const page = () => {
   return <Orders />;

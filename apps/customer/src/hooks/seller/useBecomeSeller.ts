@@ -1,7 +1,7 @@
 "use client";
 
 import useSWRMutation from "swr/mutation";
-import { useFetcher } from "../useFetcher";
+import { useFetcher } from "@/hooks/useFetcher";
 
 export type BecomeSellerResult = { isSeller: true; businessName: string };
 export type ShopNameInput = { name: string };

@@ -1,8 +1,8 @@
 "use client";
 
 import useSWR from "swr";
-import type { ProductCardProps } from "../../../common/types/product.types";
-import { useFetcher } from "../../useFetcher";
+import type { ProductCardProps } from "@/common/types/product.types";
+import { useFetcher } from "@/hooks/useFetcher";
 
 export const useGetWishlist = () => {
   const { getData } = useFetcher();

@@ -1,8 +1,8 @@
 "use client";
 
 import useSWR, { type KeyedMutator } from "swr";
-import type { ShippingMethod } from "../../common/types/order.types";
-import { useFetcher } from "../useFetcher";
+import type { ShippingMethod } from "@/common/types/order.types";
+import { useFetcher } from "@/hooks/useFetcher";
 
 export type ShippingMethodsResponse = { methods: ShippingMethod[] };
 

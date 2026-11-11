@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { OrderItemStatus } from "../types/order.types";
+import { OrderItemStatus } from "@/common/types/order.types";
 import { ITEM_STATUS_KEYS, itemStatusKey } from "./itemStatus";
 
 describe("itemStatusKey", () => {

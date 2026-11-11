@@ -5,12 +5,10 @@ import axios from "axios";
 import { useFormatter, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import {
-  createEditProfileFormSchema,
-  showToast,
-  type UserData,
-} from "../../../../../common";
-import type { updateUserDto } from "../../../../../common/dto/update-user.dto";
+import type { updateUserDto } from "@/common/dto/update-user.dto";
+import { showToast } from "@/common/helpers/showToast";
+import { type UserData } from "@/common/types/user.types";
+import { createEditProfileFormSchema } from "@/common/zodSchemes/edit-profile.scheme";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,8 +19,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "../../../../../components/ui/alert-dialog";
-import { Button } from "../../../../../components/ui/button";
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -31,10 +29,10 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "../../../../../components/ui/form";
-import { Input } from "../../../../../components/ui/input";
-import { Label } from "../../../../../components/ui/label";
-import { useUser } from "../../../../../hooks";
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useUser } from "@/hooks/user/useUser";
 
 type Props = {
   profileData: UserData;

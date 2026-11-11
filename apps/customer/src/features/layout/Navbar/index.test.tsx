@@ -2,19 +2,21 @@ import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { useGetCart, useGetOrders, useGetWishlist, useUser } = vi.hoisted(() => ({
-  useGetCart: vi.fn(),
-  useGetOrders: vi.fn(),
-  useGetWishlist: vi.fn(),
-  useUser: vi.fn(),
-}));
+const { useGetCart, useGetOrders, useGetWishlist, useUser } = vi.hoisted(
+  () => ({
+    useGetCart: vi.fn(),
+    useGetOrders: vi.fn(),
+    useGetWishlist: vi.fn(),
+    useUser: vi.fn(),
+  }),
+);
 
-vi.mock("../../../hooks", () => ({
-  useGetCart,
-  useGetOrders,
+vi.mock("@/hooks/product/useCart/useGetCart", () => ({ useGetCart }));
+vi.mock("@/hooks/order/useGetOrders", () => ({ useGetOrders }));
+vi.mock("@/hooks/product/useWishlist/useGetWishlist", () => ({
   useGetWishlist,
-  useUser,
 }));
+vi.mock("@/hooks/user/useUser", () => ({ useUser }));
 
 vi.mock("next-intl", () => ({
   useTranslations:
@@ -39,16 +41,16 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-vi.mock("../../../common", () => ({ showToast: vi.fn() }));
+vi.mock("@/common/helpers/showToast", () => ({ showToast: vi.fn() }));
 vi.mock("./Searchbar", () => ({ default: () => <span data-searchbar="" /> }));
-vi.mock("../../../components/LocaleSwitcher", () => ({
+vi.mock("@/components/LocaleSwitcher", () => ({
   default: () => <span data-locale="" />,
 }));
-vi.mock("../../../components/ThemeSwitcher", () => ({
+vi.mock("@/components/ThemeSwitcher", () => ({
   default: () => <span data-themeswitcher="" />,
 }));
 
-import Navbar from "./index";
+import Navbar from ".";
 
 const SELLER_HREF = 'a[href="/seller/orders"]';
 

@@ -1,10 +1,10 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { showToast } from "../../../common";
-import { ProductCardsSkeleton } from "../../../components/skeletons";
-import { useGetWishlist } from "../../../hooks/product/useWishlist";
-import ProductCard from "../../general/ProductCard";
+import { showToast } from "@/common/helpers/showToast";
+import ProductCardsSkeleton from "@/components/skeletons/ProductCardsSkeleton/ProductCardsSkeleton";
+import ProductCard from "@/features/general/ProductCard";
+import { useGetWishlist } from "@/hooks/product/useWishlist/useGetWishlist";
 
 const WishList = () => {
   const t = useTranslations("wishlist");

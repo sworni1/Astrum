@@ -4,11 +4,11 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useRef } from "react";
 import { useSWRConfig } from "swr";
-import { showToast } from "../../common";
-import type { CreateOrderItemDto } from "../../common/types/order.types";
-import type { ProductCartProps } from "../../common/types/product.types";
-import type { CheckoutFormData } from "../../common/zodSchemes/checkout.scheme";
-import { useFetcher } from "../useFetcher";
+import { showToast } from "@/common/helpers/showToast";
+import type { CreateOrderItemDto } from "@/common/types/order.types";
+import type { ProductCartProps } from "@/common/types/product.types";
+import type { CheckoutFormData } from "@/common/zodSchemes/checkout.scheme";
+import { useFetcher } from "@/hooks/useFetcher";
 import { checkoutRefusalOf } from "./checkoutErrors";
 import { createIdempotencyKey, isTerminalAnswer } from "./idempotency";
 

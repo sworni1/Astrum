@@ -3,9 +3,9 @@
 import { useMemo } from "react";
 import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
-import type { UserData } from "../../common";
-import { useFetcher } from "../useFetcher";
-import { useLogOut } from "../useLogOut";
+import type { UserData } from "@/common/types/user.types";
+import { useFetcher } from "@/hooks/useFetcher";
+import { useLogOut } from "@/hooks/useLogOut";
 
 // Optimized SWR configuration for user data
 const USER_SWR_CONFIG = {

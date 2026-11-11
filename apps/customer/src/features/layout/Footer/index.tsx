@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { AcmeLogo } from "../../general/AcmeLogo";
+import { AcmeLogo } from "@/features/general/AcmeLogo";
 
 const Footer = async () => {
   const t = await getTranslations("footer");

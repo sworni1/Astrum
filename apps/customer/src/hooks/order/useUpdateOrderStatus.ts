@@ -2,11 +2,8 @@
 
 import { useSWRConfig } from "swr";
 import useSWRMutation from "swr/mutation";
-import type {
-  Order,
-  UpdateOrderStatusDto,
-} from "../../common/types/order.types";
-import { useFetcher } from "../useFetcher";
+import type { Order, UpdateOrderStatusDto } from "@/common/types/order.types";
+import { useFetcher } from "@/hooks/useFetcher";
 
 export type UpdateOrderStatusError = {
   message: string;

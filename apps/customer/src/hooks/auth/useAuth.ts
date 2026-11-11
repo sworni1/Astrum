@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
 import type { SubmitHandler } from "react-hook-form";
+import { createSession } from "@/common/helpers/session";
+import { showToast } from "@/common/helpers/showToast";
 import {
   type SignInCredentials,
   type SignUpCredentials,
-  showToast,
-} from "../../common";
-import { createSession } from "../../common/helpers/session";
-import { resetSessionEnded, useFetcher } from "../useFetcher";
-import { useSessionCacheReset } from "../useSessionCacheReset";
+} from "@/common/types/auth.types";
+import { resetSessionEnded, useFetcher } from "@/hooks/useFetcher";
+import { useSessionCacheReset } from "@/hooks/useSessionCacheReset";
 
 export const useAuth = () => {
   const { fetcher } = useFetcher();

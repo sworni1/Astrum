@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type { createRegisterFormSchema } from "../zodSchemes/auth.scheme";
+import type { createRegisterFormSchema } from "@/common/zodSchemes/auth.scheme";
 
 export enum Gender {
   Male,

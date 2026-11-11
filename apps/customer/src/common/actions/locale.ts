@@ -6,7 +6,7 @@ import {
   isLocale,
   LOCALE_COOKIE,
   LOCALE_COOKIE_MAX_AGE_SECONDS,
-} from "../../i18n/config";
+} from "@/i18n/config";
 
 /**
  * The language is a preference, not a secret, so the cookie stays readable by

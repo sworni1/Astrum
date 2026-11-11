@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   normalizeShopName,
   shopNameProblem,
-} from "../../../../../api-astrum/src/modules/seller/shop-name";
+} from "@/../../api-astrum/src/modules/seller/shop-name";
 import {
   createShopNameSchema,
   normalizeShopName as normalizeOnClient,
   shopNameProblem as problemOnClient,
-} from "../../../common/zodSchemes/shop-name.scheme";
+} from "@/common/zodSchemes/shop-name.scheme";
 import { SHOP_NAME_CASES } from "./nameCases";
 
 const translator = ((key: string) => key) as never;

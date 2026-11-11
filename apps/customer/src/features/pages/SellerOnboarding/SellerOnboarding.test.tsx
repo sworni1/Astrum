@@ -30,20 +30,20 @@ vi.mock("next/link", () => ({
   }) => <a href={href}>{children}</a>,
 }));
 
-vi.mock("../../../common/helpers/showToast", () => ({
+vi.mock("@/common/helpers/showToast", () => ({
   showToast: mocks.toast,
 }));
 
-vi.mock("../../../hooks/user", () => ({ useUser: () => mocks.user }));
+vi.mock("@/hooks/user/useUser", () => ({ useUser: () => mocks.user }));
 
-vi.mock("../../../hooks/seller", () => ({
+vi.mock("@/hooks/seller/useBecomeSeller", () => ({
   useBecomeSeller: () => ({
     becomeSeller: mocks.becomeSeller,
     isSubmitting: false,
   }),
 }));
 
-import SellerOnboarding from "./index";
+import SellerOnboarding from ".";
 
 let container: HTMLDivElement;
 let root: Root;

@@ -4,12 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { patchItem } = vi.hoisted(() => ({ patchItem: vi.fn() }));
 
-vi.mock("../useFetcher", () => ({ useFetcher: () => ({ patchItem }) }));
+vi.mock("@/hooks/useFetcher", () => ({ useFetcher: () => ({ patchItem }) }));
 
 import {
   OrderItemStatus,
   type SellerOrderLine,
-} from "../../common/types/order.types";
+} from "@/common/types/order.types";
 import { sellerErrorCode } from "./sellerError";
 import { useSellerOrderItemStatus } from "./useSellerOrderItemStatus";
 

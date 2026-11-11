@@ -1,4 +1,4 @@
-import ProductOverview from "../../../../features/pages/ProductOverview";
+import ProductOverview from "@/features/pages/ProductOverview";
 
 const page = () => {
   return <ProductOverview />;

@@ -1,4 +1,4 @@
-import SellerOnboarding from "../../../../features/pages/SellerOnboarding";
+import SellerOnboarding from "@/features/pages/SellerOnboarding";
 
 const page = () => {
   return <SellerOnboarding />;

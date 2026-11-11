@@ -1,9 +1,9 @@
 "use client";
 
 import useSWR, { type KeyedMutator } from "swr";
-import type { SellerOrdersPage } from "../../common/types/order.types";
-import { useFetcher } from "../useFetcher";
-import { sellerErrorKind, type SellerErrorKind } from "./sellerError";
+import type { SellerOrdersPage } from "@/common/types/order.types";
+import { useFetcher } from "@/hooks/useFetcher";
+import { type SellerErrorKind, sellerErrorKind } from "./sellerError";
 
 export const SELLER_ORDERS_PAGE_SIZE = 20;
 

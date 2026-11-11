@@ -1,5 +1,5 @@
 import axios from "axios";
-import { acceptLanguage } from "../../i18n/config";
+import { acceptLanguage } from "@/i18n/config";
 
 const client = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_GATEWAY_URL,

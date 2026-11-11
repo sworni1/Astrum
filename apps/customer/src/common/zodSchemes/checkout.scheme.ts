@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PaymentMethod } from "../types/order.types";
+import { PaymentMethod } from "@/common/types/order.types";
 import type { ValidationTranslator } from "./translator";
 
 export const createCheckoutFormSchema = (t: ValidationTranslator) =>

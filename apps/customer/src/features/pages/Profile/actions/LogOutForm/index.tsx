@@ -11,9 +11,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "../../../../../components/ui/alert-dialog";
-import { Button } from "../../../../../components/ui/button";
-import { useLogOut } from "../../../../../hooks";
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { useLogOut } from "@/hooks/useLogOut";
 
 const LogOutForm = () => {
   const { logOut } = useLogOut();

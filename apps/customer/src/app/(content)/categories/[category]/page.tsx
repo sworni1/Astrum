@@ -1,4 +1,4 @@
-import { CategoryPage } from "../../../../features/pages/Categories/CategoryPage";
+import { CategoryPage } from "@/features/pages/Categories/CategoryPage";
 
 const page = () => {
   return <CategoryPage />;

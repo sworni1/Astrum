@@ -21,18 +21,17 @@ vi.mock("next-intl", () => ({
   useFormatter: () => ({ dateTime: (value: Date) => value.toISOString() }),
 }));
 
-vi.mock("@/hooks", () => ({
+vi.mock("@/hooks/order/useCheckout", () => ({
   useCheckout: () => state.checkout,
+}));
+
+vi.mock("@/hooks/shipping/useShippingMethods", () => ({
   useShippingMethods: () => state.shipping,
 }));
 
-vi.mock("@/common", async (importOriginal) => {
-  const actual = await importOriginal<Record<string, unknown>>();
+vi.mock("@/common/helpers/showToast", () => ({ showToast: state.toast }));
 
-  return { ...actual, showToast: state.toast };
-});
-
-import CheckoutForm from "./index";
+import CheckoutForm from ".";
 
 const METHODS: Method[] = [
   { id: "sm-1", name: "Standard Delivery", price: 299, currency: "RUB" },

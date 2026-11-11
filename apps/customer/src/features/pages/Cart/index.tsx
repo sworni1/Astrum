@@ -3,6 +3,7 @@
 import { CreditCard, Loader2, Package, Shield, Truck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
+import { showToast } from "@/common/helpers/showToast";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,8 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { showToast } from "../../../common";
-import { useGetCart } from "../../../hooks/product/useCart";
+import { useGetCart } from "@/hooks/product/useCart/useGetCart";
 import CartCard from "./components/CartCard";
 import CheckoutForm from "./components/CheckoutForm";
 

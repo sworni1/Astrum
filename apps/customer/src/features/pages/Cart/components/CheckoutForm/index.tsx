@@ -5,7 +5,8 @@ import { CalendarIcon, CreditCard, Loader2, MapPin } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { formatMoney, showToast, toCurrency } from "@/common";
+import { formatMoney, toCurrency } from "@/common/helpers/money";
+import { showToast } from "@/common/helpers/showToast";
 import { PaymentMethod } from "@/common/types/order.types";
 import type { ProductCartProps } from "@/common/types/product.types";
 import { Currency } from "@/common/types/product.types";
@@ -38,8 +39,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useCheckout, useShippingMethods } from "@/hooks";
 import { refusalReaction } from "@/hooks/order/checkoutErrors";
+import { useCheckout } from "@/hooks/order/useCheckout";
+import { useShippingMethods } from "@/hooks/shipping/useShippingMethods";
 import { cn } from "@/lib/utils";
 
 type Props = {

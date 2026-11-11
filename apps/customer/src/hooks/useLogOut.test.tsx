@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { endSession } = vi.hoisted(() => ({ endSession: vi.fn() }));
 
-vi.mock("../common/helpers/session", () => ({ endSession }));
+vi.mock("@/common/helpers/session", () => ({ endSession }));
 
 import { useLogOut } from "./useLogOut";
 

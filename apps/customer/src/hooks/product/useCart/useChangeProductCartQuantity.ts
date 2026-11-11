@@ -1,7 +1,7 @@
 "use client";
 
 import useSWRMutation from "swr/mutation";
-import { useFetcher } from "../../useFetcher";
+import { useFetcher } from "@/hooks/useFetcher";
 
 export const useChangeProductCartQuantity = (productId: string) => {
   const { patchItem } = useFetcher();

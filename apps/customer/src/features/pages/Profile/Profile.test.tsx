@@ -28,26 +28,30 @@ vi.mock("next/link", () => ({
   }) => <a href={href}>{children}</a>,
 }));
 
-vi.mock("../../../common/helpers/showToast", () => ({
+vi.mock("@/common/helpers/showToast", () => ({
   showToast: mocks.toast,
 }));
 
-vi.mock("../../../hooks/user", () => ({ useUser: () => mocks.user }));
+vi.mock("@/hooks/user/useUser", () => ({ useUser: () => mocks.user }));
 
-vi.mock("../../../components/skeletons", () => ({
-  EditProfileFormSkeleton: () => <div data-testid="profile-skeleton" />,
+vi.mock("@/components/skeletons/EditProfileFormSkeleton", () => ({
+  default: () => <div data-testid="profile-skeleton" />,
 }));
 
-vi.mock("./actions", () => ({
-  EditProfileForm: () => <div data-testid="edit-profile" />,
-  ChangePasswordForm: () => <div data-testid="change-password" />,
-  LogOutForm: () => <div />,
-  DeleteAccountForm: () => <div />,
-  SellOnAstrum: () => <div data-testid="sell-on-astrum-stub" />,
+vi.mock("./actions/EditProfileForm", () => ({
+  default: () => <div data-testid="edit-profile" />,
 }));
 
+vi.mock("./actions/ChangePasswordForm", () => ({
+  default: () => <div data-testid="change-password" />,
+}));
+
+vi.mock("./actions/LogOutForm", () => ({ default: () => <div /> }));
+
+vi.mock("./actions/DeleteAccountForm", () => ({ default: () => <div /> }));
+
+import Profile from ".";
 import SellOnAstrum from "./actions/SellOnAstrum";
-import Profile from "./index";
 
 let container: HTMLDivElement;
 let root: Root;
@@ -86,7 +90,7 @@ describe("Profile seller entry", () => {
     await render(<Profile />);
 
     expect(
-      container.querySelector("[data-testid='sell-on-astrum-stub']"),
+      container.querySelector("[data-testid='sell-on-astrum']"),
     ).not.toBeNull();
   });
 
@@ -95,7 +99,7 @@ describe("Profile seller entry", () => {
     await render(<Profile />);
 
     expect(
-      container.querySelector("[data-testid='sell-on-astrum-stub']"),
+      container.querySelector("[data-testid='sell-on-astrum']"),
     ).toBeNull();
   });
 
@@ -104,7 +108,7 @@ describe("Profile seller entry", () => {
     await render(<Profile />);
 
     expect(
-      container.querySelector("[data-testid='sell-on-astrum-stub']"),
+      container.querySelector("[data-testid='sell-on-astrum']"),
     ).toBeNull();
 
     await act(async () => root.unmount());
@@ -115,7 +119,7 @@ describe("Profile seller entry", () => {
     await render(<Profile />);
 
     expect(
-      container.querySelector("[data-testid='sell-on-astrum-stub']"),
+      container.querySelector("[data-testid='sell-on-astrum']"),
     ).toBeNull();
   });
 });

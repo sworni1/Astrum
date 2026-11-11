@@ -4,9 +4,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { createEditPasswordFormSchema, showToast } from "../../../../../common";
-import type { updatePasswordUserDto } from "../../../../../common/dto/update-user.dto";
-import { Button } from "../../../../../components/ui/button";
+import type { updatePasswordUserDto } from "@/common/dto/update-user.dto";
+import { showToast } from "@/common/helpers/showToast";
+import { createEditPasswordFormSchema } from "@/common/zodSchemes/edit-password.scheme";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -16,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../../../../../components/ui/dialog";
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -24,9 +25,9 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "../../../../../components/ui/form";
-import { Input } from "../../../../../components/ui/input";
-import { useUser } from "../../../../../hooks/user";
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { useUser } from "@/hooks/user/useUser";
 
 const ChangePasswordForm = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);

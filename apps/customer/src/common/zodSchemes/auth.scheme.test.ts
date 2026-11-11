@@ -1,7 +1,7 @@
+import en from "@messages/en.json";
+import ru from "@messages/ru.json";
 import { subYears } from "date-fns";
 import { describe, expect, it } from "vitest";
-import en from "../../../messages/en.json";
-import ru from "../../../messages/ru.json";
 import { createRegisterFormSchema, MIN_AGE_YEARS } from "./auth.scheme";
 import type { ValidationTranslator } from "./translator";
 

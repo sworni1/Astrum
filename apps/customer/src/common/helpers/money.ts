@@ -1,4 +1,4 @@
-import { Currency } from "../types/product.types";
+import { Currency } from "@/common/types/product.types";
 import { getCurrencyEmoji } from "./getCurrencyEmoji";
 
 /**

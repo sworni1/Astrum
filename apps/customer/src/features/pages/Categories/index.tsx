@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { categoryList } from "../../../common/constants/category.list";
-import { Alert } from "../../../components/ui/alert";
+import { categoryList } from "@/common/constants/category.list";
+import { Alert } from "@/components/ui/alert";
 
 const Categories = async () => {
   const t = await getTranslations("catalog");
