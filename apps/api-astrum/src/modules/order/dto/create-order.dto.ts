@@ -6,9 +6,11 @@ import {
   IsEnum,
   IsInt,
   IsNotEmpty,
+  IsOptional,
   IsString,
   Max,
   Min,
+  ValidateIf,
   ValidateNested,
 } from "class-validator";
 import { PaymentMethod } from "../../../../generated/prisma/enums";
@@ -33,9 +35,16 @@ class OrderItemDto {
 
 export class CreateOrderDto {
   @Expose()
+  @ValidateIf((dto: CreateOrderDto) => !dto.pickupPointId)
   @IsNotEmpty()
   @IsString()
-  deliveryAddress!: string;
+  deliveryAddress?: string | null;
+
+  @Expose()
+  @IsOptional()
+  @IsNotEmpty()
+  @IsString()
+  pickupPointId?: string;
 
   @Expose()
   @IsNotEmpty()

@@ -1,4 +1,5 @@
 import type {
+  SellerOrderGroup,
   SellerOrderLine,
   SellerOrdersPage,
 } from "@/common/types/order.types";
@@ -15,4 +16,15 @@ export const pageWithLine = (
       line.id === updated.id ? { ...line, ...updated } : line,
     ),
   })),
+});
+
+/** Writes one answered group, with its delivered lines and handover date. */
+export const pageWithGroup = (
+  page: SellerOrdersPage,
+  updated: SellerOrderGroup,
+): SellerOrdersPage => ({
+  ...page,
+  orders: page.orders.map((order) =>
+    order.id === updated.id ? updated : order,
+  ),
 });

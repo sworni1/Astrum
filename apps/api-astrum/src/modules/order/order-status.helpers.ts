@@ -64,7 +64,7 @@ export const recomputeOrderStatus = async (
   tx: Prisma.TransactionClient,
   orderId: string,
   paymentStatus?: PaymentStatus,
-): Promise<void> => {
+): Promise<OrderStatus> => {
   const lines = await tx.orderItem.findMany({
     where: { orderId },
     select: { status: true },
@@ -77,13 +77,16 @@ export const recomputeOrderStatus = async (
         ORDER_STATUS_PRIORITY[ORDER_STATUS_BY_LINE_STATUS[left]] -
         ORDER_STATUS_PRIORITY[ORDER_STATUS_BY_LINE_STATUS[right]],
     );
+  const status: OrderStatus =
+    active.length > 0 ? ORDER_STATUS_BY_LINE_STATUS[active[0]] : "CANCELED";
 
   await tx.order.update({
     where: { id: orderId },
     data: {
-      status:
-        active.length > 0 ? ORDER_STATUS_BY_LINE_STATUS[active[0]] : "CANCELED",
+      status,
       ...(paymentStatus ? { paymentStatus } : {}),
     },
   });
+
+  return status;
 };

@@ -1,14 +1,17 @@
 import axios from "axios";
 
 /**
- * The three refusals about the delivery method, each mapped to its catalog key
- * in the `cart` namespace. The form branches on the code, never on the server
- * message (spec 0009, AC-11).
+ * The refusals about the delivery choice, each mapped to its catalog key in the
+ * `cart` namespace. The form branches on the code, never on the server message
+ * (spec 0009, AC-11; spec 0013, AC-6).
  */
 export const CHECKOUT_ERROR_KEYS = {
   UNKNOWN_SHIPPING_METHOD: "shippingUnknown",
   SHIPPING_METHOD_INACTIVE: "shippingInactive",
   SHIPPING_CURRENCY_MISMATCH: "shippingCurrencyMismatch",
+  UNKNOWN_PICKUP_POINT: "unknownPickupPoint",
+  PICKUP_POINT_INACTIVE: "pickupInactive",
+  PICKUP_POINT_NOT_ALLOWED: "pickupNotAllowed",
 } as const;
 
 export type CheckoutErrorCode = keyof typeof CHECKOUT_ERROR_KEYS;
@@ -30,9 +33,11 @@ export type RefusalReaction = {
   key: CheckoutErrorKey;
   /** True when the method is gone, so the list is refetched and the choice cleared. */
   resetMethod: boolean;
+  /** True when the point is gone or closed, so the list is refetched and cleared. */
+  resetPoint: boolean;
 };
 
-/** What the form does with a refusal; undefined for any other failure (AC-11). */
+/** What the form does with a refusal; undefined for any other failure (AC-6). */
 export const refusalReaction = (
   error: unknown,
 ): RefusalReaction | undefined => {
@@ -40,9 +45,17 @@ export const refusalReaction = (
     return undefined;
   }
 
+  const resetMethod =
+    error.code === "UNKNOWN_SHIPPING_METHOD" ||
+    error.code === "SHIPPING_METHOD_INACTIVE" ||
+    error.code === "PICKUP_POINT_NOT_ALLOWED";
+  const resetPoint =
+    error.code === "UNKNOWN_PICKUP_POINT" || error.code === "PICKUP_POINT_INACTIVE";
+
   return {
     key: CHECKOUT_ERROR_KEYS[error.code],
-    resetMethod: error.code !== "SHIPPING_CURRENCY_MISMATCH",
+    resetMethod,
+    resetPoint,
   };
 };
 

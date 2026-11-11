@@ -13,6 +13,12 @@ export const ORDER_ERROR_CODES = {
   sellerWorkflowDisabled: "SELLER_ORDER_WORKFLOW_DISABLED",
   invalidTransition: "INVALID_STATUS_TRANSITION",
   idempotencyReused: "IDEMPOTENCY_KEY_REUSED",
+  pickupPointRequired: "PICKUP_POINT_REQUIRED",
+  unknownPickupPoint: "UNKNOWN_PICKUP_POINT",
+  pickupPointInactive: "PICKUP_POINT_INACTIVE",
+  pickupPointNotAllowed: "PICKUP_POINT_NOT_ALLOWED",
+  handoverRequiresPickup: "HANDOVER_REQUIRES_PICKUP",
+  nothingToHandOver: "NOTHING_TO_HAND_OVER",
 } as const;
 
 /** At most 50 lines per order (AC-7). */

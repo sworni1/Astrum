@@ -11,6 +11,7 @@ import corsOptions from "./middlewares/corsOptions";
 import cartRoutes from "./modules/cart/cart.routes";
 import orderRoutes from "./modules/order/order.routes";
 import sellerOrderRoutes from "./modules/order/seller-order.routes";
+import pickupRoutes from "./modules/pickup/pickup.routes";
 import productRoutes from "./modules/product/product.routes";
 import { reviewsRouter } from "./modules/reviews/reviews.routes";
 import sellerOnboardingRoutes from "./modules/seller/onboarding.routes";
@@ -79,6 +80,7 @@ app.use(
   sellerOrderRoutes,
   sellerOnboardingRoutes,
   shippingRoutes,
+  pickupRoutes,
 );
 app.use("/api/reviews", authenticateToken, reviewsRouter);
 

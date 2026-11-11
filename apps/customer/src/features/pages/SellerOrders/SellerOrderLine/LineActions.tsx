@@ -29,6 +29,7 @@ import { DIALOG_COPY } from "./lib/dialogCopy";
 
 type Props = {
   line: Line;
+  isPickup: boolean;
   actionsDisabled: boolean;
   onUpdated: (line: Line) => Promise<void>;
   onRefused: () => Promise<void>;
@@ -41,6 +42,7 @@ type Props = {
  */
 export const LineActions = ({
   line,
+  isPickup,
   actionsDisabled,
   onUpdated,
   onRefused,
@@ -49,7 +51,7 @@ export const LineActions = ({
   const [pending, setPending] = useState<SellerAction | null>(null);
   const [dialogAction, setDialogAction] = useState<SellerAction | null>(null);
   const { changeStatus } = useSellerOrderItemStatus(line.id, onUpdated);
-  const actions = sellerLineActions(line.status);
+  const actions = sellerLineActions(line.status, isPickup);
 
   const send = async (action: SellerAction): Promise<void> => {
     setPending(action);

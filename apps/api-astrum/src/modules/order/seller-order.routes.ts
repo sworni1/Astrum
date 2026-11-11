@@ -16,6 +16,12 @@ sellerOrderRoutes.get(
   orderController.getSellerOrders,
 );
 sellerOrderRoutes.patch(
+  "/seller/orders/:orderId/handover",
+  requireActiveAccount,
+  requireSellerOrderWorkflow,
+  orderController.handOverOrder,
+);
+sellerOrderRoutes.patch(
   "/order-items/:orderItemId/status",
   requireActiveAccount,
   requireSellerOrderWorkflow,

@@ -123,7 +123,18 @@ describe("Seller route access gate", () => {
     jest
       .spyOn(SellerOrderService.prototype, "getSellerOrders")
       .mockResolvedValue({
-        orders: [{ id: "order-1", createdAt: new Date(0), orderItems: [] }],
+        orders: [
+          {
+            id: "order-1",
+            createdAt: new Date(0),
+            isPickup: false,
+            pickupPointId: null,
+            pickupPointName: null,
+            pickupPointAddress: null,
+            handedOverAt: null,
+            orderItems: [],
+          },
+        ],
         page: 1,
         limit: 20,
         total: 1,

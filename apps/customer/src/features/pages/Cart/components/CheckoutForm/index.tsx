@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CalendarIcon, CreditCard, Loader2, MapPin } from "lucide-react";
+import { CalendarIcon, CreditCard, Loader2 } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -38,11 +38,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { refusalReaction } from "@/hooks/order/checkoutErrors";
 import { useCheckout } from "@/hooks/order/useCheckout";
+import { usePickupPoints } from "@/hooks/pickup/usePickupPoints";
 import { useShippingMethods } from "@/hooks/shipping/useShippingMethods";
 import { cn } from "@/lib/utils";
+import DeliveryField from "./components/DeliveryField";
 
 type Props = {
   cartItems: ProductCartProps[];
@@ -57,20 +58,28 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
     error: methodsError,
     mutate: mutateMethods,
   } = useShippingMethods();
+  const {
+    points,
+    isLoading: pointsLoading,
+    error: pointsError,
+    mutate: mutatePoints,
+  } = usePickupPoints();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPickup, setIsPickup] = useState(false);
   const t = useTranslations("cart");
   const validation = useTranslations("validation");
   const format = useFormatter();
 
   const schema = useMemo(
-    () => createCheckoutFormSchema(validation),
-    [validation],
+    () => createCheckoutFormSchema(validation, isPickup),
+    [validation, isPickup],
   );
 
   const form = useForm<CheckoutFormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       deliveryAddress: "",
+      pickupPointId: "",
       deliveryDate: undefined,
       shippingMethodId: "",
       paymentMethod: PaymentMethod.ONLINE_CARD,
@@ -89,12 +98,18 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
 
   const selectedShippingMethodId = watch("shippingMethodId");
   const paymentMethod = watch("paymentMethod");
+  const pickupPointId = watch("pickupPointId");
 
   // A failed request and an empty list leave the same usable state: no method
   // to pick, and a retry next to the select (AC-10).
   const methodsUnavailable =
     methodsError !== null || (!methodsLoading && methods.length === 0);
   const methodsBlocked = methodsLoading || methodsUnavailable;
+
+  // A pickup method cannot be chosen while the shop runs no active point, and a
+  // failed points read blocks the point field with its own retry (AC-6).
+  const pointsUnavailable = !pointsLoading && points.length === 0;
+  const pointsFailed = pointsError !== null;
 
   const selectedMethod = methods.find(
     (method) => method.id === selectedShippingMethodId,
@@ -104,6 +119,7 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
   );
   const shippingPrice = selectedMethod?.price ?? 0;
   const total = subtotal + shippingPrice;
+  const pickupWithoutPoint = isPickup && pickupPointId === "";
 
   const onSubmit = async (data: CheckoutFormData) => {
     setIsSubmitting(true);
@@ -116,11 +132,17 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
         return;
       }
 
-      // An inactive or unknown method is gone from the list too, so the form
-      // refetches it and clears the choice while the typed fields stay (AC-11).
+      // A refusal that names a gone method or a closed point refetches that
+      // list and clears the choice, while the typed fields stay (AC-6).
       if (reaction.resetMethod) {
         await mutateMethods();
         setValue("shippingMethodId", "");
+        setIsPickup(false);
+      }
+
+      if (reaction.resetPoint) {
+        await mutatePoints();
+        setValue("pickupPointId", "");
       }
 
       showToast({ title: t(reaction.key), type: "error" });
@@ -159,33 +181,17 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
 
         <Form {...form}>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Delivery Address */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                <FormLabel className="text-base font-medium">
-                  {t("deliveryAddress")}
-                </FormLabel>
-              </div>
-
-              <FormField
-                control={control}
-                name="deliveryAddress"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("fullAddress")}</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder={t("fullAddressPlaceholder")}
-                        rows={3}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            {/* Delivery block: one field, chosen by the method */}
+            <DeliveryField
+              control={control}
+              isPickup={isPickup}
+              points={points}
+              pointsLoading={pointsLoading}
+              pointsFailed={pointsFailed}
+              onPointsRetry={() => {
+                void mutatePoints();
+              }}
+            />
 
             {/* Shipping Method */}
             <FormField
@@ -197,7 +203,13 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
                   <FormControl>
                     <Select
                       value={field.value}
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        setIsPickup(
+                          methods.find((method) => method.id === value)
+                            ?.isPickup ?? false,
+                        );
+                      }}
                       disabled={methodsBlocked}
                     >
                       <SelectTrigger>
@@ -210,19 +222,33 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
                         />
                       </SelectTrigger>
                       <SelectContent>
-                        {methods.map((method) => (
-                          <SelectItem key={method.id} value={method.id}>
-                            <div className="flex flex-col">
-                              <div className="font-medium">{method.name}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {formatMoney(
-                                  method.price,
-                                  toCurrency(method.currency),
+                        {methods.map((method) => {
+                          const pickupBlocked =
+                            method.isPickup && pointsUnavailable;
+
+                          return (
+                            <SelectItem
+                              key={method.id}
+                              value={method.id}
+                              disabled={pickupBlocked}
+                            >
+                              <div className="flex flex-col">
+                                <div className="font-medium">{method.name}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {formatMoney(
+                                    method.price,
+                                    toCurrency(method.currency),
+                                  )}
+                                </div>
+                                {pickupBlocked && (
+                                  <div className="text-sm text-destructive">
+                                    {t("pickupUnavailable")}
+                                  </div>
                                 )}
                               </div>
-                            </div>
-                          </SelectItem>
-                        ))}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </FormControl>
@@ -378,7 +404,8 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
                 !isValid ||
                 isSubmitting ||
                 methodsBlocked ||
-                selectedShippingMethodId === ""
+                selectedShippingMethodId === "" ||
+                pickupWithoutPoint
               }
             >
               {isSubmitting ? (

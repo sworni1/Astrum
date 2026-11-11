@@ -43,7 +43,11 @@ const OrderCard = ({ order }: Props) => {
           <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-4'>
             <div className='flex-1'>
               <div className='flex items-center gap-2 mb-2'>
-                <p className='text-sm'>{order.shippingMethodName}</p>
+                <p className='text-sm'>
+                  {order.pickupPointId !== null
+                    ? `${order.shippingMethodName} · ${order.pickupPointName ?? ''}`
+                    : order.shippingMethodName}
+                </p>
                 <Badge
                   className={`text-white px-2 py-0.5 rounded-md text-xs font-medium ${getStatusVariant(order.status)}`}
                 >
@@ -52,7 +56,7 @@ const OrderCard = ({ order }: Props) => {
               </div>
 
               <p className='text-sm text-muted-foreground mb-3'>
-                {t('deliveryDate', {
+                {t(order.pickupPointId !== null ? 'pickupDate' : 'deliveryDate', {
                   date: format.dateTime(new Date(order.deliveryDate), {
                     dateStyle: 'long',
                   }),

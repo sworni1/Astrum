@@ -17,7 +17,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | 4   | Order statuses with seller ownership  | Slice 2 | done        |
 | 5   | Seller order panel                    | Slice 2 | done        |
 | 6   | Customer cancel on the order screen   | Slice 2 | done        |
-| 7   | Pickup handover                       | Slice 3 | planned     |
+| 7   | Pickup handover                       | Slice 3 | done        |
 | 8   | Reviews on the product screen         | Slice 4 | done        |
 | 9   | Order flow end to end test and CI     | Slice 4 | planned     |
 | 10  | Session store in Redis                | Slice 5 | done        |
@@ -134,11 +134,21 @@ The cancel button on the order screen (`apps/customer/src/features/pages/Orders/
 
 ## Slice 3: handover
 
-### 7. Pickup handover · planned
+### 7. Pickup handover · done
 
 Pickup is how this shop hands an order over, and nothing closes an order today.
 **Done when:** a customer chooses a pickup point at checkout, the seller marks the order handed over at that point, the order becomes `DELIVERED`, and the order screen shows the pickup point and the handover date.
-- [ ] Design it (spec): `/architect pickup handover`
+- [x] Design it (spec): `/architect pickup handover` — 2026-11-12: 16 acceptance criteria after a cross check
+- [x] Build it: `/develop pickup handover`
+  - [x] Schema, migration, operator script, the points read and the `isPickup` flag on the method read (AC-1 to AC-4)
+  - [x] Checkout: the data layer and the point field with its three refusals (AC-5, AC-6, AC-14)
+  - [x] Order create, then the customer order answers and surfaces (AC-7 to AC-9)
+  - [x] Seller read, the handover route and the per line dates (AC-10 to AC-12)
+  - [x] Seller panel, copy and tests (AC-13 to AC-15); the live walk of `verify.md` stays with `Verify it`
+- [x] Verify it: `/check verify pickup handover` — 2026-11-12, PASS on the running dev stack (55 of 57 verify steps exercised and passing, every acceptance criterion met; the two left unticked are the Russian copy of the loading and failure states, never on screen because the local API answers first, and the focus return after Escape, which lands on `body`). Five premise corrections and the harness switches are recorded in `verify.md`.
+- [x] Test it: `/test pickup handover` (not run as its own pass: the owner closed the slice on 2026-11-12. Coverage that exists: 213 tests in 36 suites for `@astrum/api` with `ORDER_DB_TESTS=1`, including the two seller handover race, 240 tests in 53 files for `@astrum/customer`, and the live walk of 55 of 57 `verify.md` steps on the running stack)
+  spec [0013](../../specs/_root/0013-pickup-handover/index.md)
+  code in `packages/Astrum-db/prisma/migrations/20261112120000_pickup_handover`, `packages/Astrum-db/scripts/pickupPoint.ts`, `apps/api-astrum/src/modules/pickup`, `apps/api-astrum/src/modules/order` (create, seller read, handover, line dates), `apps/customer/src/hooks/pickup`, `apps/customer/src/hooks/seller/useSellerHandover.ts`, `apps/customer/src/features/pages/Cart/components/CheckoutForm`, `apps/customer/src/features/pages/SellerOrders`, `apps/customer/src/features/pages/Orders`, `apps/customer/messages`
 
 ## Slice 4: closing the loop
 
@@ -296,6 +306,12 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Unmaintained product rating columns**: `Product.stars`, `reviewCount` and `averageRating` have no writer and `ReviewsService.updateProductAggregates` has no caller · from spec 0012 · needs a decision
 - **Raw review by id**: `GET /api/reviews/:reviewId` answers any customer's row including `userId` and reviews that are not approved · from spec 0012 · needs a decision
 - **Review photo upload**: the project has no file storage, so `photos` stays a URL list nobody fills · from spec 0012 · needs a decision
+
+- **Pickup point operator role**: an account flag for point staff, a collection screen keyed by order id, and a screen to manage points · from spec 0013 · needs a decision
+- **Pickup code**: a short code the customer shows at the point, with a log line on every failed attempt · from spec 0013
+- **Reaching the point and handing over**: a notification for each of the two moments, built on the events and the worker of spec 0005 · from spec 0013 · needs a decision
+- **City, opening hours and a phone on a pickup point**: plus a filter in the checkout, once the shop runs more than one city · from spec 0013
+- **Checkout date field shows the day before the picked one**: clicking `Friday, November 20th, 2026` in the calendar (which keeps that day selected) leaves `November 19, 2026` on the trigger, while the stored `deliveryDate` is the 20th and the order screen prints `Pickup Date: November 20, 2026`, so the field and the value disagree by one day · bug, found while verifying spec 0013
 
 ## Legend
 
