@@ -50,6 +50,11 @@ type CartRow = { productId: string; quantity: number };
 /** What a create and a detail read answer with, in the shape the storefront reads. */
 export type OrderDetail = Order & { orderItems: OrderItem[] };
 
+export type OrderSummary = Order & {
+  orderItemsCount: number;
+  previewImage: string | null;
+};
+
 /** A create answers with the order and whether it came from a replay (spec 0003). */
 export type CreateOrderResult = { order: OrderDetail; replay: boolean };
 
@@ -67,6 +72,15 @@ const CUSTOMER_CANCELLATION_BLOCKERS: readonly OrderItemStatus[] = [
 ];
 
 const ORDER_DETAIL_INCLUDE = { OrderItem: true } as const;
+
+const ORDER_LIST_INCLUDE = {
+  _count: { select: { OrderItem: true } },
+  OrderItem: {
+    select: { previewImage: true },
+    orderBy: { id: "asc" },
+    take: 1,
+  },
+} as const;
 
 const orderNotFound = () =>
   new AppError(
@@ -327,11 +341,18 @@ export class OrderService {
     return toOrderDetail(order);
   }
 
-  async getOrdersByUserId(userId: string) {
-    return prisma.order.findMany({
+  async getOrdersByUserId(userId: string): Promise<OrderSummary[]> {
+    const orders = await prisma.order.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
+      include: ORDER_LIST_INCLUDE,
     });
+
+    return orders.map(({ _count, OrderItem, ...order }) => ({
+      ...order,
+      orderItemsCount: _count.OrderItem,
+      previewImage: OrderItem[0]?.previewImage ?? null,
+    }));
   }
 
   async updateOrderStatus(

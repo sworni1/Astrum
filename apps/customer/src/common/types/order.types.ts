@@ -84,6 +84,11 @@ export interface Order {
   currency: Currency;
 }
 
+export type OrderListItem = Omit<Order, "orderItems"> & {
+  orderItemsCount: number;
+  previewImage: string | null;
+};
+
 // DTOs for API calls
 export interface CreateOrderItemDto {
   productId: string;

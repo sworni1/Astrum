@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import type { Order } from "@/common/types/order.types";
+import type { OrderListItem } from "@/common/types/order.types";
 import { useFetcher } from "@/hooks/useFetcher";
 
 export type GetOrdersError = {
@@ -10,19 +10,22 @@ export type GetOrdersError = {
 };
 
 export interface UseGetOrdersReturn {
-  orders: Order[] | undefined;
+  orders: OrderListItem[] | undefined;
   isLoading: boolean;
   error: GetOrdersError | null;
   mutate: (
-    data?: Order[] | Promise<Order[]>,
+    data?: OrderListItem[] | Promise<OrderListItem[]>,
     shouldRevalidate?: boolean,
-  ) => Promise<Order[] | undefined>;
+  ) => Promise<OrderListItem[] | undefined>;
 }
 
 export const useGetOrders = (): UseGetOrdersReturn => {
   const { getData } = useFetcher();
 
-  const { data, error, isLoading, mutate } = useSWR<Order[], GetOrdersError>(
+  const { data, error, isLoading, mutate } = useSWR<
+    OrderListItem[],
+    GetOrdersError
+  >(
     `/orders`,
     getData,
   );

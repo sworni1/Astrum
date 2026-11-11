@@ -1,4 +1,3 @@
-import type { Order } from "../../../generated/prisma/client";
 import { Prisma } from "../../../generated/prisma/client";
 import { toOrderJson, toOrderListJson } from "./order.mapper";
 
@@ -45,7 +44,9 @@ describe("order mapper", () => {
         totalPrice: new Prisma.Decimal("10.00"),
         deliveryPrice: new Prisma.Decimal("299.00"),
         grandTotal: new Prisma.Decimal("309.00"),
-      } as Order,
+        orderItemsCount: 2,
+        previewImage: "https://cdn.test/preview.png",
+      } as never,
     ]);
 
     expect(json).not.toHaveProperty("idempotencyKey");
@@ -53,5 +54,8 @@ describe("order mapper", () => {
     expect(json.totalPrice).toBe(10);
     expect(json.deliveryPrice).toBe(299);
     expect(json.grandTotal).toBe(309);
+    expect(json.orderItemsCount).toBe(2);
+    expect(json.previewImage).toBe("https://cdn.test/preview.png");
+    expect(json).not.toHaveProperty("orderItems");
   });
 });
