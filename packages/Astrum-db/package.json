@@ -31,7 +31,8 @@
     "quality-gate": "pnpm check-types && pnpm test",
     "prisma:deploy": "prisma migrate deploy && prisma generate",
     "seed:excel": "node --max-old-space-size=8192 ./node_modules/tsx/dist/cli.mjs prisma/seedFromExcel.ts",
-    "assign-business": "tsx scripts/assignBusiness.ts"
+    "assign-business": "tsx scripts/assignBusiness.ts",
+    "pickup-point": "tsx scripts/pickupPoint.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.1",
