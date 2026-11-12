@@ -24,6 +24,9 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | 11  | Account confirmation by email         | Slice 6 | in-progress |
 | 12  | English interface by default          | Slice 7 | in-progress |
 | 13  | Seller onboarding                     | Slice 8 | done        |
+| 14  | Review likes and comments             | Slice 4 | done        |
+| 15  | Payment through a test provider       | Slice 9 | in-progress |
+| 16  | Order letters                         | Slice 9 | planned     |
 
 ## Slice 1: the order thread
 
@@ -174,6 +177,22 @@ Nothing proves the order path keeps working, and no pipeline runs the gates.
 **Done when:** one end to end test walks register, add to cart, checkout and see the order against a real database, and CI runs types, lint, unit tests and that test on every pull request.
 - [ ] Design it (spec): `/architect order flow end to end test and CI`
 
+### 14. Review likes and comments · done
+
+The card carries a like and a comment control that spec 0012 left visibly disabled, so the reviews block still promises two features it does not have.
+**Done when:** a confirmed customer likes a review and the number moves at once, the liked set comes from its own route so the shared list stays one body for every reader, a flat comment thread opens under the card with its own form, the author can soft delete their own reply, both counters come from the server row, and every refusal answers a code the screen branches on.
+- [x] Design it (spec): `/architect review likes and comments` — 2026-11-12: 15 acceptance criteria after a cross check pass
+- [x] Build it: `/develop review likes and comments`
+  - [x] Schema and the four schema copies: `ReviewLike`, `ReviewComment`, `Review.likeCount` and `Review.commentCount`, one migration, then `pnpm prisma:generate` (AC-2, AC-4, AC-8, AC-10)
+  - [x] Likes: the two idempotent routes, the liked set route and the counters in the shared serializer (AC-2, AC-3, AC-4, AC-5)
+  - [x] Likes on the screen: `useReviewLikes`, `useReviewCounts`, `ReviewLikeButton` with its optimistic press and rollback (AC-1, AC-5, AC-6, AC-13)
+  - [x] Comments read and write: the page, the create with the hourly limit, the soft delete, then the thread, the form and the delete dialog (AC-7, AC-8, AC-9, AC-10, AC-11, AC-12)
+  - [x] Copy in both catalogs, the removed `comingSoon`, and the test suites (AC-13, AC-14, AC-15)
+- [x] Verify it: `/check verify review likes and comments` — 2026-11-12: the full pass ran on the dev stack against every AC and every command in `verify.md` (55 steps). The first run failed on one runtime defect, the like press answering `400` because the client sent the literal `null` body through `express.json`; the fix in `useFetcher.putItem` landed the same day and the re-run passed every step: 20 cards plus an appended page liked from the screen, both refusals, the transport failure and its recovery, the thread, the paging, the delete dialog, Russian copy, the keyboard walk, and the four gates (api 238 tests, customer 268, lint 0 errors, types 5 of 5). `useFetcher` carries the fix with no suite of its own, which `/test` owes it
+- [x] Test it: `/test review likes and comments` — 2026-11-12: no separate pass was run; the feature closed with the suites that landed alongside the build. The gateway answers 238 tests over 36 suites (3 skipped) covering the repeat like, the unlike, the counters against the child rows, the ordering with its tiebreak, the dropped extra row, the clamped limit, the foreign cursor, the deleted row, `mine`, the `429`, the failed insert, the foreign delete, the repeat delete and the `400` naming `body`; the storefront answers 268 tests over 58 files, 58 of them in `src/hooks/review` and `Reviews`; `pnpm check-types --force` is 5 of 5 and lint exits 0. One gap is recorded rather than closed: `useFetcher.putItem`, which carries the like body fix, has no suite of its own
+  spec [0014](../../specs/_root/0014-review-likes-and-comments/index.md)
+  code in `apps/api-astrum/src/modules/reviews`, `apps/api-astrum/src/modules/product`, `packages/Astrum-db/prisma`, `apps/customer/src/features/pages/ProductOverview/Reviews`, `apps/customer/src/hooks/review`, `apps/customer/src/common/types/review.types.ts`, `apps/customer/messages`
+
 ## Slice 5: session state
 
 ### 10. Session store in Redis · done · GA
@@ -209,7 +228,7 @@ Registering hands out a session at once, so an account works before anyone prove
   - [x] Email change and rights: the `PATCH /api/users/me` rules, `400` and `409`, the status reset, the profile form (AC-12, AC-15) — done: `403`, `400`, `409` and a `200` that went back to `PENDING` and sent a letter
 - [x] Verify it: `/check verify account confirmation by email` — 2026-11-05: all 17 acceptance criteria walked on a freshly started stack, including the letter lifecycle, both rate limits, the boot refusals and the 21 minute retry ladder that ends in the dead letter queue; three defects found on the way and fixed (`consumer.ts`), the confirm token reaching the gateway access log and `email.publish.failed` logging an empty reason; log in the spec's `verify.md`, three steps still owed
 - [x] Test it: `/test account confirmation by email` — 2026-11-05: отдельного прохода `/test` не было (по решению владельца), покрытие закрыто тем, что уже лежит в репозитории: `apps/worker` 24 теста на топологию, токены, письмо, лестницу ретраев и outbox, `auth` 41 тест на регистрацию, confirm, resend и лимиты, `api` 73 теста включая `requireActiveAccount`, плюс живые 17 AC из `/check verify`; `pnpm quality-gate` 18 из 18
-- [ ] Review it (fresh model): `/check review account confirmation by email`
+- [x] Review it (fresh model): `/check review account confirmation by email`
 - [x] Document it: `/document account confirmation by email` — 2026-11-05: entry `docs/changelog/2026-11-05-account-confirmation.md`, written from the diff and the verify report (Added, Changed, Fixed, Verified, Open)
   spec [0005](../../specs/_root/0005-account-confirmation-by-email/index.md)
   code in `packages/Astrum-db/prisma/migrations/20261105112608_account_confirmation`, `apps/auth-astrum/src`, `apps/api-astrum/src/middlewares/requireActiveAccount.ts`, `apps/api-astrum/src/events`, `apps/api-astrum/src/modules/user`, `apps/worker`, `apps/customer/src/features/auth/ConfirmEmail`, `apps/customer/src/features/layout/ConfirmEmailBanner`, `docker-compose.yml`, `docker-compose.prod.yml`
@@ -236,8 +255,8 @@ A visitor meets Russian in places: toasts and screens across ten storefront file
 
 ### 13. Seller onboarding · done · GA
 
-Becoming a seller today means an engineer runs `pnpm db:assign-business <email>`: it hands over an unassigned `Business` that owns products, creates one when none is free, and sets `ownerUserId`. Nothing in the product offers this, a `Business` row carries nothing but an id and a creation date, and the seller panel answers only after that script runs and only while `SELLER_ORDER_WORKFLOW_ENABLED` is on.
-**Done when:** a confirmed, signed in user becomes a seller from the storefront in one deliberate action, without anyone running a script or touching the database; the seller area and the seller endpoints answer for that account right away and after a reload, with `SELLER_ORDER_WORKFLOW_ENABLED` on; an unconfirmed account and a second attempt create nothing; and the account ends up owning exactly one shop of its own.
+Becoming a seller today means an engineer runs `pnpm db:assign-business <email>`: it hands over an unassigned `Business` that owns products, creates one when none is free, and sets `ownerUserId`. Nothing in the product offers this, a `Business` row carries nothing but an id and a creation date, and the seller panel answers only after that script runs.
+**Done when:** a confirmed, signed in user becomes a seller from the storefront in one deliberate action, without anyone running a script or touching the database; the seller area and the seller endpoints answer for that account right away and after a reload; an unconfirmed account and a second attempt create nothing; and the account ends up owning exactly one shop of its own.
 - [x] Design it (spec): `/architect seller onboarding` (2026-11-09: 15 acceptance criteria after a cross check)
 - [x] Build it: `/develop seller onboarding` — 2026-11-09: schema, gateway, page and entry points built, `pnpm quality-gate` green, the migration applied and the schema confirmed live
   - [x] Schema, migration and clients: `Business.name`, the three step migration, the script and fixtures, regenerate (AC-13)
@@ -252,6 +271,33 @@ Becoming a seller today means an engineer runs `pnpm db:assign-business <email>`
   spec [0008](../../specs/_root/0008-seller-onboarding/index.md)
   code in `apps/api-astrum/src/modules/seller`, `apps/customer/src/features/pages/SellerOnboarding`, `apps/customer/src/features/pages/Profile/actions/SellOnAstrum`, `apps/customer/src/hooks/seller/useBecomeSeller.ts`, `packages/Astrum-db/prisma/schema.prisma`
 
+## Slice 9: payment and order letters
+
+### 15. Payment through a test provider · in-progress · GA
+
+The checkout stores `paymentMethod` and `paymentStatus` and nothing charges anything: `ONLINE_CARD`, `PAYPAL` and `STRIPE` are labels the order screen prints, no env template names a provider, the gateway has no payment module, no callback route and no provider reference on the order, and `paymentDetails` is free text typed by the client.
+**Done when:** a customer pays an online card order on the Stripe test page from the order screen and lands back on it, the order's `paymentStatus` becomes `PAID` once from a callback whose signature, session, amount and currency are checked against the stored order, a second delivery of the same callback changes nothing, a declined card leaves the order payable for the rest of its 32 minute window with the stock still held, an abandoned payment closes the order and returns the stock once, cancel expires the session and a callback that lands afterwards is recorded as `PAID` with a refund owed, and `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` arrive from the environment in dev and in the production template.
+- [x] Design it (spec): `/architect payment through a test provider`
+- [x] Build it: `/develop payment through a test provider`
+  - [x] Schema, adapter, pay route, paid callback and the pay control (AC-1, AC-2, AC-4, AC-5, AC-6, AC-13) — done: two new tables, two enums and `Order.paymentExpiresAt` applied to the dev database (`Payment_one_pending_per_order` partial unique index live), `stripe@23.1.0` behind `PaymentGateway`, `POST /api/orders/:orderId/payment`, the raw body webhook mounted before `express.json`, and `PaymentActions` on the order screen
+  - [x] Failure paths of the callback (AC-5, AC-7, AC-12) — done: amount and currency compared through `toMinorUnits`, the event log inserted before the apply with the unique key as the replay guard, the adoption branch for a session stored after the callback, the decline and async failure transitions, and `payment.refund_owed` on a paid callback after a cancel
+  - [x] Expiry, sweep and cancel (AC-8, AC-9, AC-11) — done: `closeOrder(tx, order)` shared by the cancel route and the expiry, the one minute pass behind `pg_try_advisory_xact_lock` started from `server.ts`, and the cancel expiring the session before its transaction opens
+  - [x] Sync and the return screen (AC-10, AC-14) — done: `POST /api/orders/:orderId/payment/sync` through the same apply path, one call on mount behind a ref guard, the checking state, and `router.replace` dropping the parameter
+  - [x] Methods, seller read, copy, tests and deploy config (AC-3, AC-15, AC-16, AC-17) — done: `CHOOSABLE_PAYMENT_METHODS` on both sides, the seller read carrying `paymentStatus` and `paymentMethod` with the label in the panel, 12 new keys in both catalogs, 46 gateway tests and 20 storefront ones, and `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` plus the Caddyfile webhook path
+
+- [ ] Verify it: `/check verify payment through a test provider`
+- [ ] Test it: `/test payment through a test provider`
+- [ ] Review it (fresh model): `/check review payment through a test provider`
+- [ ] Document it: `/document payment through a test provider`
+  spec [0015](../../specs/_root/0015-payment-through-a-test-provider/index.md)
+  code in `apps/api-astrum/src/modules/payment`, `apps/api-astrum/src/modules/order`, `apps/customer/src/features/pages/Orders/OrderPage`, `apps/customer/src/hooks/order`, `packages/Astrum-db/prisma/schema.prisma`, `Caddyfile`
+
+### 16. Order letters · planned
+
+The worker delivers one letter, the account confirmation, and the gateway publishes one event, so nothing tells a customer that an order was placed, paid or handed over.
+**Done when:** a letter leaves for the customer when an order is placed and on each status change that concerns them, the gateway publishes one event per change on the existing `astrum.events` exchange after the commit, the worker consumes it through its own queue with the retry ladder and the dead letter queue that already carry the confirmation letter, the letter arrives in the language the customer chose, a republished event sends no twin letter, and letters written while the worker is down wait in the durable queue instead of disappearing.
+- [ ] Design it (spec): `/architect order letters`
+
 ## Fixed
 
 Bugs found while verifying a slice, recorded here once the fix lands so the plan stays honest.
@@ -264,15 +310,14 @@ Bugs found while verifying a slice, recorded here once the fix lands so the plan
 
 Kept so the plan stays honest, built only when the loop above runs.
 
-- **Online payment through a test provider**: pay before handover · needs a decision
-- **Order emails**: confirmation and status changes · needs a decision
 - **Courier delivery**: a shipping address instead of a pickup point · needs a decision
-- **Returns and refunds** · needs a decision
+- **Returns and refunds** · needs a decision · from spec 0015 (a paid order cancelled now owes a manual refund and logs `payment.refund_owed`)
 - **Second currency** · needs a decision
 - **Storefront checkout timeout above the server budget**: the client gives up at 10000 ms while the server transaction may still be committing · from spec 0003, a separate small change
 - **Two order create hooks**: `useCreateOrder` is unused and sends no idempotency key · from spec 0003, cleanup
 - **Log out everywhere**: a `user:<id>:sessions` index plus the button that uses it · from spec 0004 · needs a decision
 - **Session renewal and a device list**: refresh on activity, plus the screen that lists sessions · from spec 0004 · needs a decision
+- **A real Russian payment provider** behind the same adapter, if the shop ever sells for real; Stripe stays test only · from spec 0015 · needs a decision
 - **Session alerts**: metrics and an alert on `session.store.error` and on a `/health` `503` · from spec 0004
 - **Storefront guard reading the session**: stops a revoked customer from seeing page shells before the first API call · from spec 0004 · needs a decision
 - **Cyrillic copy guard**: a check that refuses Cyrillic literals in `apps/customer/src`, so a hardcoded string cannot come back · from spec 0006
@@ -293,14 +338,18 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Account gate on product creation**: `POST /api/products` runs behind `authenticateToken` only, with no account state gate · from spec 0008 · needs a decision
 - **AGENTS.md schema claim**: `packages/Astrum-db/AGENTS.md` and `apps/worker/AGENTS.md` call the auth and worker schemas byte identical; they are trimmed subsets · from spec 0008
 - **Shop ownership on account deletion**: `Business.ownerUserId` becomes null and the operator script can reassign the shop and its products · from spec 0008 · needs a decision
-- **Seller workflow flag**: `SELLER_ORDER_WORKFLOW_ENABLED` gates `GET /api/seller/orders` and `PATCH /api/order-items/:orderItemId/status`, is read once at boot from `process.env` and defaults to `false` in the root, api and prod templates, so a fresh clone and a template deploy ship the seller panel dark while the storefront learns the state only from a `503`; either remove it together with the `disabled` screen and spec 0007 AC-11, or keep it as a kill switch with a `true` default, an owner, a review date and a state readout on `/api/users/me` or a config route · from spec 0008 · needs a decision
+- **Seller workflow flag**: `SELLER_ORDER_WORKFLOW_ENABLED` used to gate `GET /api/seller/orders`, `PATCH /api/order-items/:orderItemId/status` and the handover route through a boot time middleware, defaulting to `false` in the root, api and prod templates · removed on 2026-11-13 on the owner's call: the middleware, its startup validation, the `503 SELLER_ORDER_WORKFLOW_DISABLED` code and the storefront `intake is not switched on` screen are gone, so the seller routes answer to any active account that owns a business, the way every other seller read already did · from spec 0008
 - **Registration with a bare date**: `@IsDateString()` accepts `2000-01-01` while Prisma 7 refuses it with `premature end of input. Expected ISO-8601 DateTime`, so `POST /api/auth/register` answers `500` and writes no row; a full ISO datetime answers `200` and is what the storefront sends, so either the DTO transforms the date or validation asks for the stricter shape · bug, found while verifying spec 0009
 - **Account gate on order cancellation**: `PATCH /api/orders/:orderId/status` runs behind `authenticateToken` only, so an account whose status returned to `PENDING` can still cancel its own older order; spec 0011 keeps that on purpose, and it needs a rule if the account confirmation work ever gates every write · from spec 0011
 - **Dead catalog key for a list cancel**: `orders.cancelOrder` has no reader in either catalog, because the order list carries no cancel action (spec 0011, AC-1) · from spec 0011
 - **Print button without a handler** on the order screen header; spec 0011 leaves it alone · from spec 0011
 - **Duplicate cart add answers 500**: `POST /api/cart` with a product the cart already holds replies `{"message":"Internal Server Error"}` with status `500` instead of raising the quantity or refusing with a code; the storefront reaches the same product through `PATCH /api/cart/:productId`, so only a direct call sees it · bug, found while verifying spec 0011
 - **Missing space in the Russian cart summary**: the page prints `ДоставкаРассчитывается при оформлении`, two keys joined without a space in `messages/ru.json` · bug, found while verifying spec 0009
-- **Likes and comments on a review**: a reaction table, the endpoints and the counters behind the two controls this spec leaves visibly disabled · from spec 0012 · needs a decision
+- **Account deletion with a review**: `Review.userId` is `ON DELETE RESTRICT`, so `prisma.user.delete` fails for anyone who wrote a review and `deleteUser` answers the misleading "User not found"; the new like and comment rows cascade, this one blocks · from spec 0014 · bug, needs a decision
+- **Counter repair for likes and comments**: nothing compares `Review.likeCount` and `Review.commentCount` with their child rows; `verify.md` of spec 0014 carries the manual query, and a job or a constraint needs its own decision · from spec 0014 · needs a decision
+- **Purge of deleted comments**: a soft deleted `ReviewComment` keeps its row and its text forever · from spec 0014
+- **Reviews sorted by likes**: needs an index on `Review(productId, likeCount)` and a decision on whether popularity outranks recency · from spec 0014 · needs a decision
+- **Shop answers on a review**: `ReviewResponse` is unbuilt and unread, so the thread shows customer replies only · from spec 0014 · needs a decision
 - **Review moderation**: every review publishes on write, so `ReviewStatus.PENDING` and `REJECTED` are dead values and nothing can take an abusive review down · from spec 0012 · needs a decision
 - **Review count on the product card**: `ProductCard` prints `_count.impressions` as a review count and five stars whatever the rating is · from spec 0012
 - **Unmaintained product rating columns**: `Product.stars`, `reviewCount` and `averageRating` have no writer and `ReviewsService.updateProductAggregates` has no caller · from spec 0012 · needs a decision
@@ -312,6 +361,8 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Reaching the point and handing over**: a notification for each of the two moments, built on the events and the worker of spec 0005 · from spec 0013 · needs a decision
 - **City, opening hours and a phone on a pickup point**: plus a filter in the checkout, once the shop runs more than one city · from spec 0013
 - **Checkout date field shows the day before the picked one**: clicking `Friday, November 20th, 2026` in the calendar (which keeps that day selected) leaves `November 19, 2026` on the trigger, while the stored `deliveryDate` is the 20th and the order screen prints `Pickup Date: November 20, 2026`, so the field and the value disagree by one day · bug, found while verifying spec 0013
+
+- **An abandoned online card order with no payment attempt is never closed**: the sweep reads `ONLINE_CARD` orders past their deadline, but `closeWithoutSession` returns after logging `payment.sweep.no_attempt` when the order has no `Payment` row, so an order abandoned before the first pay press keeps its stock forever; `cmwcq7jl5000vzkvd0kgsp2zz` has been `PENDING` with a deadline of 2026-11-11 23:36 since then · bug, found while verifying spec 0015
 
 ## Legend
 

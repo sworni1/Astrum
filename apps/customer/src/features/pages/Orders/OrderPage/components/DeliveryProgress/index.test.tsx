@@ -64,4 +64,18 @@ describe("DeliveryProgress", () => {
       discs().filter((disc) => disc.className.includes("bg-green-500")),
     ).toHaveLength(0);
   });
+
+  it.each([
+    [OrderStatus.PENDING, "0%"],
+    [OrderStatus.CONFIRMED, "33.33%"],
+    [OrderStatus.SHIPPED, "66.67%"],
+    [OrderStatus.DELIVERED, "100%"],
+    [OrderStatus.CANCELED, "0%"],
+  ])("shows %s progress", async (status, expectedWidth) => {
+    await render(status);
+
+    expect(container.querySelector<HTMLElement>("[style]")?.style.width).toBe(
+      expectedWidth,
+    );
+  });
 });

@@ -78,6 +78,7 @@ export interface Order {
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   paymentDetails?: string;
+  paymentExpiresAt: string | null; // Deadline of the payment window, null for a cash order
   status: OrderStatus;
   createdAt: string; // ISO string from DB
   updatedAt: string; // ISO string from DB
@@ -108,7 +109,6 @@ export interface CreateOrderItemDto {
 
 export interface CreateOrderDto {
   paymentMethod: PaymentMethod;
-  paymentDetails?: string;
   deliveryAddress: string | null; // null on a pickup order
   deliveryDate: Date; // Date type for form, converted to ISO string for API
   shippingMethodId: string;
@@ -118,6 +118,19 @@ export interface CreateOrderDto {
 
 export interface UpdateOrderStatusDto {
   status: OrderStatus;
+}
+
+/** What the pay route answers: where to send the browser, and until when. */
+export interface PayOrderResponse {
+  url: string;
+  expiresAt: string;
+}
+
+/** What the sync route answers: the order as the provider sees it. */
+export interface SyncPaymentResponse {
+  paymentStatus: PaymentStatus;
+  status: OrderStatus;
+  paymentExpiresAt: string | null;
 }
 
 export interface UpdateOrderItemStatusDto {
@@ -148,6 +161,8 @@ export interface SellerOrderLine {
 export interface SellerOrderGroup {
   id: string;
   createdAt: string;
+  paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod;
   isPickup: boolean;
   pickupPointId: string | null;
   pickupPointName: string | null;

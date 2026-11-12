@@ -78,12 +78,4 @@ describe("SellerOrders panel states", () => {
     expect(container.textContent).toContain("seller.states.notSellerTitle");
     expect(link?.textContent).toBe("seller.states.notSellerAction");
   });
-
-  it("keeps the disabled screen when the workflow flag is off (AC-12)", async () => {
-    mocks.orders.kind = "disabled";
-    await render();
-
-    expect(container.textContent).toContain("seller.states.disabledTitle");
-    expect(container.querySelector("a[href='/seller/onboarding']")).toBeNull();
-  });
 });

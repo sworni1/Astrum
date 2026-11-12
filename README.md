@@ -4,7 +4,7 @@
 
 An e-commerce platform in a monorepo: a Next.js storefront, an Express API gateway, a separate NestJS authentication service and one shared Prisma plus PostgreSQL data schema. Everything runs with a single `docker compose`, and every layer except the database runs in several replicas behind one balancer.
 
-> **Stage: MVP in progress.** The catalogue, the cart, the account, checkout and email confirmation work: the server decides the price, the contents and the stock of an order, and a repeated submit does not create a second order. A confirmed account can open its own shop from the profile page. The rest of the end to end flow is still ahead: fulfilment, payment and the review screen.
+> **Stage: MVP in progress.** The catalogue, the cart, the account, checkout and email confirmation work: the server decides the price, the contents and the stock of an order, and a repeated submit does not create a second order. A confirmed account can open its own shop from the profile page. Pickup fulfilment works: the customer picks a point at checkout, the seller hands the order over there, and the order screen prints the point and the handover date. The product screen shows real reviews, and a customer with a delivered line writes one. Still ahead: payment, review likes and comments, and the end to end tests with CI.
 
 ## What works
 
@@ -15,8 +15,8 @@ An e-commerce platform in a monorepo: a Next.js storefront, an Express API gatew
 - **Selling**: a confirmed account opens its own shop from the profile page with one name and one button; the storefront and the gateway create exactly one shop per account, a repeated press answers with the existing shop and renames nothing, and the seller area appears without a reload
 - **Cart and wishlist**: adding, changing the quantity with a stock check, removing, selecting the lines for checkout
 - **Checkout**: the delivery methods come from the API with their prices and currency, the order stores the chosen method and its delivery price, the grand total is computed on the server, and a missing, switched off or wrong currency method is refused with its own code
-- **Orders**: the server decides the price, the contents and the stock; lines carry only `productId` and `quantity`, the sums are `Decimal`, the stock is taken in a transaction and a refusal comes as a code (`OUT_OF_STOCK`, `CART_MISMATCH`); a repeated submit with the same `Idempotency-Key` returns the first order, the ordered cart lines are cleared on the server, and the order page opens for its owner only. Order cancellation and status transitions work; fulfilment is not built yet
-- **Reviews**: an API with a purchase check (only after `DELIVERED`), one review per order line and moderation; the review screen still runs on mock data
+- **Orders**: the server decides the price, the contents and the stock; lines carry only `productId` and `quantity`, the sums are `Decimal`, the stock is taken in a transaction and a refusal comes as a code (`OUT_OF_STOCK`, `CART_MISMATCH`); a repeated submit with the same `Idempotency-Key` returns the first order, the ordered cart lines are cleared on the server, and the order page opens for its owner only. Order cancellation and status transitions work; pickup handover closes a pickup order as `DELIVERED`, while courier delivery is not built yet
+- **Reviews**: the product screen reads the list, the rating summary and the distribution from the API, and the write dialog opens only for a delivered line; the API checks the purchase (only after `DELIVERED`), allows one review per order line, and publishes every review at once because moderation is off. Likes and comments are not built yet
 
 ## Architecture
 
@@ -108,13 +108,23 @@ The reasoning behind the choice and the rejected alternatives (Swarm, nginx, Tra
   - [x] Storefront: the `/seller/onboarding` page with its five states, the `Sell on Astrum` section on the profile, and the action on the panel screen for an account that does not sell
 - [x] Delivery methods from the API: the checkout lists the methods the gateway serves with their prices and currency, the order stores the method, its delivery price and a server computed grand total, and a missing, switched off or wrong currency method is refused with its own code (spec [0009](docs/specs/_root/0009-shipping-methods-from-the-api/index.md))
 - [ ] English interface by default: every storefront screen answers in English, Russian stays as a second locale, and the confirmation letter follows the chosen language (spec [0006](docs/specs/_root/0006-english-interface-by-default/index.md); built on 2026-11-06, the verify walk is still owed)
-- [ ] Fulfilment: pickup or a receipt confirmation
-- [ ] Payment through a test provider and order letters
-- [ ] Reviews in full, moderation is off for now
-  - [ ] Writing: a form on the product page after `DELIVERED`, ratings (overall, quality, delivery, match) and the text go to the API, and the review is `APPROVED` at once
-  - [ ] Review likes: a `ReviewLike` table with one row per review and customer, the count in the response, a toggle in the UI
-  - [ ] Review comments: customer replies under a review (`ReviewComment`), the list and the form, separate from the shop answer `ReviewResponse`
-  - [ ] The review storefront: the lists and forms stop running on mocks, and the average rating and the count come from the database
+- [x] Pickup handover: the customer picks a point at checkout, the seller marks the order handed over there, the order becomes `DELIVERED`, and the order screen shows the point and the handover date (spec [0013](docs/specs/_root/0013-pickup-handover/index.md))
+- [ ] Payment through a test provider
+  - A payment record on the order: the provider session id, the amount, the currency, the status the provider reports and the callback body it sent
+  - Gateway payment routes: create a payment for an order, then a public callback that checks the signature and the amount and moves `paymentStatus` to `PAID` exactly once
+  - Pay before handover: an online order reaches the seller only after the provider confirms, a failed or abandoned payment frees the stock it held, and a cancelled order closes its payment
+  - The storefront: the pay step after checkout, and the order screen reading the payment state from the API instead of a label table alone
+  - Provider credentials in `.env.example`, `.env.prod.example` and `docker-compose.prod.yml`; which test provider is still a decision for the spec
+- [ ] Order letters
+  - The gateway publishes `order.created` and an order status event on the existing `astrum.events` exchange, after the commit
+  - The worker binds its own order queue with the retry ladder and the dead letter queue that already carry the confirmation letter
+  - The letters: the order placed, the payment, the handover and the cancel, each in the language the customer chose
+  - A republished event sends no twin letter
+- [x] Review likes and comments, moderation is off for now
+  - [x] Writing: a form on the product page after `DELIVERED`, ratings (overall, quality, delivery, match) and the text go to the API, and the review is `APPROVED` at once (spec [0012](docs/specs/_root/0012-reviews-on-the-product-screen/index.md))
+  - [x] Review likes: a `ReviewLike` table with one row per review and customer, the count in the response, a toggle in the UI
+  - [x] Review comments: customer replies under a review (`ReviewComment`), the list and the form, separate from the shop answer `ReviewResponse`
+  - [x] The review storefront: the lists and forms read the API instead of mocks, and the average rating and the count come from the database
 - [ ] End to end tests of the order flow, CI
 
 ## Quick start

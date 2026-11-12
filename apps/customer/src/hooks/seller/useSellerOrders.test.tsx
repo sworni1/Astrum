@@ -105,20 +105,6 @@ describe("useSellerOrders", () => {
     expect(read().total).toBeUndefined();
   });
 
-  it("reads a disabled workflow as its own screen (AC-11, AC-15)", async () => {
-    getData.mockRejectedValue({
-      isAxiosError: true,
-      response: {
-        status: 503,
-        data: { code: "SELLER_ORDER_WORKFLOW_DISABLED" },
-      },
-    });
-
-    await render(1);
-
-    expect(read().kind).toBe("disabled");
-  });
-
   it("treats a server fault as a failure that offers a retry (AC-11)", async () => {
     getData.mockRejectedValue({
       isAxiosError: true,

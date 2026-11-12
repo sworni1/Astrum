@@ -9,11 +9,11 @@ A shop with a Next.js storefront, an Express gateway, a NestJS auth service, and
 
 | Workspace                                                          | Scope                                        | Rollup                              |
 | ------------------------------------------------------------------ | -------------------------------------------- | ----------------------------------- |
-| `_root` (order flow, sessions, account confirmation, English copy) | [_root/scope.md](_root/scope.md)             | 5 done / 4 in progress / 4 planned  |
-| `apps/customer`                                                    | [customer/scope.md](customer/scope.md)       | 1 done / 0 in progress / 10 planned |
+| `_root` (order flow, sessions, account confirmation, English copy) | [_root/scope.md](_root/scope.md)             | 11 done / 3 in progress / 2 planned |
+| `apps/customer`                                                    | [customer/scope.md](customer/scope.md)       | 2 done / 3 in progress / 6 planned  |
 | `apps/api-astrum`                                                  | no scope yet                                 | 0 / 0                               |
 | `apps/auth-astrum`                                                 | [auth-astrum/scope.md](auth-astrum/scope.md) | 1 done / 0 planned                  |
 | `apps/worker`                                                      | no scope yet                                 | 0 / 0                               |
-| `packages/astrum-db`                                               | no scope yet                                 | 0 / 0                               |
+| `packages/Astrum-db`                                               | no scope yet                                 | 0 / 0                               |
 
 Repo wide decisions that no single app owns live in `docs/adr/`. Work that crosses workspaces is planned in `docs/scope/_root/`; the order flow and the account confirmation flow live there.

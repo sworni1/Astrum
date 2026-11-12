@@ -1,6 +1,10 @@
 import type { OrderItem } from "../../../generated/prisma/client";
 import { Prisma } from "../../../generated/prisma/client";
-import type { OrderItemStatus } from "../../../generated/prisma/enums";
+import type {
+  OrderItemStatus,
+  PaymentMethod,
+  PaymentStatus,
+} from "../../../generated/prisma/enums";
 import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
 import { logger } from "../../common/helpers/logger";
@@ -41,6 +45,8 @@ const SELLER_ORDER_ITEM_SELECT = {
 const SELLER_ORDER_GROUP_SELECT = {
   id: true,
   createdAt: true,
+  paymentStatus: true,
+  paymentMethod: true,
   pickupPointId: true,
   pickupPointName: true,
   pickupPointAddress: true,
@@ -51,6 +57,8 @@ const SELLER_ORDER_GROUP_SELECT = {
 type SellerOrderGroupRow = {
   id: string;
   createdAt: Date;
+  paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod;
   pickupPointId: string | null;
   pickupPointName: string | null;
   pickupPointAddress: string | null;
@@ -68,6 +76,8 @@ const HANDOVER_READY_STATUSES: readonly OrderItemStatus[] = [
 export const toSellerOrderGroupJson = (row: SellerOrderGroupRow) => ({
   id: row.id,
   createdAt: row.createdAt,
+  paymentStatus: row.paymentStatus,
+  paymentMethod: row.paymentMethod,
   isPickup: row.shippingMethod.isPickup,
   pickupPointId: row.pickupPointId,
   pickupPointName: row.pickupPointName,

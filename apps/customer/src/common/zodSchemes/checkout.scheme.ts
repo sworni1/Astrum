@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PaymentMethod } from "@/common/types/order.types";
+import { CHOOSABLE_PAYMENT_METHODS } from "@/common/helpers/paymentMethods";
 import type { ValidationTranslator } from "./translator";
 
 /**
@@ -20,10 +20,9 @@ export const createCheckoutFormSchema = (
       : z.string(),
     deliveryDate: z.date({ error: t("deliveryDateRequired") }),
     shippingMethodId: z.string().min(1, t("shippingMethodRequired")),
-    paymentMethod: z.enum(PaymentMethod, {
+    paymentMethod: z.enum(CHOOSABLE_PAYMENT_METHODS, {
       error: t("paymentMethodRequired"),
     }),
-    paymentDetails: z.string().optional(),
   });
 
 export type CheckoutFormData = z.infer<

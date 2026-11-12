@@ -5,18 +5,21 @@ import type { Order } from "@/common/types/order.types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import OrderStatusBadge from "@/features/pages/Orders/OrderPage/components/OrderStatusBadge";
+import PaymentActions from "@/features/pages/Orders/OrderPage/components/PaymentActions";
 import {
   PAYMENT_KEYS,
   paymentStatusKey,
 } from "@/features/pages/Orders/OrderPage/lib/payment";
 import { CARD_CLASS } from "@/features/pages/Orders/OrderPage/lib/styles";
+import type { PaymentReturnBranch } from "@/hooks/order/useSyncOrderPayment";
 
 type Props = {
   order: Order;
+  paymentBranch: PaymentReturnBranch;
 };
 
 /** Where the parcel goes, what pays for it, and how it ships. */
-const OrderOverviewCard = ({ order }: Props) => {
+const OrderOverviewCard = ({ order, paymentBranch }: Props) => {
   const t = useTranslations("orders");
   const format = useFormatter();
   const paymentKey = paymentStatusKey(order.paymentStatus);
@@ -74,6 +77,7 @@ const OrderOverviewCard = ({ order }: Props) => {
               </span>
             </div>
           </Card>
+          <PaymentActions order={order} branch={paymentBranch} />
         </div>
 
         <div>

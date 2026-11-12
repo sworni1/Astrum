@@ -12,7 +12,7 @@ _Steps derived from spec 0008 acceptance criteria. `/check verify` runs these; `
 - [x] Enter `A` → an inline error under the field and no request leaves the page → AC-4, AC-6
 - [x] Paste a name holding the right to left override (`\u202e`) → an inline error under the field → AC-6
 - [x] Change the email in `/profile` so the account is `PENDING`, then open `/seller/onboarding` → the form is disabled with the confirmation notice, while `/seller/orders` still reads its queue → AC-3, AC-8
-- [x] With `SELLER_ORDER_WORKFLOW_ENABLED=true` and a non seller, open `/seller/orders` → the not a seller screen carries the `Open your shop` action to `/seller/onboarding` → AC-12
+- [x] As a non seller, open `/seller/orders` → the not a seller screen carries the `Open your shop` action to `/seller/onboarding` → AC-12
 - [x] Switch the language to Russian → the page, the profile section and the panel action read Russian → AC-11
 - [x] At 360 px width, `/seller/onboarding` stacks in one column with no horizontal scroll → AC-15
 - [x] Keyboard walk: Tab reaches the name input and the button, the focus ring is visible, Enter submits → AC-4, AC-15

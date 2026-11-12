@@ -36,6 +36,7 @@ vi.mock("@/common/helpers/showToast", () => ({
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
   useFormatter: () => ({ dateTime: () => "1 November 2026" }),
+  createTranslator: () => (key: string) => key,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -54,6 +55,7 @@ const order: Order = {
   totalPrice: 100,
   paymentMethod: PaymentMethod.ONLINE_CARD,
   paymentStatus: PaymentStatus.PAID,
+  paymentExpiresAt: null,
   status: OrderStatus.CONFIRMED,
   createdAt: "2026-11-01T10:00:00.000Z",
   updatedAt: "2026-11-01T10:00:00.000Z",

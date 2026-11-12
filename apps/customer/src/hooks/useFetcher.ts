@@ -238,9 +238,13 @@ export const useFetcher = () => {
   );
 
   const putItem = useCallback(
-    async <TData>(url: string, { arg }: { arg: TData }) => {
+    async <TData>(url: string, { arg }: { arg?: TData } = {}) => {
       try {
-        const response = await fetcher.put(url, arg);
+        // A route that takes no body is called with no body: the instance pins
+        // `Content-Type: application/json`, so axios would serialize `null`
+        // into the literal `null`, which `express.json()` refuses with a 400
+        // before any route runs (spec 0014, AC-4).
+        const response = await fetcher.put(url, arg ?? undefined);
         return response.data;
       } catch (error) {
         console.error("PUT request failed:", url, error);

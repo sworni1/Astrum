@@ -2,6 +2,7 @@ import "reflect-metadata";
 import type { Server } from "node:http";
 import { prisma } from "../lib/prisma";
 import app from "./app";
+import { startPaymentSweep } from "./modules/payment/payment.sweep";
 
 if (!process.env.RABBITMQ_URL) {
   throw new Error(
@@ -16,8 +17,14 @@ const server: Server = app.listen(PORT, () => {
   console.log(`API Gateway running at http://localhost:${PORT}/api`);
 });
 
+// The reconciliation pass belongs to the running process, never to app.ts: a
+// test that imports the app must not start a timer (spec 0015, AC-9).
+const sweep = startPaymentSweep();
+
 const shutdown = (signal: NodeJS.Signals): void => {
   console.log(`[api] ${signal} received, draining connections`);
+
+  clearInterval(sweep);
 
   server.close(() => {
     void prisma.$disconnect().finally(() => process.exit(0));

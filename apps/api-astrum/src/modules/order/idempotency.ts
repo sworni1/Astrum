@@ -105,7 +105,6 @@ export const canonicalOrderBody = (
         productId: line.productId,
         quantity: line.quantity,
       })),
-    paymentDetails: dto.paymentDetails,
     paymentMethod: dto.paymentMethod,
     shippingMethodId: dto.shippingMethodId,
     ...(dto.pickupPointId ? { pickupPointId: dto.pickupPointId } : {}),

@@ -47,7 +47,6 @@ export const useCheckout = () => {
 
         const orderData = {
           paymentMethod: checkoutData.paymentMethod,
-          paymentDetails: checkoutData.paymentDetails || "Online payment",
           deliveryAddress: pickupPointId ? null : checkoutData.deliveryAddress,
           deliveryDate: localDeliveryDate.toISOString(),
           shippingMethodId: checkoutData.shippingMethodId,

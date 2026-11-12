@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { ReviewPage } from "@/common/types/review.types";
-import { mergeReviewPages, reviewsKey, reviewsPageKey } from "./reviewsKeys";
+import {
+  mergeReviewPages,
+  reviewCommentKey,
+  reviewCommentsKey,
+  reviewCommentsPageKey,
+  reviewLikeKey,
+  reviewLikesKey,
+  reviewsKey,
+  reviewsPageKey,
+} from "./reviewsKeys";
 
 const pageOf = (
   ids: string[],
@@ -15,6 +24,8 @@ const pageOf = (
     accuracyRating: 5,
     comment: "solid drill",
     photos: [],
+    likeCount: 0,
+    commentCount: 0,
     createdAt: "2026-11-11T10:00:00.000Z",
   })),
   nextCursor: null,
@@ -25,23 +36,23 @@ const pageOf = (
 
 describe("mergeReviewPages", () => {
   it("keeps the order the gateway answered (AC-4)", () => {
-    expect(mergeReviewPages([pageOf(["a", "b"]), pageOf(["c"])]).map((r) => r.id)).toEqual([
-      "a",
-      "b",
-      "c",
-    ]);
+    expect(
+      mergeReviewPages([pageOf(["a", "b"]), pageOf(["c"])]).map((r) => r.id),
+    ).toEqual(["a", "b", "c"]);
   });
 
   it("never repeats an id already on screen (AC-4)", () => {
     expect(
-      mergeReviewPages([pageOf(["a", "b"]), pageOf(["b", "c"])]).map((r) => r.id),
+      mergeReviewPages([pageOf(["a", "b"]), pageOf(["b", "c"])]).map(
+        (r) => r.id,
+      ),
     ).toEqual(["a", "b", "c"]);
   });
 
   it("survives the first page not having arrived yet (AC-4)", () => {
-    expect(mergeReviewPages([undefined, pageOf(["a"])]).map((r) => r.id)).toEqual([
-      "a",
-    ]);
+    expect(
+      mergeReviewPages([undefined, pageOf(["a"])]).map((r) => r.id),
+    ).toEqual(["a"]);
   });
 });
 
@@ -53,6 +64,23 @@ describe("review keys", () => {
   it("gives every appended page its own key (AC-4)", () => {
     expect(reviewsPageKey("product-1", "review-1")).toBe(
       "/products/product-1/reviews?after=review-1",
+    );
+  });
+
+  it("keeps the liked set on its own key, away from the shared list (AC-3)", () => {
+    expect(reviewLikesKey("product-1")).toBe(
+      "/products/product-1/review-likes",
+    );
+  });
+
+  it("gives the like toggle, the thread, its pages and a comment their keys (AC-4, AC-7)", () => {
+    expect(reviewLikeKey("review-1")).toBe("/reviews/review-1/like");
+    expect(reviewCommentsKey("review-1")).toBe("/reviews/review-1/comments");
+    expect(reviewCommentsPageKey("review-1", "comment-1")).toBe(
+      "/reviews/review-1/comments?after=comment-1",
+    );
+    expect(reviewCommentKey("review-1", "comment-1")).toBe(
+      "/reviews/review-1/comments/comment-1",
     );
   });
 });

@@ -11,6 +11,8 @@ export const reviewRowSelect = {
   accuracyRating: true,
   comment: true,
   photos: true,
+  likeCount: true,
+  commentCount: true,
   createdAt: true,
   User: { select: { nickName: true } },
 } as const;
@@ -23,6 +25,8 @@ export type ReviewRow = {
   accuracyRating: number;
   comment: string;
   photos: string[];
+  likeCount: number;
+  commentCount: number;
   createdAt: Date;
   User: { nickName: string | null } | null;
 };
@@ -36,6 +40,8 @@ export type PublicReview = {
   accuracyRating: number;
   comment: string;
   photos: string[];
+  likeCount: number;
+  commentCount: number;
   createdAt: Date;
 };
 
@@ -61,7 +67,58 @@ export const serializeReview = (row: ReviewRow): PublicReview => {
     accuracyRating: row.accuracyRating,
     comment: row.comment,
     photos: Array.isArray(row.photos) ? row.photos : [],
+    likeCount: row.likeCount,
+    commentCount: row.commentCount,
     createdAt: row.createdAt,
+  };
+};
+
+/**
+ * One row of a comment thread. `userId` is read to decide `mine` and never
+ * published, and a deleted row answers no text and no author at all
+ * (spec 0014, AC-7, AC-10).
+ */
+export const reviewCommentSelect = {
+  id: true,
+  body: true,
+  createdAt: true,
+  deletedAt: true,
+  userId: true,
+  User: { select: { nickName: true } },
+} as const;
+
+export type ReviewCommentRow = {
+  id: string;
+  body: string;
+  createdAt: Date;
+  deletedAt: Date | null;
+  userId: string;
+  User: { nickName: string | null } | null;
+};
+
+export type PublicReviewComment = {
+  id: string;
+  authorName: string | null;
+  body: string | null;
+  createdAt: Date;
+  deletedAt: Date | null;
+  mine: boolean;
+};
+
+export const serializeReviewComment = (
+  row: ReviewCommentRow,
+  viewerId: string,
+): PublicReviewComment => {
+  const isDeleted = row.deletedAt !== null;
+  const authorName = row.User?.nickName?.trim();
+
+  return {
+    id: row.id,
+    authorName: isDeleted || !authorName ? null : authorName,
+    body: isDeleted ? null : row.body,
+    createdAt: row.createdAt,
+    deletedAt: row.deletedAt,
+    mine: row.userId === viewerId,
   };
 };
 

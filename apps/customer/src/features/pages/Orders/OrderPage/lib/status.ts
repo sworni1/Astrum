@@ -61,6 +61,14 @@ export const DELIVERY_STEPS: readonly DeliveryStep[] = [
   { status: OrderStatus.DELIVERED, key: "delivered", icon: Truck },
 ];
 
+export const DELIVERY_PROGRESS: Record<OrderStatus, number> = {
+  [OrderStatus.PENDING]: 0,
+  [OrderStatus.CONFIRMED]: 33.33,
+  [OrderStatus.SHIPPED]: 66.67,
+  [OrderStatus.DELIVERED]: 100,
+  [OrderStatus.CANCELED]: 0,
+};
+
 /**
  * How far the parcel got: -1 means no step is reached, which covers a cancelled
  * order and a status this storefront does not know.

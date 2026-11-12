@@ -21,7 +21,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | 2   | Storefront coding standard                 | Slice 2  | in-progress |
 | 3   | Order page decomposition                   | Slice 2  | in-progress |
 | 4   | One quantity stepper for the shop          | Slice 2  | in-progress |
-| 5   | Product reviews: real state                | Slice 2  | planned  |
+| 5   | Product reviews: real state                | Slice 2  | done     |
 | 6   | Checkout form decomposition                | Slice 2  | planned  |
 | 7   | Optimized image decomposition              | Slice 2  | planned  |
 | 8   | Cart money and selection                   | Slice 2  | planned  |
@@ -96,11 +96,12 @@ Two copies of the same stepper exist (98 identical lines, 0.66 similarity), one 
   code in `apps/customer/src/features/general/AddToCartWithQuantity/` (`index.tsx` the one stepper, `lib/styles.ts` the width variant with a test); the product card copy and the cart card copy are deleted, and the product page uses the same component
   evidence: `tsc --noEmit` and `tsc -p tsconfig.test.json --noEmit` clean, `eslint .` 0 errors (8 warnings, one fewer than before since two copies became one), `vitest run` 147 tests in 33 files, rendered at 1037 and 390 wide with no horizontal overflow
 
-### 5. Product reviews: real state
+### 5. Product reviews: real state · done
 
 The reviews block renders four hard coded reviews of products that do not exist and a form that discards what it is given.
 **Done when:** the demo constant is gone, the block renders an honest empty state when there are no reviews, and the submit path either posts or is visibly disabled instead of pretending.
-- [ ] Build it: `/develop product reviews real state`
+- [x] Build it: `/develop product reviews real state` — built through root scope feature 8 (spec [0012](../../specs/_root/0012-reviews-on-the-product-screen/index.md)): the demo constant is gone, `ReviewsEmpty` covers zero reviews, `WriteReviewDialog` posts through `useCreateReview`, and the list, the summary and the rating come from the API
+  code in `apps/customer/src/features/pages/ProductOverview/Reviews/`, `apps/customer/src/hooks/review/`
 
 ### 6. Checkout form decomposition
 

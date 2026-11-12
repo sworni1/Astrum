@@ -1,6 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { PaymentMethod, PaymentStatus } from "@/common/types/order.types";
-import { PAYMENT_KEYS, PAYMENT_STATUS_KEYS, paymentStatusKey } from "./payment";
+import {
+  type Order,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+} from "@/common/types/order.types";
+import {
+  canPay,
+  PAYMENT_KEYS,
+  PAYMENT_STATUS_KEYS,
+  paymentStatusKey,
+  paymentUnconfirmed,
+  paymentWindowPassed,
+  refundOwed,
+} from "./payment";
+
+const NOW = new Date("2026-11-12T12:00:00.000Z");
+
+const order = (overrides: Partial<Order> = {}): Order =>
+  ({
+    id: "order-1",
+    paymentMethod: PaymentMethod.ONLINE_CARD,
+    paymentStatus: PaymentStatus.PENDING,
+    paymentExpiresAt: "2026-11-12T12:20:00.000Z",
+    status: OrderStatus.PENDING,
+    ...overrides,
+  }) as Order;
 
 describe("PAYMENT_KEYS", () => {
   it("names one catalog key for every payment method", () => {
@@ -43,5 +68,87 @@ describe("paymentStatusKey", () => {
 
   it("prints a status outside the enum as it is", () => {
     expect(paymentStatusKey("SOMETHING_NEW")).toBeUndefined();
+  });
+});
+
+describe("canPay", () => {
+  it("offers the control for a live online card order (AC-13)", () => {
+    expect(canPay(order(), NOW)).toBe(true);
+  });
+
+  it("offers it again on a failed payment inside the window (AC-13)", () => {
+    expect(canPay(order({ paymentStatus: PaymentStatus.FAILED }), NOW)).toBe(
+      true,
+    );
+  });
+
+  it("refuses it for another method, a cancelled order, a paid one or a spent window (AC-13)", () => {
+    expect(canPay(order({ paymentMethod: PaymentMethod.CASH }), NOW)).toBe(
+      false,
+    );
+    expect(canPay(order({ status: OrderStatus.CANCELED }), NOW)).toBe(false);
+    expect(canPay(order({ paymentStatus: PaymentStatus.PAID }), NOW)).toBe(
+      false,
+    );
+    expect(
+      canPay(order({ paymentExpiresAt: "2026-11-12T11:59:00.000Z" }), NOW),
+    ).toBe(false);
+    expect(canPay(order({ paymentExpiresAt: null }), NOW)).toBe(false);
+  });
+});
+
+describe("paymentUnconfirmed", () => {
+  it("holds for a pending and for a failed payment", () => {
+    expect(paymentUnconfirmed(order())).toBe(true);
+    expect(
+      paymentUnconfirmed(order({ paymentStatus: PaymentStatus.FAILED })),
+    ).toBe(true);
+  });
+
+  it("does not hold for a paid order, so the return copy stays off it (AC-14)", () => {
+    expect(
+      paymentUnconfirmed(order({ paymentStatus: PaymentStatus.PAID })),
+    ).toBe(false);
+    expect(
+      paymentUnconfirmed(order({ paymentStatus: PaymentStatus.CANCELLED })),
+    ).toBe(false);
+    expect(
+      paymentUnconfirmed(order({ paymentStatus: PaymentStatus.REFUNDED })),
+    ).toBe(false);
+  });
+});
+
+describe("paymentWindowPassed", () => {
+  it("says the window is spent only for an uncancelled online order (AC-13)", () => {
+    expect(
+      paymentWindowPassed(
+        order({ paymentExpiresAt: "2026-11-12T11:00:00.000Z" }),
+        NOW,
+      ),
+    ).toBe(true);
+    expect(paymentWindowPassed(order(), NOW)).toBe(false);
+    expect(
+      paymentWindowPassed(
+        order({
+          status: OrderStatus.CANCELED,
+          paymentExpiresAt: "2026-11-12T11:00:00.000Z",
+        }),
+        NOW,
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("refundOwed", () => {
+  it("flags a cancelled order that was paid (AC-12)", () => {
+    expect(
+      refundOwed(
+        order({
+          status: OrderStatus.CANCELED,
+          paymentStatus: PaymentStatus.PAID,
+        }),
+      ),
+    ).toBe(true);
+    expect(refundOwed(order())).toBe(false);
   });
 });

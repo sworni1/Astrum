@@ -2,6 +2,7 @@
 
 import { OrderStatus } from "@/common/types/order.types";
 import { useGetOrderById } from "@/hooks/order/useGetOrderById";
+import { useSyncOrderPayment } from "@/hooks/order/useSyncOrderPayment";
 import DeliveryStatusCard from "./components/DeliveryStatusCard";
 import LoadingScreen from "./components/LoadingScreen";
 import OrderItemsCard from "./components/OrderItemsCard";
@@ -9,6 +10,7 @@ import OrderNotFound from "./components/OrderNotFound";
 import OrderOverviewCard from "./components/OrderOverviewCard";
 import OrderPageHeader from "./components/OrderPageHeader";
 import OrderSummaryCard from "./components/OrderSummaryCard";
+import PaymentChecking from "./components/PaymentChecking";
 import { useCancelOrder } from "./hooks/useCancelOrder";
 import { useLoadFailureToast } from "./hooks/useLoadFailureToast";
 
@@ -19,7 +21,14 @@ type Props = {
 export default function OrderPage({ orderId }: Props) {
   const { order, isLoading, error } = useGetOrderById(orderId);
   const { cancel, isCancelling } = useCancelOrder(orderId);
+  const { isChecking, branch } = useSyncOrderPayment(orderId);
   useLoadFailureToast(error);
+
+  // The provider sent the customer back and the truth is being read: showing the
+  // order now would print a payment state the gateway may have already moved (AC-14).
+  if (isChecking) {
+    return <PaymentChecking />;
+  }
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -43,7 +52,7 @@ export default function OrderPage({ orderId }: Props) {
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-          <OrderOverviewCard order={order} />
+          <OrderOverviewCard order={order} paymentBranch={branch} />
           <OrderSummaryCard order={order} />
         </div>
 

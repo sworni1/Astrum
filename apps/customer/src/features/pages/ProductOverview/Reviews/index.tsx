@@ -3,12 +3,14 @@
 import { useTranslations } from "next-intl";
 import type { ReviewState } from "@/common/types/review.types";
 import { useProductReviews } from "@/hooks/review/useProductReviews";
+import { useReviewLikes } from "@/hooks/review/useReviewLikes";
 import LoadMoreReviews from "./components/LoadMoreReviews";
 import ReviewCard from "./components/ReviewCard";
 import ReviewsEmpty from "./components/ReviewsEmpty";
 import ReviewsError from "./components/ReviewsError";
 import ReviewSummary from "./components/ReviewSummary";
 import ReviewWriteAction from "./components/ReviewWriteAction";
+import { useReviewCounts } from "./hooks/useReviewCounts";
 
 type Props = {
   productId: string;
@@ -28,6 +30,11 @@ const Reviews = ({ productId, reviewState }: Props) => {
     loadMoreFailed,
     retry,
   } = useProductReviews(productId);
+
+  // The caller's own liked set and the numbers this customer moved: both live
+  // outside the cards, so a row from an appended page moves too (AC-6, AC-12).
+  const likes = useReviewLikes(productId);
+  const counts = useReviewCounts();
 
   const showsEmptyState =
     !reviewsAreLoading && !reviewError && reviews.length === 0;
@@ -53,7 +60,12 @@ const Reviews = ({ productId, reviewState }: Props) => {
           ) : (
             <div className="flex flex-col gap-4">
               {reviews.map((review) => (
-                <ReviewCard key={review.id} review={review} />
+                <ReviewCard
+                  key={review.id}
+                  review={review}
+                  counts={counts}
+                  likes={likes}
+                />
               ))}
             </div>
           )}

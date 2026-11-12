@@ -37,7 +37,7 @@ Checkout decreases stock before fulfillment. Cancellation restores it. Partial s
 * **AC-10**: Customer cancellation remains `PATCH /api/orders/:orderId/status` with `status: "CANCELED"`. A foreign or missing order returns `404 ORDER_NOT_FOUND`. Cancellation is refused with `409 INVALID_STATUS_TRANSITION` and writes nothing if any line is `SHIPPED`, `DELIVERED`, `RETURNED`, `BACKORDERED`, or `REPLACED`. Otherwise all `PENDING` and `CONFIRMED` lines are cancelled and their stock is restored once using an atomic database increment; existing `CANCELLED` and `OUT_OF_STOCK` lines are unchanged. The order status is recomputed by AC-8 in the same transaction, so an order with no remaining active lines is `CANCELED`. The line statuses, order status, stock changes, and the existing pending payment cancellation update commit atomically. Repeating cancellation returns the current order without another stock change.
 * **AC-11**: A status change and its order status recalculation are atomic. Every status write locks the parent order row before reading line state. Concurrent seller and customer changes to the same order serialize on that row. Product stock returns use an atomic database increment, also protecting simultaneous cancellations on different orders that share a product. The transaction uses the existing 5000 millisecond wait limit, 10000 millisecond timeout, and Read Committed isolation, with no retry loop. A failed operation leaves line status, order status, stock quantity, and stock flag unchanged; an unexpected database error uses the existing `500` response.
 * **AC-12**: `Order.totalPrice` remains the amount recorded at checkout when a line is cancelled or marked `OUT_OF_STOCK`. This feature does not recalculate payment amounts, issue refunds, or change a non pending `paymentStatus`. Customer cancellation keeps the existing rule that a `PENDING` payment becomes `CANCELLED`.
-* **AC-13**: When `SELLER_ORDER_WORKFLOW_ENABLED` is false or absent, the seller list and line status endpoints return `503 SELLER_ORDER_WORKFLOW_DISABLED`. Only the literal values `true` and `false` are valid; any other configured value prevents the API from starting. Customer order reads, checkout, and customer cancellation remain available. When enabled, seller endpoints use the ownership checks above.
+* **AC-13**: The seller list and line status endpoints answer to any active account that owns a business, through the ownership checks above, and customer order reads, checkout and customer cancellation remain available. The `SELLER_ORDER_WORKFLOW_ENABLED` gate and its startup validation this criterion described were removed on 2026-11-13.
 * **AC-14**: Structured logs record successful seller status changes and refused changes with the actor id, order id when the line exists (otherwise `null`), line id from the route, target status when valid, and result code. Logs do not contain delivery addresses, payment details, or other seller lines.
 
 ## Options considered
@@ -130,8 +130,8 @@ Every line change locks its parent order row before it reads line state. The ser
 | --- | --- | --- | --- | --- | --- |
 | `/api/products` | POST | Product fields, no trusted `businessId` | Product associated with the caller's business | Existing session | `403 SELLER_NOT_ASSIGNED`, validation error |
 | `/api/orders` | POST | Existing checkout DTO | Customer order, with seller snapshot kept internal | Existing session and active account | Existing checkout errors |
-| `/api/seller/orders` | GET | `page`, `limit` | Paginated orders with only the caller's lines | Existing session and assigned business | `403 SELLER_NOT_ASSIGNED`, `422 VALIDATION`, `503 SELLER_ORDER_WORKFLOW_DISABLED` |
-| `/api/order-items/:orderItemId/status` | PATCH | `status` | Updated line with its order id | Existing session and owning business | `404 ORDER_ITEM_NOT_FOUND`, `409 INVALID_STATUS_TRANSITION`, `422 VALIDATION`, `503 SELLER_ORDER_WORKFLOW_DISABLED` |
+| `/api/seller/orders` | GET | `page`, `limit` | Paginated orders with only the caller's lines | Existing session and assigned business | `403 SELLER_NOT_ASSIGNED`, `422 VALIDATION` |
+| `/api/order-items/:orderItemId/status` | PATCH | `status` | Updated line with its order id | Existing session and owning business | `404 ORDER_ITEM_NOT_FOUND`, `409 INVALID_STATUS_TRANSITION`, `422 VALIDATION` |
 | `/api/orders/:orderId/status` | PATCH | `status: "CANCELED"` | Updated customer order | Existing session and order owner | `404 ORDER_NOT_FOUND`, `409 INVALID_STATUS_TRANSITION`, `422 VALIDATION` |
 
 The seller list response carries `orders`, `page`, `limit`, `total`, and `totalPages`. Each order carries `id`, `createdAt`, and only the owned `orderItems`. Each line carries `id`, `productId`, `name`, `previewImage`, `quantity`, `price`, `currency`, and `status`. `total` counts distinct orders with at least one owned line, and `totalPages` is `ceil(total / limit)`. The seller status response carries the same safe line fields and `orderId`. Expected business errors use the existing `AppError` response shape with `code`, `message`, and transition details when applicable. Unexpected database failures remain server errors through the current error handler.
@@ -166,7 +166,7 @@ All routes remain behind the existing `__auth` session middleware. A seller is a
 
 **Configuration required**:
 
-* `SELLER_ORDER_WORKFLOW_ENABLED`: optional boolean, default `false`. Only `true` and `false` are accepted. It gates seller order listing and seller line status changes until the migration and owner assignments are ready. Changing it requires an API restart.
+* No seller workflow flag: `SELLER_ORDER_WORKFLOW_ENABLED` was removed on 2026-11-13, so seller reads and writes are gated by ownership alone. This line used to describe the boolean kill switch (optional, default `false`, read once at boot).
 
 **Critical test scenarios**:
 
@@ -188,7 +188,7 @@ Tracer Bullet: first preserve business ownership through one order from product 
 2. Update product creation to use the authenticated user's assigned business and checkout to snapshot the product business on each order line. Keep the new field out of customer response mappers, satisfies **AC-3**, **AC-4**.
 3. Add seller order reads with bounded pagination and business scoped line selection. Add the line status route using the existing order module and the ownership check, satisfies **AC-5**, **AC-7**.
 4. Add the line transition rules, parent order row lock, stock restoration for cancellation only, and order status aggregation. Preserve customer cancellation and the checkout total, satisfies **AC-6**, **AC-8**, **AC-9**, **AC-10**, **AC-11**, **AC-12**.
-5. Add `SELLER_ORDER_WORKFLOW_ENABLED` with a false default to both environment templates, validate its value at startup, and add the error mapping and structured logs without private order data, satisfies **AC-7**, **AC-13**, **AC-14**.
+5. Add the error mapping and structured logs without private order data, satisfies **AC-7**, **AC-13**, **AC-14**. The flag and the two template entries this step also named were removed on 2026-11-13.
 6. After older API replicas are drained, backfill any rows written during rollout, require `OrderItem.businessId`, add the product and line foreign keys, enable the seller workflow after explicit owner assignment, and run API, database, and concurrency tests, satisfies **AC-1**, **AC-2**, **AC-11**, **AC-13**.
 
 ## Consequences
@@ -228,7 +228,7 @@ Tracer Bullet: first preserve business ownership through one order from product 
 1. Check for order lines without a product and for unsupported legacy statuses. Stop rollout and report counts if either exists. Create `Business`, add nullable `OrderItem.businessId`, preserve current product business ids, create unassigned businesses for them, and backfill order lines. Do not add the product foreign key or require the new line field while old API replicas may still write.
 2. Deploy API code that writes the business snapshot on checkout, derives new product ownership from the signed in user, and keeps seller endpoints disabled. Drain all old replicas.
 3. Reconcile businesses and order lines created during rollout. Immediately before applying constraints, repeat the missing product, missing line snapshot, missing business row, and unsupported status checks, and stop with counts if any fail. Then make the field required, add the `Business.ownerUserId`, `Product.businessId`, and `OrderItem.businessId` foreign keys, and verify there are no orphan values.
-4. Assign business owners through an administrative data change, enable `SELLER_ORDER_WORKFLOW_ENABLED`, and run the live seller and cancellation checks.
+4. Assign business owners through an administrative data change and run the live seller and cancellation checks.
 
 **Rollback**: Disable the seller workflow first. If the application must return to the old writer, remove the new foreign key constraints and keep `OrderItem.businessId` nullable so old code can continue to write. Preserve the `Business` rows and owner assignments. Do not delete the new ownership data during rollback.
 

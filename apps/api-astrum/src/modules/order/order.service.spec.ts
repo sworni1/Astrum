@@ -590,6 +590,7 @@ const createCancelTx = (order: Record<string, unknown> | null) => ({
     findMany: jest.fn().mockResolvedValue([{ status: "CANCELED" }]),
   },
   product: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+  payment: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
 });
 
 type CancelTx = ReturnType<typeof createCancelTx>;
@@ -623,7 +624,16 @@ describe("OrderService.updateOrderStatus", () => {
 
     expect(tx.order.update).toHaveBeenCalledWith({
       where: { id: "order-1" },
-      data: { status: "CANCELED", paymentStatus: "CANCELLED" },
+      data: { status: "CANCELED" },
+    });
+    // The payment is resolved in its own write, and the attempt closes with it (AC-11).
+    expect(tx.order.update).toHaveBeenCalledWith({
+      where: { id: "order-1" },
+      data: { paymentStatus: "CANCELLED" },
+    });
+    expect(tx.payment.updateMany).toHaveBeenCalledWith({
+      where: { orderId: "order-1", status: { in: ["PENDING", "FAILED"] } },
+      data: { status: "CANCELLED" },
     });
     expect(tx.orderItem.updateMany).toHaveBeenCalledWith({
       where: {
