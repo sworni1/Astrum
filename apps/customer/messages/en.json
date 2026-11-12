@@ -231,7 +231,19 @@
       "paypal": "PayPal",
       "stripe": "Stripe",
       "cardOnDelivery": "Card on Delivery",
-      "cash": "Cash on Delivery"
+      "cash": "Cash on Delivery",
+      "pay": "Pay now",
+      "paying": "Opening the payment page",
+      "payBefore": "Pay before {time}",
+      "windowExpired": "The payment window of this order has closed.",
+      "checking": "Checking your payment",
+      "notConfirmed": "The provider has not confirmed this payment yet.",
+      "cancelled": "You left the payment page without paying.",
+      "providerUnavailable": "The payment provider is unavailable right now. Try again in a minute.",
+      "refundOwed": "This order was cancelled after the money left, so a refund is on its way.",
+      "notPayable": "Only an online card order can be paid from this screen.",
+      "alreadyPaid": "This order is already paid.",
+      "failed": "The payment did not go through. Try again."
     }
   },
   "profile": {
@@ -457,6 +469,7 @@
     "subtitle": "The order lines your shop has to fulfil.",
     "found": "{count, plural, one {# order} other {# orders}}",
     "orderNumber": "Order #{number}",
+    "paymentLabel": "Payment: {status}",
     "statusCount": "{status}: {count}",
     "productFallback": "Product {id}",
     "retry": "Try again",

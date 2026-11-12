@@ -6,6 +6,10 @@ import { useFormatter, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { formatMoney, toCurrency } from "@/common/helpers/money";
+import {
+  CHECKOUT_METHOD_KEYS,
+  CHOOSABLE_PAYMENT_METHODS,
+} from "@/common/helpers/paymentMethods";
 import { showToast } from "@/common/helpers/showToast";
 import { PaymentMethod } from "@/common/types/order.types";
 import type { ProductCartProps } from "@/common/types/product.types";
@@ -25,7 +29,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
@@ -83,7 +86,6 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
       deliveryDate: undefined,
       shippingMethodId: "",
       paymentMethod: PaymentMethod.ONLINE_CARD,
-      paymentDetails: "",
     },
     mode: "onChange",
   });
@@ -97,7 +99,6 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
   } = form;
 
   const selectedShippingMethodId = watch("shippingMethodId");
-  const paymentMethod = watch("paymentMethod");
   const pickupPointId = watch("pickupPointId");
 
   // A failed request and an empty list leave the same usable state: no method
@@ -335,21 +336,11 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={PaymentMethod.ONLINE_CARD}>
-                          {t("paymentOnlineCard")}
-                        </SelectItem>
-                        <SelectItem value={PaymentMethod.PAYPAL}>
-                          {t("paymentPaypal")}
-                        </SelectItem>
-                        <SelectItem value={PaymentMethod.STRIPE}>
-                          {t("paymentStripe")}
-                        </SelectItem>
-                        <SelectItem value={PaymentMethod.CARD_ON_DELIVERY}>
-                          {t("paymentCardOnDelivery")}
-                        </SelectItem>
-                        <SelectItem value={PaymentMethod.CASH}>
-                          {t("paymentCash")}
-                        </SelectItem>
+                        {CHOOSABLE_PAYMENT_METHODS.map((method) => (
+                          <SelectItem key={method} value={method}>
+                            {t(CHECKOUT_METHOD_KEYS[method])}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </FormControl>
@@ -357,26 +348,6 @@ const CheckoutForm = ({ cartItems, subtotal }: Props) => {
                 </FormItem>
               )}
             />
-
-            {/* Payment Details */}
-            {paymentMethod !== PaymentMethod.CASH && (
-              <FormField
-                control={control}
-                name="paymentDetails"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("paymentDetails")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={t("paymentDetailsPlaceholder")}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
 
             {/* Order Summary */}
             {methods.length > 0 && (

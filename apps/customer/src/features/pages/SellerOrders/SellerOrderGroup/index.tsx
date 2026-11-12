@@ -4,9 +4,11 @@ import { Loader2, MapPin } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 import { itemStatusKey } from "@/common/helpers/itemStatus";
-import type {
-  SellerOrderGroup as Group,
-  SellerOrderLine as Line,
+import {
+  type SellerOrderGroup as Group,
+  type SellerOrderLine as Line,
+  PaymentMethod,
+  PaymentStatus,
 } from "@/common/types/order.types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { paymentStatusKey } from "@/features/pages/Orders/OrderPage/lib/payment";
 import {
   browserTimeZone,
   countLinesByStatus,
@@ -50,12 +53,19 @@ const SellerOrderGroup = ({
 }: Props) => {
   const t = useTranslations("seller");
   const tStatus = useTranslations("orders.itemStatus");
+  const tPayment = useTranslations("orders.paymentStatus");
   const format = useFormatter();
   const counts = countLinesByStatus(order.orderItems);
   const [dialogOpen, setDialogOpen] = useState(false);
   const { handOver, isHandingOver } = useSellerHandover(order.id, onHandedOver);
   const isPickup = order.pickupPointId !== null;
   const readyCount = handoverableCount(order.orderItems);
+  // A payment status alone cannot tell an online order from cash, so both are
+  // printed, and only when the seller could still be shipping goods unpaid (AC-16).
+  const unpaidOnline =
+    order.paymentMethod === PaymentMethod.ONLINE_CARD &&
+    order.paymentStatus !== PaymentStatus.PAID;
+  const paymentKey = paymentStatusKey(order.paymentStatus);
 
   const send = async (): Promise<void> => {
     try {
@@ -74,6 +84,13 @@ const SellerOrderGroup = ({
         <h2 className="text-sm font-semibold" title={order.id}>
           {t("orderNumber", { number: order.id.slice(-8) })}
         </h2>
+        {unpaidOnline && (
+          <Badge variant="outline" className="font-normal">
+            {t("paymentLabel", {
+              status: paymentKey ? tPayment(paymentKey) : order.paymentStatus,
+            })}
+          </Badge>
+        )}
         <span className="text-xs text-muted-foreground">
           {format.dateTime(new Date(order.createdAt), {
             dateStyle: "medium",

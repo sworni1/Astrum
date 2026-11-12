@@ -17,7 +17,9 @@ const state = vi.hoisted(() => ({
 vi.mock("next-intl", () => ({
   useTranslations: (namespace: string) => {
     const translate = (key: string, values?: Record<string, unknown>) =>
-      values ? `${namespace}.${key} ${JSON.stringify(values)}` : `${namespace}.${key}`;
+      values
+        ? `${namespace}.${key} ${JSON.stringify(values)}`
+        : `${namespace}.${key}`;
 
     return Object.assign(translate, { rich: translate });
   },
@@ -31,9 +33,13 @@ vi.mock("next/image", () => ({
 }));
 
 vi.mock("next/link", () => ({
-  default: ({ href, children }: { href: string; children: React.ReactNode }) => (
-    <a href={href}>{children}</a>
-  ),
+  default: ({
+    href,
+    children,
+  }: {
+    href: string;
+    children: React.ReactNode;
+  }) => <a href={href}>{children}</a>,
 }));
 
 vi.mock("@/common/helpers/showToast", () => ({ showToast: state.toast }));
@@ -50,7 +56,11 @@ vi.mock("@/hooks/seller/useSellerOrderItemStatus", () => ({
   }),
 }));
 
-import { OrderItemStatus } from "@/common/types/order.types";
+import {
+  OrderItemStatus,
+  PaymentMethod,
+  PaymentStatus,
+} from "@/common/types/order.types";
 import SellerOrderGroup from ".";
 
 const line = (id: string, status: OrderItemStatus): Line => ({
@@ -67,6 +77,8 @@ const line = (id: string, status: OrderItemStatus): Line => ({
 const groupOf = (overrides: Partial<Group> = {}): Group => ({
   id: "order-1234567890",
   createdAt: "2026-11-08T10:00:00.000Z",
+  paymentStatus: PaymentStatus.PENDING,
+  paymentMethod: PaymentMethod.CASH,
   isPickup: true,
   pickupPointId: "pp-1",
   pickupPointName: "Central Pickup",
@@ -104,10 +116,10 @@ const handoverButton = (): HTMLButtonElement | undefined =>
     button.textContent?.includes("seller.handover"),
   );
 
-const dialog = (): Element | null =>
-  document.querySelector('[role="dialog"]');
+const dialog = (): Element | null => document.querySelector('[role="dialog"]');
 
-const keep = (): Element | null => document.querySelector('[data-slot="dialog-close"]');
+const keep = (): Element | null =>
+  document.querySelector('[data-slot="dialog-close"]');
 
 const confirm = (): Element | undefined =>
   [...document.querySelectorAll('[data-slot="dialog-footer"] button')].find(
@@ -157,7 +169,12 @@ describe("SellerOrderGroup pickup block", () => {
 
   it("не предлагает выдачу, когда готовых строк нет (AC-13)", async () => {
     await render(
-      groupOf({ orderItems: [line("line-1", OrderItemStatus.PENDING), line("line-2", OrderItemStatus.DELIVERED)] }),
+      groupOf({
+        orderItems: [
+          line("line-1", OrderItemStatus.PENDING),
+          line("line-2", OrderItemStatus.DELIVERED),
+        ],
+      }),
     );
 
     expect(handoverButton()).toBeUndefined();
@@ -261,9 +278,10 @@ describe("SellerOrderGroup handover dialog", () => {
   });
 
   it("показывает текст отказа и перечитывает список (AC-13)", async () => {
-    state.handover.handOver = vi
-      .fn()
-      .mockRejectedValue({ isAxiosError: true, response: { data: { code: "NOTHING_TO_HAND_OVER" } } });
+    state.handover.handOver = vi.fn().mockRejectedValue({
+      isAxiosError: true,
+      response: { data: { code: "NOTHING_TO_HAND_OVER" } },
+    });
     const onReload = vi.fn();
     container = document.createElement("div");
     document.body.appendChild(container);

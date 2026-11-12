@@ -28,6 +28,7 @@ const order = (status: OrderStatus): Order => ({
   totalPrice: 100,
   paymentMethod: PaymentMethod.ONLINE_CARD,
   paymentStatus: PaymentStatus.PAID,
+  paymentExpiresAt: null,
   status,
   createdAt: "2026-11-01T10:00:00.000Z",
   updatedAt: "2026-11-01T10:00:00.000Z",
