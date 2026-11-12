@@ -1,31 +1,89 @@
 "use client";
 
-import { MessageCircle, ThumbsUp } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
+import { useState } from "react";
+import { showToast } from "@/common/helpers/showToast";
 import type { ProductReview } from "@/common/types/review.types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import ReviewCommentsThread from "@/features/pages/ProductOverview/Reviews/components/ReviewCommentsThread";
+import ReviewLikeButton from "@/features/pages/ProductOverview/Reviews/components/ReviewLikeButton";
 import ReviewPhotos from "@/features/pages/ProductOverview/Reviews/components/ReviewPhotos";
 import StarRating from "@/features/pages/ProductOverview/Reviews/components/StarRating";
+import type { ReviewCounts } from "@/features/pages/ProductOverview/Reviews/hooks/useReviewCounts";
+import { classifyReviewRefusal } from "@/features/pages/ProductOverview/Reviews/lib/refusal";
+import type { ReviewLikes } from "@/hooks/review/useReviewLikes";
 
 type Props = {
   review: ProductReview;
+  counts: ReviewCounts;
+  likes: ReviewLikes;
 };
 
 /**
  * One published review: author, stars, date, the detail ratings the form asked
- * for, the photos it carried, and the two controls whose feature has not landed
- * yet, visibly disabled and with no number beside them (AC-2).
+ * for, the photos it carried, the like control and the comment control that
+ * opens its thread in place (spec 0014, AC-1, AC-6, AC-11).
  */
-const ReviewCard = ({ review }: Props) => {
+const ReviewCard = ({ review, counts, likes }: Props) => {
   const t = useTranslations("reviews");
   const format = useFormatter();
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+
+  const liked = likes.isLiked(review.id);
+  const isLikePending = likes.isPending(review.id);
+  const likeCount = counts.likeCountOf(review.id, review.likeCount);
+  const commentCount = counts.commentCountOf(review.id, review.commentCount);
+  const threadId = `review-${review.id}-comments`;
 
   const details = [
     { key: "quality", label: t("ratingQuality"), value: review.qualityRating },
-    { key: "delivery", label: t("ratingDelivery"), value: review.deliveryRating },
-    { key: "accuracy", label: t("ratingAccuracy"), value: review.accuracyRating },
+    {
+      key: "delivery",
+      label: t("ratingDelivery"),
+      value: review.deliveryRating,
+    },
+    {
+      key: "accuracy",
+      label: t("ratingAccuracy"),
+      value: review.accuracyRating,
+    },
   ];
+
+  /**
+   * The press moves the number before the answer, and the answer replaces it.
+   * A second press while this review's request runs returns before sending; a
+   * failure puts the number and the pressed state back where they were
+   * (spec 0014, AC-6).
+   */
+  const toggleLike = async (): Promise<void> => {
+    if (isLikePending) {
+      return;
+    }
+
+    const before = likeCount;
+    counts.setLikeCount(review.id, liked ? before - 1 : before + 1);
+
+    try {
+      const answer = await likes.toggle(review.id);
+
+      if (!answer) {
+        counts.setLikeCount(review.id, before);
+        return;
+      }
+
+      counts.setLikeCount(review.id, answer.likeCount);
+    } catch (error) {
+      counts.setLikeCount(review.id, before);
+
+      // The confirmation branch already raised its own toast with a resend
+      // action, so a second one would only repeat it (AC-5).
+      if (classifyReviewRefusal(error) !== "emailNotConfirmed") {
+        showToast({ title: t("likeFailed"), type: "error" });
+      }
+    }
+  };
 
   return (
     <Card>
@@ -68,29 +126,33 @@ const ReviewCard = ({ review }: Props) => {
           </dl>
 
           <div className="flex gap-2">
+            <ReviewLikeButton
+              liked={liked}
+              count={likeCount}
+              isPending={isLikePending}
+              onToggle={() => void toggleLike()}
+            />
             <Button
+              type="button"
               variant="ghost"
               size="sm"
-              aria-disabled="true"
-              title={t("comingSoon")}
-              className="h-8 px-3 text-xs text-muted-foreground"
-            >
-              <ThumbsUp aria-hidden className="size-4" />
-              <span className="sr-only">{t("like")}</span>
-              <span className="sr-only">{t("comingSoon")}</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-disabled="true"
-              title={t("comingSoon")}
-              className="h-8 px-3 text-xs text-muted-foreground"
+              aria-expanded={isCommentsOpen}
+              aria-controls={threadId}
+              aria-label={t("comments.open")}
+              onClick={() => setIsCommentsOpen((open) => !open)}
+              className="h-8 gap-1 px-3 text-xs text-muted-foreground"
             >
               <MessageCircle aria-hidden className="size-4" />
-              <span className="sr-only">{t("viewComments")}</span>
-              <span className="sr-only">{t("comingSoon")}</span>
+              <span aria-hidden="true">{commentCount}</span>
             </Button>
           </div>
+
+          {isCommentsOpen ? (
+            <ReviewCommentsThread
+              reviewId={review.id}
+              onCountChange={(next) => counts.setCommentCount(review.id, next)}
+            />
+          ) : null}
         </div>
       </CardContent>
     </Card>
