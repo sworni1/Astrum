@@ -10,6 +10,9 @@ import { createAuthenticateToken } from "./middlewares/authenticateToken";
 import corsOptions from "./middlewares/corsOptions";
 import cartRoutes from "./modules/cart/cart.routes";
 import orderRoutes from "./modules/order/order.routes";
+import paymentWebhookRoutes, {
+  STRIPE_WEBHOOK_PATH,
+} from "./modules/payment/payment.routes";
 import sellerOrderRoutes from "./modules/order/seller-order.routes";
 import pickupRoutes from "./modules/pickup/pickup.routes";
 import productRoutes from "./modules/product/product.routes";
@@ -49,6 +52,10 @@ app.use((_req, res, next) => {
 });
 
 app.use("/api/auth", proxyOptions(authServiceUrl));
+
+// The provider callback is mounted before the JSON parser on purpose: its
+// signature is computed over the raw bytes (spec 0015, AC-5).
+app.use(STRIPE_WEBHOOK_PATH, paymentWebhookRoutes);
 
 app.use(express.json({ limit: "10mb" }));
 app.use(

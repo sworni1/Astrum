@@ -3,7 +3,7 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsDateString,
-  IsEnum,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -13,7 +13,8 @@ import {
   ValidateIf,
   ValidateNested,
 } from "class-validator";
-import { PaymentMethod } from "../../../../generated/prisma/enums";
+import type { PaymentMethod } from "../../../../generated/prisma/enums";
+import { CHOOSABLE_PAYMENT_METHODS } from "../../payment/payment.constants";
 import { MAX_LINE_QUANTITY, MAX_ORDER_LINES } from "../order.constants";
 
 /**
@@ -58,13 +59,8 @@ export class CreateOrderDto {
 
   @Expose()
   @IsNotEmpty()
-  @IsEnum(PaymentMethod)
+  @IsIn([...CHOOSABLE_PAYMENT_METHODS])
   paymentMethod!: PaymentMethod;
-
-  @Expose()
-  @IsNotEmpty()
-  @IsString()
-  paymentDetails!: string;
 
   @Expose()
   @ArrayMinSize(1)

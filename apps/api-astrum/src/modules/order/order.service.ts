@@ -14,6 +14,8 @@ import { AppError } from "../../common/helpers/appError";
 import { logger } from "../../common/helpers/logger";
 import type { CreateOrderDto, OrderItemDto } from "./dto/create-order.dto";
 import { type Idempotency, idempotencyOf } from "./idempotency";
+import { expireSessionForCancel } from "../payment/payment.cancel";
+import { PAYMENT_WINDOW_MINUTES } from "../payment/payment.constants";
 import {
   MAX_LINE_QUANTITY,
   ORDER_ERROR_CODES,
@@ -21,10 +23,9 @@ import {
   REPLAY_RETRY_DELAY_MS,
 } from "./order.constants";
 import {
+  closeOrder,
   lockOrder,
   ORDER_TRANSACTION_OPTIONS,
-  recomputeOrderStatus,
-  returnOrderStock,
 } from "./order-status.helpers";
 
 type OrderLine = { productId: string; quantity: number };
@@ -57,11 +58,6 @@ export type OrderSummary = Order & {
 
 /** A create answers with the order and whether it came from a replay (spec 0003). */
 export type CreateOrderResult = { order: OrderDetail; replay: boolean };
-
-const STOCK_RETURN_STATUSES: readonly OrderItemStatus[] = [
-  "PENDING",
-  "CONFIRMED",
-];
 
 const CUSTOMER_CANCELLATION_BLOCKERS: readonly OrderItemStatus[] = [
   "SHIPPED",
@@ -124,6 +120,9 @@ class StockShortfall extends Error {
     this.name = "StockShortfall";
   }
 }
+
+const addMinutes = (from: Date, minutes: number): Date =>
+  new Date(from.getTime() + minutes * 60_000);
 
 const roundMoney = (value: number): Prisma.Decimal =>
   new Prisma.Decimal(value).toDecimalPlaces(2);
@@ -369,6 +368,11 @@ export class OrderService {
       );
     }
 
+    // The session is expired before the transaction opens, never inside it: the
+    // provider call must not run while the order row is locked (AC-11).
+    await this.assertOwnOrder(orderId, userId);
+    await expireSessionForCancel(orderId);
+
     const order = await prisma.$transaction(
       (tx) => this.cancelOrder(tx, orderId, userId),
       ORDER_TRANSACTION_OPTIONS,
@@ -382,6 +386,17 @@ export class OrderService {
     });
 
     return order;
+  }
+
+  private async assertOwnOrder(orderId: string, userId: string): Promise<void> {
+    const owned = await prisma.order.findFirst({
+      where: { id: orderId, userId },
+      select: { id: true },
+    });
+
+    if (owned === null) {
+      throw orderNotFound();
+    }
   }
 
   /** Owner check, transition check, status write and stock return in one transaction. */
@@ -419,25 +434,24 @@ export class OrderService {
       );
     }
 
-    await tx.orderItem.updateMany({
-      where: {
-        orderId: current.id,
-        status: { in: ["PENDING", "CONFIRMED"] },
-      },
+    await closeOrder(tx, current);
+
+    // A close resolves the payment too: a pending or failed attempt is now
+    // cancelled, while a paid order keeps PAID (AC-11).
+    await tx.payment.updateMany({
+      where: { orderId: current.id, status: { in: ["PENDING", "FAILED"] } },
       data: { status: "CANCELLED" },
     });
 
-    await returnOrderStock(
-      tx,
-      current.OrderItem.filter((item) =>
-        STOCK_RETURN_STATUSES.includes(item.status),
-      ),
-    );
-    await recomputeOrderStatus(
-      tx,
-      current.id,
-      current.paymentStatus === "PENDING" ? "CANCELLED" : undefined,
-    );
+    if (
+      current.paymentStatus === "PENDING" ||
+      current.paymentStatus === "FAILED"
+    ) {
+      await tx.order.update({
+        where: { id: current.id },
+        data: { paymentStatus: "CANCELLED" },
+      });
+    }
 
     return toOrderDetail(
       await tx.order.findFirstOrThrow({
@@ -495,6 +509,7 @@ export class OrderService {
 
     await this.takeStock(tx, lines);
 
+    const now = new Date();
     const totalPrice = priced.reduce(
       (total, line) => total.add(line.unitPrice.mul(line.quantity)),
       new Prisma.Decimal(0),
@@ -507,7 +522,10 @@ export class OrderService {
         totalPrice,
         currency,
         paymentMethod: dto.paymentMethod,
-        paymentDetails: dto.paymentDetails,
+        paymentExpiresAt:
+          dto.paymentMethod === "ONLINE_CARD"
+            ? addMinutes(now, PAYMENT_WINDOW_MINUTES)
+            : null,
         deliveryAddress: pickup ? null : (dto.deliveryAddress ?? null),
         deliveryDate: new Date(dto.deliveryDate),
         shippingMethodId: dto.shippingMethodId,

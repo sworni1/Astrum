@@ -2,6 +2,7 @@ import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import { requireActiveAccount } from "../../middlewares/requireActiveAccount";
 import { validateDto } from "../../middlewares/validateDto";
+import { PaymentController } from "../payment/payment.controller";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { UpdateOrderStatusDto } from "./dto/update-order-status.dto";
 import { attachIdempotencyKey } from "./idempotency";
@@ -9,6 +10,8 @@ import { ORDER_ERROR_CODES } from "./order.constants";
 import { OrderController } from "./order.controller";
 
 const orderController = new OrderController();
+
+const paymentController = new PaymentController();
 
 const orderRoutes: Router = Router();
 
@@ -22,6 +25,12 @@ orderRoutes.patch(
   }),
   orderController.updateOrderStatus,
 );
+orderRoutes.post(
+  "/:orderId/payment",
+  requireActiveAccount,
+  paymentController.startPayment,
+);
+orderRoutes.post("/:orderId/payment/sync", paymentController.syncPayment);
 orderRoutes.post(
   "/",
   requireActiveAccount,
