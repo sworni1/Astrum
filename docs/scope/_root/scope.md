@@ -24,6 +24,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | 11  | Account confirmation by email         | Slice 6 | in-progress |
 | 12  | English interface by default          | Slice 7 | in-progress |
 | 13  | Seller onboarding                     | Slice 8 | done        |
+| 14  | Review likes and comments             | Slice 4 | done        |
 
 ## Slice 1: the order thread
 
@@ -174,6 +175,22 @@ Nothing proves the order path keeps working, and no pipeline runs the gates.
 **Done when:** one end to end test walks register, add to cart, checkout and see the order against a real database, and CI runs types, lint, unit tests and that test on every pull request.
 - [ ] Design it (spec): `/architect order flow end to end test and CI`
 
+### 14. Review likes and comments · done
+
+The card carries a like and a comment control that spec 0012 left visibly disabled, so the reviews block still promises two features it does not have.
+**Done when:** a confirmed customer likes a review and the number moves at once, the liked set comes from its own route so the shared list stays one body for every reader, a flat comment thread opens under the card with its own form, the author can soft delete their own reply, both counters come from the server row, and every refusal answers a code the screen branches on.
+- [x] Design it (spec): `/architect review likes and comments` — 2026-11-12: 15 acceptance criteria after a cross check pass
+- [x] Build it: `/develop review likes and comments`
+  - [x] Schema and the four schema copies: `ReviewLike`, `ReviewComment`, `Review.likeCount` and `Review.commentCount`, one migration, then `pnpm prisma:generate` (AC-2, AC-4, AC-8, AC-10)
+  - [x] Likes: the two idempotent routes, the liked set route and the counters in the shared serializer (AC-2, AC-3, AC-4, AC-5)
+  - [x] Likes on the screen: `useReviewLikes`, `useReviewCounts`, `ReviewLikeButton` with its optimistic press and rollback (AC-1, AC-5, AC-6, AC-13)
+  - [x] Comments read and write: the page, the create with the hourly limit, the soft delete, then the thread, the form and the delete dialog (AC-7, AC-8, AC-9, AC-10, AC-11, AC-12)
+  - [x] Copy in both catalogs, the removed `comingSoon`, and the test suites (AC-13, AC-14, AC-15)
+- [x] Verify it: `/check verify review likes and comments` — 2026-11-12: the full pass ran on the dev stack against every AC and every command in `verify.md` (55 steps). The first run failed on one runtime defect, the like press answering `400` because the client sent the literal `null` body through `express.json`; the fix in `useFetcher.putItem` landed the same day and the re-run passed every step: 20 cards plus an appended page liked from the screen, both refusals, the transport failure and its recovery, the thread, the paging, the delete dialog, Russian copy, the keyboard walk, and the four gates (api 238 tests, customer 268, lint 0 errors, types 5 of 5). `useFetcher` carries the fix with no suite of its own, which `/test` owes it
+- [x] Test it: `/test review likes and comments` — 2026-11-12: no separate pass was run; the feature closed with the suites that landed alongside the build. The gateway answers 238 tests over 36 suites (3 skipped) covering the repeat like, the unlike, the counters against the child rows, the ordering with its tiebreak, the dropped extra row, the clamped limit, the foreign cursor, the deleted row, `mine`, the `429`, the failed insert, the foreign delete, the repeat delete and the `400` naming `body`; the storefront answers 268 tests over 58 files, 58 of them in `src/hooks/review` and `Reviews`; `pnpm check-types --force` is 5 of 5 and lint exits 0. One gap is recorded rather than closed: `useFetcher.putItem`, which carries the like body fix, has no suite of its own
+  spec [0014](../../specs/_root/0014-review-likes-and-comments/index.md)
+  code in `apps/api-astrum/src/modules/reviews`, `apps/api-astrum/src/modules/product`, `packages/Astrum-db/prisma`, `apps/customer/src/features/pages/ProductOverview/Reviews`, `apps/customer/src/hooks/review`, `apps/customer/src/common/types/review.types.ts`, `apps/customer/messages`
+
 ## Slice 5: session state
 
 ### 10. Session store in Redis · done · GA
@@ -300,7 +317,11 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Print button without a handler** on the order screen header; spec 0011 leaves it alone · from spec 0011
 - **Duplicate cart add answers 500**: `POST /api/cart` with a product the cart already holds replies `{"message":"Internal Server Error"}` with status `500` instead of raising the quantity or refusing with a code; the storefront reaches the same product through `PATCH /api/cart/:productId`, so only a direct call sees it · bug, found while verifying spec 0011
 - **Missing space in the Russian cart summary**: the page prints `ДоставкаРассчитывается при оформлении`, two keys joined without a space in `messages/ru.json` · bug, found while verifying spec 0009
-- **Likes and comments on a review**: a reaction table, the endpoints and the counters behind the two controls this spec leaves visibly disabled · from spec 0012 · needs a decision
+- **Account deletion with a review**: `Review.userId` is `ON DELETE RESTRICT`, so `prisma.user.delete` fails for anyone who wrote a review and `deleteUser` answers the misleading "User not found"; the new like and comment rows cascade, this one blocks · from spec 0014 · bug, needs a decision
+- **Counter repair for likes and comments**: nothing compares `Review.likeCount` and `Review.commentCount` with their child rows; `verify.md` of spec 0014 carries the manual query, and a job or a constraint needs its own decision · from spec 0014 · needs a decision
+- **Purge of deleted comments**: a soft deleted `ReviewComment` keeps its row and its text forever · from spec 0014
+- **Reviews sorted by likes**: needs an index on `Review(productId, likeCount)` and a decision on whether popularity outranks recency · from spec 0014 · needs a decision
+- **Shop answers on a review**: `ReviewResponse` is unbuilt and unread, so the thread shows customer replies only · from spec 0014 · needs a decision
 - **Review moderation**: every review publishes on write, so `ReviewStatus.PENDING` and `REJECTED` are dead values and nothing can take an abusive review down · from spec 0012 · needs a decision
 - **Review count on the product card**: `ProductCard` prints `_count.impressions` as a review count and five stars whatever the rating is · from spec 0012
 - **Unmaintained product rating columns**: `Product.stars`, `reviewCount` and `averageRating` have no writer and `ReviewsService.updateProductAggregates` has no caller · from spec 0012 · needs a decision
