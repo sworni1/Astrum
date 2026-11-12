@@ -236,14 +236,6 @@ describe("SellerOrders page states", () => {
     expect(text()).toContain("states.notSellerTitle");
   });
 
-  it("shows the intake switched off screen on 503 (AC-11)", async () => {
-    refuseWith(503, "SELLER_ORDER_WORKFLOW_DISABLED");
-
-    await renderPage();
-
-    expect(text()).toContain("states.disabledTitle");
-  });
-
   it("shows the failure screen with a retry on 500 (AC-11)", async () => {
     refuseWith(500, "INTERNAL_SERVER_ERROR");
 

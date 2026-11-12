@@ -35,7 +35,6 @@ describe("refusalToastFor", () => {
     [404, "ORDER_ITEM_NOT_FOUND", "orderItemNotFound"],
     [422, "VALIDATION", "validation"],
     [403, "EMAIL_NOT_CONFIRMED", "emailNotConfirmed"],
-    [503, "SELLER_ORDER_WORKFLOW_DISABLED", "workflowDisabled"],
   ])(
     "maps %i %s to its own catalog key and asks for no retry (AC-10)",
     (status: number, code: string, key: string) => {

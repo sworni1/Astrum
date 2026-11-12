@@ -4,24 +4,11 @@ jest.mock("../../../lib/prisma", () => ({
   prisma: { user: { findUnique: jest.fn() } },
 }));
 
-jest.mock("./seller-order-workflow.config", () => ({
-  requireSellerOrderWorkflow: (
-    _req: unknown,
-    _res: unknown,
-    next: () => void,
-  ) => next(),
-  parseSellerOrderWorkflowEnabled: () => true,
-  createRequireSellerOrderWorkflow:
-    () => (_req: unknown, _res: unknown, next: () => void) =>
-      next(),
-}));
-
 import type { AddressInfo } from "node:net";
 import { prisma } from "../../../lib/prisma";
 import { requireActiveAccount } from "../../middlewares/requireActiveAccount";
 import sellerOrderRoutes from "./seller-order.routes";
 import { SellerOrderService } from "./seller-order.service";
-import { requireSellerOrderWorkflow } from "./seller-order-workflow.config";
 
 const findUnique = prisma.user.findUnique as unknown as jest.Mock;
 
@@ -77,14 +64,12 @@ describe("Seller route access gate", () => {
     findUnique.mockReset();
   });
 
-  it("mounts the account gate on the write before the workflow check (AC-13)", () => {
+  it("mounts the account gate on the write before the controller (AC-13)", () => {
     const handlers = handlersOf(patchRoute);
     const gateIndex = handlers.indexOf(requireActiveAccount);
-    const workflowIndex = handlers.indexOf(requireSellerOrderWorkflow);
 
     expect(gateIndex).toBeGreaterThanOrEqual(0);
-    expect(workflowIndex).toBeGreaterThanOrEqual(0);
-    expect(gateIndex).toBeLessThan(workflowIndex);
+    expect(handlers.length).toBe(gateIndex + 3);
   });
 
   it("keeps the read route open to any account state (AC-13)", () => {
@@ -127,6 +112,8 @@ describe("Seller route access gate", () => {
           {
             id: "order-1",
             createdAt: new Date(0),
+            paymentStatus: "PENDING" as const,
+            paymentMethod: "ONLINE_CARD" as const,
             isPickup: false,
             pickupPointId: null,
             pickupPointName: null,

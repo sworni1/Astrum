@@ -1,6 +1,6 @@
 import { refusalBody, refusalCode } from "@/common/helpers/apiRefusal";
 
-export type SellerErrorKind = "none" | "notSeller" | "disabled" | "failure";
+export type SellerErrorKind = "none" | "notSeller" | "failure";
 
 export const sellerRefusalBody = refusalBody;
 
@@ -19,10 +19,6 @@ export const sellerErrorKind = (error: unknown): SellerErrorKind => {
 
   if (code === "SELLER_NOT_ASSIGNED") {
     return "notSeller";
-  }
-
-  if (code === "SELLER_ORDER_WORKFLOW_DISABLED") {
-    return "disabled";
   }
 
   return "failure";

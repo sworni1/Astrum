@@ -10,7 +10,6 @@ export const ORDER_ERROR_CODES = {
   notFound: "ORDER_NOT_FOUND",
   orderItemNotFound: "ORDER_ITEM_NOT_FOUND",
   sellerNotAssigned: "SELLER_NOT_ASSIGNED",
-  sellerWorkflowDisabled: "SELLER_ORDER_WORKFLOW_DISABLED",
   invalidTransition: "INVALID_STATUS_TRANSITION",
   idempotencyReused: "IDEMPOTENCY_KEY_REUSED",
   pickupPointRequired: "PICKUP_POINT_REQUIRED",

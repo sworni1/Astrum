@@ -83,15 +83,6 @@ export default function SellerOrders() {
     );
   }
 
-  if (kind === "disabled") {
-    return (
-      <StateScreen
-        title={t("states.disabledTitle")}
-        text={t("states.disabledText")}
-      />
-    );
-  }
-
   if (kind === "failure") {
     return (
       <StateScreen

@@ -52,10 +52,6 @@ export const refusalToastFor = (error: unknown): RefusalToast => {
     return { key: "emailNotConfirmed", retry: false };
   }
 
-  if (code === "SELLER_ORDER_WORKFLOW_DISABLED") {
-    return { key: "workflowDisabled", retry: false };
-  }
-
   if (code === "ACCOUNT_STATUS_UNAVAILABLE") {
     return { key: "accountStatusUnavailable", retry: true };
   }

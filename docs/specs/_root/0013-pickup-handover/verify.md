@@ -13,7 +13,7 @@ _Every step here is the evidence for AC-16, the live walk of the path; the tag b
 ## Fixtures the run needs
 
 - Two active pickup points created through the script: `Pickup point Lenina` at `Ленина, 5` and `Pickup point Mira` at `Мира, 12`, plus a third `Pickup point Closed` switched off with `db:pickup-point off`.
-- Seller account S1, signed in, `ACTIVE`, owning business B1 with product P1 in stock, with `SELLER_ORDER_WORKFLOW_ENABLED=true` in `apps/api-astrum/.env` and the gateway restarted.
+- Seller account S1, signed in, `ACTIVE`, owning business B1 with product P1 in stock, with the gateway running the current code (no workflow flag since 2026-11-13).
 - Seller account S2, signed in, `ACTIVE`, owning business B2 with product P2, for the multi business order.
 - Seller account S3, signed in, `PENDING`, owning business B3 with product P3, for the account gate.
 - Customer account A, signed in, `ACTIVE`, with a cart holding P1, P2 and P3, to place pickup orders of one business and of two businesses.
