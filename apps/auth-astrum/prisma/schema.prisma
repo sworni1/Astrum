@@ -22,6 +22,8 @@ model User {
   status              UserStatus          @default(PENDING)
   lastViewedProduct   LastViewedProduct[]
   reviews             Review[]
+  reviewLikes         ReviewLike[]
+  reviewComments      ReviewComment[]
   emailTokens         EmailToken[]
 }
 
@@ -301,6 +303,8 @@ model Review {
   comment        String
   photos         String[]     @default([])
   status         ReviewStatus @default(PENDING)
+  likeCount      Int          @default(0)
+  commentCount   Int          @default(0)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -308,10 +312,42 @@ model Review {
   User            User             @relation(fields: [userId], references: [id])
   OrderItem       OrderItem        @relation(fields: [orderItemId], references: [id])
   reviewResponses ReviewResponse[]
+  reviewLikes     ReviewLike[]
+  reviewComments  ReviewComment[]
 
   @@index([productId, status])
   @@index([userId])
   @@index([createdAt])
+}
+
+/// One like per review and customer: the unique pair is the only guard.
+model ReviewLike {
+  id        String   @id @default(uuid())
+  reviewId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  Review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  User   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, userId])
+  @@index([userId])
+}
+
+/// One flat thread per review; a deleted row keeps its text and never sends it.
+model ReviewComment {
+  id        String    @id @default(uuid())
+  reviewId  String
+  userId    String
+  body      String
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  Review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  User   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId, createdAt])
+  @@index([userId, createdAt])
 }
 
 model ReviewResponse {
