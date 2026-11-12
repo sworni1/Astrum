@@ -33,7 +33,8 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.12.1",
     "pg": "^8.23.1",
-    "reflect-metadata": "^0.2.2"
+    "reflect-metadata": "^0.2.2",
+    "stripe": "^23.1.0"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.9",
