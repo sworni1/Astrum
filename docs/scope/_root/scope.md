@@ -25,6 +25,8 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | 12  | English interface by default          | Slice 7 | in-progress |
 | 13  | Seller onboarding                     | Slice 8 | done        |
 | 14  | Review likes and comments             | Slice 4 | done        |
+| 15  | Payment through a test provider       | Slice 9 | in-progress |
+| 16  | Order letters                         | Slice 9 | planned     |
 
 ## Slice 1: the order thread
 
@@ -269,6 +271,33 @@ Becoming a seller today means an engineer runs `pnpm db:assign-business <email>`
   spec [0008](../../specs/_root/0008-seller-onboarding/index.md)
   code in `apps/api-astrum/src/modules/seller`, `apps/customer/src/features/pages/SellerOnboarding`, `apps/customer/src/features/pages/Profile/actions/SellOnAstrum`, `apps/customer/src/hooks/seller/useBecomeSeller.ts`, `packages/Astrum-db/prisma/schema.prisma`
 
+## Slice 9: payment and order letters
+
+### 15. Payment through a test provider · in-progress · GA
+
+The checkout stores `paymentMethod` and `paymentStatus` and nothing charges anything: `ONLINE_CARD`, `PAYPAL` and `STRIPE` are labels the order screen prints, no env template names a provider, the gateway has no payment module, no callback route and no provider reference on the order, and `paymentDetails` is free text typed by the client.
+**Done when:** a customer pays an online card order on the Stripe test page from the order screen and lands back on it, the order's `paymentStatus` becomes `PAID` once from a callback whose signature, session, amount and currency are checked against the stored order, a second delivery of the same callback changes nothing, a declined card leaves the order payable for the rest of its 32 minute window with the stock still held, an abandoned payment closes the order and returns the stock once, cancel expires the session and a callback that lands afterwards is recorded as `PAID` with a refund owed, and `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` arrive from the environment in dev and in the production template.
+- [x] Design it (spec): `/architect payment through a test provider`
+- [x] Build it: `/develop payment through a test provider`
+  - [x] Schema, adapter, pay route, paid callback and the pay control (AC-1, AC-2, AC-4, AC-5, AC-6, AC-13) — done: two new tables, two enums and `Order.paymentExpiresAt` applied to the dev database (`Payment_one_pending_per_order` partial unique index live), `stripe@23.1.0` behind `PaymentGateway`, `POST /api/orders/:orderId/payment`, the raw body webhook mounted before `express.json`, and `PaymentActions` on the order screen
+  - [x] Failure paths of the callback (AC-5, AC-7, AC-12) — done: amount and currency compared through `toMinorUnits`, the event log inserted before the apply with the unique key as the replay guard, the adoption branch for a session stored after the callback, the decline and async failure transitions, and `payment.refund_owed` on a paid callback after a cancel
+  - [x] Expiry, sweep and cancel (AC-8, AC-9, AC-11) — done: `closeOrder(tx, order)` shared by the cancel route and the expiry, the one minute pass behind `pg_try_advisory_xact_lock` started from `server.ts`, and the cancel expiring the session before its transaction opens
+  - [x] Sync and the return screen (AC-10, AC-14) — done: `POST /api/orders/:orderId/payment/sync` through the same apply path, one call on mount behind a ref guard, the checking state, and `router.replace` dropping the parameter
+  - [x] Methods, seller read, copy, tests and deploy config (AC-3, AC-15, AC-16, AC-17) — done: `CHOOSABLE_PAYMENT_METHODS` on both sides, the seller read carrying `paymentStatus` and `paymentMethod` with the label in the panel, 12 new keys in both catalogs, 46 gateway tests and 20 storefront ones, and `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` plus the Caddyfile webhook path
+
+- [ ] Verify it: `/check verify payment through a test provider`
+- [ ] Test it: `/test payment through a test provider`
+- [ ] Review it (fresh model): `/check review payment through a test provider`
+- [ ] Document it: `/document payment through a test provider`
+  spec [0015](../../specs/_root/0015-payment-through-a-test-provider/index.md)
+  code in `apps/api-astrum/src/modules/payment`, `apps/api-astrum/src/modules/order`, `apps/customer/src/features/pages/Orders/OrderPage`, `apps/customer/src/hooks/order`, `packages/Astrum-db/prisma/schema.prisma`, `Caddyfile`
+
+### 16. Order letters · planned
+
+The worker delivers one letter, the account confirmation, and the gateway publishes one event, so nothing tells a customer that an order was placed, paid or handed over.
+**Done when:** a letter leaves for the customer when an order is placed and on each status change that concerns them, the gateway publishes one event per change on the existing `astrum.events` exchange after the commit, the worker consumes it through its own queue with the retry ladder and the dead letter queue that already carry the confirmation letter, the letter arrives in the language the customer chose, a republished event sends no twin letter, and letters written while the worker is down wait in the durable queue instead of disappearing.
+- [ ] Design it (spec): `/architect order letters`
+
 ## Fixed
 
 Bugs found while verifying a slice, recorded here once the fix lands so the plan stays honest.
@@ -281,15 +310,14 @@ Bugs found while verifying a slice, recorded here once the fix lands so the plan
 
 Kept so the plan stays honest, built only when the loop above runs.
 
-- **Online payment through a test provider**: pay before handover · needs a decision
-- **Order emails**: confirmation and status changes · needs a decision
 - **Courier delivery**: a shipping address instead of a pickup point · needs a decision
-- **Returns and refunds** · needs a decision
+- **Returns and refunds** · needs a decision · from spec 0015 (a paid order cancelled now owes a manual refund and logs `payment.refund_owed`)
 - **Second currency** · needs a decision
 - **Storefront checkout timeout above the server budget**: the client gives up at 10000 ms while the server transaction may still be committing · from spec 0003, a separate small change
 - **Two order create hooks**: `useCreateOrder` is unused and sends no idempotency key · from spec 0003, cleanup
 - **Log out everywhere**: a `user:<id>:sessions` index plus the button that uses it · from spec 0004 · needs a decision
 - **Session renewal and a device list**: refresh on activity, plus the screen that lists sessions · from spec 0004 · needs a decision
+- **A real Russian payment provider** behind the same adapter, if the shop ever sells for real; Stripe stays test only · from spec 0015 · needs a decision
 - **Session alerts**: metrics and an alert on `session.store.error` and on a `/health` `503` · from spec 0004
 - **Storefront guard reading the session**: stops a revoked customer from seeing page shells before the first API call · from spec 0004 · needs a decision
 - **Cyrillic copy guard**: a check that refuses Cyrillic literals in `apps/customer/src`, so a hardcoded string cannot come back · from spec 0006
@@ -333,6 +361,8 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Reaching the point and handing over**: a notification for each of the two moments, built on the events and the worker of spec 0005 · from spec 0013 · needs a decision
 - **City, opening hours and a phone on a pickup point**: plus a filter in the checkout, once the shop runs more than one city · from spec 0013
 - **Checkout date field shows the day before the picked one**: clicking `Friday, November 20th, 2026` in the calendar (which keeps that day selected) leaves `November 19, 2026` on the trigger, while the stored `deliveryDate` is the 20th and the order screen prints `Pickup Date: November 20, 2026`, so the field and the value disagree by one day · bug, found while verifying spec 0013
+
+- **An abandoned online card order with no payment attempt is never closed**: the sweep reads `ONLINE_CARD` orders past their deadline, but `closeWithoutSession` returns after logging `payment.sweep.no_attempt` when the order has no `Payment` row, so an order abandoned before the first pay press keeps its stock forever; `cmwcq7jl5000vzkvd0kgsp2zz` has been `PENDING` with a deadline of 2026-11-11 23:36 since then · bug, found while verifying spec 0015
 
 ## Legend
 

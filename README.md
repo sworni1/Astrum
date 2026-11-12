@@ -109,11 +109,21 @@ The reasoning behind the choice and the rejected alternatives (Swarm, nginx, Tra
 - [x] Delivery methods from the API: the checkout lists the methods the gateway serves with their prices and currency, the order stores the method, its delivery price and a server computed grand total, and a missing, switched off or wrong currency method is refused with its own code (spec [0009](docs/specs/_root/0009-shipping-methods-from-the-api/index.md))
 - [ ] English interface by default: every storefront screen answers in English, Russian stays as a second locale, and the confirmation letter follows the chosen language (spec [0006](docs/specs/_root/0006-english-interface-by-default/index.md); built on 2026-11-06, the verify walk is still owed)
 - [x] Pickup handover: the customer picks a point at checkout, the seller marks the order handed over there, the order becomes `DELIVERED`, and the order screen shows the point and the handover date (spec [0013](docs/specs/_root/0013-pickup-handover/index.md))
-- [ ] Payment through a test provider and order letters
-- [ ] Review likes and comments, moderation is off for now
+- [ ] Payment through a test provider
+  - A payment record on the order: the provider session id, the amount, the currency, the status the provider reports and the callback body it sent
+  - Gateway payment routes: create a payment for an order, then a public callback that checks the signature and the amount and moves `paymentStatus` to `PAID` exactly once
+  - Pay before handover: an online order reaches the seller only after the provider confirms, a failed or abandoned payment frees the stock it held, and a cancelled order closes its payment
+  - The storefront: the pay step after checkout, and the order screen reading the payment state from the API instead of a label table alone
+  - Provider credentials in `.env.example`, `.env.prod.example` and `docker-compose.prod.yml`; which test provider is still a decision for the spec
+- [ ] Order letters
+  - The gateway publishes `order.created` and an order status event on the existing `astrum.events` exchange, after the commit
+  - The worker binds its own order queue with the retry ladder and the dead letter queue that already carry the confirmation letter
+  - The letters: the order placed, the payment, the handover and the cancel, each in the language the customer chose
+  - A republished event sends no twin letter
+- [x] Review likes and comments, moderation is off for now
   - [x] Writing: a form on the product page after `DELIVERED`, ratings (overall, quality, delivery, match) and the text go to the API, and the review is `APPROVED` at once (spec [0012](docs/specs/_root/0012-reviews-on-the-product-screen/index.md))
-  - [ ] Review likes: a `ReviewLike` table with one row per review and customer, the count in the response, a toggle in the UI
-  - [ ] Review comments: customer replies under a review (`ReviewComment`), the list and the form, separate from the shop answer `ReviewResponse`
+  - [x] Review likes: a `ReviewLike` table with one row per review and customer, the count in the response, a toggle in the UI
+  - [x] Review comments: customer replies under a review (`ReviewComment`), the list and the form, separate from the shop answer `ReviewResponse`
   - [x] The review storefront: the lists and forms read the API instead of mocks, and the average rating and the count come from the database
 - [ ] End to end tests of the order flow, CI
 
