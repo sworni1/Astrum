@@ -42,8 +42,8 @@ describe("productReviewsRouter params", () => {
   beforeEach(() => {
     jest.restoreAllMocks();
     (
-      (prisma as unknown as { user: { findUnique: jest.Mock } }).user.findUnique
-    ).mockResolvedValue({ status: "ACTIVE" });
+      prisma as unknown as { user: { findUnique: jest.Mock } }
+    ).user.findUnique.mockResolvedValue({ status: "ACTIVE" });
   });
 
   it("hands the product id from the path to the service (AC-1, AC-12)", async () => {
@@ -60,13 +60,29 @@ describe("productReviewsRouter params", () => {
         },
       });
 
-    const response = await fetch(`${baseUrl}/api/products/product-from-path/reviews?limit=2`);
+    const response = await fetch(
+      `${baseUrl}/api/products/product-from-path/reviews?limit=2`,
+    );
 
     expect(response.status).toBe(200);
     expect(list).toHaveBeenCalledWith("product-from-path", {
       after: undefined,
       limit: "2",
     });
+  });
+
+  it("hands the product id from the path to the liked set route (AC-3)", async () => {
+    const likedSet = jest
+      .spyOn(ReviewsService.prototype, "getLikedReviewIds")
+      .mockResolvedValue({ reviewIds: ["review-1"] });
+
+    const response = await fetch(
+      `${baseUrl}/api/products/product-from-path/review-likes`,
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ reviewIds: ["review-1"] });
+    expect(likedSet).toHaveBeenCalledWith("user-1", "product-from-path");
   });
 
   it("never reads the product from the request body (AC-11)", async () => {

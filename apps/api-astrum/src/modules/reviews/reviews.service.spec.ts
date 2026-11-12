@@ -51,6 +51,8 @@ const rowFor = (overrides: Record<string, unknown> = {}) => ({
   accuracyRating: 5,
   comment: "solid drill",
   photos: [],
+  likeCount: 0,
+  commentCount: 0,
   createdAt: new Date("2026-11-11T10:00:00.000Z"),
   User: { nickName: "Ivan" },
   ...overrides,
@@ -66,7 +68,9 @@ describe("ReviewsService.createReview", () => {
 
   beforeEach(() => jest.clearAllMocks());
 
-  const expectRefusal = async (promise: Promise<unknown>): Promise<AppError> => {
+  const expectRefusal = async (
+    promise: Promise<unknown>,
+  ): Promise<AppError> => {
     await expect(promise).rejects.toBeInstanceOf(AppError);
     const error = await promise.catch((caught: unknown) => caught);
     return error as AppError;
@@ -111,15 +115,21 @@ describe("ReviewsService.createReview", () => {
     });
     prismaMock.review.create.mockResolvedValue(rowFor({ User: null }));
 
-    const review = await service.createReview("user-1", "product-path", dtoFor());
+    const review = await service.createReview(
+      "user-1",
+      "product-path",
+      dtoFor(),
+    );
 
     expect(Object.keys(review).sort()).toEqual([
       "accuracyRating",
       "authorName",
       "comment",
+      "commentCount",
       "createdAt",
       "deliveryRating",
       "id",
+      "likeCount",
       "photos",
       "qualityRating",
       "rating",
@@ -231,11 +241,16 @@ describe("ReviewsService.getReviewsForProduct", () => {
 
   it("drops the extra row, answers the next cursor and keeps the aggregate from the whole set (AC-12)", async () => {
     const rows = Array.from({ length: 3 }, (_, index) =>
-      rowFor({ id: `review-${index}`, User: { nickName: index === 1 ? "  " : "Ivan" } }),
+      rowFor({
+        id: `review-${index}`,
+        User: { nickName: index === 1 ? "  " : "Ivan" },
+      }),
     );
     prismaMock.review.findMany.mockResolvedValue(rows);
 
-    const page = await service.getReviewsForProduct("product-1", { limit: "2" });
+    const page = await service.getReviewsForProduct("product-1", {
+      limit: "2",
+    });
 
     expect(page.reviews).toHaveLength(2);
     expect(page.nextCursor).toBe("review-1");
@@ -251,7 +266,9 @@ describe("ReviewsService.getReviewsForProduct", () => {
   it("answers no cursor when the extra row did not exist (AC-12)", async () => {
     prismaMock.review.findMany.mockResolvedValue([rowFor()]);
 
-    const page = await service.getReviewsForProduct("product-1", { limit: "20" });
+    const page = await service.getReviewsForProduct("product-1", {
+      limit: "20",
+    });
 
     expect(page.nextCursor).toBeNull();
     expect(page.hasNextPage).toBe(false);

@@ -2,17 +2,25 @@ import { Prisma } from "../../../generated/prisma/client";
 import { OrderItemStatus, ReviewStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
+import type { CreateReviewCommentDto } from "./dto/create-review-comment.dto";
 import type { CreateReviewDto } from "./dto/create-review.dto";
 import {
+  REVIEW_COMMENT_PAGE_DEFAULT_LIMIT,
+  REVIEW_COMMENT_RATE_LIMIT,
+  REVIEW_COMMENT_RATE_WINDOW_MS,
   REVIEW_ERROR_CODES,
   REVIEW_PAGE_DEFAULT_LIMIT,
   REVIEW_PAGE_MAX_LIMIT,
 } from "./reviews.constants";
 import {
   buildDistribution,
-  roundAverageRating,
+  reviewCommentSelect,
   reviewRowSelect,
+  roundAverageRating,
   serializeReview,
+  serializeReviewComment,
+  type PublicReviewComment,
+  type ReviewCommentRow,
   type ReviewRow,
 } from "./review.serializer";
 
@@ -21,10 +29,29 @@ export type ReviewPageQuery = {
   limit?: unknown;
 };
 
-/** An integer clamped to 1 through 50, defaulting to 20 (AC-12). */
-const parseLimit = (raw: unknown): number => {
+export type LikeAnswer = {
+  liked: boolean;
+  likeCount: number;
+};
+
+export type CommentPage = {
+  comments: PublicReviewComment[];
+  nextCursor: string | null;
+  hasNextPage: boolean;
+};
+
+export type CommentWriteAnswer = {
+  comment: PublicReviewComment;
+  commentCount: number;
+};
+
+/** A transaction handle, so a guard reads the same snapshot as the write. */
+type Tx = Prisma.TransactionClient;
+
+/** An integer clamped to 1 through 50, defaulting to the caller's page size. */
+const parseLimit = (raw: unknown, fallback: number): number => {
   if (raw === undefined) {
-    return REVIEW_PAGE_DEFAULT_LIMIT;
+    return fallback;
   }
 
   const value = typeof raw === "number" ? raw : Number(raw);
@@ -109,7 +136,7 @@ export class ReviewsService {
   }
 
   async getReviewsForProduct(productId: string, query: ReviewPageQuery = {}) {
-    const limit = parseLimit(query.limit);
+    const limit = parseLimit(query.limit, REVIEW_PAGE_DEFAULT_LIMIT);
     const after = query.after === undefined ? undefined : String(query.after);
 
     if (after !== undefined) {
@@ -179,6 +206,274 @@ export class ReviewsService {
     }
 
     return review;
+  }
+
+  /**
+   * The ids of this product's approved reviews the caller liked, oldest like
+   * first (AC-3). An empty array covers a product with nothing liked in it, so
+   * the screen never reads a `404` as "nobody liked anything".
+   */
+  async getLikedReviewIds(
+    userId: string,
+    productId: string,
+  ): Promise<{ reviewIds: string[] }> {
+    const rows = await prisma.reviewLike.findMany({
+      where: {
+        userId,
+        Review: { productId, status: ReviewStatus.APPROVED },
+      },
+      select: { reviewId: true },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return { reviewIds: rows.map((row) => row.reviewId) };
+  }
+
+  /**
+   * One like per review and customer. The insert itself is the guard, so a
+   * repeated press answers the same number instead of a `500` (AC-4).
+   */
+  async likeReview(userId: string, reviewId: string): Promise<LikeAnswer> {
+    return prisma.$transaction(async (tx) => {
+      await this.requireApprovedReview(tx, reviewId);
+
+      const created = await tx.reviewLike.createMany({
+        data: [{ reviewId, userId }],
+        skipDuplicates: true,
+      });
+
+      if (created.count === 1) {
+        const updated = await tx.review.update({
+          where: { id: reviewId },
+          data: { likeCount: { increment: 1 } },
+          select: { likeCount: true },
+        });
+
+        return { liked: true, likeCount: updated.likeCount };
+      }
+
+      const current = await tx.review.findUnique({
+        where: { id: reviewId },
+        select: { likeCount: true },
+      });
+
+      return { liked: true, likeCount: current?.likeCount ?? 0 };
+    });
+  }
+
+  /**
+   * Decrements only when exactly one row was removed, so a repeat answers the
+   * same number and the counter never reads `-1` (AC-4).
+   */
+  async unlikeReview(userId: string, reviewId: string): Promise<LikeAnswer> {
+    return prisma.$transaction(async (tx) => {
+      await this.requireReview(tx, reviewId);
+
+      const removed = await tx.reviewLike.deleteMany({
+        where: { reviewId, userId },
+      });
+
+      if (removed.count === 1) {
+        await tx.review.updateMany({
+          where: { id: reviewId, likeCount: { gt: 0 } },
+          data: { likeCount: { decrement: 1 } },
+        });
+      }
+
+      const current = await tx.review.findUnique({
+        where: { id: reviewId },
+        select: { likeCount: true },
+      });
+
+      return { liked: false, likeCount: current?.likeCount ?? 0 };
+    });
+  }
+
+  /** One page of the flat thread, oldest first, ten rows by default (AC-7). */
+  async getReviewComments(
+    reviewId: string,
+    viewerId: string,
+    query: ReviewPageQuery = {},
+  ): Promise<CommentPage> {
+    const review = await prisma.review.findFirst({
+      where: { id: reviewId, status: ReviewStatus.APPROVED },
+      select: { id: true },
+    });
+
+    if (!review) {
+      throw new AppError(404, REVIEW_ERROR_CODES.notFound, "Review not found");
+    }
+
+    const limit = parseLimit(query.limit, REVIEW_COMMENT_PAGE_DEFAULT_LIMIT);
+    const after = query.after === undefined ? undefined : String(query.after);
+
+    if (after !== undefined) {
+      const cursorRow = await prisma.reviewComment.findFirst({
+        where: { id: after, reviewId },
+        select: { id: true },
+      });
+
+      if (!cursorRow) {
+        throw new AppError(
+          400,
+          REVIEW_ERROR_CODES.invalidCursor,
+          "after must be a comment of this review",
+        );
+      }
+    }
+
+    const rows = await prisma.reviewComment.findMany({
+      where: { reviewId },
+      take: limit + 1,
+      ...(after ? { cursor: { id: after }, skip: 1 } : {}),
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      select: reviewCommentSelect,
+    });
+
+    const hasNextPage = rows.length > limit;
+    const page = hasNextPage ? rows.slice(0, limit) : rows;
+
+    return {
+      comments: page.map((row) =>
+        serializeReviewComment(row as ReviewCommentRow, viewerId),
+      ),
+      nextCursor: hasNextPage ? page[page.length - 1].id : null,
+      hasNextPage,
+    };
+  }
+
+  /**
+   * The budget and the insert read and write one snapshot, so the eleventh
+   * comment in the hour is refused and a failed insert leaves the counter
+   * untouched (AC-8, AC-9).
+   */
+  async createReviewComment(
+    userId: string,
+    reviewId: string,
+    dto: CreateReviewCommentDto,
+  ): Promise<CommentWriteAnswer> {
+    const body = dto.body.trim();
+
+    return prisma.$transaction(async (tx) => {
+      await this.requireApprovedReview(tx, reviewId);
+
+      const windowStart = new Date(Date.now() - REVIEW_COMMENT_RATE_WINDOW_MS);
+      const recent = await tx.reviewComment.count({
+        where: { userId, createdAt: { gte: windowStart } },
+      });
+
+      if (recent >= REVIEW_COMMENT_RATE_LIMIT) {
+        throw new AppError(
+          429,
+          REVIEW_ERROR_CODES.commentRateLimited,
+          "Too many comments in the last hour",
+        );
+      }
+
+      const row = await tx.reviewComment.create({
+        data: { reviewId, userId, body },
+        select: reviewCommentSelect,
+      });
+
+      const updated = await tx.review.update({
+        where: { id: reviewId },
+        data: { commentCount: { increment: 1 } },
+        select: { commentCount: true },
+      });
+
+      return {
+        comment: serializeReviewComment(row as ReviewCommentRow, userId),
+        commentCount: updated.commentCount,
+      };
+    });
+  }
+
+  /**
+   * The author's own soft delete: the update is guarded by `deletedAt: null`,
+   * so a repeat answers the identical stub and decrements once (AC-10).
+   */
+  async deleteReviewComment(
+    userId: string,
+    reviewId: string,
+    commentId: string,
+  ): Promise<CommentWriteAnswer> {
+    return prisma.$transaction(async (tx) => {
+      await this.requireReview(tx, reviewId);
+
+      const existing = await tx.reviewComment.findFirst({
+        where: { id: commentId, reviewId },
+        select: { id: true, userId: true },
+      });
+
+      if (!existing) {
+        throw new AppError(
+          404,
+          REVIEW_ERROR_CODES.commentNotFound,
+          "Comment not found",
+        );
+      }
+
+      if (existing.userId !== userId) {
+        throw new AppError(
+          403,
+          REVIEW_ERROR_CODES.commentForbidden,
+          "Only the author can delete this comment",
+        );
+      }
+
+      const updated = await tx.reviewComment.updateMany({
+        where: { id: commentId, reviewId, userId, deletedAt: null },
+        data: { deletedAt: new Date() },
+      });
+
+      if (updated.count === 1) {
+        await tx.review.updateMany({
+          where: { id: reviewId, commentCount: { gt: 0 } },
+          data: { commentCount: { decrement: 1 } },
+        });
+      }
+
+      const row = await tx.reviewComment.findUnique({
+        where: { id: commentId },
+        select: reviewCommentSelect,
+      });
+      const counter = await tx.review.findUnique({
+        where: { id: reviewId },
+        select: { commentCount: true },
+      });
+
+      return {
+        comment: serializeReviewComment(row as ReviewCommentRow, userId),
+        commentCount: counter?.commentCount ?? 0,
+      };
+    });
+  }
+
+  /**
+   * A like or a comment needs an approved review; both delete routes act on
+   * existence alone, so a row written before a status change can be withdrawn
+   * (AC-5).
+   */
+  private async requireApprovedReview(tx: Tx, reviewId: string): Promise<void> {
+    const review = await tx.review.findFirst({
+      where: { id: reviewId, status: ReviewStatus.APPROVED },
+      select: { id: true },
+    });
+
+    if (!review) {
+      throw new AppError(404, REVIEW_ERROR_CODES.notFound, "Review not found");
+    }
+  }
+
+  private async requireReview(tx: Tx, reviewId: string): Promise<void> {
+    const review = await tx.review.findFirst({
+      where: { id: reviewId },
+      select: { id: true },
+    });
+
+    if (!review) {
+      throw new AppError(404, REVIEW_ERROR_CODES.notFound, "Review not found");
+    }
   }
 
   // Kept for a future moderation write; nothing calls it today (spec 0012, Follow up).
