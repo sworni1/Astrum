@@ -130,6 +130,7 @@ model Order {
   paymentMethod    PaymentMethod
   paymentStatus    PaymentStatus  @default(PENDING)
   paymentDetails   String?
+  paymentExpiresAt DateTime?
   status           OrderStatus    @default(PENDING)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
@@ -137,6 +138,7 @@ model Order {
   deliveryAddress  String?
   deliveryDate     DateTime
   OrderItem        OrderItem[]
+  payments         Payment[]
   shippingMethodId String
   shippingMethodName String
   deliveryPrice    Decimal        @db.Decimal(10, 2)
@@ -210,6 +212,20 @@ enum PaymentStatus {
   FAILED
   REFUNDED
   CANCELLED
+}
+
+enum PaymentProvider {
+  STRIPE
+}
+
+/// Where one payment attempt stands. EXPIRED (the window closed) stays distinct
+/// from CANCELLED (the customer cancelled), which Order.paymentStatus cannot say.
+enum PaymentAttemptStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+  EXPIRED
 }
 
 enum OrderItemStatus {
@@ -393,4 +409,52 @@ model EmailToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// Payment models
+/// One row per payment attempt. `id` doubles as the provider idempotency key, so a
+/// retried create cannot open a second session. The partial unique index that keeps
+/// one PENDING attempt per order is raw SQL in the migration, because Prisma cannot
+/// express it: Payment_one_pending_per_order on (orderId) WHERE status = PENDING.
+model Payment {
+  id                      String               @id @default(cuid())
+  orderId                 String
+  order                   Order                @relation(fields: [orderId], references: [id])
+  provider                PaymentProvider
+  providerSessionId       String?              @unique
+  providerPaymentIntentId String?
+  amount                  Decimal              @db.Decimal(10, 2)
+  currency                Currency
+  status                  PaymentAttemptStatus @default(PENDING)
+  checkoutUrl             String?
+  expiresAt               DateTime
+  paidAt                  DateTime?
+  lastErrorCode           String?
+  lastErrorMessage        String?              @db.VarChar(255)
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+  events                  PaymentEvent[]
+
+  @@index([orderId, createdAt])
+}
+
+/// A trimmed record of one delivered event: no customer name and no email, so the
+/// log stays free of personal data. The unique key is the replay guard.
+model PaymentEvent {
+  id            String          @id @default(cuid())
+  provider      PaymentProvider
+  eventId       String
+  type          String
+  paymentId     String?
+  payment       Payment?        @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  orderId       String?
+  sessionId     String?
+  amountTotal   Int?
+  currency      String?
+  sessionStatus String?
+  paymentStatus String?
+  applied       Boolean         @default(false)
+  receivedAt    DateTime        @default(now())
+
+  @@unique([provider, eventId])
 }
