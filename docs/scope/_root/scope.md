@@ -25,7 +25,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | 12  | English interface by default          | Slice 7 | in-progress |
 | 13  | Seller onboarding                     | Slice 8 | done        |
 | 14  | Review likes and comments             | Slice 4 | done        |
-| 15  | Payment through a test provider       | Slice 9 | in-progress |
+| 15  | Payment through a test provider       | Slice 9 | done        |
 | 16  | Order letters                         | Slice 9 | planned     |
 
 ## Slice 1: the order thread
@@ -285,8 +285,8 @@ The checkout stores `paymentMethod` and `paymentStatus` and nothing charges anyt
   - [x] Sync and the return screen (AC-10, AC-14) — done: `POST /api/orders/:orderId/payment/sync` through the same apply path, one call on mount behind a ref guard, the checking state, and `router.replace` dropping the parameter
   - [x] Methods, seller read, copy, tests and deploy config (AC-3, AC-15, AC-16, AC-17) — done: `CHOOSABLE_PAYMENT_METHODS` on both sides, the seller read carrying `paymentStatus` and `paymentMethod` with the label in the panel, 12 new keys in both catalogs, 46 gateway tests and 20 storefront ones, and `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` plus the Caddyfile webhook path
 
-- [ ] Verify it: `/check verify payment through a test provider`
-- [ ] Test it: `/test payment through a test provider`
+- [x] Verify it: `/check verify payment through a test provider` — 2026-11-13: the schema and configuration steps ran on the dev database (both tables, the `Payment_one_pending_per_order` partial index, `Order.paymentExpiresAt`, the four schema copies identical), and the live pass paid an order on the hosted Stripe test page and read it back `PAID` on the order screen. The callback itself was never exercised locally: `stripe listen` hung on `Getting ready` in this workspace, `PaymentEvent` stayed empty, and the payment was confirmed through `POST /orders/:orderId/payment/sync` instead. Still unrun in the spec's `verify.md`: the callback walk, the window expiry toast, the missing key toast, the refund line after a cancel, and the 360 px check
+- [x] Test it: `/test payment through a test provider` — 2026-11-13: no separate pass was run (the owner closed the feature); the suites that landed with the build cover it: `apps/api-astrum` answers 153 tests over the `payment` and `order` modules (3 suites and 15 tests skipped, they need the live stack), `apps/customer` answers 118 tests over the order screen, the seller panel and the seller hooks, and `tsc --noEmit` is clean in both apps
 - [ ] Review it (fresh model): `/check review payment through a test provider`
 - [ ] Document it: `/document payment through a test provider`
   spec [0015](../../specs/_root/0015-payment-through-a-test-provider/index.md)

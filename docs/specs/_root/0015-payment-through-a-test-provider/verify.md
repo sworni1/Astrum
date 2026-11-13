@@ -69,7 +69,7 @@ PSQL="docker exec astrum-db psql -U $(docker exec astrum-db printenv POSTGRES_US
 - [ ] Remove `STRIPE_SECRET_KEY`, restart the api, press pay → the toast reads the provider unavailable copy and the screen stays usable → AC-13, AC-15
 - [ ] Cancel a paid order from the order screen, then open it → the payment row stays `PAID` and the screen prints the refund owed line next to it → AC-12, AC-13
 - [ ] Switch the language → every new string reads Russian, and `node -e "const e=require('./apps/customer/messages/en.json'),r=require('./apps/customer/messages/ru.json');const k=o=>JSON.stringify(Object.keys(o.orders.payment).sort());console.log(k(e)===k(r))"` prints `true` → AC-15
-- [ ] Seller panel: sign in as a seller with the workflow flag on, open the sales page → an unpaid online order prints its payment status beside the order id → AC-16
+- [ ] Seller panel: sign in as a seller with a business assigned, open the sales page → an unpaid online order prints its payment status beside the order id → AC-16
 - [ ] Checkout: open `/cart` → the payment select lists exactly Cash, Card on delivery and Online card; `grep -rn "paymentPaypal\|paymentStripe" apps/customer/src/features/pages/Cart` → no match; `grep -rn "paymentDetails" apps/customer/src/features/pages/Cart apps/customer/src/common/zodSchemes apps/customer/src/hooks/order` → no match → AC-3
 - [ ] Open an old order whose method is `PAYPAL` or `STRIPE` → its label still prints from the catalog, and no pay control appears → AC-3, AC-13
 - [ ] At 360 px width the pay block and the deadline stack without horizontal scrolling → AC-13
