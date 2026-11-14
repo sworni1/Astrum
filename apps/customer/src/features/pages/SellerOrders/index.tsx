@@ -2,18 +2,13 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
-import type {
-  SellerOrderGroup as SellerGroup,
-  SellerOrderLine,
-} from "@/common/types/order.types";
+import { Fragment, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSellerOrders } from "@/hooks/seller/useSellerOrders";
-import { useUser } from "@/hooks/user/useUser";
-import { SELLER_GRID_CLASS } from "./lib/grid";
-import { pageWithGroup, pageWithLine } from "./lib/pageData";
-import SellerOrderGroup from "./SellerOrderGroup";
+import { SELLER_COLUMN_ALIGNMENT, SELLER_COLUMNS } from "./lib/columns";
+import SellerOrderBand from "./SellerOrderBand";
+import SellerOrderRow from "./SellerOrderRow";
 import { StateScreen } from "./StateScreen";
 
 const SkeletonPanel = () => {
@@ -32,12 +27,14 @@ const SkeletonPanel = () => {
   );
 };
 
+/**
+ * The seller panel is one read only table: a band of order facts, then one row
+ * per line, and no control that sends a request (spec 0020, AC-1 to AC-8).
+ */
 export default function SellerOrders() {
   const t = useTranslations("seller");
   const [page, setPage] = useState(1);
   const { data, kind, isLoading, isValidating, mutate } = useSellerOrders(page);
-  const { profileData } = useUser();
-  const actionsDisabled = profileData?.status === "PENDING";
 
   useEffect(() => {
     if (!data || data.total === 0 || data.orders.length > 0) {
@@ -48,26 +45,6 @@ export default function SellerOrders() {
       setPage(data.totalPages);
     }
   }, [data, page]);
-
-  const applyLine = async (line: SellerOrderLine): Promise<void> => {
-    await mutate(
-      (current) => (current ? pageWithLine(current, line) : undefined),
-      false,
-    );
-    await mutate();
-  };
-
-  const applyGroup = async (group: SellerGroup): Promise<void> => {
-    await mutate(
-      (current) => (current ? pageWithGroup(current, group) : undefined),
-      false,
-    );
-    await mutate();
-  };
-
-  const reload = async (): Promise<void> => {
-    await mutate();
-  };
 
   if (kind === "notSeller") {
     return (
@@ -88,7 +65,7 @@ export default function SellerOrders() {
       <StateScreen
         title={t("states.failureTitle")}
         text={t("states.failureText")}
-        action={<Button onClick={() => void reload()}>{t("retry")}</Button>}
+        action={<Button onClick={() => void mutate()}>{t("retry")}</Button>}
       />
     );
   }
@@ -120,16 +97,6 @@ export default function SellerOrders() {
         </p>
       </header>
 
-      {actionsDisabled && (
-        <div
-          role="status"
-          className="mb-3 rounded-lg border border-dashed px-3 py-2 text-sm"
-        >
-          <p className="font-medium">{t("states.pendingTitle")}</p>
-          <p className="text-muted-foreground">{t("states.pendingText")}</p>
-        </div>
-      )}
-
       <div className="relative" aria-busy={isValidating}>
         {isValidating && (
           <div
@@ -138,31 +105,35 @@ export default function SellerOrders() {
           />
         )}
 
-        <div
-          aria-hidden="true"
-          className={`${SELLER_GRID_CLASS} sticky top-16 z-10 hidden border-b bg-background/95 px-3 py-2 text-xs font-medium text-muted-foreground backdrop-blur sm:grid`}
-        >
-          <span>{t("columns.product")}</span>
-          <span className="text-right">{t("columns.quantity")}</span>
-          <span className="text-right">{t("columns.unitPrice")}</span>
-          <span className="text-right">{t("columns.subtotal")}</span>
-          <span>{t("columns.status")}</span>
-          <span className="text-right">{t("columns.actions")}</span>
-        </div>
-
-        <div className="space-y-3">
-          {data.orders.map((order) => (
-            <SellerOrderGroup
-              key={order.id}
-              order={order}
-              actionsDisabled={actionsDisabled}
-              onUpdated={applyLine}
-              onRefused={reload}
-              onHandedOver={applyGroup}
-              onReload={reload}
-            />
-          ))}
-        </div>
+        <table aria-label={t("title")} className="w-full text-sm">
+          <thead className="hidden sm:table-header-group">
+            <tr>
+              {SELLER_COLUMNS.map((column) => (
+                <th
+                  key={column}
+                  scope="col"
+                  className={`sticky top-16 z-10 border-b bg-background px-3 py-2 text-xs font-medium text-muted-foreground ${SELLER_COLUMN_ALIGNMENT[column] ?? "text-left"}`}
+                >
+                  {t(column)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="block sm:table-row-group">
+            {data.orders.map((order) => (
+              <Fragment key={order.id}>
+                <SellerOrderBand order={order} />
+                {order.orderItems.map((line) => (
+                  <SellerOrderRow
+                    key={line.id}
+                    line={line}
+                    createdAt={order.createdAt}
+                  />
+                ))}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <nav

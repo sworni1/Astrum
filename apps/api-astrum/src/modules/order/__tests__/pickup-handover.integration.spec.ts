@@ -1,18 +1,15 @@
 import { prisma } from "../../../../lib/prisma";
 import type { CreateOrderDto } from "../dto/create-order.dto";
 import { OrderService } from "../order.service";
-import { SellerOrderService } from "../seller-order.service";
 
 const describeWithDatabase =
   process.env.ORDER_DB_TESTS === "1" ? describe : describe.skip;
 
-describeWithDatabase("Pickup handover against Postgres", () => {
+describeWithDatabase("Pickup snapshot against Postgres", () => {
   const suffix = `pickup-${Date.now()}`;
   const customerId = `${suffix}-customer`;
-  const firstSellerId = `${suffix}-owner`;
-  const secondSellerId = `${suffix}-second-owner`;
-  const firstBusinessId = `${suffix}-business`;
-  const secondBusinessId = `${suffix}-second-business`;
+  const sellerId = `${suffix}-owner`;
+  const businessId = `${suffix}-business`;
   const productIds: string[] = [];
   const orderIds: string[] = [];
   let shippingMethodId = "";
@@ -41,8 +38,7 @@ describeWithDatabase("Pickup handover against Postgres", () => {
     await prisma.user.createMany({
       data: [
         { id: customerId, email: `${customerId}@test.local` },
-        { id: firstSellerId, email: `${firstSellerId}@test.local` },
-        { id: secondSellerId, email: `${secondSellerId}@test.local` },
+        { id: sellerId, email: `${sellerId}@test.local` },
       ].map((user) => ({
         ...user,
         passwordhash: "integration-test",
@@ -54,14 +50,9 @@ describeWithDatabase("Pickup handover against Postgres", () => {
     await prisma.business.createMany({
       data: [
         {
-          id: firstBusinessId,
-          name: `Shop ${firstBusinessId}`,
-          ownerUserId: firstSellerId,
-        },
-        {
-          id: secondBusinessId,
-          name: `Shop ${secondBusinessId}`,
-          ownerUserId: secondSellerId,
+          id: businessId,
+          name: `Shop ${businessId}`,
+          ownerUserId: sellerId,
         },
       ],
     });
@@ -80,21 +71,17 @@ describeWithDatabase("Pickup handover against Postgres", () => {
     await prisma.order.deleteMany({ where: { id: { in: orderIds } } });
     await prisma.cartItem.deleteMany({ where: { userId: customerId } });
     await prisma.product.deleteMany({ where: { id: { in: productIds } } });
-    await prisma.business.deleteMany({
-      where: { id: { in: [firstBusinessId, secondBusinessId] } },
-    });
-    await prisma.user.deleteMany({
-      where: { id: { in: [customerId, firstSellerId, secondSellerId] } },
-    });
+    await prisma.business.deleteMany({ where: { id: businessId } });
+    await prisma.user.deleteMany({ where: { id: { in: [customerId, sellerId] } } });
     await prisma.pickupPoint.deleteMany({ where: { id: pickupPointId } });
     await prisma.shippingMethod.deleteMany({ where: { id: shippingMethodId } });
     await prisma.$disconnect();
   });
 
-  it("хранит снимок точки и нулевую доставку, затем выдаёт заказ одним действием (AC-7, AC-11)", async () => {
+  it("snapshots the pickup point and zeroes the delivery price (AC-7)", async () => {
     const product = await prisma.product.create({
       data: {
-        businessId: firstBusinessId,
+        businessId,
         name: `${suffix} drill`,
         quantity: 5,
         price: 19.99,
@@ -118,91 +105,5 @@ describeWithDatabase("Pickup handover against Postgres", () => {
     expect(order.deliveryAddress).toBeNull();
     expect(order.deliveryPrice.toFixed(2)).toBe("0.00");
     expect(order.grandTotal.toFixed(2)).toBe(order.totalPrice.toFixed(2));
-
-    const sellers = new SellerOrderService();
-    const line = order.orderItems[0];
-    await sellers.updateSellerOrderItemStatus(line.id, firstSellerId, "CONFIRMED");
-
-    const group = await sellers.handOverOrder(order.id, firstSellerId);
-    const stored = await prisma.order.findUniqueOrThrow({
-      where: { id: order.id },
-    });
-
-    expect(group.orderItems[0].status).toBe("DELIVERED");
-    expect(stored.status).toBe("DELIVERED");
-    expect(stored.handedOverAt).not.toBeNull();
-
-    const deliveredLine = await prisma.orderItem.findUniqueOrThrow({
-      where: { id: line.id },
-    });
-    expect(deliveredLine.receiptDate).not.toBeNull();
-  }, 30000);
-
-  it("сериализует выдачу двумя продавцами и пишет дату один раз (AC-11)", async () => {
-    const firstProduct = await prisma.product.create({
-      data: {
-        businessId: firstBusinessId,
-        name: `${suffix} first`,
-        quantity: 5,
-        price: 10,
-        currency: "RUB",
-        category: "Home",
-        previewImage: "https://cdn.test/first.png",
-        images: [],
-        visibility: "Public",
-        status: "Published",
-      },
-    });
-    const secondProduct = await prisma.product.create({
-      data: {
-        businessId: secondBusinessId,
-        name: `${suffix} second`,
-        quantity: 5,
-        price: 10,
-        currency: "RUB",
-        category: "Home",
-        previewImage: "https://cdn.test/second.png",
-        images: [],
-        visibility: "Public",
-        status: "Published",
-      },
-    });
-    productIds.push(firstProduct.id, secondProduct.id);
-
-    const order = await placePickupOrder([
-      { productId: firstProduct.id, quantity: 1 },
-      { productId: secondProduct.id, quantity: 1 },
-    ]);
-    const sellers = new SellerOrderService();
-    const firstLine = order.orderItems.find(
-      (item) => item.productId === firstProduct.id,
-    );
-    const secondLine = order.orderItems.find(
-      (item) => item.productId === secondProduct.id,
-    );
-
-    if (!firstLine || !secondLine) {
-      throw new Error("Order creation did not return both expected lines.");
-    }
-
-    await sellers.updateSellerOrderItemStatus(firstLine.id, firstSellerId, "CONFIRMED");
-    await sellers.updateSellerOrderItemStatus(secondLine.id, secondSellerId, "CONFIRMED");
-
-    await Promise.all([
-      sellers.handOverOrder(order.id, firstSellerId),
-      sellers.handOverOrder(order.id, secondSellerId),
-    ]);
-
-    const stored = await prisma.order.findUniqueOrThrow({
-      where: { id: order.id },
-    });
-    const lines = await prisma.orderItem.findMany({
-      where: { orderId: order.id },
-    });
-
-    expect(stored.status).toBe("DELIVERED");
-    expect(stored.handedOverAt).not.toBeNull();
-    expect(lines.every((line) => line.status === "DELIVERED")).toBe(true);
-    expect(lines.every((line) => line.receiptDate !== null)).toBe(true);
   }, 30000);
 });

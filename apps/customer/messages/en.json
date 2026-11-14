@@ -475,30 +475,13 @@
     "statusCount": "{status}: {count}",
     "productFallback": "Product {id}",
     "retry": "Try again",
-    "handover": "Hand over",
-    "handoverTitle": "Hand this parcel over?",
-    "handoverText": "{point}: {count, plural, one {# line becomes} other {# lines become}} delivered, and the order closes once nothing is left to deliver.",
-    "handoverCourierText": "{count, plural, one {# line becomes} other {# lines become}} delivered, and the order closes once nothing is left to deliver.",
-    "handoverConfirm": "Hand over",
-    "handoverBusy": "Handing over…",
-    "handoverKeep": "Keep it open",
     "handedOverAt": "Handed over: {date}",
     "columns": {
+      "orderNumber": "Order",
       "product": "Product",
-      "quantity": "Quantity",
-      "unitPrice": "Unit price",
       "subtotal": "Subtotal",
-      "status": "Status",
-      "actions": "Actions"
-    },
-    "actions": {
-      "gone": "Out of stock"
-    },
-    "dialog": {
-      "cancelTitle": "Is this item gone?",
-      "cancelText": "{product}: the quantity goes back to stock, and this screen cannot undo it.{paid, select, yes { {money} goes back to the buyer.} other {}}",
-      "keep": "Keep the line",
-      "confirm": "Confirm"
+      "date": "Date",
+      "status": "Status"
     },
     "pagination": {
       "label": "Order pages",
@@ -514,21 +497,7 @@
       "failureTitle": "The order lines could not be loaded",
       "failureText": "The shop did not answer. Try again in a moment.",
       "emptyTitle": "Nothing to fulfil",
-      "emptyText": "No order holds a line from your shop yet.",
-      "pendingTitle": "Confirm your email address",
-      "pendingText": "You can read the queue now. Statuses open for change once the address is confirmed."
-    },
-    "toasts": {
-      "invalidTransition": "Somebody already moved this line from {from} to {to}. The queue is refreshed.",
-      "orderItemNotFound": "This line no longer exists. The queue is refreshed.",
-      "validation": "The change was rejected as invalid.",
-      "emailNotConfirmed": "Confirm the email address before changing a status.",
-      "accountStatusUnavailable": "The account state could not be read.",
-      "generic": "The change did not go through.",
-      "nothingToHandOver": "Nothing on this order is ready to hand over yet.",
-      "orderNotFound": "This order no longer holds a line of your shop. The queue is refreshed.",
-      "handoverFailed": "The handover did not go through.",
-      "retry": "Try again"
+      "emptyText": "No order holds a line from your shop yet."
     },
     "onboarding": {
       "title": "Open your shop",

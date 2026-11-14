@@ -2,7 +2,7 @@ import type { ClassConstructor } from "class-transformer";
 import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { CreateOrderDto } from "../../modules/order/dto/create-order.dto";
-import { UpdateOrderItemStatusDto } from "../../modules/order/dto/update-order-item-status.dto";
+import { UpdateOrderStatusDto } from "../../modules/order/dto/update-order-status.dto";
 import { CreateProductDto } from "../../modules/product/dto/create-product.dto";
 import { validateDto } from "../validateDto";
 
@@ -145,7 +145,7 @@ describe("validateDto", () => {
 
   it("rejects a line status outside the enum with validation code (AC-7)", async () => {
     const { res, next } = await runValidationWith(
-      UpdateOrderItemStatusDto,
+      UpdateOrderStatusDto,
       { status: "NOT_A_STATUS" },
       { status: StatusCodes.UNPROCESSABLE_ENTITY, code: "VALIDATION" },
     );

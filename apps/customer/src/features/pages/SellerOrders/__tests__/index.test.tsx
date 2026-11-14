@@ -3,17 +3,14 @@ import { createRoot, type Root } from "react-dom/client";
 import { SWRConfig } from "swr";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getData, patchItem } = vi.hoisted(() => ({
-  getData: vi.fn(),
-  patchItem: vi.fn(),
-}));
+const { getData } = vi.hoisted(() => ({ getData: vi.fn() }));
 
 vi.mock("@/hooks/useFetcher", () => ({
   useFetcher: () => ({
     fetcher: {},
     getData,
     deleteItem: vi.fn(),
-    patchItem,
+    patchItem: vi.fn(),
     postItem: vi.fn(),
     putItem: vi.fn(),
   }),
@@ -23,7 +20,10 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, values?: Record<string, unknown>) =>
     values ? `${key} ${JSON.stringify(values)}` : key,
   useFormatter: () => ({
-    dateTime: () => "2026-11-08",
+    dateTime: (value: Date, options?: { timeStyle?: string }) =>
+      options?.timeStyle
+        ? `placed ${value.toISOString()}`
+        : `date ${value.toISOString()}`,
     number: (value: number) => String(value),
   }),
 }));
@@ -57,34 +57,33 @@ import SellerOrders from "@/features/pages/SellerOrders";
 let container: HTMLDivElement;
 let root: Root;
 
-const profile = {
-  email: "seller@example.com",
-  nickName: "seller",
-  gender: "MALE",
-  dateOfBirth: "2000-01-01T00:00:00.000Z",
-  status: "ACTIVE",
-  isSeller: true,
-};
-
-const orderLine = {
+const line = (over: Record<string, unknown> = {}) => ({
   id: "line-1",
   productId: "product-1",
   name: "Kettle",
   previewImage: "",
-  quantity: 2,
+  quantity: 3,
   price: 9.99,
   currency: "RUB",
-  status: "PENDING",
+  status: "CONFIRMED",
+  ...over,
+});
+
+const order = {
+  id: "order-12345678",
+  createdAt: "2026-11-08T10:00:00.000Z",
+  paymentStatus: "PENDING",
+  paymentMethod: "ONLINE_CARD",
+  isPickup: true,
+  pickupPointId: "pp-1",
+  pickupPointName: "Central",
+  pickupPointAddress: "Tverskaya 12",
+  handedOverAt: "2026-11-13T12:00:00.000Z",
+  orderItems: [line()],
 };
 
 const page = {
-  orders: [
-    {
-      id: "order-12345678",
-      createdAt: "2026-11-08T10:00:00.000Z",
-      orderItems: [orderLine],
-    },
-  ],
+  orders: [order],
   page: 1,
   limit: 20,
   total: 1,
@@ -112,96 +111,21 @@ const renderPage = async (): Promise<void> => {
   await flush();
 };
 
-const withProfile =
-  (currentProfile: unknown) =>
-  (url: string): unknown =>
-    url === "/users/me" ? Promise.resolve(currentProfile) : undefined;
-
-const listResolves = (
-  answer: unknown,
-  currentProfile: unknown = profile,
-): void => {
-  const profileAnswer = withProfile(currentProfile);
-  getData.mockImplementation(
-    (url: string) => profileAnswer(url) ?? Promise.resolve(answer),
-  );
-};
-
-const listRejects = (
-  answer: unknown,
-  currentProfile: unknown = profile,
-): void => {
-  const profileAnswer = withProfile(currentProfile);
-  getData.mockImplementation(
-    (url: string) => profileAnswer(url) ?? Promise.reject(answer),
-  );
-};
-
-const refuseWith = (status: number, code: string): void => {
-  listRejects({ isAxiosError: true, response: { status, data: { code } } });
-};
-
-type Deferred = {
-  promise: Promise<unknown>;
-  resolve: (value: unknown) => void;
-};
-
-const deferred = (): Deferred => {
-  let resolve: (value: unknown) => void = () => undefined;
-  const promise = new Promise<unknown>((settle) => {
-    resolve = settle;
-  });
-
-  return { promise, resolve };
-};
-
-const routes = (
-  answers: Record<string, unknown>,
-  currentProfile: unknown = profile,
-): void => {
-  getData.mockImplementation((url: string) => {
-    if (url === "/users/me") {
-      return Promise.resolve(currentProfile);
-    }
-
-    if (!(url in answers)) {
-      return Promise.reject(new Error(`unexpected ${url}`));
-    }
-
-    return Promise.resolve(answers[url]);
-  });
-};
-
-const button = (label: string): HTMLButtonElement => {
-  const found = Array.from(container.querySelectorAll("button")).find(
-    (node) => node.textContent === label,
-  );
-
-  if (!found) {
-    throw new Error(`no button named ${label}`);
-  }
-
-  return found;
-};
-
-const buttonInDom = (label: string): HTMLButtonElement => {
-  const found = Array.from(document.querySelectorAll("button")).find(
-    (node) => node.textContent === label,
-  );
-
-  if (!found) {
-    throw new Error(`no button named ${label} in the document`);
-  }
-
-  return found;
+const answersWith = (answer: unknown): void => {
+  getData.mockResolvedValue(answer);
 };
 
 const text = (): string => container.textContent ?? "";
 
-describe("SellerOrders page states", () => {
+const band = (): HTMLTableRowElement =>
+  container.querySelectorAll("tbody tr")[0] as HTMLTableRowElement;
+
+const firstLineRow = (): HTMLTableRowElement =>
+  container.querySelectorAll("tbody tr")[1] as HTMLTableRowElement;
+
+describe("SellerOrders table", () => {
   beforeEach(() => {
     getData.mockReset();
-    patchItem.mockReset();
   });
 
   afterEach(async () => {
@@ -209,139 +133,183 @@ describe("SellerOrders page states", () => {
     container?.remove();
   });
 
-  it("shows the skeleton on the first load (AC-11)", async () => {
-    listResolves(new Promise(() => undefined));
+  it("prints the five column labels in order under an accessible table name (AC-1)", async () => {
+    answersWith(page);
 
     await renderPage();
 
+    const table = container.querySelector("table");
+    const labels = Array.from(container.querySelectorAll("thead th")).map(
+      (cell) => cell.textContent,
+    );
+
+    expect(table?.getAttribute("aria-label")).toBe("title");
+    expect(labels).toEqual([
+      "columns.orderNumber",
+      "columns.product",
+      "columns.subtotal",
+      "columns.date",
+      "columns.status",
+    ]);
     expect(
-      container.querySelector('[aria-label="states.loadingLabel"]'),
-    ).not.toBeNull();
+      Array.from(container.querySelectorAll("thead th")).every(
+        (cell) => cell.getAttribute("scope") === "col",
+      ),
+    ).toBe(true);
   });
 
-  it("shows the empty state when the shop has no lines (AC-11)", async () => {
-    listResolves({ orders: [], page: 1, limit: 20, total: 0, totalPages: 0 });
+  it("prints the facts of the order in a band above its lines (AC-2)", async () => {
+    answersWith(page);
 
     await renderPage();
 
-    expect(text()).toContain("states.emptyTitle");
-    expect(text()).not.toContain("pagination.pageOf");
+    const facts = band().textContent ?? "";
+
+    expect(band().querySelector("span[title='order-12345678']")).not.toBeNull();
+    expect(facts).toContain("orderNumber");
+    expect(facts).toContain("12345678");
+    expect(facts).toContain("paymentLabel");
+    expect(facts).toContain("statusCount");
+    expect(facts).toContain("Central");
+    expect(facts).toContain("Tverskaya 12");
+    expect(facts).toContain("handedOverAt");
+    expect(band().querySelectorAll("td")[1].getAttribute("colspan")).toBe("4");
   });
 
-  it("shows the not a seller screen on 403 SELLER_NOT_ASSIGNED (AC-11)", async () => {
-    refuseWith(403, "SELLER_NOT_ASSIGNED");
+  it("prints the placed date in the date column and none in the band (AC-3)", async () => {
+    answersWith(page);
 
     await renderPage();
 
-    expect(text()).toContain("states.notSellerTitle");
+    const row = firstLineRow();
+    const cells = Array.from(row.querySelectorAll("td"));
+
+    expect(cells[3].textContent).toContain("placed 2026-11-08T10:00:00.000Z");
+    expect(band().textContent).not.toContain("placed");
+    expect(band().textContent).toContain("date 2026-11-13T12:00:00.000Z");
   });
 
-  it("shows the failure screen with a retry on 500 (AC-11)", async () => {
-    refuseWith(500, "INTERNAL_SERVER_ERROR");
+  it("prints the rounded line sum beside the product and its quantity (AC-4)", async () => {
+    answersWith(page);
 
     await renderPage();
 
-    expect(text()).toContain("states.failureTitle");
-    expect(text()).toContain("retry");
+    const cells = Array.from(firstLineRow().querySelectorAll("td"));
+
+    expect(cells[1].textContent).toContain("Kettle × 3");
+    expect(cells[1].querySelector("a[href='/products/product-1']")).not.toBeNull();
+    expect(cells[2].textContent).toContain("29.97");
+    expect(text()).not.toContain("29.970000");
+    expect(text()).not.toContain("toFixed");
   });
 
-  it("renders the group, the page label and a notice for a PENDING account (AC-4, AC-5, AC-11)", async () => {
-    listResolves(page, { ...profile, status: "PENDING" });
+  it("offers no control that sends a request and renders no dialog (AC-5)", async () => {
+    answersWith(page);
 
     await renderPage();
 
-    expect(text()).toContain("orderNumber");
+    const buttons = Array.from(container.querySelectorAll("button")).map(
+      (button) => button.textContent,
+    );
+
+    expect(buttons).toEqual(["pagination.back", "pagination.next"]);
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it("labels every line value so the row reads as a card on a narrow screen (AC-8)", async () => {
+    answersWith(page);
+
+    await renderPage();
+
+    const cells = Array.from(firstLineRow().querySelectorAll("td")).filter(
+      (cell) => cell.textContent !== "",
+    );
+    const labelled = cells.map((cell) =>
+      Array.from(cell.querySelectorAll("span")).find(
+        (span) => span.className.includes("sm:sr-only"),
+      ),
+    );
+
+    expect(labelled.map((label) => label?.textContent)).toEqual([
+      "columns.product",
+      "columns.subtotal",
+      "columns.date",
+      "columns.status",
+    ]);
+  });
+
+  it("asks for the last page instead of printing page three of two (AC-7)", async () => {
+    getData.mockImplementation((url: string) =>
+      Promise.resolve(
+        url.includes("page=2")
+          ? { ...page, page: 2, total: 21, totalPages: 2 }
+          : { orders: [], page: 1, limit: 20, total: 21, totalPages: 2 },
+      ),
+    );
+
+    await renderPage();
+    await flush();
+
+    expect(getData).toHaveBeenCalledWith("/seller/orders?page=2&limit=20");
     expect(text()).toContain("Kettle");
-    expect(text()).toContain("pagination.pageOf");
-    expect(text()).toContain("states.pendingTitle");
+    expect(text()).toContain('"page":2');
   });
 
-  it("keeps the shown page under a loading strip while the next page loads (AC-5)", async () => {
-    const second = deferred();
-    const firstPage = {
-      orders: [
-        {
-          id: "order-page-1",
-          createdAt: "2026-11-08T10:00:00.000Z",
-          orderItems: [orderLine],
-        },
-      ],
-      page: 1,
-      limit: 20,
-      total: 21,
-      totalPages: 2,
-    };
-    const secondPage = {
-      orders: [
-        {
-          id: "order-page-2",
-          createdAt: "2026-11-08T11:00:00.000Z",
-          orderItems: [{ ...orderLine, id: "line-2", name: "Whistle" }],
-        },
-      ],
-      page: 2,
-      limit: 20,
-      total: 21,
-      totalPages: 2,
-    };
-
-    routes({
-      "/seller/orders?page=1&limit=20": firstPage,
-      "/seller/orders?page=2&limit=20": second.promise,
+  it("keeps the shown rows under a loading strip while the next page loads (AC-7)", async () => {
+    let settle: (value: unknown) => void = () => undefined;
+    const secondPage = new Promise((resolve) => {
+      settle = resolve;
     });
 
+    getData.mockImplementation((url: string) =>
+      url.includes("page=2")
+        ? secondPage
+        : Promise.resolve({ ...page, total: 21, totalPages: 2 }),
+    );
+
     await renderPage();
 
-    expect(text()).toContain("Kettle");
-    expect(button("pagination.next").disabled).toBe(false);
+    const next = Array.from(container.querySelectorAll("button")).find(
+      (node) => node.textContent === "pagination.next",
+    ) as HTMLButtonElement;
 
-    await act(async () => {
-      button("pagination.next").click();
-    });
+    expect(next.disabled).toBe(false);
+
+    await act(async () => next.click());
     await flush();
 
     expect(text()).toContain("Kettle");
-    expect(text()).toContain('"page":1');
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
 
     await act(async () => {
-      second.resolve(secondPage);
+      settle({
+        orders: [{ ...order, id: "order-2", orderItems: [line({ name: "Whistle" })] }],
+        page: 2,
+        limit: 20,
+        total: 21,
+        totalPages: 2,
+      });
     });
     await flush();
 
     expect(text()).toContain("Whistle");
     expect(text()).not.toContain("Kettle");
-    expect(text()).toContain('"page":2');
     expect(container.querySelector('[aria-busy="true"]')).toBeNull();
   });
 
   it("sends an external thumbnail past the optimizer and keeps a local one on it (AC-4)", async () => {
-    routes({
-      "/seller/orders?page=1&limit=20": {
-        orders: [
-          {
-            id: "order-1",
-            createdAt: "2026-11-08T10:00:00.000Z",
-            orderItems: [
-              {
-                ...orderLine,
-                id: "line-remote",
-                previewImage: "https://placehold.co/600x400",
-              },
-              {
-                ...orderLine,
-                id: "line-local",
-                name: "Mug",
-                previewImage: "/images/mug.png",
-              },
-            ],
-          },
-        ],
-        page: 1,
-        limit: 20,
-        total: 1,
-        totalPages: 1,
-      },
+    answersWith({
+      ...page,
+      orders: [
+        {
+          ...order,
+          orderItems: [
+            line({ id: "line-remote", previewImage: "https://placehold.co/600x400" }),
+            line({ id: "line-local", name: "Mug", previewImage: "/images/mug.png" }),
+          ],
+        },
+      ],
     });
 
     await renderPage();
@@ -352,164 +320,9 @@ describe("SellerOrders page states", () => {
       "https://placehold.co/600x400",
       "/images/mug.png",
     ]);
-    expect(thumbs.map((node) => node.getAttribute("data-unoptimized"))).toEqual(
-      ["true", "false"],
-    );
-  });
-
-  it("asks before cancelling and writes nothing while the dialog is open (AC-7, AC-8)", async () => {
-    routes({
-      "/seller/orders?page=1&limit=20": {
-        ...page,
-        orders: [
-          {
-            ...page.orders[0],
-            orderItems: [{ ...orderLine, status: "CONFIRMED" }],
-          },
-        ],
-      },
-    });
-
-    await renderPage();
-
-    await act(async () => button("actions.gone").click());
-    await flush();
-
-    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
-    expect(document.body.textContent).toContain('"product":"Kettle"');
-    expect(patchItem).not.toHaveBeenCalled();
-
-    await act(async () => buttonInDom("dialog.keep").click());
-    await flush();
-
-    expect(document.querySelector('[role="dialog"]')).toBeNull();
-    expect(patchItem).not.toHaveBeenCalled();
-    expect(text()).toContain("confirmed");
-  });
-
-  it("sends the cancel only from the dialog confirm (AC-7, AC-8)", async () => {
-    routes({
-      "/seller/orders?page=1&limit=20": {
-        ...page,
-        orders: [
-          {
-            ...page.orders[0],
-            orderItems: [{ ...orderLine, status: "CONFIRMED" }],
-          },
-        ],
-      },
-    });
-    patchItem.mockResolvedValue({ ...orderLine, status: "CANCELLED" });
-
-    await renderPage();
-
-    await act(async () => button("actions.gone").click());
-    await flush();
-    await act(async () => buttonInDom("dialog.confirm").click());
-    await flush();
-
-    expect(patchItem).toHaveBeenCalledWith("/order-items/line-1/status", {
-      arg: { status: "CANCELLED" },
-    });
-  });
-
-  it("keeps one change in flight and takes no second click (AC-8)", async () => {
-    const answer = deferred();
-    routes({
-      "/seller/orders?page=1&limit=20": {
-        ...page,
-        orders: [
-          {
-            ...page.orders[0],
-            orderItems: [{ ...orderLine, status: "CONFIRMED" }],
-          },
-        ],
-      },
-    });
-    patchItem.mockReturnValue(answer.promise);
-
-    await renderPage();
-
-    const gone = button("actions.gone");
-
-    await act(async () => gone.click());
-    await flush();
-    await act(async () => buttonInDom("dialog.confirm").click());
-    await flush();
-
-    expect(patchItem).toHaveBeenCalledTimes(1);
-    expect(gone.disabled).toBe(true);
-    expect(gone.getAttribute("aria-busy")).toBe("true");
-
-    await act(async () => gone.click());
-    await flush();
-
-    expect(patchItem).toHaveBeenCalledTimes(1);
-
-    await act(async () => {
-      answer.resolve({ ...orderLine, status: "CANCELLED" });
-    });
-    await flush();
-
-    expect(patchItem).toHaveBeenCalledTimes(1);
-  });
-
-  it("applies the answered line and revalidates what another person changed (AC-9)", async () => {
-    const answered = { ...orderLine, status: "CANCELLED" };
-    const withAnotherLine = {
-      ...page,
-      orders: [
-        {
-          ...page.orders[0],
-          orderItems: [
-            answered,
-            {
-              ...orderLine,
-              id: "line-2",
-              productId: "product-2",
-              name: "Whistle",
-              status: "SHIPPED",
-            },
-          ],
-        },
-      ],
-    };
-    let reads = 0;
-
-    getData.mockImplementation((url: string) => {
-      if (url === "/users/me") {
-        return Promise.resolve(profile);
-      }
-
-      reads += 1;
-      return Promise.resolve(
-        reads === 1
-          ? {
-              ...page,
-              orders: [
-                {
-                  ...page.orders[0],
-                  orderItems: [{ ...orderLine, status: "CONFIRMED" }],
-                },
-              ],
-            }
-          : withAnotherLine,
-      );
-    });
-    patchItem.mockResolvedValue(answered);
-
-    await renderPage();
-
-    expect(text()).toContain("confirmed");
-    expect(text()).not.toContain("Whistle");
-
-    await act(async () => button("actions.gone").click());
-    await flush();
-    await act(async () => buttonInDom("dialog.confirm").click());
-    await flush();
-    await flush();
-
-    expect(text()).toContain("cancelled");
-    expect(text()).toContain("Whistle");
+    expect(thumbs.map((node) => node.getAttribute("data-unoptimized"))).toEqual([
+      "true",
+      "false",
+    ]);
   });
 });

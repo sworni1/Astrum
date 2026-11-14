@@ -1,8 +1,6 @@
-import { refusalBody, refusalCode } from "@/common/helpers/apiRefusal";
+import { refusalCode } from "@/common/helpers/apiRefusal";
 
 export type SellerErrorKind = "none" | "notSeller" | "failure";
-
-export const sellerRefusalBody = refusalBody;
 
 export const sellerErrorCode = refusalCode;
 

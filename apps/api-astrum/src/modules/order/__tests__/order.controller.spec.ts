@@ -254,34 +254,4 @@ describe("OrderController", () => {
       ],
     });
   });
-
-  it("returns an updated seller line with a numeric price (AC-7)", async () => {
-    const item = {
-      id: "line-1",
-      orderId: "order-1",
-      productId: "product-1",
-      name: "Drill",
-      previewImage: "https://cdn.test/drill.png",
-      quantity: 2,
-      price: new Prisma.Decimal("19.99"),
-      currency: "RUB",
-      status: "CONFIRMED",
-    };
-    const updateStatus = jest
-      .spyOn(SellerOrderService.prototype, "updateSellerOrderItemStatus")
-      .mockResolvedValue(item as never);
-    const res = createMockResponse();
-
-    await new OrderController().updateSellerOrderItemStatus(
-      createRequest({
-        params: { orderItemId: "line-1" },
-        body: { status: "CONFIRMED" },
-      }),
-      res,
-    );
-
-    expect(updateStatus).toHaveBeenCalledWith("line-1", "user-1", "CONFIRMED");
-    expect(res.status).toHaveBeenCalledWith(StatusCodes.OK);
-    expect(res.json).toHaveBeenCalledWith({ ...item, price: 19.99 });
-  });
 });
