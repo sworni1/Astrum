@@ -6,7 +6,7 @@ import {
   hashToken,
   mintRawToken,
   TOKEN_TTL_SECONDS,
-} from "./token";
+} from "../token";
 
 test("AC-5: raw token is 32 random bytes in base64url", () => {
   const first = mintRawToken();

@@ -6,7 +6,7 @@ import {
   MAX_ATTEMPTS,
   RETRY_DELAYS_MS,
   retryQueueName,
-} from "./topology";
+} from "../topology";
 
 test("AC-7: three delays of 60, 300 and 900 seconds", () => {
   assert.deepEqual([...RETRY_DELAYS_MS], [60_000, 300_000, 900_000]);

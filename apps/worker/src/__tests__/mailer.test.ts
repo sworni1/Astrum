@@ -3,7 +3,7 @@ import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { createMailer } from "./mailer";
+import { createMailer } from "../mailer";
 
 test("AC-17: without SMTP_URL the letter is written under the outbox directory", async () => {
   const outbox = await mkdtemp(join(tmpdir(), "astrum-outbox-"));
