@@ -4,6 +4,7 @@ import { Prisma, type User } from "../../../generated/prisma/client";
 import { UserStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
+import { staffRolesOf } from "../../common/helpers/staffRoles";
 import { DEFAULT_LETTER_LOCALE, type LetterLocale } from "../../events/locale";
 import { publishConfirmationRequested } from "../../events/publisher";
 import { revokeSession } from "../../session/revokeSession";
@@ -26,6 +27,8 @@ export class UserService {
         gender: true,
         status: true,
         business: { select: { id: true } },
+        pointWorker: { select: { id: true } },
+        courier: { select: { id: true } },
       },
     });
 
@@ -33,9 +36,13 @@ export class UserService {
       throw new Error("User not found");
     }
 
-    const { business, ...profile } = user;
+    const { business, pointWorker, courier, ...profile } = user;
 
-    return { ...profile, isSeller: business !== null };
+    return {
+      ...profile,
+      isSeller: business !== null,
+      staffRoles: staffRolesOf({ pointWorker, courier }),
+    };
   }
 
   async updateUser(

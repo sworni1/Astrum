@@ -1,6 +1,6 @@
 "use client";
 
-import { Store } from "lucide-react";
+import { MapPin, Store, Truck } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -18,6 +18,7 @@ import { useGetOrders } from "@/hooks/order/useGetOrders";
 import { useGetCart } from "@/hooks/product/useCart/useGetCart";
 import { useGetWishlist } from "@/hooks/product/useWishlist/useGetWishlist";
 import { useUser } from "@/hooks/user/useUser";
+import { hasRole } from "@/hooks/staff/staff.types";
 import { MobileMenuSheet } from "./MobileMenuSheet";
 import NavItem from "./NavItem";
 import Searchbar from "./Searchbar";
@@ -34,6 +35,7 @@ export default function Navbar() {
   } = useGetOrders();
   const { profileData } = useUser();
   const isSeller = profileData?.isSeller === true;
+  const staffRoles = profileData?.staffRoles ?? [];
 
   if (cartError) {
     showToast({
@@ -104,6 +106,20 @@ export default function Navbar() {
               label={t("sales")}
             />
           )}
+          {hasRole(staffRoles, "POINT_WORKER") && (
+            <NavItem
+              icon={<MapPin size={25} />}
+              href={"/point"}
+              label={t("point")}
+            />
+          )}
+          {hasRole(staffRoles, "COURIER") && (
+            <NavItem
+              icon={<Truck size={25} />}
+              href={"/courier"}
+              label={t("courier")}
+            />
+          )}
           <Link href={"/profile"}>
             <Button
               variant="ghost"
@@ -135,6 +151,7 @@ export default function Navbar() {
             orderCount={orders?.length}
             orderIsLoading={ordersIsLoading}
             isSeller={isSeller}
+            staffRoles={staffRoles}
           />
         </div>
       </div>
