@@ -1,65 +1,18 @@
-import Link from "next/link";
-import { memo } from "react";
-import { FaStar } from "react-icons/fa";
-import { formatMoney } from "@/common/helpers/money";
-import type { Currency, ProductCardProps } from "@/common/types/product.types";
-import OptimizedImage from "@/components/OptimizedImage";
+import Link from 'next/link';
+import { memo } from 'react';
+import type { ProductCardProps } from '@/common/types/product.types';
+import OptimizedImage from '@/components/OptimizedImage';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import AddToCartWithQuantity from "@/features/general/AddToCartWithQuantity";
-import ToggleWishlistItemButton from "./actions/ToggleWishlistItemButton";
-
-// Memoized star component to prevent unnecessary re-renders
-const StarRating = memo(
-  ({ stars, reviewCount }: { stars: number; reviewCount: number }) => (
-    <div className="flex items-center text-sm text-gray-700 gap-1">
-      <div className="flex items-center">
-        <FaStar size={16} color="yellow" />
-      </div>
-      <p className="text-sm font-medium text-gray-900 dark:text-white">
-        {stars}
-      </p>
-      <span className="ml-1 text-gray-500">({reviewCount})</span>
-    </div>
-  ),
-);
-StarRating.displayName = "StarRating";
-
-// Memoized price component
-const PriceDisplay = memo(
-  ({ price, currency }: { price: number; currency: Currency }) => (
-    <CardTitle className="text-2xl font-bold leading-tight text-gray-900 dark:text-white h-[40px]">
-      {formatMoney(price, currency)}
-    </CardTitle>
-  ),
-);
-PriceDisplay.displayName = "PriceDisplay";
-
-// Memoized product name component
-const ProductName = memo(
-  ({ name, productId }: { name: string; productId: string }) => (
-    <Link href={`/products/${productId}`}>
-      <CardDescription
-        className="text-lg font-[500] line-clamp-2 mb-[-15px] h-[55px] text-gray-900 dark:text-white"
-        style={{
-          display: "-webkit-box",
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: "vertical",
-          overflow: "hidden",
-        }}
-      >
-        {name}
-      </CardDescription>
-    </Link>
-  ),
-);
-ProductName.displayName = "ProductName";
+} from '@/components/ui/card';
+import AddToCartWithQuantity from '@/features/general/AddToCartWithQuantity';
+import ToggleWishlistItemButton from './actions/ToggleWishlistItemButton';
+import PriceDisplay from './components/PriceDisplay';
+import ProductName from './components/ProductName';
+import StarRating from './components/StarRating';
 
 const ProductCard = memo<ProductCardProps>(function ProductCard({
   id,
@@ -78,11 +31,11 @@ const ProductCard = memo<ProductCardProps>(function ProductCard({
   const reviewCount = _count?.impressions ?? 0;
 
   return (
-    <Card className="select-none">
+    <Card className='select-none'>
       <Link href={`/products/${id}`}>
-        <CardHeader className="h-auto w-auto">
+        <CardHeader className='h-auto w-auto'>
           <OptimizedImage
-            className="aspect-4/3 w-full rounded-lg object-cover"
+            className='aspect-4/3 w-full rounded-lg object-cover'
             width={300}
             height={300}
             src={previewImage}
@@ -90,8 +43,8 @@ const ProductCard = memo<ProductCardProps>(function ProductCard({
             alt={name}
             priority={false}
             showLoadingSpinner={true}
-            containerClassName="aspect-4/3"
-            errorVariant="minimal"
+            containerClassName='aspect-4/3'
+            errorVariant='minimal'
           />
         </CardHeader>
       </Link>
@@ -101,19 +54,19 @@ const ProductCard = memo<ProductCardProps>(function ProductCard({
         <ProductName name={name} productId={id} />
       </CardContent>
 
-      <CardFooter className="flex flex-col justify-between items-center h-[100px]">
-        <div className="flex justify-between items-center w-full">
+      <CardFooter className='flex flex-col justify-between items-center h-[100px]'>
+        <div className='flex justify-between items-center w-full'>
           <StarRating stars={stars} reviewCount={reviewCount} />
         </div>
 
-        <div className="flex w-full gap-[10px] items-center">
+        <div className='flex w-full gap-[10px] items-center'>
           <ToggleWishlistItemButton
             productId={id}
             isWishlisted={isWishlisted}
           />
           <AddToCartWithQuantity
             quantity={quantity}
-            size="full"
+            size='full'
             quantityInCart={quantityInCart}
             productId={id}
           />
@@ -123,6 +76,6 @@ const ProductCard = memo<ProductCardProps>(function ProductCard({
   );
 });
 
-ProductCard.displayName = "ProductCard";
+ProductCard.displayName = 'ProductCard';
 
 export default ProductCard;

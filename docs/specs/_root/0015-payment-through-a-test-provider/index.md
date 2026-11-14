@@ -1,7 +1,7 @@
 # 0015. Payment through a test provider
 
 **Date**: 2026-11-12
-**Status**: In Progress
+**Status**: Accepted
 
 ## Summary
 
@@ -124,7 +124,7 @@ Payment attempt `status`:
 | `/api/orders/:orderId/payment/sync` | POST | none | `{ paymentStatus, status, paymentExpiresAt }` | session cookie | `404 ORDER_NOT_FOUND`, `409 ORDER_NOT_PAYABLE`, `502 PAYMENT_PROVIDER_UNAVAILABLE` |
 | `/api/payments/stripe/webhook` | POST | raw body, `Stripe-Signature` | `{ received: true }` | public, signature verified | `400 PAYMENT_INVALID_SIGNATURE`, `503 PAYMENT_PROVIDER_UNAVAILABLE` |
 | `/api/orders/:orderId` | GET | existing | adds `paymentExpiresAt`, drops every provider id | session cookie, owner | unchanged |
-| `/api/seller/orders` (seller read) | GET | existing | adds `paymentStatus` per group | session cookie, seller, workflow flag | unchanged |
+| `/api/seller/orders` (seller read) | GET | existing | adds `paymentStatus` per group | session cookie, seller, business owner | unchanged |
 
 Both payment routes live in the order module router, so they inherit the existing `/api/orders` mount and its `authenticateToken`. The codes above are one exported `PAYMENT_ERROR_CODES` object in `apps/api-astrum/src/modules/payment/payment.constants.ts`, and every refusal is an `AppError` so `handleErrors` answers the coded shape. The webhook gets its own router, mounted before `express.json` and outside the authenticated mounts, because a parsed body cannot be signature checked.
 

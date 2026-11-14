@@ -5,7 +5,7 @@ import {
   CONFIRMATION_ROUTING_KEY,
   EVENTS_EXCHANGE,
   PUBLISH_TIMEOUT_MS,
-} from "./events.constants";
+} from "./constants/events.constants";
 import { DEFAULT_LETTER_LOCALE, type LetterLocale } from "./locale";
 
 let connection: ChannelModel | undefined;

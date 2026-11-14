@@ -14,7 +14,7 @@ import { LineActions } from "./LineActions";
 
 type Props = {
   line: Line;
-  isPickup: boolean;
+  paid: boolean;
   actionsDisabled: boolean;
   onUpdated: (line: Line) => Promise<void>;
   onRefused: () => Promise<void>;
@@ -22,7 +22,7 @@ type Props = {
 
 const SellerOrderLineRow = ({
   line,
-  isPickup,
+  paid,
   actionsDisabled,
   onUpdated,
   onRefused,
@@ -100,7 +100,7 @@ const SellerOrderLineRow = ({
 
       <LineActions
         line={line}
-        isPickup={isPickup}
+        paid={paid}
         actionsDisabled={actionsDisabled}
         onUpdated={onUpdated}
         onRefused={onRefused}

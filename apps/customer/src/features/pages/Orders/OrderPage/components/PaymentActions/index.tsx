@@ -6,6 +6,7 @@ import type { Order } from "@/common/types/order.types";
 import { Button } from "@/components/ui/button";
 import {
   canPay,
+  lineRefundOwed,
   paymentUnconfirmed,
   paymentWindowPassed,
   refundOwed,
@@ -72,7 +73,7 @@ const PaymentActions = ({ order, branch }: Props) => {
         </p>
       )}
 
-      {refundOwed(order) && (
+      {(refundOwed(order) || lineRefundOwed(order)) && (
         <p className="text-sm text-muted-foreground">
           {t("payment.refundOwed")}
         </p>

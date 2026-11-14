@@ -6,7 +6,7 @@ import { PaymentController } from "../payment/payment.controller";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { UpdateOrderStatusDto } from "./dto/update-order-status.dto";
 import { attachIdempotencyKey } from "./idempotency";
-import { ORDER_ERROR_CODES } from "./order.constants";
+import { ORDER_ERROR_CODES } from "./constants/order.constants";
 import { OrderController } from "./order.controller";
 
 const orderController = new OrderController();

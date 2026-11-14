@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import { useTranslations } from "next-intl";
-import type { ReviewState } from "@/common/types/review.types";
-import { useProductReviews } from "@/hooks/review/useProductReviews";
-import { useReviewLikes } from "@/hooks/review/useReviewLikes";
-import LoadMoreReviews from "./components/LoadMoreReviews";
-import ReviewCard from "./components/ReviewCard";
-import ReviewsEmpty from "./components/ReviewsEmpty";
-import ReviewsError from "./components/ReviewsError";
-import ReviewSummary from "./components/ReviewSummary";
-import ReviewWriteAction from "./components/ReviewWriteAction";
-import { useReviewCounts } from "./hooks/useReviewCounts";
+import { useTranslations } from 'next-intl';
+import type { ReviewState } from '@/common/types/review.types';
+import { useProductReviews } from '@/hooks/review/useProductReviews';
+import { useReviewLikes } from '@/hooks/review/useReviewLikes';
+import LoadMoreReviews from './components/LoadMoreReviews';
+import ReviewCard from './components/ReviewCard';
+import ReviewSummary from './components/ReviewSummary';
+import ReviewsEmpty from './components/ReviewsEmpty';
+import ReviewsError from './components/ReviewsError';
+import ReviewWriteAction from './components/ReviewWriteAction';
+import { useReviewCounts } from './hooks/useReviewCounts';
 
 type Props = {
   productId: string;
@@ -18,7 +18,7 @@ type Props = {
 };
 
 const Reviews = ({ productId, reviewState }: Props) => {
-  const t = useTranslations("reviews");
+  const t = useTranslations('reviews');
   const {
     reviews,
     aggregate,
@@ -31,8 +31,6 @@ const Reviews = ({ productId, reviewState }: Props) => {
     retry,
   } = useProductReviews(productId);
 
-  // The caller's own liked set and the numbers this customer moved: both live
-  // outside the cards, so a row from an appended page moves too (AC-6, AC-12).
   const likes = useReviewLikes(productId);
   const counts = useReviewCounts();
 
@@ -41,24 +39,24 @@ const Reviews = ({ productId, reviewState }: Props) => {
 
   return (
     <section
-      id="reviews"
-      className="mx-auto w-full max-w-7xl scroll-mt-24 px-4 py-8 sm:px-6 lg:px-8"
+      id='reviews'
+      className='mx-auto w-full max-w-7xl scroll-mt-24 px-4 py-8 sm:px-6 lg:px-8'
     >
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-2xl font-bold">{t("title")}</h2>
+      <div className='mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+        <h2 className='text-2xl font-bold'>{t('title')}</h2>
         <ReviewWriteAction productId={productId} reviewState={reviewState} />
       </div>
 
       {reviewError ? (
         <ReviewsError onRetry={retry} />
       ) : (
-        <div className="flex flex-col gap-6">
+        <div className='flex flex-col gap-6'>
           {aggregate ? <ReviewSummary aggregate={aggregate} /> : null}
 
           {showsEmptyState ? (
             <ReviewsEmpty />
           ) : (
-            <div className="flex flex-col gap-4">
+            <div className='flex flex-col gap-4'>
               {reviews.map((review) => (
                 <ReviewCard
                   key={review.id}

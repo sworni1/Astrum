@@ -36,6 +36,7 @@ pnpm --filter @astrum/worker check-types
 
 ## Conventions
 
+- Sources stay flat in `src/`, the suites live in `src/__tests__/`; the `tsx --test` glob covers both.
 - Only the sha256 hash reaches the database; the raw token exists in the letter and nowhere else.
 - A delivery failure is republished to `retryQueueName(attempt)` with the `x-attempt` header; after the last delay the message goes to `mail.confirmation.dead` with the last error in `x-last-error`.
 - A message is acked only after the send succeeded, so a crash mid delivery repeats the message instead of dropping it.

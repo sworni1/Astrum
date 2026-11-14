@@ -1,5 +1,6 @@
 import {
   type Order,
+  OrderItemStatus,
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
@@ -92,3 +93,11 @@ export const paymentWindowPassed = (order: Order, now: Date): boolean => {
 export const refundOwed = (order: Order): boolean =>
   order.status === OrderStatus.CANCELED &&
   order.paymentStatus === PaymentStatus.PAID;
+
+/**
+ * A paid order that holds a cancelled line: the shop cancelled the item after
+ * the money left, so that line's money is owed back (AC-9).
+ */
+export const lineRefundOwed = (order: Order): boolean =>
+  order.paymentStatus === PaymentStatus.PAID &&
+  order.orderItems.some((item) => item.status === OrderItemStatus.CANCELLED);

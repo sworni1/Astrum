@@ -14,7 +14,7 @@ import {
 import {
   REVIEW_COMMENT_MAX_LENGTH,
   REVIEW_COMMENT_MIN_LENGTH,
-} from "../reviews.constants";
+} from "../constants/reviews.constants";
 
 /** The comment is trimmed before validation, so the length is the real one. */
 const trim = ({ value }: { value: unknown }): unknown =>

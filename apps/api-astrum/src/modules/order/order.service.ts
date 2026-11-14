@@ -15,17 +15,19 @@ import { logger } from "../../common/helpers/logger";
 import type { CreateOrderDto, OrderItemDto } from "./dto/create-order.dto";
 import { type Idempotency, idempotencyOf } from "./idempotency";
 import { expireSessionForCancel } from "../payment/payment.cancel";
-import { PAYMENT_WINDOW_MINUTES } from "../payment/payment.constants";
+import { PAYMENT_WINDOW_MINUTES } from "../payment/constants/payment.constants";
 import {
   MAX_LINE_QUANTITY,
+  LINE_STATUS_BY_PAYMENT_METHOD,
   ORDER_ERROR_CODES,
   REPLAY_ATTEMPTS,
   REPLAY_RETRY_DELAY_MS,
-} from "./order.constants";
+} from "./constants/order.constants";
 import {
   closeOrder,
   lockOrder,
   ORDER_TRANSACTION_OPTIONS,
+  recomputeOrderStatus,
 } from "./order-status.helpers";
 
 type OrderLine = { productId: string; quantity: number };
@@ -453,6 +455,19 @@ export class OrderService {
       });
     }
 
+    // Money that left for an order cancelled afterwards is never dropped: the
+    // payment stays PAID and one warning names the refund (AC-3).
+    if (current.paymentStatus === "PAID") {
+      logger.warn({
+        event: "payment.refund_owed",
+        orderId: current.id,
+        userId,
+        reason: "customer_cancel",
+        amount: current.grandTotal.toFixed(2),
+        currency: current.currency,
+      });
+    }
+
     return toOrderDetail(
       await tx.order.findFirstOrThrow({
         where: { id: current.id },
@@ -547,15 +562,20 @@ export class OrderService {
             currency: line.currency,
             businessId: line.businessId,
             userId,
+            status: LINE_STATUS_BY_PAYMENT_METHOD[dto.paymentMethod],
           })),
         },
       },
       include: { OrderItem: true },
     });
 
+    // The order status is a mirror of its lines, so a cash order reads
+    // `CONFIRMED` and a prepaid one `PENDING` from the first read (AC-1).
+    const status = await recomputeOrderStatus(tx, created.id);
+
     await this.clearCart(tx, created.id, userId, lines, cartRows);
 
-    return { order: toOrderDetail(created), replay: false };
+    return { order: toOrderDetail({ ...created, status }), replay: false };
   }
 
   private async loadProducts(

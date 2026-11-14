@@ -9,7 +9,7 @@ Next.js App Router storefront for the Astrum shop. Server components fetch on th
 - Next.js 16 App Router, React 19.3, TypeScript 7 (`tsc`); Turbopack is the default bundler
 - Tailwind CSS 4 with shadcn and Radix primitives, `class-variance-authority`, `lucide-react`, `sonner`
 - Forms: `react-hook-form` with `zod` resolvers. Data: `swr` plus server fetchers
-- Tests: vitest with jsdom, `@` alias maps to `src`
+- Tests: vitest with jsdom, `@` alias maps to `src`; every suite lives in a `__tests__/` folder beside the module it covers
 
 ## Key files
 
@@ -56,7 +56,7 @@ A file holds one component or one module of pure functions. Everything that can 
 
 ### S2. Feature folder shape
 
-A feature lives at `src/features/<area>/<Feature>/` and keeps only the folders it needs: `index.tsx` composition, `components/` one component per file, `lib/` constants and pure code, `hooks/` the feature's own state. `index.tsx` imports children, may call the feature's own hooks and a translator, and holds no state, handlers, tables or helpers. A `lib/` file holds lookup tables, pure helpers, style constants and local types, and carries a test when it branches or maps inputs to outputs. A backend call is not a feature hook: it goes through `src/hooks/<domain>`. A component file is `PascalCase.tsx`, a module is `kebab-case.ts`, and `index.tsx` is a feature or folder entry.
+A feature lives at `src/features/<area>/<Feature>/` and keeps only the folders it needs: `index.tsx` composition, `components/` one component per file, `lib/` constants and pure code, `hooks/` the feature's own state. `index.tsx` imports children, may call the feature's own hooks and a translator, and holds no state, handlers, tables or helpers. A `lib/` file holds lookup tables, pure helpers, style constants and local types, and carries a test when it branches or maps inputs to outputs. A suite is `__tests__/<module>.test.ts`, or `__tests__/index.test.tsx` for a component folder, and reaches its subject through the `@/` alias like any other import. A backend call is not a feature hook: it goes through `src/hooks/<domain>`. A component file is `PascalCase.tsx`, a module is `kebab-case.ts`, and `index.tsx` is a feature or folder entry.
 
 ### S3. Placement
 

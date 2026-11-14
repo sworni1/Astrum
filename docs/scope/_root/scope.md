@@ -25,8 +25,9 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | 12  | English interface by default          | Slice 7 | in-progress |
 | 13  | Seller onboarding                     | Slice 8 | done        |
 | 14  | Review likes and comments             | Slice 4 | done        |
-| 15  | Payment through a test provider       | Slice 9 | in-progress |
+| 15  | Payment through a test provider       | Slice 9 | done        |
 | 16  | Order letters                         | Slice 9 | planned     |
+| 17  | Confirm order lines when paid         | Slice 9 | in-progress |
 
 ## Slice 1: the order thread
 
@@ -271,7 +272,7 @@ Becoming a seller today means an engineer runs `pnpm db:assign-business <email>`
   spec [0008](../../specs/_root/0008-seller-onboarding/index.md)
   code in `apps/api-astrum/src/modules/seller`, `apps/customer/src/features/pages/SellerOnboarding`, `apps/customer/src/features/pages/Profile/actions/SellOnAstrum`, `apps/customer/src/hooks/seller/useBecomeSeller.ts`, `packages/Astrum-db/prisma/schema.prisma`
 
-## Slice 9: payment and order letters
+## Slice 9: payment, acceptance and order letters
 
 ### 15. Payment through a test provider · in-progress · GA
 
@@ -285,8 +286,8 @@ The checkout stores `paymentMethod` and `paymentStatus` and nothing charges anyt
   - [x] Sync and the return screen (AC-10, AC-14) — done: `POST /api/orders/:orderId/payment/sync` through the same apply path, one call on mount behind a ref guard, the checking state, and `router.replace` dropping the parameter
   - [x] Methods, seller read, copy, tests and deploy config (AC-3, AC-15, AC-16, AC-17) — done: `CHOOSABLE_PAYMENT_METHODS` on both sides, the seller read carrying `paymentStatus` and `paymentMethod` with the label in the panel, 12 new keys in both catalogs, 46 gateway tests and 20 storefront ones, and `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` plus the Caddyfile webhook path
 
-- [ ] Verify it: `/check verify payment through a test provider`
-- [ ] Test it: `/test payment through a test provider`
+- [x] Verify it: `/check verify payment through a test provider` — 2026-11-13: the schema and configuration steps ran on the dev database (both tables, the `Payment_one_pending_per_order` partial index, `Order.paymentExpiresAt`, the four schema copies identical), and the live pass paid an order on the hosted Stripe test page and read it back `PAID` on the order screen. The callback itself was never exercised locally: `stripe listen` hung on `Getting ready` in this workspace, `PaymentEvent` stayed empty, and the payment was confirmed through `POST /orders/:orderId/payment/sync` instead. Still unrun in the spec's `verify.md`: the callback walk, the window expiry toast, the missing key toast, the refund line after a cancel, and the 360 px check
+- [x] Test it: `/test payment through a test provider` — 2026-11-13: no separate pass was run (the owner closed the feature); the suites that landed with the build cover it: `apps/api-astrum` answers 153 tests over the `payment` and `order` modules (3 suites and 15 tests skipped, they need the live stack), `apps/customer` answers 118 tests over the order screen, the seller panel and the seller hooks, and `tsc --noEmit` is clean in both apps
 - [ ] Review it (fresh model): `/check review payment through a test provider`
 - [ ] Document it: `/document payment through a test provider`
   spec [0015](../../specs/_root/0015-payment-through-a-test-provider/index.md)
@@ -297,6 +298,23 @@ The checkout stores `paymentMethod` and `paymentStatus` and nothing charges anyt
 The worker delivers one letter, the account confirmation, and the gateway publishes one event, so nothing tells a customer that an order was placed, paid or handed over.
 **Done when:** a letter leaves for the customer when an order is placed and on each status change that concerns them, the gateway publishes one event per change on the existing `astrum.events` exchange after the commit, the worker consumes it through its own queue with the retry ladder and the dead letter queue that already carry the confirmation letter, the letter arrives in the language the customer chose, a republished event sends no twin letter, and letters written while the worker is down wait in the durable queue instead of disappearing.
 - [ ] Design it (spec): `/architect order letters`
+
+### 17. Confirm order lines when the order is paid · in-progress · GA
+
+A paid order waits for a seller to confirm its lines, and a line whose shop has no owner account never gets confirmed, so the buyer reads `PENDING` after paying.
+**Done when:** a cash order writes `CONFIRMED` lines and a `CONFIRMED` order at creation, a prepaid order confirms its lines in the same transaction as the paid event and the order follows, the seller keeps two moves only (`Выдать` and `Нет в наличии`), a cancelled paid line returns the stock and logs `payment.refund_owed`, and a courier order is handed over with no pickup point.
+- [x] Design it (spec): `/architect confirm order lines when the order is paid`
+- [x] Build it: `/develop confirm order lines when the order is paid`
+  - [x] Confirm on write and on payment: `LINE_STATUS_BY_PAYMENT_METHOD`, `recomputeOrderStatus` in the create transaction, the paid apply confirming `PENDING` lines behind an order level guard, and the customer cancel refund warning (AC-1 to AC-4)
+  - [x] Narrow the seller rules: the patch table, the handover as the only writer of `DELIVERED` for a confirmed line, the refund warning read under the lock, and the pickup precondition removed (AC-5 to AC-7)
+  - [x] Seller panel and buyer screen: two moves only, the courier dialog string, `paid` passed down to the line, the refund note predicate, and both catalogs (AC-8 to AC-10)
+  - [x] Tests and the gate: the four suites that assert the old rules rewritten, then `pnpm check-types` and `pnpm quality-gate` (AC-11)
+- [x] Verify it: `/check verify confirm order lines when the order is paid` (2026-11-14: PASS on the live stack, all 12 AC met, the four payment log lines read from a second gateway replica; the hosted Stripe page was replaced by a signed provider event, the sync paid branch was not reachable, both recorded in the spec's verify.md)
+- [ ] Test it: `/test confirm order lines when the order is paid`
+- [ ] Review it (fresh model): `/check review confirm order lines when the order is paid`
+- [ ] Document it: `/document confirm order lines when the order is paid`
+  spec [0016](../../specs/_root/0016-confirm-lines-on-payment/index.md)
+  code in `apps/api-astrum/src/modules/order/order.constants.ts`, `apps/api-astrum/src/modules/order/order.service.ts`, `apps/api-astrum/src/modules/order/seller-order.service.ts`, `apps/api-astrum/src/modules/payment/payment.apply.ts`, `apps/customer/src/features/pages/SellerOrders/`, `apps/customer/src/features/pages/Orders/OrderPage/`, `apps/customer/messages/`
 
 ## Fixed
 
@@ -326,6 +344,9 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Seller notifications**: a mail or a badge when a new line arrives · from spec 0007 · needs a decision
 - **Seller batch actions**: act on several lines at once · from spec 0007 · needs a decision
 - **Excel seed creates its businesses**: `seedFromExcel.ts` writes a product `businessId` without the matching `Business` row, which the foreign key added by spec 0002 rejects · from spec 0007
+- **Registration answers 500**: `POST /api/auth/register` fails through the gateway and through the auth service, and no user row is written, so no new account can be created · bug, found while verifying spec 0016
+- **An unpaid order with no attempt row is never closed**: the sweep logs `payment.sweep.no_attempt` and returns, so the order stays `PENDING` past its deadline and its stock stays held (`cmwfh4ttc0004z4vdp1h17doq`, `cmwcq7jl5000zkvd0kgsp2zz`) · from spec 0015, found while verifying spec 0016
+- **Handover date prints empty**: the seller panel renders `Выдан:` with no date for an order that is `DELIVERED` with `handedOverAt` null, which three rows in the demo database carry (`review-check-order-1`, `cmwcgbrns000fe8vdcupntf58`, `cmw25deon00003wvdd87kni5m`) · from spec 0013, found while verifying spec 0016
 - **Delivery method management screen**: create a method, change its price, switch it off; an operator still edits rows by hand · from spec 0009 · needs a decision
 - **Confirming a changed delivery price**: the create call stores the price in force at the commit without comparing it with what the customer saw; a `409 SHIPPING_PRICE_CHANGED` needs the request to carry the displayed price · from spec 0009 · needs a decision
 - **Order total rule in AGENTS.md**: the `grandTotal = totalPrice + deliveryPrice` rule that no constraint enforces · from spec 0009

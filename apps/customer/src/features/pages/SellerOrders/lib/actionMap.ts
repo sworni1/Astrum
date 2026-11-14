@@ -1,54 +1,31 @@
 import { OrderItemStatus } from "@/common/types/order.types";
 
-export type SellerAction =
-  | "confirm"
-  | "outOfStock"
-  | "cancel"
-  | "ship"
-  | "deliver";
+/** The one per line move a seller still owns: the item is gone (AC-6, AC-8). */
+export type SellerAction = "gone";
 
 /** The target status of every action the panel offers. */
 export const SELLER_ACTION_TARGET: Record<SellerAction, OrderItemStatus> = {
-  confirm: OrderItemStatus.CONFIRMED,
-  ship: OrderItemStatus.SHIPPED,
-  deliver: OrderItemStatus.DELIVERED,
-  cancel: OrderItemStatus.CANCELLED,
-  outOfStock: OrderItemStatus.OUT_OF_STOCK,
+  gone: OrderItemStatus.CANCELLED,
 };
 
 /**
- * A client mirror of the transition table of spec 0002. It only hides
- * buttons; the gateway re checks every move. `actionMap.test.ts` compares it
- * with the table for all nine statuses.
+ * A client mirror of the per line table of spec 0016, AC-5: the platform
+ * confirms and ships, so a seller cancels a confirmed line and nothing else.
+ * Every other status carries no move, so the table names only the one that does.
+ * It only hides buttons; the gateway re checks every move.
  */
 export const SELLER_LINE_ACTIONS: Record<string, readonly SellerAction[]> = {
-  [OrderItemStatus.PENDING]: ["confirm", "outOfStock", "cancel"],
-  [OrderItemStatus.CONFIRMED]: ["ship", "cancel"],
-  [OrderItemStatus.SHIPPED]: ["deliver"],
-  [OrderItemStatus.OUT_OF_STOCK]: [],
-  [OrderItemStatus.CANCELLED]: [],
-  [OrderItemStatus.DELIVERED]: [],
-  [OrderItemStatus.RETURNED]: [],
-  [OrderItemStatus.BACKORDERED]: [],
-  [OrderItemStatus.REPLACED]: [],
+  [OrderItemStatus.CONFIRMED]: ["gone"],
+  // A paid line is shipped by the payment itself, and the seller must still be
+  // able to report it gone, because that is the move that returns the money.
+  [OrderItemStatus.SHIPPED]: ["gone"],
 };
 
-/** Cancel and Out of stock ask first; the other three act at once. */
-export const SELLER_CONFIRMING_ACTIONS: readonly SellerAction[] = [
-  "cancel",
-  "outOfStock",
-];
+/** The one action asks first: the stock returns and the buyer may be owed. */
+export const SELLER_CONFIRMING_ACTIONS: readonly SellerAction[] = ["gone"];
 
-export const sellerLineActions = (
-  status: string,
-  isPickup = false,
-): readonly SellerAction[] => {
-  const actions = SELLER_LINE_ACTIONS[status] ?? [];
-
-  // A pickup group hands the whole parcel over in one action, so the line rows
-  // offer no `Deliver` of their own (spec 0013, AC-13).
-  return isPickup ? actions.filter((action) => action !== "deliver") : actions;
-};
+export const sellerLineActions = (status: string): readonly SellerAction[] =>
+  SELLER_LINE_ACTIONS[status] ?? [];
 
 export const isConfirmingAction = (action: SellerAction): boolean =>
   SELLER_CONFIRMING_ACTIONS.includes(action);

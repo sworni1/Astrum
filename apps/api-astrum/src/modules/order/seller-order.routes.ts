@@ -3,7 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import { requireActiveAccount } from "../../middlewares/requireActiveAccount";
 import { validateDto } from "../../middlewares/validateDto";
 import { UpdateOrderItemStatusDto } from "./dto/update-order-item-status.dto";
-import { ORDER_ERROR_CODES } from "./order.constants";
+import { ORDER_ERROR_CODES } from "./constants/order.constants";
 import { OrderController } from "./order.controller";
 
 const orderController = new OrderController();

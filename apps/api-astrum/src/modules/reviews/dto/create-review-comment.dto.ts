@@ -3,7 +3,7 @@ import { IsString, MaxLength, MinLength } from "class-validator";
 import {
   REVIEW_COMMENT_MAX_LENGTH,
   REVIEW_COMMENT_MIN_LENGTH,
-} from "../reviews.constants";
+} from "../constants/reviews.constants";
 
 /** Trimmed before validation and before the write, so the length is real. */
 const trim = ({ value }: { value: unknown }): unknown =>

@@ -14,8 +14,8 @@ import {
   ValidateNested,
 } from "class-validator";
 import type { PaymentMethod } from "../../../../generated/prisma/enums";
-import { CHOOSABLE_PAYMENT_METHODS } from "../../payment/payment.constants";
-import { MAX_LINE_QUANTITY, MAX_ORDER_LINES } from "../order.constants";
+import { CHOOSABLE_PAYMENT_METHODS } from "../../payment/constants/payment.constants";
+import { MAX_LINE_QUANTITY, MAX_ORDER_LINES } from "../constants/order.constants";
 
 /**
  * A line names what to buy and how many. Price, name and image come from the

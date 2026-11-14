@@ -7,7 +7,7 @@ import {
   PAYMENT_SWEEP_BATCH,
   PAYMENT_SWEEP_INTERVAL_MS,
   PAYMENT_SWEEP_LOCK_KEY,
-} from "./payment.constants";
+} from "./constants/payment.constants";
 import type { PaymentGateway } from "./payment.gateway";
 import { paymentGateway } from "./payment.gateway.registry";
 import { sessionOutcomeOf } from "./payment.money";
