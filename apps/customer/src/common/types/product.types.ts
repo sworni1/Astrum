@@ -6,6 +6,7 @@ export enum Currency {
 }
 
 export type ProductCardProps = {
+  isOutOfStock: boolean;
   id: string;
   name: string;
   previewImage: string;
@@ -23,6 +24,7 @@ export type ProductCardProps = {
 };
 
 export type ProductCartProps = {
+  isOutOfStock: boolean;
   id: string;
   quantity: number;
   name: string;

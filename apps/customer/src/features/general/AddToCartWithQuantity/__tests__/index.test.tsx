@@ -45,6 +45,7 @@ type Props = {
   quantity?: number;
   size?: "full" | "sm";
   allowAdd?: boolean;
+  isOutOfStock?: boolean;
 };
 
 const PRODUCT_ID = "product-1";
@@ -74,6 +75,7 @@ describe("AddToCartWithQuantity", () => {
     quantity = 5,
     size,
     allowAdd,
+    isOutOfStock = false,
   }: Props) => {
     container = document.createElement("div");
     document.body.appendChild(container);
@@ -84,6 +86,7 @@ describe("AddToCartWithQuantity", () => {
           productId={PRODUCT_ID}
           quantity={quantity}
           quantityInCart={quantityInCart}
+          isOutOfStock={isOutOfStock}
           size={size}
           allowAdd={allowAdd}
         />,

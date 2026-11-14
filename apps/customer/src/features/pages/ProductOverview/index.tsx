@@ -94,6 +94,7 @@ export default function ProductOverview() {
               />
 
               <AddToCartWithQuantity
+                isOutOfStock={product.isOutOfStock}
                 quantity={product.quantity}
                 size='sm'
                 quantityInCart={product.quantityInCart}

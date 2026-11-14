@@ -46,6 +46,7 @@ export class ProductService {
         impressions: _count?.impressions ?? 0,
       },
       isWishlisted: !!wishlistItem,
+      isOutOfStock: product.isOutOfStock,
       quantityInCart: cartItem ? cartItem.quantity : 0,
       reviewState,
     };
