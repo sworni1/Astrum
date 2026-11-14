@@ -11,7 +11,7 @@ import {
   REVIEW_ERROR_CODES,
   REVIEW_PAGE_DEFAULT_LIMIT,
   REVIEW_PAGE_MAX_LIMIT,
-} from "./reviews.constants";
+} from "./constants/reviews.constants";
 import {
   buildDistribution,
   reviewCommentSelect,

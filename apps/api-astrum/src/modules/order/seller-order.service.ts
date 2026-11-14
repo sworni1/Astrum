@@ -8,7 +8,7 @@ import type {
 import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
 import { logger } from "../../common/helpers/logger";
-import { ORDER_ERROR_CODES } from "./order.constants";
+import { ORDER_ERROR_CODES } from "./constants/order.constants";
 import {
   lockOrder,
   ORDER_TRANSACTION_OPTIONS,
@@ -88,15 +88,22 @@ export const toSellerOrderGroupJson = (row: SellerOrderGroupRow) => ({
 
 export type SellerOrderGroupJson = ReturnType<typeof toSellerOrderGroupJson>;
 
+/**
+ * The moves the per line status route allows: the item is gone, and a line
+ * created before this change can still be closed as delivered. Confirming and
+ * shipping are no longer a seller's decision, and a line the payment shipped
+ * can still be reported gone, because that is where the money comes back
+ * (AC-5 as amended on 2026-11-14).
+ */
 export const ALLOWED_LINE_TRANSITIONS: Record<
   OrderItemStatus,
   readonly OrderItemStatus[]
 > = {
-  PENDING: ["CONFIRMED", "OUT_OF_STOCK", "CANCELLED"],
-  CONFIRMED: ["SHIPPED", "CANCELLED"],
+  PENDING: [],
+  CONFIRMED: ["CANCELLED"],
   OUT_OF_STOCK: [],
   CANCELLED: [],
-  SHIPPED: ["DELIVERED"],
+  SHIPPED: ["CANCELLED", "DELIVERED"],
   DELIVERED: [],
   RETURNED: [],
   BACKORDERED: [],
@@ -122,13 +129,6 @@ const orderNotFound = () =>
     404,
     ORDER_ERROR_CODES.notFound,
     "Order not found for this seller.",
-  );
-
-const handoverRequiresPickup = () =>
-  new AppError(
-    409,
-    ORDER_ERROR_CODES.handoverRequiresPickup,
-    "This order is not a pickup order, so it has no point to hand over at.",
   );
 
 const nothingToHandOver = () =>
@@ -317,16 +317,16 @@ export class SellerOrderService {
       where: { id: orderId, OrderItem: { some: { businessId } } },
       select: {
         ...SELLER_ORDER_GROUP_SELECT,
-        OrderItem: { where: { businessId }, orderBy: { id: "asc" }, select: SELLER_ORDER_ITEM_SELECT },
+        OrderItem: {
+          where: { businessId },
+          orderBy: { id: "asc" },
+          select: SELLER_ORDER_ITEM_SELECT,
+        },
       },
     });
 
     if (!order) {
       throw orderNotFound();
-    }
-
-    if (order.pickupPointId === null) {
-      throw handoverRequiresPickup();
     }
 
     const ready = order.OrderItem.filter((line) =>
@@ -368,7 +368,11 @@ export class SellerOrderService {
       where: { id: orderId },
       select: {
         ...SELLER_ORDER_GROUP_SELECT,
-        OrderItem: { where: { businessId }, orderBy: { id: "asc" }, select: SELLER_ORDER_ITEM_SELECT },
+        OrderItem: {
+          where: { businessId },
+          orderBy: { id: "asc" },
+          select: SELLER_ORDER_ITEM_SELECT,
+        },
       },
     });
 
@@ -506,6 +510,23 @@ export class SellerOrderService {
 
     if (targetStatus === "CANCELLED") {
       await returnOrderStock(tx, [result]);
+
+      // The item is gone after the buyer paid: the money is owed back, and the
+      // log line is the only signal until the refund route exists (AC-6).
+      const order = await tx.order.findUniqueOrThrow({
+        where: { id: current.orderId },
+        select: { paymentStatus: true },
+      });
+
+      if (order.paymentStatus === "PAID") {
+        logger.warn({
+          event: "payment.refund_owed",
+          orderId: current.orderId,
+          orderItemId: result.id,
+          amount: result.price.mul(result.quantity).toFixed(2),
+          currency: result.currency,
+        });
+      }
     }
 
     const orderStatus = await recomputeOrderStatus(tx, current.orderId);

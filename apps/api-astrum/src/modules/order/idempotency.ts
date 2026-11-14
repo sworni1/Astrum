@@ -8,7 +8,7 @@ import {
   IDEMPOTENCY_KEY_MIN_LENGTH,
   IDEMPOTENCY_KEY_PATTERN,
   ORDER_ERROR_CODES,
-} from "./order.constants";
+} from "./constants/order.constants";
 
 /** What a create answers with, so a repeat can be told from a new order. */
 export type Idempotency = { key: string; hash: string };

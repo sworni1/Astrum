@@ -40,6 +40,7 @@ pnpm --filter @astrum/api check-types
 ## Conventions
 
 - One folder per module holding `*.controller.ts`, `*.routes.ts`, `*.service.ts` and `dto/`; the router is registered in `src/app.ts`.
+- A module keeps its suites in `__tests__/` (`dto/__tests__/` for DTO suites) and its literals in `constants/*.constants.ts`; nothing else lives in those folders, because jest treats every file under `__tests__/` as a suite.
 - Nested resources keep their router in the parent module, for example reviews mounted inside `product.routes.ts`.
 - Controllers return through `handleErrors` with `http-status-codes`; DTO classes carry the validation rules.
 - `POST /api/orders` takes an optional `Idempotency-Key` of 8 to 128 characters from `[A-Za-z0-9_-]`, stores its sha256 body fingerprint on the order and answers the first order with `200` and `Idempotent-Replay: true` on a repeat.

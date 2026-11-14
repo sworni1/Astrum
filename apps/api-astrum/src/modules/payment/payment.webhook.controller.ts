@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { handleErrors } from "../../common/helpers/errorHandler";
 import { logger } from "../../common/helpers/logger";
-import { PAYMENT_ERROR_CODES, isHandledEventType } from "./payment.constants";
+import { PAYMENT_ERROR_CODES, isHandledEventType } from "./constants/payment.constants";
 import { InvalidSignatureError } from "./payment.gateway";
 import { paymentGateway } from "./payment.gateway.registry";
 import { handleWebhookEvent } from "./payment.webhook.service";

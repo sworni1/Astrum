@@ -2,7 +2,11 @@ import type { Order, OrderItem } from "../../../generated/prisma/client";
 import { Prisma } from "../../../generated/prisma/client";
 import type { PaymentStatus } from "../../../generated/prisma/enums";
 import { logger } from "../../common/helpers/logger";
-import { closeOrder, lockOrder } from "../order/order-status.helpers";
+import {
+  closeOrder,
+  lockOrder,
+  recomputeOrderStatus,
+} from "../order/order-status.helpers";
 import { toMinorUnits } from "./payment.money";
 
 export type OrderWithLines = Order & { OrderItem: OrderItem[] };
@@ -63,10 +67,13 @@ const setPaymentStatus = async (
 };
 
 /**
- * Money arrived. The order status is never touched and the stock never moves,
- * because stock left the shelf when the order was created. An attempt that was
- * cancelled or expired first still becomes PAID, and the line says a refund is
- * owed rather than dropping money that did leave (AC-6, AC-12).
+ * Money arrived. The order status is never touched by hand: it follows its
+ * lines through `recomputeOrderStatus`, so the order reads ACCEPTED at once.
+ * The shipping pass in `order-shipping.ts` marks it sent one minute later,
+ * because this project runs no real delivery. Stock never moves here, because it
+ * left the shelf when the order was created. An attempt that was cancelled or
+ * expired first still becomes PAID, and the line says a refund is owed rather
+ * than dropping money that did leave (AC-2, AC-3, AC-4).
  */
 export const applyPaidEvent = async (
   tx: Prisma.TransactionClient,
@@ -84,6 +91,12 @@ export const applyPaidEvent = async (
 
   const order = await loadLockedOrder(tx, orderId);
 
+  // An order another attempt already paid is written once: the sync can find an
+  // older FAILED attempt, and `newestOpenAttempt` never reads the paid one (AC-4).
+  if (order.paymentStatus === "PAID") {
+    return "ignored";
+  }
+
   await tx.payment.update({
     where: { id: attempt.id },
     data: {
@@ -95,13 +108,38 @@ export const applyPaidEvent = async (
     },
   });
 
-  await setPaymentStatus(tx, order.id, ["PENDING", "FAILED", "CANCELLED"], "PAID");
+  await setPaymentStatus(
+    tx,
+    order.id,
+    ["PENDING", "FAILED", "CANCELLED"],
+    "PAID",
+  );
 
-  if (attempt.status === "CANCELLED" || attempt.status === "EXPIRED") {
+  // Only a line waiting for the money is confirmed; a cancelled, delivered or
+  // returned line keeps what it says (AC-3). The shipping pass ships it later.
+  const { count: lineCount } = await tx.orderItem.updateMany({
+    where: { orderId: order.id, status: "PENDING" },
+    data: { status: "CONFIRMED" },
+  });
+
+  const status = await recomputeOrderStatus(tx, order.id);
+
+  logger.info({
+    event: "payment.lines_confirmed",
+    orderId: order.id,
+    paymentId: attempt.id,
+    lineCount,
+  });
+
+  const lateAttempt =
+    attempt.status === "CANCELLED" || attempt.status === "EXPIRED";
+
+  if (lateAttempt || status === "CANCELED") {
     logger.warn({
       event: "payment.refund_owed",
       orderId: order.id,
       paymentId: attempt.id,
+      reason: "late_payment",
       amount: attempt.amount.toFixed(2),
       currency: attempt.currency,
     });

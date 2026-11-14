@@ -9,7 +9,7 @@ import {
   applyExpiredEvent,
   applyPaidEvent,
 } from "./payment.apply";
-import { PAYMENT_EVENT_TYPES } from "./payment.constants";
+import { PAYMENT_EVENT_TYPES } from "./constants/payment.constants";
 import type { ProviderEvent, ProviderSession } from "./payment.gateway";
 import { sessionOutcomeOf } from "./payment.money";
 
