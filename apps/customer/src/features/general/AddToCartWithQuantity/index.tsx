@@ -103,7 +103,7 @@ const AddToCartWithQuantity = ({
           onClick={handleAddToCart}
           disabled={loading || isOutOfStock}
         >
-          Нет в наличии
+          {t('outOfStock')}
         </Button>
       </div>
     );

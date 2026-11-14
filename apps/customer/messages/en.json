@@ -95,6 +95,7 @@
     "fastDelivery": "Fast delivery",
     "selectToCheckout": "Select items to checkout",
     "addToCart": "Add to Cart",
+    "outOfStock": "Out of stock",
     "proceed": "Proceed to Checkout ({count, plural, one {# item} other {# items}})",
     "empty": "Your cart is empty",
     "back": "Back to Cart",
