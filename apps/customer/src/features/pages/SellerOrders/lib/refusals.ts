@@ -36,10 +36,6 @@ export const refusalToastFor = (error: unknown): RefusalToast => {
     return { key: "nothingToHandOver", retry: false };
   }
 
-  if (code === "HANDOVER_REQUIRES_PICKUP") {
-    return { key: "handoverRequiresPickup", retry: false };
-  }
-
   if (code === "ORDER_NOT_FOUND") {
     return { key: "orderNotFound", retry: false };
   }

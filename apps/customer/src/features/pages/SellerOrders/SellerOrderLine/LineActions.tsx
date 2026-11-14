@@ -3,6 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { formatMoney } from "@/common/helpers/money";
 import type { SellerOrderLine as Line } from "@/common/types/order.types";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +21,7 @@ import {
   type SellerAction,
   sellerLineActions,
 } from "@/features/pages/SellerOrders/lib/actionMap";
+import { lineSubtotal } from "@/features/pages/SellerOrders/lib/format";
 import {
   showRefusalToast,
   type Translate,
@@ -29,7 +31,8 @@ import { DIALOG_COPY } from "./lib/dialogCopy";
 
 type Props = {
   line: Line;
-  isPickup: boolean;
+  /** The group's order is paid, so a cancelled line owes the buyer money (AC-8). */
+  paid: boolean;
   actionsDisabled: boolean;
   onUpdated: (line: Line) => Promise<void>;
   onRefused: () => Promise<void>;
@@ -37,12 +40,12 @@ type Props = {
 
 /**
  * The actions of one line, the one status change in flight and the dialog that
- * guards the two destructive moves. The map only hides buttons; the gateway
- * re checks every move and every refusal is surfaced.
+ * guards the move. The map only hides buttons; the gateway re checks every move
+ * and every refusal is surfaced.
  */
 export const LineActions = ({
   line,
-  isPickup,
+  paid,
   actionsDisabled,
   onUpdated,
   onRefused,
@@ -51,7 +54,7 @@ export const LineActions = ({
   const [pending, setPending] = useState<SellerAction | null>(null);
   const [dialogAction, setDialogAction] = useState<SellerAction | null>(null);
   const { changeStatus } = useSellerOrderItemStatus(line.id, onUpdated);
-  const actions = sellerLineActions(line.status, isPickup);
+  const actions = sellerLineActions(line.status);
 
   const send = async (action: SellerAction): Promise<void> => {
     setPending(action);
@@ -88,10 +91,7 @@ export const LineActions = ({
     }
   };
 
-  const copy =
-    dialogAction === "cancel" || dialogAction === "outOfStock"
-      ? DIALOG_COPY[dialogAction]
-      : null;
+  const copy = dialogAction === "gone" ? DIALOG_COPY.gone : null;
 
   if (actions.length === 0) {
     return null;
@@ -127,7 +127,13 @@ export const LineActions = ({
           <DialogHeader>
             <DialogTitle>{copy ? t(copy.title) : ""}</DialogTitle>
             <DialogDescription>
-              {copy ? t(copy.text, { product: line.name }) : ""}
+              {copy
+                ? t(copy.text, {
+                    product: line.name,
+                    paid: paid ? "yes" : "no",
+                    money: formatMoney(lineSubtotal(line), line.currency),
+                  })
+                : ""}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -1,67 +1,65 @@
-"use client";
+'use client';
 
-import { Mail, MailCheck } from "lucide-react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { type ReactNode, useEffect } from "react";
-import useSWR, { useSWRConfig } from "swr";
-import type { UserData } from "@/common/types/user.types";
-import { Button } from "@/components/ui/button";
+import { Mail, MailCheck } from 'lucide-react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { useEffect } from 'react';
+import useSWR, { useSWRConfig } from 'swr';
+import type { UserData } from '@/common/types/user.types';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { useFetcher } from "@/hooks/useFetcher";
+} from '@/components/ui/card';
+import { useFetcher } from '@/hooks/useFetcher';
+import OutcomeIcon from './components/OutcomeIcon';
 import {
   isOutcome,
   OUTCOME_ICONS,
   type Outcome,
   VIEW_KEYS,
-} from "./lib/outcome";
-import ResendForm from "./ResendForm";
+} from './lib/outcome';
+import ResendForm from './ResendForm';
 
 export default function ConfirmEmail() {
-  const t = useTranslations("confirmEmail");
+  const t = useTranslations('confirmEmail');
   const params = useSearchParams();
-  const status = params.get("status");
+  const status = params.get('status');
   const outcome: Outcome | null = isOutcome(status) ? status : null;
   const { getData } = useFetcher();
   const { mutate } = useSWRConfig();
   const { data: profile } = useSWR<UserData>(
-    outcome === null ? "/users/me" : null,
+    outcome === null ? '/users/me' : null,
     getData,
   );
 
   useEffect(() => {
-    if (outcome !== "ok") {
+    if (outcome !== 'ok') {
       return;
     }
-
-    // The profile is read again and written into the cache, so the banner of
-    // an unconfirmed account disappears on the next page without a re-login.
-    void mutate("/users/me", getData("/users/me"), { revalidate: false });
+    void mutate('/users/me', getData('/users/me'), { revalidate: false });
   }, [outcome, mutate, getData]);
 
-  if (outcome === "ok") {
+  if (outcome === 'ok') {
     return (
       <Card>
         <CardHeader>
           <OutcomeIcon>
-            <MailCheck className="size-5" aria-hidden="true" />
+            <MailCheck className='size-5' aria-hidden='true' />
           </OutcomeIcon>
-          <CardTitle className="text-2xl">{t("okTitle")}</CardTitle>
-          <CardDescription>{t("okText")}</CardDescription>
+          <CardTitle className='text-2xl'>{t('okTitle')}</CardTitle>
+          <CardDescription>{t('okText')}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2">
-          <Button asChild className="w-full">
-            <Link href="/">{t("goShopping")}</Link>
+        <CardContent className='space-y-2'>
+          <Button asChild className='w-full'>
+            <Link href='/'>{t('goShopping')}</Link>
           </Button>
-          <Button asChild variant="ghost" className="w-full">
-            <Link href="/auth/signin">{t("signInOther")}</Link>
+          <Button asChild variant='ghost' className='w-full'>
+            <Link href='/auth/signin'>{t('signInOther')}</Link>
           </Button>
         </CardContent>
       </Card>
@@ -75,17 +73,17 @@ export default function ConfirmEmail() {
       <Card>
         <CardHeader>
           <OutcomeIcon>
-            <OutcomeGlyph className="size-5" aria-hidden="true" />
+            <OutcomeGlyph className='size-5' aria-hidden='true' />
           </OutcomeIcon>
-          <CardTitle className="text-2xl">
+          <CardTitle className='text-2xl'>
             {t(VIEW_KEYS[outcome].title)}
           </CardTitle>
           <CardDescription>{t(VIEW_KEYS[outcome].text)}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className='space-y-4'>
           <ResendForm defaultEmail={profile?.email} />
-          <Button asChild variant="ghost" className="w-full">
-            <Link href="/auth/signin">{t("backToSignIn")}</Link>
+          <Button asChild variant='ghost' className='w-full'>
+            <Link href='/auth/signin'>{t('backToSignIn')}</Link>
           </Button>
         </CardContent>
       </Card>
@@ -96,29 +94,21 @@ export default function ConfirmEmail() {
     <Card>
       <CardHeader>
         <OutcomeIcon>
-          <Mail className="size-5" aria-hidden="true" />
+          <Mail className='size-5' aria-hidden='true' />
         </OutcomeIcon>
-        <CardTitle className="text-2xl">{t("checkMailTitle")}</CardTitle>
+        <CardTitle className='text-2xl'>{t('checkMailTitle')}</CardTitle>
         <CardDescription>
           {profile?.email
-            ? t("checkMailTo", { email: profile.email })
-            : t("checkMailGeneric")}
+            ? t('checkMailTo', { email: profile.email })
+            : t('checkMailGeneric')}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className='space-y-4'>
         <ResendForm defaultEmail={profile?.email} />
-        <Button asChild variant="ghost" className="w-full">
-          <Link href="/">{t("backToShop")}</Link>
+        <Button asChild variant='ghost' className='w-full'>
+          <Link href='/'>{t('backToShop')}</Link>
         </Button>
       </CardContent>
     </Card>
-  );
-}
-
-function OutcomeIcon({ children }: { children: ReactNode }) {
-  return (
-    <div className="mb-2 flex size-11 items-center justify-center rounded-full bg-muted text-foreground">
-      {children}
-    </div>
   );
 }

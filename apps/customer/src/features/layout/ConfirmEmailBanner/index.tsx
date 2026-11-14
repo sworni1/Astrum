@@ -1,46 +1,41 @@
-"use client";
+'use client';
 
-import { MailWarning } from "lucide-react";
-import Link from "next/link";
-import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
-import { useResendConfirmation } from "@/hooks/user/useResendConfirmation";
-import { useUser } from "@/hooks/user/useUser";
+import { MailWarning } from 'lucide-react';
+import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { Button } from '@/components/ui/button';
+import { useResendConfirmation } from '@/hooks/user/useResendConfirmation';
+import { useUser } from '@/hooks/user/useUser';
 
-/**
- * Shown on every content page while the account is unconfirmed. It sends
- * another letter in place, so the customer does not have to open the confirm
- * screen to unblock ordering.
- */
 export default function ConfirmEmailBanner() {
-  const t = useTranslations("confirmEmail");
+  const t = useTranslations('confirmEmail');
   const { profileData } = useUser();
   const { send, cooldown, isSending, isCoolingDown } = useResendConfirmation();
 
-  if (profileData?.status !== "PENDING") {
+  if (profileData?.status !== 'PENDING') {
     return null;
   }
 
   return (
-    <div className="border-b border-amber-200/70 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
-      <div className="mx-auto flex min-h-12 max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2 text-sm">
-        <p className="flex items-center gap-2">
-          <MailWarning className="size-4 shrink-0" aria-hidden="true" />
-          <span>{t("bannerText", { email: profileData.email })}</span>
+    <div className='border-b border-amber-200/70 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100'>
+      <div className='mx-auto flex min-h-12 max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2 text-sm'>
+        <p className='flex items-center gap-2'>
+          <MailWarning className='size-4 shrink-0' aria-hidden='true' />
+          <span>{t('bannerText', { email: profileData.email })}</span>
         </p>
 
-        <div className="flex items-center gap-2">
+        <div className='flex items-center gap-2'>
           <Button
-            type="button"
-            size="sm"
-            variant="outline"
+            type='button'
+            size='sm'
+            variant='outline'
             disabled={isCoolingDown || isSending}
             onClick={() => void send(profileData.email)}
           >
-            {isCoolingDown ? t("resendIn", { seconds: cooldown }) : t("resend")}
+            {isCoolingDown ? t('resendIn', { seconds: cooldown }) : t('resend')}
           </Button>
-          <Button asChild size="sm" variant="ghost">
-            <Link href="/auth/confirm-email">{t("bannerDetails")}</Link>
+          <Button asChild size='sm' variant='ghost'>
+            <Link href='/auth/confirm-email'>{t('bannerDetails')}</Link>
           </Button>
         </div>
       </div>

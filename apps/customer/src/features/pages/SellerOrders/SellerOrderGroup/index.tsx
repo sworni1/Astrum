@@ -60,6 +60,8 @@ const SellerOrderGroup = ({
   const { handOver, isHandingOver } = useSellerHandover(order.id, onHandedOver);
   const isPickup = order.pickupPointId !== null;
   const readyCount = handoverableCount(order.orderItems);
+  // A paid group may hold a cancelled line, so the line dialog names the money (AC-8).
+  const paid = order.paymentStatus === PaymentStatus.PAID;
   // A payment status alone cannot tell an online order from cash, so both are
   // printed, and only when the seller could still be shipping goods unpaid (AC-16).
   const unpaidOnline =
@@ -116,13 +118,20 @@ const SellerOrderGroup = ({
         </ul>
       </header>
 
-      {isPickup && (
+      {(isPickup || order.handedOverAt || readyCount > 0) && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-3 py-2 text-xs">
-          <MapPin className="size-4 text-muted-foreground" aria-hidden="true" />
-          <span className="font-medium">{order.pickupPointName}</span>
-          <span className="text-muted-foreground">
-            {order.pickupPointAddress}
-          </span>
+          {isPickup && (
+            <>
+              <MapPin
+                className="size-4 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <span className="font-medium">{order.pickupPointName}</span>
+              <span className="text-muted-foreground">
+                {order.pickupPointAddress}
+              </span>
+            </>
+          )}
           {order.handedOverAt ? (
             <span className="text-muted-foreground">
               {t("handedOverAt", {
@@ -133,6 +142,8 @@ const SellerOrderGroup = ({
               })}
             </span>
           ) : null}
+          {/* The platform confirms the lines, so one handover closes the parcel
+              of a pickup and of a courier group alike (AC-7, AC-8). */}
           {readyCount > 0 && (
             <Button
               className="ml-auto"
@@ -155,7 +166,7 @@ const SellerOrderGroup = ({
           <SellerOrderLineRow
             key={line.id}
             line={line}
-            isPickup={isPickup}
+            paid={paid}
             actionsDisabled={actionsDisabled}
             onUpdated={onUpdated}
             onRefused={onRefused}
@@ -168,10 +179,12 @@ const SellerOrderGroup = ({
           <DialogHeader>
             <DialogTitle>{t("handoverTitle")}</DialogTitle>
             <DialogDescription>
-              {t("handoverText", {
-                point: order.pickupPointName ?? "",
-                count: readyCount,
-              })}
+              {isPickup
+                ? t("handoverText", {
+                    point: order.pickupPointName ?? "",
+                    count: readyCount,
+                  })
+                : t("handoverCourierText", { count: readyCount })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

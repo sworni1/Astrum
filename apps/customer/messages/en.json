@@ -240,7 +240,7 @@
       "notConfirmed": "The provider has not confirmed this payment yet.",
       "cancelled": "You left the payment page without paying.",
       "providerUnavailable": "The payment provider is unavailable right now. Try again in a minute.",
-      "refundOwed": "This order was cancelled after the money left, so a refund is on its way.",
+      "refundOwed": "Money left for this order and something in it was cancelled, so a refund is on its way.",
       "notPayable": "Only an online card order can be paid from this screen.",
       "alreadyPaid": "This order is already paid.",
       "failed": "The payment did not go through. Try again."
@@ -476,6 +476,7 @@
     "handover": "Hand over",
     "handoverTitle": "Hand this parcel over?",
     "handoverText": "{point}: {count, plural, one {# line becomes} other {# lines become}} delivered, and the order closes once nothing is left to deliver.",
+    "handoverCourierText": "{count, plural, one {# line becomes} other {# lines become}} delivered, and the order closes once nothing is left to deliver.",
     "handoverConfirm": "Hand over",
     "handoverBusy": "Handing over…",
     "handoverKeep": "Keep it open",
@@ -489,17 +490,11 @@
       "actions": "Actions"
     },
     "actions": {
-      "confirm": "Confirm",
-      "outOfStock": "Out of stock",
-      "cancel": "Cancel",
-      "ship": "Ship",
-      "deliver": "Deliver"
+      "gone": "Out of stock"
     },
     "dialog": {
-      "cancelTitle": "Cancel this line?",
-      "cancelText": "{product}: the quantity goes back to stock, and this screen cannot undo it.",
-      "outOfStockTitle": "Mark this line out of stock?",
-      "outOfStockText": "{product}: no stock changes, and the line closes for this order.",
+      "cancelTitle": "Is this item gone?",
+      "cancelText": "{product}: the quantity goes back to stock, and this screen cannot undo it.{paid, select, yes { {money} goes back to the buyer.} other {}}",
       "keep": "Keep the line",
       "confirm": "Confirm"
     },
@@ -529,7 +524,6 @@
       "accountStatusUnavailable": "The account state could not be read.",
       "generic": "The change did not go through.",
       "nothingToHandOver": "Nothing on this order is ready to hand over yet.",
-      "handoverRequiresPickup": "This order is not a pickup order, so there is no point to hand it over at.",
       "orderNotFound": "This order no longer holds a line of your shop. The queue is refreshed.",
       "handoverFailed": "The handover did not go through.",
       "retry": "Try again"
