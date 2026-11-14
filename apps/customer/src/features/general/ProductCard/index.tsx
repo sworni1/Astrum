@@ -27,6 +27,7 @@ const ProductCard = memo<ProductCardProps>(function ProductCard({
   _count,
   isWishlisted,
   quantityInCart,
+  isOutOfStock,
 }) {
   const reviewCount = _count?.impressions ?? 0;
 
@@ -65,6 +66,7 @@ const ProductCard = memo<ProductCardProps>(function ProductCard({
             isWishlisted={isWishlisted}
           />
           <AddToCartWithQuantity
+            isOutOfStock={isOutOfStock}
             quantity={quantity}
             size='full'
             quantityInCart={quantityInCart}

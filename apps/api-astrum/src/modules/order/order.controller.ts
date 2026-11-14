@@ -1,6 +1,5 @@
 import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import type { OrderItemStatus } from "../../../generated/prisma/enums";
 import { handleErrors } from "../../common/helpers/errorHandler";
 import { toOrderJson, toOrderListJson } from "./order.mapper";
 import { OrderService } from "./order.service";
@@ -69,36 +68,6 @@ export class OrderController {
       res.status(StatusCodes.OK).json({
         ...pagination,
         orders: orders.map(withNumberPrices),
-      });
-    } catch (error) {
-      handleErrors(res, error);
-    }
-  }
-
-  async handOverOrder(req: Request, res: Response) {
-    try {
-      const order = await sellerOrderService.handOverOrder(
-        req.params.orderId as string,
-        userIdOf(req),
-      );
-
-      res.status(StatusCodes.OK).json({ order: withNumberPrices(order) });
-    } catch (error) {
-      handleErrors(res, error);
-    }
-  }
-
-  async updateSellerOrderItemStatus(req: Request, res: Response) {
-    try {
-      const item = await sellerOrderService.updateSellerOrderItemStatus(
-        req.params.orderItemId as string,
-        userIdOf(req),
-        req.body.status as OrderItemStatus,
-      );
-
-      res.status(StatusCodes.OK).json({
-        ...item,
-        price: Number(item.price.toFixed(2)),
       });
     } catch (error) {
       handleErrors(res, error);

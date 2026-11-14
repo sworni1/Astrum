@@ -5,7 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   user: {
     profileData: undefined as
-      | { isSeller: boolean; status: "ACTIVE" | "PENDING" }
+      | {
+          isSeller: boolean;
+          status: "ACTIVE" | "PENDING";
+          staffRoles: Array<"POINT_WORKER" | "COURIER">;
+        }
       | undefined,
     profileIsLoading: false,
     profileIsError: false,
@@ -16,6 +20,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next-intl", () => ({
   useTranslations: (namespace: string) => (key: string) =>
     `${namespace}.${key}`,
+  createTranslator:
+    ({ namespace }: { namespace?: string }) =>
+    (key: string) =>
+      namespace ? `${namespace}.${key}` : key,
 }));
 
 vi.mock("next/link", () => ({
@@ -86,7 +94,11 @@ describe("Profile seller entry", () => {
   });
 
   it("shows the section for an account that does not sell (AC-2)", async () => {
-    mocks.user.profileData = { isSeller: false, status: "ACTIVE" };
+    mocks.user.profileData = {
+      isSeller: false,
+      status: "ACTIVE",
+      staffRoles: [],
+    };
     await render(<Profile />);
 
     expect(
@@ -95,7 +107,11 @@ describe("Profile seller entry", () => {
   });
 
   it("hides the section for a seller (AC-2)", async () => {
-    mocks.user.profileData = { isSeller: true, status: "ACTIVE" };
+    mocks.user.profileData = {
+      isSeller: true,
+      status: "ACTIVE",
+      staffRoles: [],
+    };
     await render(<Profile />);
 
     expect(

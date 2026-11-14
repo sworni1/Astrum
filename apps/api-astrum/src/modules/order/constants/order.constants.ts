@@ -22,6 +22,7 @@ export const ORDER_ERROR_CODES = {
   pickupPointInactive: "PICKUP_POINT_INACTIVE",
   pickupPointNotAllowed: "PICKUP_POINT_NOT_ALLOWED",
   nothingToHandOver: "NOTHING_TO_HAND_OVER",
+  sellerPanelReadOnly: "SELLER_PANEL_READ_ONLY",
 } as const;
 
 /**

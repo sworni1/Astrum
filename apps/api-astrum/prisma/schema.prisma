@@ -26,6 +26,8 @@ model User {
   reviewLikes         ReviewLike[]
   reviewComments      ReviewComment[]
   emailTokens         EmailToken[]
+  pointWorker         PointWorker?
+  courier             Courier?
 }
 
 model Business {
@@ -151,10 +153,12 @@ model Order {
   pickupPointName    String?
   pickupPointAddress String?
   handedOverAt       DateTime?
+  courierUserId      String?
 
   @@unique([userId, idempotencyKey])
   @@index([userId])
   @@index([pickupPointId])
+  @@index([courierUserId])
 }
 
 model OrderItem {
@@ -196,6 +200,30 @@ model PickupPoint {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   Order     Order[]
+  workers   PointWorker[]
+}
+
+/// One collection point an account works at: one row per account (spec 0017).
+model PointWorker {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  pickupPointId String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  User        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  PickupPoint PickupPoint @relation(fields: [pickupPointId], references: [id], onDelete: Restrict)
+
+  @@index([pickupPointId])
+}
+
+/// A delivery job an account holds. No point column: a courier names none.
+model Courier {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum PaymentMethod {

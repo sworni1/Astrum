@@ -1,6 +1,6 @@
 # Scope: Astrum order flow
 
-One order moves through three places: the storefront (`apps/customer`), the gateway (`apps/api-astrum`) and the shared schema (`packages/Astrum-db`). This plan holds the whole order path, slice by slice, so the storefront and backend scopes stay about their own pages. The seller surface began with the order panel, spec 0007. Session state and account confirmation cross the same places plus the auth service and a new worker, so their slices live here too. Becoming a seller crosses the storefront, the gateway and one `Business` row, so it is planned here as well.
+One order moves through three places: the storefront (`apps/customer`), the gateway (`apps/api-astrum`) and the shared schema (`packages/Astrum-db`). This plan holds the whole order path, slice by slice, so the storefront and backend scopes stay about their own pages. The seller surface began with the order panel, spec 0007. Session state and account confirmation cross the same places plus the auth service and a new worker, so their slices live here too. Becoming a seller crosses the storefront, the gateway and one `Business` row, so it is planned here as well. A handover at a collection point and by a courier needs two roles of its own, so Slice 10 lives here too.
 
 **Build approach:** Tracer Bullet (every slice runs end to end through the storefront and the gateway).
 **Workflow:** Beta (after `/develop`: `/check verify`, then `/test`). Features that move money or stock, or guard access, carry a `· GA` tag.
@@ -9,25 +9,29 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 
 ## At a glance
 
-| #   | Feature                               | Phase   | Status      |
-| --- | ------------------------------------- | ------- | ----------- |
-| 1   | Order price and stock on the server   | Slice 1 | done        |
-| 2   | Idempotent checkout and cart clearing | Slice 1 | done        |
-| 3   | Shipping methods from the API         | Slice 1 | done        |
-| 4   | Order statuses with seller ownership  | Slice 2 | done        |
-| 5   | Seller order panel                    | Slice 2 | done        |
-| 6   | Customer cancel on the order screen   | Slice 2 | done        |
-| 7   | Pickup handover                       | Slice 3 | done        |
-| 8   | Reviews on the product screen         | Slice 4 | done        |
-| 9   | Order flow end to end test and CI     | Slice 4 | planned     |
-| 10  | Session store in Redis                | Slice 5 | done        |
-| 11  | Account confirmation by email         | Slice 6 | in-progress |
-| 12  | English interface by default          | Slice 7 | in-progress |
-| 13  | Seller onboarding                     | Slice 8 | done        |
-| 14  | Review likes and comments             | Slice 4 | done        |
-| 15  | Payment through a test provider       | Slice 9 | done        |
-| 16  | Order letters                         | Slice 9 | planned     |
-| 17  | Confirm order lines when paid         | Slice 9 | in-progress |
+| #   | Feature                               | Phase    | Status      |
+| --- | ------------------------------------- | -------- | ----------- |
+| 1   | Order price and stock on the server   | Slice 1  | done        |
+| 2   | Idempotent checkout and cart clearing | Slice 1  | done        |
+| 3   | Shipping methods from the API         | Slice 1  | done        |
+| 4   | Order statuses with seller ownership  | Slice 2  | done        |
+| 5   | Seller order panel                    | Slice 2  | done        |
+| 6   | Customer cancel on the order screen   | Slice 2  | done        |
+| 7   | Pickup handover                       | Slice 3  | done        |
+| 8   | Reviews on the product screen         | Slice 4  | done        |
+| 9   | Order flow end to end test and CI     | Slice 4  | planned     |
+| 10  | Session store in Redis                | Slice 5  | done        |
+| 11  | Account confirmation by email         | Slice 6  | in-progress |
+| 12  | English interface by default          | Slice 7  | in-progress |
+| 13  | Seller onboarding                     | Slice 8  | done        |
+| 14  | Review likes and comments             | Slice 4  | done        |
+| 15  | Payment through a test provider       | Slice 9  | in-progress |
+| 16  | Order letters                         | Slice 9  | planned     |
+| 17  | Confirm order lines when paid         | Slice 9  | in-progress |
+| 18  | Become a point worker or a courier    | Slice 10 | done        |
+| 19  | Handover at the pickup point          | Slice 10 | done        |
+| 20  | Handover by the courier               | Slice 10 | in-progress |
+| 21  | Read only seller panel                | Slice 10 | in-progress |
 
 ## Slice 1: the order thread
 
@@ -316,6 +320,79 @@ A paid order waits for a seller to confirm its lines, and a line whose shop has 
   spec [0016](../../specs/_root/0016-confirm-lines-on-payment/index.md)
   code in `apps/api-astrum/src/modules/order/order.constants.ts`, `apps/api-astrum/src/modules/order/order.service.ts`, `apps/api-astrum/src/modules/order/seller-order.service.ts`, `apps/api-astrum/src/modules/payment/payment.apply.ts`, `apps/customer/src/features/pages/SellerOrders/`, `apps/customer/src/features/pages/Orders/OrderPage/`, `apps/customer/messages/`
 
+## Slice 10: handover by the point and by the courier
+
+One action hands a parcel over today, and it belongs to the seller: `PATCH /api/seller/orders/:orderId/handover` closes every line of that order which is `CONFIRMED` or `SHIPPED`. The buyer already picks a collection point at checkout, a courier order already carries an address, and no account can stand at either end. This slice gives the parcel two real hands and leaves the seller with what the example page shows, a list to read. The sent status its gate needs arrives by itself, because the shipping pass moves an accepted order to `SHIPPED` after `ORDER_SHIPPING_DELAY_MS`.
+
+### 18. Become a point worker or a courier · done · GA
+
+A handover is keyed to the shop owner today, `User` carries no role field at all, and nothing in the product can give an account the right to hand a parcel over.
+**Done when:** a confirmed, signed in account becomes a pickup point worker from the profile in one deliberate action and names the active point it works at, or becomes a courier by naming no point; both roles show on the profile and in the navigation at once and after a reload; an unconfirmed account and a second attempt create nothing extra; a worker can move to another point later; and a gateway call from an account that holds neither role is refused with a code the screen branches on.
+- [x] Design it (spec): `/architect become a point worker or a courier` — 2026-11-14: spec 0017, 18 acceptance criteria after a cross check
+- [x] Build it: `/develop become a point worker or a courier`
+  - [x] Schema and clients: `PointWorker`, `Courier`, the migration `20261114120000_staff_roles`, all four schema copies and all four generated clients (AC-16)
+  - [x] Gateway staff module: the two role guards, the two grants, the point change, the two reads, their codes and suites (AC-4 to AC-10, AC-18)
+  - [x] Profile read: `staffRoles` on `/users/me` and on both profile writes, `UserData` and every mock that builds it (AC-11)
+  - [x] Storefront: `/staff/onboarding`, `/point`, `/courier`, the profile section, the two navigation items, both catalogs, the layout pass (AC-1, AC-2, AC-3, AC-12 to AC-15)
+  - [x] Tests and the gate: the new suites plus `pnpm quality-gate` (AC-17)
+- [x] Verify it: `/check verify become a point worker or a courier` — 2026-11-14: PASS over 30 steps, 18 of 18 criteria met; the grants, the move and the role guards proved by request, the three pages driven in the browser in both languages and at 360 px, `pnpm quality-gate` 18 of 18
+- [x] Test it: `/test become a point worker or a courier` — waived 2026-11-14 when the owner closed the feature; coverage that exists: 38 new gateway staff tests (`staff.service`, `staff.guards`, `staff.routes`, `create-point-worker.dto`), the storefront staff suites counted in the 349 `@astrum/customer` tests, and `pnpm quality-gate` 18 of 18
+- [x] Review it (fresh model): `/check review become a point worker or a courier` — waived 2026-11-14 when the owner closed the feature, no review on another model was run; the read that exists is the `/check verify` pass over 18 of 18 acceptance criteria
+- [ ] Document it: `/document become a point worker or a courier`
+  spec [0017](../../specs/_root/0017-point-worker-and-courier-roles/index.md)
+  code in `packages/Astrum-db/prisma/migrations/20261114120000_staff_roles`, `packages/Astrum-db/prisma/schema.prisma`, `apps/api-astrum/src/modules/staff/`, `apps/api-astrum/src/middlewares/staffRole.ts`, `apps/api-astrum/src/common/helpers/staffRoles.ts`, `apps/api-astrum/src/modules/user/user.service.ts`, `apps/customer/src/hooks/staff/`, `apps/customer/src/features/pages/StaffOnboarding/`, `apps/customer/src/features/pages/PointWorkspace/`, `apps/customer/src/features/pages/CourierWorkspace/`, `apps/customer/src/features/pages/Profile/actions/WorkOnAstrum/`, `apps/customer/src/features/layout/Navbar/`, `apps/customer/messages/`
+
+### 19. Handover at the pickup point · done · GA
+
+The parcel reaches the point the buyer chose, and only that point's staff may hand it over.
+**Done when:** a worker reads the orders of their own point which are `SHIPPED` and not handed over, and no other order; one control hands the whole order over, stamps one server time and leaves it `DELIVERED`; both moves are refused while the order is not `SHIPPED`, an order of another point answers the same `404 ORDER_NOT_FOUND` a missing one does, and an order already handed over answers `409 ALREADY_HANDED_OVER`; the worker cancels the whole order on the buyer's request, the stock comes back once, a line already delivered stays delivered, and an order paid online leaves one line saying money is owed back; and both moves are refused for an account that is not staff of that point.
+- [x] Design it (spec): `/architect handover at the pickup point` — 2026-11-14: spec 0018, 16 acceptance criteria after a cross check
+- [x] Build it: `/develop handover at the pickup point` — 2026-11-14: gateway queue and both writes, the shared pagination helper, the `/point` screen, the suites and `pnpm quality-gate` 18 of 18; the live walk of `verify.md` is still open (AC-16) and stays with `Verify it`
+  - [x] Queue and pagination: `GET /api/staff/point/orders`, `toMoney`, the shared `parsePagination` helper, 20 per page and 50 at most (AC-1 to AC-3)
+  - [x] Both writes on the gateway: one refusal chain, one timestamp, `handedOverAt`, the stock return, `expireSessionForCancel`, the refund warning and the log lines (AC-4 to AC-9)
+  - [x] The `/point` screen: the cards, the two `AlertDialog` components, every state, `Show more`, the disabled controls on a switched off point and both catalogs (AC-10 to AC-14)
+  - [x] Tests: the gateway and storefront suites and `pnpm quality-gate` (AC-15); the live walk of `verify.md` (AC-16) is kept by `Verify it`
+- [x] Verify it: `/check verify handover at the pickup point` — 2026-11-14, PASS on the running dev stack: 32 of 32 steps of `verify.md` exercised and passing, all 16 acceptance criteria met, `pnpm quality-gate` 18 of 18 and the seller suites green. Two routes could not be delivered by the browser harness and were reached another way (the overlay click and the second stale tab), and the language switch was made through the cookie the switcher writes; both are recorded in `verify.md`. The first run of the same day found the feature unbuilt and is recorded there too.
+- [ ] Test it: `/test handover at the pickup point`
+- [ ] Review it (fresh model): `/check review handover at the pickup point`
+- [ ] Document it: `/document handover at the pickup point`
+  spec [0018](../../specs/_root/0018-handover-at-pickup-point/index.md)
+  code in `apps/api-astrum/src/common/helpers/pagination.ts`, `apps/api-astrum/src/modules/staff/` (`point-order.service.ts`, `point-order.controller.ts`, `staff.routes.ts`, `constants/staff.constants.ts`), `apps/customer/src/hooks/staff/` (`pointOrder.types.ts`, `usePointOrders.ts`, `usePointOrderAction.ts`), `apps/customer/src/features/pages/PointWorkspace/`, `apps/customer/messages`
+
+### 20. Handover by the courier · in-progress · GA
+
+A courier order carries an address instead of a point, so nothing keyed to a point can serve it, and an address every courier may read is a list of where buyers live.
+**Done when:** a courier reads a pool of courier orders that are `SHIPPED` and claimed by nobody, takes one in a single press, sees its delivery address and date only after taking it, hands it over or cancels it with the same codes and the same stock and money rules as the point, and gives it back to the pool; a pickup order never appears in the pool and answers the same `404` a missing one does; and a handover of a cash or card on delivery parcel records the money on the order.
+- [x] Design it (spec): `/architect handover by the courier` — 2026-11-14: spec 0019, 15 acceptance criteria after a cross check
+- [x] Build it: `/develop handover by the courier` — 2026-11-14: the migration, the shared write blocks, the five courier routes, the two sections on `/courier`, the suites and `pnpm quality-gate` 18 of 18; the live walk of `verify.md` is still open (AC-15) and stays with `Verify it`
+  - [x] Schema and shared blocks: the `courierUserId` column and its migration in all four schema copies, then the counter's write blocks moved into `staff-order.helpers.ts` with its suites green (AC-1, AC-9)
+  - [x] Claim, release and the two reads: both writes in one transaction under the order lock with one classification, the queue scopes with the address rule and the row shape (AC-2 to AC-5)
+  - [x] Handover and cancel: the two writes, the money at the door, the stock return and the refund warning (AC-6 to AC-8)
+  - [x] Storefront: the two sections on `/courier`, the four dialogs, the refusal map and both catalogs (AC-10 to AC-13)
+  - [x] Tests and the gate: the gateway and storefront suites and `pnpm quality-gate` 18 of 18 (AC-14); the live walk of `verify.md` (AC-15) is kept by `Verify it`
+- [x] Verify it: `/check verify handover by the courier` — 2026-11-14: PASS over 36 of 38 steps, 15 of 15 criteria met; the five routes driven with two courier sessions and a `PENDING` account, the log lines read from a second gateway on 3581, both sections and the four dialogs driven in the browser in both languages and at 360 px, `pnpm quality-gate` 18 of 18; two steps stayed partial (the buyer's screen for a cancelled parcel, three of the four dialogs in Russian) and are named in `verify.md`
+- [ ] Test it: `/test handover by the courier`
+- [ ] Review it (fresh model): `/check review handover by the courier`
+- [ ] Document it: `/document handover by the courier`
+  spec [0019](../../specs/_root/0019-handover-by-the-courier/index.md)
+  code in `packages/Astrum-db/prisma/schema.prisma` and its three copies, `packages/Astrum-db/prisma/migrations/20261114130000_courier_claim/`, `apps/api-astrum/src/modules/staff/` (`staff-order.helpers.ts`, `courier-order.service.ts`, `courier-order.controller.ts`, `staff.routes.ts`, `constants/staff.constants.ts`), `apps/customer/src/hooks/staff/` (`courierOrder.types.ts`, `useCourierOrders.ts`, `useCourierOrderAction.ts`), `apps/customer/src/features/pages/CourierWorkspace/`, `apps/customer/messages`
+
+### 21. Read only seller panel · in-progress · GA
+
+The seller keeps sight of their own orders and loses every action, because handover moved to the point and to the courier.
+**Done when:** the seller area lists the seller's orders as a table of order number, product, price, date and status, with no buyer name and no email; no handover and no line action is offered anywhere in it; a handover or a line change sent by a shop owner is refused by the gateway; and the table keeps its loading, empty and failure states at desktop and at mobile width.
+- [x] Design it (spec): `/architect read only seller panel` — 2026-11-14: spec 0020, 13 acceptance criteria after a cross check
+- [x] Build it: `/develop read only seller panel` — 2026-11-14: the read only table with the order band, the one shared refusal on both write paths, the seller write service, transition table, DTO, three suites, two hooks, four lib modules, a component and ten catalog keys deleted, both catalogs trimmed, `pnpm quality-gate` 18 of 18; the live walk of `verify.md` (AC-13) stays with `Verify it`
+  - [x] The read only table and the removed controls: the five columns, the order band, the line sum, the placed date, the four states, the narrow width stack, and the action files and catalog keys deleted (AC-1 to AC-5, AC-7, AC-8, AC-11)
+  - [x] The gateway door: the shared refusal handler with its code and its log line, then the seller write service, the transition table, the DTO and their suites deleted (AC-9, AC-10)
+  - [x] Tests and the gate: the refusal and payload suites, the table and state suites, and `pnpm quality-gate` (AC-6, AC-12)
+- [x] Verify it: `/check verify read only seller panel` — 2026-11-15: PASS on the dev stack. The table, the band, the line sum, the date column, the four states, the 360 px stack, the keyboard walk and both languages were walked in the browser; both refusals answer `404 SELLER_PANEL_READ_ONLY` and leave `Order`, `OrderItem` and `Product` byte identical, with one `seller.write_refused` line per call on a second gateway; the API carries exactly the keys of AC-6; `pnpm quality-gate` 18 of 18, api 409 tests with the live stack, customer 365. AC-7's last page fallback is unreachable from the panel (page is component state) and is recorded under Premise corrections 3 in [verify.md](../../specs/_root/0020-read-only-seller-panel/verify.md)
+- [ ] Test it: `/test read only seller panel`
+- [ ] Review it (fresh model): `/check review read only seller panel`
+- [ ] Document it: `/document read only seller panel`
+  spec [0020](../../specs/_root/0020-read-only-seller-panel/index.md)
+  code in `apps/api-astrum/src/modules/order` (`seller-order.routes.ts`, `seller-order.service.ts`, `order.controller.ts`), `apps/customer/src/features/pages/SellerOrders/`, `apps/customer/src/hooks/seller/`, `apps/customer/messages`
+
 ## Fixed
 
 Bugs found while verifying a slice, recorded here once the fix lands so the plan stays honest.
@@ -328,6 +405,8 @@ Bugs found while verifying a slice, recorded here once the fix lands so the plan
 
 Kept so the plan stays honest, built only when the loop above runs.
 
+- **Registration answers 500**: `POST /api/auth/register` fails before the insert for any fresh address, through the gateway and on the auth service directly, and writes no `User` row · bug, found while verifying spec 0018
+- **The mobile menu trigger is not a control**: the navbar opens the sheet from a bare `LuMenu` icon with an `onClick`, so it takes no keyboard focus and has no accessible name, and every page that carries the navbar inherits it (`apps/customer/src/features/layout/Navbar/index.tsx`) · bug, found while verifying spec 0017
 - **Courier delivery**: a shipping address instead of a pickup point · needs a decision
 - **Returns and refunds** · needs a decision · from spec 0015 (a paid order cancelled now owes a manual refund and logs `payment.refund_owed`)
 - **Second currency** · needs a decision
@@ -357,7 +436,7 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Seller facing product management screen**: create, edit and publish products from the storefront; the gateway route and DTO exist · from spec 0008 · needs a decision
 - **Shop name policy**: reserved names, impersonation and moderation before a name is public · from spec 0008 · needs a decision
 - **Account gate on product creation**: `POST /api/products` runs behind `authenticateToken` only, with no account state gate · from spec 0008 · needs a decision
-- **AGENTS.md schema claim**: `packages/Astrum-db/AGENTS.md` and `apps/worker/AGENTS.md` call the auth and worker schemas byte identical; they are trimmed subsets · from spec 0008
+- **AGENTS.md schema claim, settled**: `packages/Astrum-db/AGENTS.md` and `apps/worker/AGENTS.md` call the auth and worker schemas byte identical to the shared one, and all four `schema.prisma` files are identical today (460 lines each), so the claim holds and the stale sentence is spec 0008, AC-13 calling them trimmed subsets · from spec 0008, corrected while designing spec 0017
 - **Shop ownership on account deletion**: `Business.ownerUserId` becomes null and the operator script can reassign the shop and its products · from spec 0008 · needs a decision
 - **Seller workflow flag**: `SELLER_ORDER_WORKFLOW_ENABLED` used to gate `GET /api/seller/orders`, `PATCH /api/order-items/:orderItemId/status` and the handover route through a boot time middleware, defaulting to `false` in the root, api and prod templates · removed on 2026-11-13 on the owner's call: the middleware, its startup validation, the `503 SELLER_ORDER_WORKFLOW_DISABLED` code and the storefront `intake is not switched on` screen are gone, so the seller routes answer to any active account that owns a business, the way every other seller read already did · from spec 0008
 - **Registration with a bare date**: `@IsDateString()` accepts `2000-01-01` while Prisma 7 refuses it with `premature end of input. Expected ISO-8601 DateTime`, so `POST /api/auth/register` answers `500` and writes no row; a full ISO datetime answers `200` and is what the storefront sends, so either the DTO transforms the date or validation asks for the stricter shape · bug, found while verifying spec 0009
@@ -377,13 +456,29 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Raw review by id**: `GET /api/reviews/:reviewId` answers any customer's row including `userId` and reviews that are not approved · from spec 0012 · needs a decision
 - **Review photo upload**: the project has no file storage, so `photos` stays a URL list nobody fills · from spec 0012 · needs a decision
 
-- **Pickup point operator role**: an account flag for point staff, a collection screen keyed by order id, and a screen to manage points · from spec 0013 · needs a decision
+- **Pickup point management screen**: create a point, change its address and switch it off; an operator still edits rows by hand · from spec 0013 · needs a decision
 - **Pickup code**: a short code the customer shows at the point, with a log line on every failed attempt · from spec 0013
 - **Reaching the point and handing over**: a notification for each of the two moments, built on the events and the worker of spec 0005 · from spec 0013 · needs a decision
 - **City, opening hours and a phone on a pickup point**: plus a filter in the checkout, once the shop runs more than one city · from spec 0013
 - **Checkout date field shows the day before the picked one**: clicking `Friday, November 20th, 2026` in the calendar (which keeps that day selected) leaves `November 19, 2026` on the trigger, while the stored `deliveryDate` is the 20th and the order screen prints `Pickup Date: November 20, 2026`, so the field and the value disagree by one day · bug, found while verifying spec 0013
 
 - **An abandoned online card order with no payment attempt is never closed**: the sweep reads `ONLINE_CARD` orders past their deadline, but `closeWithoutSession` returns after logging `payment.sweep.no_attempt` when the order has no `Payment` row, so an order abandoned before the first pay press keeps its stock forever; `cmwcq7jl5000vzkvd0kgsp2zz` has been `PENDING` with a deadline of 2026-11-11 23:36 since then · bug, found while verifying spec 0015
+
+- **Who may grant a staff role**: the grant is self service, so any confirmed account attaches itself to any active point and, once feature 19 ships, may hand that point's parcels over · from spec 0017 · needs a decision
+- **Leaving a staff role**: a person who stops working at a point or as a courier cannot leave the role, and the row never goes away · from spec 0017 · needs a decision
+- **An audit table for access changes**: a grant and a point move write only a structured log line, which log rotation loses, while feature 19 hands parcels over on the strength of those rows · from spec 0017 · needs a decision
+- **A buyer date printed in UTC**: `OrderPageHeader` passes no `timeZone` while the request config pins the formatter to UTC, so the buyer reads a UTC time where the seller panel passes `browserTimeZone()`; the counter screen of feature 19 passes the zone · bug, found while measuring spec 0018
+- **No order lock in the shipping pass**: `shipOrder` updates `CONFIRMED` lines and recomputes the order with no `lockOrder`, so a later writer that closes a `CONFIRMED` order would race it; feature 19 stays clear by acting on `SHIPPED` orders only · from spec 0018
+- **Who may grant a staff role**: any confirmed account grants itself a point or a courier role today, and the claim of spec 0019 bounds only what such an account reads · needs a decision · from spec 0019
+- **A payment attempt row for money collected at the door**: the courier handover records `paymentStatus = PAID` without an attempt, because `PaymentProvider` has `STRIPE` alone · needs a decision · from spec 0019
+- **A stale seller order integration suite**: `seller-order.integration.spec.ts` asks `updateSellerOrderItemStatus` to move a line `CONFIRMED → SHIPPED` and `CONFIRMED → OUT_OF_STOCK` while `ALLOWED_LINE_TRANSITIONS` allows `CONFIRMED → CANCELLED` only, so two tests fail under `ORDER_DB_TESTS=1` and `pnpm quality-gate` hides them by skipping the database suites; both the suite and the table read the same at `HEAD` · bug, found while verifying spec 0019
+
+- **A seller report for an item gone**: the panel loses the only seller side cancel (spec 0016, AC-6), so a damaged or missing item is reported to the point worker, who cancels the whole order · from spec 0020 · needs a decision
+- **The delivery date on the read only panel**: `GET /api/seller/orders` selects no `Order.deliveryDate`, so a seller cannot see when a parcel has to leave · from spec 0020 · needs a decision
+- **A 404 handler at the end of `app.ts`**: it would answer every unknown path in the project shape and let the two seller refusal paths be deleted outright · from spec 0020 · needs a decision
+- **Two seller refusal paths that always answer `404`**: remove them once no stale storefront bundle can be older than one release · from spec 0020
+- **An unused order status hook**: `apps/customer/src/hooks/order/useUpdateOrderItemStatus.ts` has no importer and targets a path that now always refuses · from spec 0020
+- **The last page fallback of the seller panel is unreachable**: the page number is component state and never in the URL, `Далее` is disabled on the last page and nothing revalidates while mounted, so the effect that follows an answer with no rows and `total` above zero can never fire; a page number in the URL or a revalidating read would make it live · from spec 0020 · needs a decision
 
 ## Legend
 

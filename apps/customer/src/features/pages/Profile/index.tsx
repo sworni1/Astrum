@@ -10,6 +10,7 @@ import DeleteAccountForm from "./actions/DeleteAccountForm";
 import EditProfileForm from "./actions/EditProfileForm";
 import LogOutForm from "./actions/LogOutForm";
 import SellOnAstrum from "./actions/SellOnAstrum";
+import WorkOnAstrum from "./actions/WorkOnAstrum";
 
 export default function Profile() {
   const { profileData, profileIsLoading, profileIsError } = useUser();
@@ -41,6 +42,8 @@ export default function Profile() {
         profileData?.isSeller === false ? (
           <SellOnAstrum />
         ) : null}
+
+        <WorkOnAstrum />
 
         <ChangePasswordForm />
         <LogOutForm />

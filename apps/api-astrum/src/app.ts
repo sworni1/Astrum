@@ -19,6 +19,7 @@ import productRoutes from "./modules/product/product.routes";
 import { reviewsRouter } from "./modules/reviews/reviews.routes";
 import sellerOnboardingRoutes from "./modules/seller/onboarding.routes";
 import shippingRoutes from "./modules/shipping/shipping.routes";
+import staffRoutes from "./modules/staff/staff.routes";
 import userRoutes from "./modules/user/user.routes";
 import wishlistRoutes from "./modules/wishlist/wishlist.routes";
 import { getSessionStore } from "./session/sessionStore";
@@ -88,6 +89,7 @@ app.use(
   sellerOnboardingRoutes,
   shippingRoutes,
   pickupRoutes,
+  staffRoutes,
 );
 app.use("/api/reviews", authenticateToken, reviewsRouter);
 

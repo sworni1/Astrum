@@ -1,12 +1,13 @@
 "use client";
 
-import { Store } from "lucide-react";
+import { MapPin, Store, Truck } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { FiPackage } from "react-icons/fi";
 import { MdFavoriteBorder, MdOutlineShoppingCart } from "react-icons/md";
 import { TbCategory } from "react-icons/tb";
+import type { StaffRole } from "@/common/types/user.types";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -17,6 +18,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { hasRole } from "@/hooks/staff/staff.types";
 
 interface MobileMenuSheetProps {
   open: boolean;
@@ -28,6 +30,7 @@ interface MobileMenuSheetProps {
   orderCount?: number;
   orderIsLoading?: boolean;
   isSeller?: boolean;
+  staffRoles?: StaffRole[];
 }
 
 export function MobileMenuSheet({
@@ -40,6 +43,7 @@ export function MobileMenuSheet({
   orderCount,
   orderIsLoading,
   isSeller,
+  staffRoles = [],
 }: MobileMenuSheetProps) {
   const t = useTranslations("nav");
   const { setTheme, theme } = useTheme();
@@ -130,6 +134,28 @@ export function MobileMenuSheet({
               >
                 <Store size={24} />
                 <span>{t("sales")}</span>
+              </Link>
+            )}
+
+            {hasRole(staffRoles, "POINT_WORKER") && (
+              <Link
+                href="/point"
+                className="flex w-full items-center space-x-3 p-2 rounded-md hover:bg-muted transition"
+                onClick={() => onOpenChange(false)}
+              >
+                <MapPin size={24} />
+                <span>{t("point")}</span>
+              </Link>
+            )}
+
+            {hasRole(staffRoles, "COURIER") && (
+              <Link
+                href="/courier"
+                className="flex w-full items-center space-x-3 p-2 rounded-md hover:bg-muted transition"
+                onClick={() => onOpenChange(false)}
+              >
+                <Truck size={24} />
+                <span>{t("courier")}</span>
               </Link>
             )}
 

@@ -53,11 +53,16 @@ vi.mock("@/components/ThemeSwitcher", () => ({
 import Navbar from "@/features/layout/Navbar";
 
 const SELLER_HREF = 'a[href="/seller/orders"]';
+const POINT_HREF = 'a[href="/point"]';
+const COURIER_HREF = 'a[href="/courier"]';
 
 let container: HTMLDivElement;
 let root: Root;
 
-const render = async (isSeller: boolean | undefined): Promise<void> => {
+const render = async (
+  isSeller: boolean | undefined,
+  staffRoles: Array<"POINT_WORKER" | "COURIER"> = [],
+): Promise<void> => {
   useGetCart.mockReturnValue({
     cart: [],
     cartIsLoading: false,
@@ -74,7 +79,7 @@ const render = async (isSeller: boolean | undefined): Promise<void> => {
     error: null,
   });
   useUser.mockReturnValue({
-    profileData: isSeller === undefined ? undefined : { isSeller },
+    profileData: isSeller === undefined ? undefined : { isSeller, staffRoles },
   });
 
   container = document.createElement("div");
@@ -99,8 +104,8 @@ const openMobileSheet = async (): Promise<void> => {
 };
 
 /** The sheet renders through a portal, so its links sit outside the container. */
-const sheetLinks = (): HTMLAnchorElement[] =>
-  Array.from(document.querySelectorAll<HTMLAnchorElement>(SELLER_HREF)).filter(
+const sheetLinks = (selector = SELLER_HREF): HTMLAnchorElement[] =>
+  Array.from(document.querySelectorAll<HTMLAnchorElement>(selector)).filter(
     (link) => !container.contains(link),
   );
 
@@ -167,5 +172,92 @@ describe("Sales item in the navigation", () => {
     await openMobileSheet();
 
     expect(sheetLinks()).toHaveLength(0);
+  });
+});
+
+describe("Point and courier items in the navigation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: (query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }),
+    });
+  });
+
+  afterEach(async () => {
+    await act(async () => root?.unmount());
+    container?.remove();
+  });
+
+  it("shows the point item to a point worker and links it to /point (AC-12)", async () => {
+    await render(false, ["POINT_WORKER"]);
+
+    const link = container.querySelector<HTMLAnchorElement>(POINT_HREF);
+
+    expect(link).not.toBeNull();
+    expect(link?.getAttribute("aria-label")).toBe("nav.point");
+    expect(container.querySelector(COURIER_HREF)).toBeNull();
+  });
+
+  it("shows the courier item to a courier and links it to /courier (AC-12)", async () => {
+    await render(false, ["COURIER"]);
+
+    const link = container.querySelector<HTMLAnchorElement>(COURIER_HREF);
+
+    expect(link).not.toBeNull();
+    expect(link?.getAttribute("aria-label")).toBe("nav.courier");
+    expect(container.querySelector(POINT_HREF)).toBeNull();
+  });
+
+  it("keeps the point item before the courier item when both are held (AC-12)", async () => {
+    await render(false, ["POINT_WORKER", "COURIER"]);
+
+    const point = container.querySelector<HTMLAnchorElement>(POINT_HREF);
+    const courier = container.querySelector<HTMLAnchorElement>(COURIER_HREF);
+
+    if (!point || !courier) {
+      throw new Error("both items should render");
+    }
+
+    expect(
+      point.compareDocumentPosition(courier) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("hides both items from an account that holds no role (AC-12)", async () => {
+    await render(false, []);
+
+    expect(container.querySelector(POINT_HREF)).toBeNull();
+    expect(container.querySelector(COURIER_HREF)).toBeNull();
+  });
+
+  it("repeats both items inside the mobile sheet (AC-12)", async () => {
+    await render(false, ["POINT_WORKER", "COURIER"]);
+
+    await openMobileSheet();
+
+    expect(sheetLinks(POINT_HREF)).toHaveLength(1);
+    expect(sheetLinks(POINT_HREF)[0]?.textContent).toContain("nav.point");
+    expect(sheetLinks(COURIER_HREF)).toHaveLength(1);
+    expect(sheetLinks(COURIER_HREF)[0]?.textContent).toContain("nav.courier");
+  });
+
+  it("keeps the mobile sheet free of both items without a role (AC-12)", async () => {
+    await render(false, []);
+
+    await openMobileSheet();
+
+    expect(sheetLinks(POINT_HREF)).toHaveLength(0);
+    expect(sheetLinks(COURIER_HREF)).toHaveLength(0);
   });
 });

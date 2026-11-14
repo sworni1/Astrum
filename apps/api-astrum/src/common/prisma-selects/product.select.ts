@@ -5,6 +5,7 @@ export const productPreviewPublicSelect = {
   images: true,
   quantity: true,
   price: true,
+  isOutOfStock: true,
   discount: true,
   stars: true,
   currency: true,
