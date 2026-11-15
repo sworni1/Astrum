@@ -260,7 +260,7 @@ async function main() {
   console.log("Clearing existing products and properties...");
 
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE "ProductProperty", "Impression", "Product" CASCADE',
+    'TRUNCATE TABLE "ProductProperty", "Product" CASCADE',
   );
 
   let totalInserted = 0;

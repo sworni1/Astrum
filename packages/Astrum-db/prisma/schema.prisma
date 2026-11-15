@@ -50,16 +50,6 @@ model LastViewedProduct {
 }
 
 // Product models
-model Impression {
-  id        String   @id @unique @default(uuid())
-  stars     Float    @default(0)
-  comment   String
-  photos    String[]
-  userId    String
-  productId String
-  Product   Product  @relation(fields: [productId], references: [id])
-}
-
 model WishlistItem {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
@@ -105,7 +95,6 @@ model Product {
   previewImage  String
   sales         Int               @default(0)
   views         Int               @default(0)
-  impressions   Impression[]
   properties    ProductProperty[]
   reviews       Review[]
   reviewCount   Int               @default(0)
