@@ -2,6 +2,7 @@ import type {
   Product,
   ProductCategory,
 } from "../../../generated/prisma/client";
+import { ReviewStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
 import { getWishlistAndCartItem } from "../../common/helpers/getWishlistAndCart";
@@ -9,8 +10,40 @@ import {
   productPreviewPublicSelect,
   productPublicSelect,
 } from "../../common/prisma-selects/product.select";
+import { roundAverageRating } from "../reviews/review.serializer";
 import { readReviewState } from "../reviews/review-state";
 import type { CreateProductDto } from "./dto/create-product.dto";
+
+type ProductRating = { averageRating: number; reviewCount: number };
+
+/**
+ * The rating of every product on one page, from the reviews a customer may read.
+ * One grouped query for the whole page, never one per card (spec 0021, AC-3).
+ */
+const readPageRatings = async (
+  productIds: Product["id"][],
+): Promise<Map<Product["id"], ProductRating>> => {
+  if (productIds.length === 0) {
+    return new Map();
+  }
+
+  const rows = await prisma.review.groupBy({
+    by: ["productId"],
+    where: { productId: { in: productIds }, status: ReviewStatus.APPROVED },
+    _count: { _all: true },
+    _avg: { rating: true },
+  });
+
+  return new Map(
+    rows.map((row) => [
+      row.productId,
+      {
+        averageRating: roundAverageRating(row._avg.rating),
+        reviewCount: row._count._all,
+      },
+    ]),
+  );
+};
 
 export class ProductService {
   async getProduct(userId: string, productId: Product["id"]) {
@@ -35,16 +68,12 @@ export class ProductService {
 
     const reviewState = await readReviewState(userId, productId);
 
-    const { impressions, properties, _count, ...rest } = product;
+    const { properties, ...rest } = product;
 
     return {
       ...rest,
       images: rest.images ?? [],
-      impressions: impressions ?? [],
       properties: properties ?? [],
-      _count: {
-        impressions: _count?.impressions ?? 0,
-      },
       isWishlisted: !!wishlistItem,
       isOutOfStock: product.isOutOfStock,
       quantityInCart: cartItem ? cartItem.quantity : 0,
@@ -89,6 +118,10 @@ export class ProductService {
       nextCursor = products[products.length - 1].id;
     }
 
+    const ratings = await readPageRatings(
+      products.map((product) => product.id),
+    );
+
     const productsWithData = await Promise.all(
       products.map(async (product) => {
         const { wishlistItem, cartItem } = await getWishlistAndCartItem(
@@ -96,8 +129,12 @@ export class ProductService {
           product.id,
         );
 
+        const rating = ratings.get(product.id);
+
         return {
           ...product,
+          averageRating: rating?.averageRating ?? 0,
+          reviewCount: rating?.reviewCount ?? 0,
           isWishlisted: !!wishlistItem,
           quantityInCart: cartItem ? cartItem.quantity : 0,
         };

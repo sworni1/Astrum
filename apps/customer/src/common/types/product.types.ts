@@ -14,11 +14,9 @@ export type ProductCardProps = {
   quantity: number;
   price: number;
   discount: number;
-  stars: number;
+  averageRating: number;
+  reviewCount: number;
   currency: Currency;
-  _count: {
-    impressions: number;
-  };
   isWishlisted: boolean;
   quantityInCart: number;
 };
@@ -85,16 +83,6 @@ export enum ProductVisibility {
   Draft = "Draft",
 }
 
-export interface Impression {
-  id: string;
-  stars: number;
-  comment: string;
-  photos: string[];
-  userId: string;
-  productId: string;
-  Product?: Product;
-}
-
 export interface WishlistItem {
   id: string;
   createdAt: Date;
@@ -139,7 +127,6 @@ export interface Product {
   previewImage: string;
   sales: number;
   views: number;
-  impressions: Impression[];
   properties: ProductProperty[];
 }
 
@@ -160,11 +147,7 @@ export interface ProductOverview {
   images: string[];
   sales: number;
   views: number;
-  impressions: Impression[];
   properties: ProductProperty[];
-  _count: {
-    impressions: number;
-  };
   isWishlisted: boolean;
   quantityInCart: number;
   reviewState: ReviewState;
