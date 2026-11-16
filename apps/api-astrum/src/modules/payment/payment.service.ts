@@ -4,6 +4,7 @@ import { AppError } from "../../common/helpers/appError";
 import { logger } from "../../common/helpers/logger";
 import { ORDER_ERROR_CODES } from "../order/constants/order.constants";
 import { closeOrder, lockOrder } from "../order/order-status.helpers";
+import { invalidateStockOfOrder } from "../order/order-cache";
 import { type OrderWithLines, applyExpiredEvent } from "./payment.apply";
 import { newestOpenAttempt, reusableAttempt } from "./payment.attempts";
 import { PAYMENT_ERROR_CODES, PAYMENT_WINDOW_MINUTES } from "./constants/payment.constants";
@@ -335,14 +336,19 @@ export class PaymentService {
     const attempt = await newestOpenAttempt(orderId);
 
     if (attempt !== null) {
-      await inTransaction((tx) =>
+      const outcome = await inTransaction((tx) =>
         applyExpiredEvent(tx, orderId, attempt.id),
       );
+
+      // A closed order returned its stock, so the counters follow the commit (AC-7 b).
+      if (outcome === "closed") {
+        await invalidateStockOfOrder(orderId);
+      }
 
       return;
     }
 
-    await inTransaction(async (tx) => {
+    const closed = await inTransaction(async (tx) => {
       await lockOrder(tx, orderId);
 
       const order = await tx.order.findFirstOrThrow({
@@ -351,7 +357,7 @@ export class PaymentService {
       });
 
       if (order.status !== "PENDING") {
-        return;
+        return false;
       }
 
       await closeOrder(tx, order);
@@ -359,7 +365,13 @@ export class PaymentService {
         where: { id: order.id },
         data: { paymentStatus: "CANCELLED" },
       });
+
+      return true;
     });
+
+    if (closed) {
+      await invalidateStockOfOrder(orderId);
+    }
   }
 
   private async currentStatus(order: OrderWithLines): Promise<SyncPaymentResult> {

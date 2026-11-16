@@ -1,6 +1,7 @@
 import { Prisma } from "../../../generated/prisma/client";
 import { prisma } from "../../../lib/prisma";
 import { ORDER_TRANSACTION_OPTIONS } from "../order/order-status.helpers";
+import { invalidateStockOfOrder } from "../order/order-cache";
 import {
   type ApplyResult,
   type ExpiryOutcome,
@@ -20,6 +21,25 @@ export type AttemptTarget = { orderId: string; attemptId: string };
 export const inTransaction = async <T>(
   work: (tx: Prisma.TransactionClient) => Promise<T>,
 ): Promise<T> => await prisma.$transaction(work, ORDER_TRANSACTION_OPTIONS);
+
+/**
+ * An expiry that closed an untouched order returned its stock, so the counters
+ * are bumped once the transaction has committed, never inside it
+ * (spec 0022, AC-7 b; invariant 4).
+ */
+const expireAfterCommit = async (
+  target: AttemptTarget,
+): Promise<TransitionResult> => {
+  const outcome = await inTransaction((tx) =>
+    applyExpiredEvent(tx, target.orderId, target.attemptId),
+  );
+
+  if (outcome === "closed") {
+    await invalidateStockOfOrder(target.orderId);
+  }
+
+  return outcome;
+};
 
 /**
  * One retrieved session, whatever asked for it (a callback, the sync route or the
@@ -43,9 +63,7 @@ export const applySession = async (
   }
 
   if (outcome === "expired") {
-    return await inTransaction((tx) =>
-      applyExpiredEvent(tx, target.orderId, target.attemptId),
-    );
+    return await expireAfterCommit(target);
   }
 
   return "ignored";
@@ -70,9 +88,7 @@ export const applyProviderEvent = async (
           )
         : "ignored";
     case PAYMENT_EVENT_TYPES.sessionExpired:
-      return await inTransaction((tx) =>
-        applyExpiredEvent(tx, target.orderId, target.attemptId),
-      );
+      return await expireAfterCommit(target);
     case PAYMENT_EVENT_TYPES.sessionAsyncFailed:
       return await inTransaction((tx) =>
         applyAsyncFailedEvent(tx, target.orderId, target.attemptId),

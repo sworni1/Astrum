@@ -12,6 +12,7 @@ import { logger } from "../../common/helpers/logger";
 import { toMoney } from "../../common/helpers/money";
 import { parsePagination } from "../../common/helpers/pagination";
 import { ORDER_ERROR_CODES } from "../order/constants/order.constants";
+import { invalidateStockOfProducts } from "../order/order-cache";
 import {
   lockOrder,
   ORDER_TRANSACTION_OPTIONS,
@@ -480,7 +481,7 @@ export class CourierOrderService {
       await this.assertHeldOrder(orderId, userId);
       await expireSessionForCancel(orderId);
 
-      const { order, cancelledLineCount } =
+      const { order, cancelledLineCount, cancelledProductIds } =
         await prisma.$transaction(async (tx) => {
           await lockOrder(tx, orderId);
 
@@ -533,8 +534,12 @@ export class CourierOrderService {
           return {
             order: toCourierOrderJson(answered, userId),
             cancelledLineCount: cancellable.length,
+            cancelledProductIds: cancellable.map((line) => line.productId),
           };
         }, ORDER_TRANSACTION_OPTIONS);
+
+      // The courier's cancel returns stock, so the next read must see it (AC-7 b).
+      await invalidateStockOfProducts(cancelledProductIds);
 
       logger.info({
         event: "staff.courier.cancelled",

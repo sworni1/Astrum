@@ -4,14 +4,26 @@ import type {
 } from "../../../generated/prisma/client";
 import { ReviewStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../../lib/prisma";
+import {
+  getOrSet,
+  invalidateLists,
+  listTtlSeconds,
+  productTtlSeconds,
+  readVersion,
+} from "../../cache/cache";
+import { cacheKeys } from "../../cache/cacheKeys";
 import { AppError } from "../../common/helpers/appError";
-import { getWishlistAndCartItem } from "../../common/helpers/getWishlistAndCart";
+import {
+  getWishlistAndCartItem,
+  readPageMarks,
+} from "../../common/helpers/getWishlistAndCart";
 import {
   productPreviewPublicSelect,
   productPublicSelect,
 } from "../../common/prisma-selects/product.select";
 import { roundAverageRating } from "../reviews/review.serializer";
 import { readReviewState } from "../reviews/review-state";
+import { PRODUCT_ERROR_CODES } from "./constants/product.constants";
 import type { CreateProductDto } from "./dto/create-product.dto";
 
 type ProductRating = { averageRating: number; reviewCount: number };
@@ -46,27 +58,24 @@ const readPageRatings = async (
 };
 
 export class ProductService {
+  /**
+   * The shared row comes from Redis, the caller's own marks and review state
+   * stay live, so two accounts read one cached product and each sees its own
+   * wishlist, cart and review state (spec 0022, AC-2, AC-3).
+   */
   async getProduct(userId: string, productId: Product["id"]) {
-    const { wishlistItem, cartItem } = await getWishlistAndCartItem(
-      userId,
-      productId,
-    );
+    const version = await readVersion(cacheKeys.productVersion(productId));
 
-    const product = await prisma.product.findUnique({
-      where: {
-        id: productId,
-        isDeleted: false,
-        visibility: "Public",
-        status: "Published",
-      },
-      select: productPublicSelect,
+    const product = await getOrSet({
+      key: cacheKeys.product(productId, version),
+      ttlSeconds: productTtlSeconds(),
+      load: async () => await this.loadPublicProduct(productId),
     });
 
-    if (!product) {
-      throw new Error("Product not found");
-    }
-
-    const reviewState = await readReviewState(userId, productId);
+    const [{ wishlistItem, cartItem }, reviewState] = await Promise.all([
+      getWishlistAndCartItem(userId, productId),
+      readReviewState(userId, productId),
+    ]);
 
     const { properties, ...rest } = product;
 
@@ -87,6 +96,95 @@ export class ProductService {
       category?: ProductCategory;
       search_query?: string;
     },
+    cursor?: string,
+    limit: number = 8,
+  ) {
+    const epoch = await readVersion(cacheKeys.listsEpoch());
+    const key = filters?.category
+      ? cacheKeys.category(
+          epoch,
+          filters.category,
+          filters.search_query,
+          cursor,
+        )
+      : cacheKeys.recommendations(epoch, cursor);
+
+    const page = await getOrSet({
+      key,
+      ttlSeconds: listTtlSeconds(),
+      epochKey: cacheKeys.listsEpoch(),
+      load: async () => await this.loadCataloguePage(filters, cursor, limit),
+    });
+
+    // Two queries for the page, merged after the cached payload is read (AC-4).
+    const marks = await readPageMarks(
+      userId,
+      page.products.map((product) => product.id),
+    );
+
+    return {
+      products: page.products.map((product) => ({
+        ...product,
+        isWishlisted: marks.wishlisted.has(product.id),
+        quantityInCart: marks.cart.get(product.id) ?? 0,
+      })),
+      nextCursor: page.nextCursor,
+      hasNextPage: page.hasNextPage,
+    };
+  }
+
+  getCategoryProducts = this.getRecommendations;
+
+  async createProduct(userId: string, dto: CreateProductDto) {
+    const business = await prisma.business.findUnique({
+      where: { ownerUserId: userId },
+      select: { id: true },
+    });
+
+    if (!business) {
+      throw new AppError(
+        403,
+        "SELLER_NOT_ASSIGNED",
+        "No business is assigned to this seller.",
+      );
+    }
+
+    const product = await prisma.product.create({
+      data: { ...dto, businessId: business.id },
+    });
+
+    // A new row can appear on any list, so every list key goes cold (AC-7 e).
+    await invalidateLists();
+
+    return product;
+  }
+
+  /** Only a fetched row reaches the cache: a missing product writes no key (AC-2). */
+  private async loadPublicProduct(productId: Product["id"]) {
+    const product = await prisma.product.findUnique({
+      where: {
+        id: productId,
+        isDeleted: false,
+        visibility: "Public",
+        status: "Published",
+      },
+      select: productPublicSelect,
+    });
+
+    if (!product) {
+      throw new AppError(
+        404,
+        PRODUCT_ERROR_CODES.notFound,
+        "Product not found",
+      );
+    }
+
+    return product;
+  }
+
+  /** The shared half of a catalogue page: two queries for the whole page (AC-4). */
+  private async loadCataloguePage(
+    filters?: { category?: ProductCategory; search_query?: string },
     cursor?: string,
     limit: number = 8,
   ) {
@@ -122,52 +220,18 @@ export class ProductService {
       products.map((product) => product.id),
     );
 
-    const productsWithData = await Promise.all(
-      products.map(async (product) => {
-        const { wishlistItem, cartItem } = await getWishlistAndCartItem(
-          userId,
-          product.id,
-        );
-
+    return {
+      products: products.map((product) => {
         const rating = ratings.get(product.id);
 
         return {
           ...product,
           averageRating: rating?.averageRating ?? 0,
           reviewCount: rating?.reviewCount ?? 0,
-          isWishlisted: !!wishlistItem,
-          quantityInCart: cartItem ? cartItem.quantity : 0,
         };
       }),
-    );
-
-    return {
-      products: productsWithData,
       nextCursor,
       hasNextPage: !!nextCursor,
     };
-  }
-
-  getCategoryProducts = this.getRecommendations;
-
-  async createProduct(userId: string, dto: CreateProductDto) {
-    const business = await prisma.business.findUnique({
-      where: { ownerUserId: userId },
-      select: { id: true },
-    });
-
-    if (!business) {
-      throw new AppError(
-        403,
-        "SELLER_NOT_ASSIGNED",
-        "No business is assigned to this seller.",
-      );
-    }
-
-    const product = await prisma.product.create({
-      data: { ...dto, businessId: business.id },
-    });
-
-    return product;
   }
 }

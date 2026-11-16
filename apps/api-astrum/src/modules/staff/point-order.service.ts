@@ -12,6 +12,7 @@ import { logger } from "../../common/helpers/logger";
 import { toMoney } from "../../common/helpers/money";
 import { parsePagination } from "../../common/helpers/pagination";
 import { ORDER_ERROR_CODES } from "../order/constants/order.constants";
+import { invalidateStockOfProducts } from "../order/order-cache";
 import {
   lockOrder,
   ORDER_TRANSACTION_OPTIONS,
@@ -240,10 +241,14 @@ export class PointOrderService {
       await this.assertOwnOrder(orderId, pickupPointId);
       await expireSessionForCancel(orderId);
 
-      const { order, cancelledLineCount } = await prisma.$transaction(
-        (tx) => this.runCancel(tx, orderId, userId, pickupPointId),
-        ORDER_TRANSACTION_OPTIONS,
-      );
+      const { order, cancelledLineCount, cancelledProductIds } =
+        await prisma.$transaction(
+          (tx) => this.runCancel(tx, orderId, userId, pickupPointId),
+          ORDER_TRANSACTION_OPTIONS,
+        );
+
+      // The counter's cancel returns stock, so the next read must see it (AC-7 b).
+      await invalidateStockOfProducts(cancelledProductIds);
 
       logger.info({
         event: "staff.point.cancelled",
@@ -332,7 +337,11 @@ export class PointOrderService {
     orderId: string,
     userId: string,
     pickupPointId: string,
-  ): Promise<{ order: PointOrderJson; cancelledLineCount: number }> {
+  ): Promise<{
+    order: PointOrderJson;
+    cancelledLineCount: number;
+    cancelledProductIds: string[];
+  }> {
     await lockOrder(tx, orderId);
 
     const order = await tx.order.findFirst({
@@ -382,6 +391,7 @@ export class PointOrderService {
     return {
       order: toPointOrderJson(answered),
       cancelledLineCount: cancellable.length,
+      cancelledProductIds: cancellable.map((line) => line.productId),
     };
   }
 

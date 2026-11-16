@@ -2,6 +2,7 @@ import { Prisma } from "../../../generated/prisma/client";
 import type { PaymentAttemptStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../../lib/prisma";
 import { logger } from "../../common/helpers/logger";
+import { invalidateStockOfOrder } from "../order/order-cache";
 import { applyExpiredEvent, applyPaidEvent } from "./payment.apply";
 import {
   PAYMENT_SWEEP_BATCH,
@@ -40,6 +41,7 @@ const closeWithoutSession = async (
   tx: Prisma.TransactionClient,
   order: SweepOrder,
   attemptId: string | null,
+  closedOrderIds: string[],
 ): Promise<void> => {
   if (attemptId === null) {
     logger.warn({
@@ -53,6 +55,7 @@ const closeWithoutSession = async (
   const outcome = await applyExpiredEvent(tx, order.id, attemptId);
 
   if (outcome === "closed") {
+    closedOrderIds.push(order.id);
     logClosed(order.id, attemptId);
   }
 };
@@ -68,6 +71,7 @@ const sweepWithSession = async (
   order: SweepOrder,
   attemptId: string,
   sessionId: string,
+  closedOrderIds: string[],
 ): Promise<void> => {
   try {
     const session = await gateway.retrieveSession(sessionId);
@@ -90,6 +94,7 @@ const sweepWithSession = async (
     const expiry = await applyExpiredEvent(tx, order.id, attemptId);
 
     if (expiry === "closed") {
+      closedOrderIds.push(order.id);
       logClosed(order.id, attemptId);
     }
   } catch (error) {
@@ -106,16 +111,24 @@ const sweepOrder = async (
   tx: Prisma.TransactionClient,
   gateway: PaymentGateway | null,
   order: SweepOrder,
+  closedOrderIds: string[],
 ): Promise<void> => {
   const attempt = order.payments[0] ?? null;
   const sessionId = attempt?.providerSessionId ?? null;
 
   if (gateway === null || attempt === null || sessionId === null) {
-    await closeWithoutSession(tx, order, attempt?.id ?? null);
+    await closeWithoutSession(tx, order, attempt?.id ?? null, closedOrderIds);
     return;
   }
 
-  await sweepWithSession(tx, gateway, order, attempt.id, sessionId);
+  await sweepWithSession(
+    tx,
+    gateway,
+    order,
+    attempt.id,
+    sessionId,
+    closedOrderIds,
+  );
 };
 
 const selectOverdueOrders = async (
@@ -141,6 +154,8 @@ const selectOverdueOrders = async (
 export const runPaymentSweep = async (
   gateway: PaymentGateway | null = paymentGateway(),
 ): Promise<void> => {
+  const closedOrderIds: string[] = [];
+
   await prisma.$transaction(async (tx) => {
     const [lock] = await tx.$queryRaw<Array<{ locked: boolean }>>`
       SELECT pg_try_advisory_xact_lock(${PAYMENT_SWEEP_LOCK_KEY}::bigint) AS locked
@@ -153,9 +168,14 @@ export const runPaymentSweep = async (
     const orders = await selectOverdueOrders(tx);
 
     for (const order of orders) {
-      await sweepOrder(tx, gateway, order);
+      await sweepOrder(tx, gateway, order, closedOrderIds);
     }
   }, SWEEP_TRANSACTION_OPTIONS);
+
+  // A closed order returned its stock, so the counters follow the commit (AC-7 b).
+  for (const orderId of closedOrderIds) {
+    await invalidateStockOfOrder(orderId);
+  }
 };
 
 /** Started from `server.ts` and never from `app.ts` (AC-9). */
