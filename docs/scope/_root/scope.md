@@ -32,6 +32,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | 19  | Handover at the pickup point          | Slice 10 | done        |
 | 20  | Handover by the courier               | Slice 10 | in-progress |
 | 21  | Read only seller panel                | Slice 10 | in-progress |
+| 22  | Real rating on the product card       | Slice 4  | in-progress |
 
 ## Slice 1: the order thread
 
@@ -197,6 +198,19 @@ The card carries a like and a comment control that spec 0012 left visibly disabl
 - [x] Test it: `/test review likes and comments` — 2026-11-12: no separate pass was run; the feature closed with the suites that landed alongside the build. The gateway answers 238 tests over 36 suites (3 skipped) covering the repeat like, the unlike, the counters against the child rows, the ordering with its tiebreak, the dropped extra row, the clamped limit, the foreign cursor, the deleted row, `mine`, the `429`, the failed insert, the foreign delete, the repeat delete and the `400` naming `body`; the storefront answers 268 tests over 58 files, 58 of them in `src/hooks/review` and `Reviews`; `pnpm check-types --force` is 5 of 5 and lint exits 0. One gap is recorded rather than closed: `useFetcher.putItem`, which carries the like body fix, has no suite of its own
   spec [0014](../../specs/_root/0014-review-likes-and-comments/index.md)
   code in `apps/api-astrum/src/modules/reviews`, `apps/api-astrum/src/modules/product`, `packages/Astrum-db/prisma`, `apps/customer/src/features/pages/ProductOverview/Reviews`, `apps/customer/src/hooks/review`, `apps/customer/src/common/types/review.types.ts`, `apps/customer/messages`
+
+### 22. Real rating on the product card · in-progress
+
+The card printed a rating from two dead ends: `Product.stars`, invented by the Excel seed out of the product description, and `_count.impressions` from the legacy `Impression` table, which held no rows and had no writer.
+**Done when:** the card prints the same average and the same count the product screen prints, both read from the approved reviews of the page, `Impression` is gone from the schema and from every read, and a product nobody reviewed prints `0 (0)`.
+- [x] Design it (spec): `/architect real rating on the product card` — 2026-11-15: spec 0021, 10 acceptance criteria; the owner chose `0 (0)` over hiding the line
+- [x] Build it: `/develop real rating on the product card` — 2026-11-15: `Impression` dropped from the four schemas with migration `20261115120000_drop_impression`, both selects and the `getProduct` mapping stripped, one `review.groupBy` per page on the recommendations read, the card and its `StarRating` moved to `averageRating`/`reviewCount`, both debug lines removed (AC-1 to AC-8)
+- [x] Verify it: `/check verify real rating on the product card` — 2026-11-15: the migration applied and `\dt` lists no `Impression`; the query the route now runs answered `Самокат Tech Team V-Tech → 4.67 / 3` and `Ручка Parker Urban T200 → 5 / 1` against the dev database; `pnpm check-types` 5 of 5, api 389 tests, customer 365 tests, lint 0 errors. The card was not walked in a browser and neither route was driven with a session: the gateway was not running, so `verify.md` steps 3, 4 and 5 stay open
+- [ ] Test it: `/test real rating on the product card`
+- [ ] Review it (fresh model): `/check review real rating on the product card`
+- [ ] Document it: `/document real rating on the product card`
+  spec [0021](../../specs/_root/0021-real-rating-on-the-product-card/index.md)
+  code in `packages/Astrum-db/prisma` (`schema.prisma`, `migrations/20261115120000_drop_impression/`, `seedFromExcel.ts`), `apps/api-astrum/src/common/prisma-selects/product.select.ts`, `apps/api-astrum/src/modules/product/product.service.ts`, `apps/customer/src/features/general/ProductCard/`, `apps/customer/src/common/types/product.types.ts`
 
 ## Slice 5: session state
 
@@ -400,6 +414,7 @@ Bugs found while verifying a slice, recorded here once the fix lands so the plan
 - **Previous account's data after an account switch** · fixed 2026-11-10 · from spec 0008 · `handleSignIn` and `handleRegister` (`apps/customer/src/hooks/auth/useAuth.ts`) and `useLogOut` (`apps/customer/src/hooks/useLogOut.ts`) drop the whole SWR store through `apps/customer/src/hooks/useSessionCacheReset.ts` before the next page renders, `router.refresh()` follows the cookie write on the sign in path, and three regression tests (`hooks/auth/useAuth.test.tsx`, `hooks/useLogOut.test.tsx`) fail without the fix · `docs/changelog/2026-11-10-session-cache-reset.md`
 - **Skeleton instead of the profile and a missing confirmation banner after a session switch** · fixed 2026-11-10 · a follow-up of the row above · `apps/customer/src/hooks/useSessionCacheReset.ts` empties the store with `useSWRConfig().unload({ revalidate })` instead of a key-filtered `mutate`: that also deletes the SWR request markers and the payload `keepPreviousData` was holding, so a hook mounted inside the previous `dedupingInterval` fetches instead of deduping against the request of the account that left; sign in and register pass `revalidate: true`, log out keeps it off, and three regression tests in `hooks/useSessionCacheReset.test.tsx` fail without the fix · `docs/changelog/2026-11-10-session-cache-unload.md`
 - **Order list reads every item to render a card** · fixed 2026-11-11 · `GET /api/orders` now returns `orderItemsCount` and the first item's `previewImage`; the storefront card consumes those summary fields, while `GET /api/orders/:orderId` still returns all items · the API order tests and `apps/customer/src/features/pages/Orders/OrderCard/index.test.tsx`
+- **A card rated by a dead table** · fixed 2026-11-15 · from spec 0012 · `ProductCard` printed `Product.stars` (a number the Excel seed invents out of the product description) and `_count.impressions` (the legacy `Impression` table: zero rows, no writer anywhere in the repository), while the product screen read the real aggregate; spec 0021 drops the table with migration `20261115120000_drop_impression`, strips `impressions` from both product selects and from the `getProduct` mapping, and reads one `review.groupBy` per page for the recommendations and category routes, so a card prints `4.7 (3)` and `0 (0)` from the same approved rows the product screen uses · `docs/specs/_root/0021-real-rating-on-the-product-card/`
 
 ## Deferred
 
@@ -451,7 +466,6 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Reviews sorted by likes**: needs an index on `Review(productId, likeCount)` and a decision on whether popularity outranks recency · from spec 0014 · needs a decision
 - **Shop answers on a review**: `ReviewResponse` is unbuilt and unread, so the thread shows customer replies only · from spec 0014 · needs a decision
 - **Review moderation**: every review publishes on write, so `ReviewStatus.PENDING` and `REJECTED` are dead values and nothing can take an abusive review down · from spec 0012 · needs a decision
-- **Review count on the product card**: `ProductCard` prints `_count.impressions` as a review count and five stars whatever the rating is · from spec 0012
 - **Unmaintained product rating columns**: `Product.stars`, `reviewCount` and `averageRating` have no writer and `ReviewsService.updateProductAggregates` has no caller · from spec 0012 · needs a decision
 - **Raw review by id**: `GET /api/reviews/:reviewId` answers any customer's row including `userId` and reviews that are not approved · from spec 0012 · needs a decision
 - **Review photo upload**: the project has no file storage, so `photos` stays a URL list nobody fills · from spec 0012 · needs a decision

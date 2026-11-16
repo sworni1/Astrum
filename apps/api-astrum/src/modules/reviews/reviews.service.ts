@@ -1,6 +1,14 @@
 import { Prisma } from "../../../generated/prisma/client";
 import { OrderItemStatus, ReviewStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../../lib/prisma";
+import {
+  getOrSet,
+  invalidateLists,
+  invalidateReviews,
+  productTtlSeconds,
+  readVersion,
+} from "../../cache/cache";
+import { cacheKeys } from "../../cache/cacheKeys";
 import { AppError } from "../../common/helpers/appError";
 import type { CreateReviewCommentDto } from "./dto/create-review-comment.dto";
 import type { CreateReviewDto } from "./dto/create-review.dto";
@@ -117,6 +125,10 @@ export class ReviewsService {
         select: reviewRowSelect,
       });
 
+      // The new rating reaches the card and the product's review pages (AC-7 c).
+      await invalidateLists();
+      await invalidateReviews(productId);
+
       return serializeReview(row as ReviewRow);
     } catch (error) {
       // The unique index on orderItemId decides the race: one 201, one 409.
@@ -135,10 +147,31 @@ export class ReviewsService {
     }
   }
 
+  /**
+   * The page, its counters and its distribution are the same for every reader,
+   * so they come from Redis; the caller filters nothing (spec 0022, AC-5).
+   */
   async getReviewsForProduct(productId: string, query: ReviewPageQuery = {}) {
     const limit = parseLimit(query.limit, REVIEW_PAGE_DEFAULT_LIMIT);
     const after = query.after === undefined ? undefined : String(query.after);
+    const revision = await readVersion(cacheKeys.reviewsVersion(productId));
 
+    return await getOrSet({
+      key: cacheKeys.reviews(productId, revision, limit, after),
+      ttlSeconds: productTtlSeconds(),
+      load: async () => await this.loadReviewPage(productId, limit, after),
+    });
+  }
+
+  /**
+   * The queries behind a miss. The cursor check runs here and only here: a key
+   * exists only for a cursor that already passed it (AC-5).
+   */
+  private async loadReviewPage(
+    productId: string,
+    limit: number,
+    after: string | undefined,
+  ) {
     if (after !== undefined) {
       const cursorRow = await prisma.review.findFirst({
         where: { id: after, productId, status: ReviewStatus.APPROVED },
@@ -234,8 +267,8 @@ export class ReviewsService {
    * repeated press answers the same number instead of a `500` (AC-4).
    */
   async likeReview(userId: string, reviewId: string): Promise<LikeAnswer> {
-    return prisma.$transaction(async (tx) => {
-      await this.requireApprovedReview(tx, reviewId);
+    const { answer, productId } = await prisma.$transaction(async (tx) => {
+      const review = await this.requireApprovedReview(tx, reviewId);
 
       const created = await tx.reviewLike.createMany({
         data: [{ reviewId, userId }],
@@ -249,7 +282,10 @@ export class ReviewsService {
           select: { likeCount: true },
         });
 
-        return { liked: true, likeCount: updated.likeCount };
+        return {
+          answer: { liked: true, likeCount: updated.likeCount },
+          productId: review.productId,
+        };
       }
 
       const current = await tx.review.findUnique({
@@ -257,8 +293,16 @@ export class ReviewsService {
         select: { likeCount: true },
       });
 
-      return { liked: true, likeCount: current?.likeCount ?? 0 };
+      return {
+        answer: { liked: true, likeCount: current?.likeCount ?? 0 },
+        productId: review.productId,
+      };
     });
+
+    // The like count is part of the cached review page (AC-7 d).
+    await invalidateReviews(productId);
+
+    return answer;
   }
 
   /**
@@ -266,8 +310,8 @@ export class ReviewsService {
    * same number and the counter never reads `-1` (AC-4).
    */
   async unlikeReview(userId: string, reviewId: string): Promise<LikeAnswer> {
-    return prisma.$transaction(async (tx) => {
-      await this.requireReview(tx, reviewId);
+    const { answer, productId } = await prisma.$transaction(async (tx) => {
+      const review = await this.requireReview(tx, reviewId);
 
       const removed = await tx.reviewLike.deleteMany({
         where: { reviewId, userId },
@@ -285,8 +329,15 @@ export class ReviewsService {
         select: { likeCount: true },
       });
 
-      return { liked: false, likeCount: current?.likeCount ?? 0 };
+      return {
+        answer: { liked: false, likeCount: current?.likeCount ?? 0 },
+        productId: review.productId,
+      };
     });
+
+    await invalidateReviews(productId);
+
+    return answer;
   }
 
   /** One page of the flat thread, oldest first, ten rows by default (AC-7). */
@@ -354,8 +405,8 @@ export class ReviewsService {
   ): Promise<CommentWriteAnswer> {
     const body = dto.body.trim();
 
-    return prisma.$transaction(async (tx) => {
-      await this.requireApprovedReview(tx, reviewId);
+    const { answer, productId } = await prisma.$transaction(async (tx) => {
+      const review = await this.requireApprovedReview(tx, reviewId);
 
       const windowStart = new Date(Date.now() - REVIEW_COMMENT_RATE_WINDOW_MS);
       const recent = await tx.reviewComment.count({
@@ -382,10 +433,18 @@ export class ReviewsService {
       });
 
       return {
-        comment: serializeReviewComment(row as ReviewCommentRow, userId),
-        commentCount: updated.commentCount,
+        answer: {
+          comment: serializeReviewComment(row as ReviewCommentRow, userId),
+          commentCount: updated.commentCount,
+        },
+        productId: review.productId,
       };
     });
+
+    // The comment count is part of the cached review page (AC-7 d).
+    await invalidateReviews(productId);
+
+    return answer;
   }
 
   /**
@@ -397,8 +456,8 @@ export class ReviewsService {
     reviewId: string,
     commentId: string,
   ): Promise<CommentWriteAnswer> {
-    return prisma.$transaction(async (tx) => {
-      await this.requireReview(tx, reviewId);
+    const { answer, productId } = await prisma.$transaction(async (tx) => {
+      const review = await this.requireReview(tx, reviewId);
 
       const existing = await tx.reviewComment.findFirst({
         where: { id: commentId, reviewId },
@@ -443,37 +502,55 @@ export class ReviewsService {
       });
 
       return {
-        comment: serializeReviewComment(row as ReviewCommentRow, userId),
-        commentCount: counter?.commentCount ?? 0,
+        answer: {
+          comment: serializeReviewComment(row as ReviewCommentRow, userId),
+          commentCount: counter?.commentCount ?? 0,
+        },
+        productId: review.productId,
       };
     });
+
+    await invalidateReviews(productId);
+
+    return answer;
   }
 
   /**
    * A like or a comment needs an approved review; both delete routes act on
    * existence alone, so a row written before a status change can be withdrawn
-   * (AC-5).
+   * (AC-5). The product comes back beside the id, because those writes carry a
+   * review id only and the cache is keyed per product (spec 0022, AC-7 d).
    */
-  private async requireApprovedReview(tx: Tx, reviewId: string): Promise<void> {
+  private async requireApprovedReview(
+    tx: Tx,
+    reviewId: string,
+  ): Promise<{ id: string; productId: string }> {
     const review = await tx.review.findFirst({
       where: { id: reviewId, status: ReviewStatus.APPROVED },
-      select: { id: true },
+      select: { id: true, productId: true },
     });
 
     if (!review) {
       throw new AppError(404, REVIEW_ERROR_CODES.notFound, "Review not found");
     }
+
+    return review;
   }
 
-  private async requireReview(tx: Tx, reviewId: string): Promise<void> {
+  private async requireReview(
+    tx: Tx,
+    reviewId: string,
+  ): Promise<{ id: string; productId: string }> {
     const review = await tx.review.findFirst({
       where: { id: reviewId },
-      select: { id: true },
+      select: { id: true, productId: true },
     });
 
     if (!review) {
       throw new AppError(404, REVIEW_ERROR_CODES.notFound, "Review not found");
     }
+
+    return review;
   }
 
   // Kept for a future moderation write; nothing calls it today (spec 0012, Follow up).

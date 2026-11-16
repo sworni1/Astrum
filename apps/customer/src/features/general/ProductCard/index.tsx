@@ -22,15 +22,13 @@ const ProductCard = memo<ProductCardProps>(function ProductCard({
   quantity,
   price,
   // discount, // TODO: Implement discount display
-  stars,
+  averageRating,
+  reviewCount,
   currency,
-  _count,
   isWishlisted,
   quantityInCart,
   isOutOfStock,
 }) {
-  const reviewCount = _count?.impressions ?? 0;
-
   return (
     <Card className='select-none'>
       <Link href={`/products/${id}`}>
@@ -57,7 +55,10 @@ const ProductCard = memo<ProductCardProps>(function ProductCard({
 
       <CardFooter className='flex flex-col justify-between items-center h-[100px]'>
         <div className='flex justify-between items-center w-full'>
-          <StarRating stars={stars} reviewCount={reviewCount} />
+          <StarRating
+            averageRating={averageRating}
+            reviewCount={reviewCount}
+          />
         </div>
 
         <div className='flex w-full gap-[10px] items-center'>

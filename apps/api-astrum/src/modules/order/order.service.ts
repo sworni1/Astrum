@@ -14,6 +14,7 @@ import { AppError } from "../../common/helpers/appError";
 import { logger } from "../../common/helpers/logger";
 import type { CreateOrderDto, OrderItemDto } from "./dto/create-order.dto";
 import { type Idempotency, idempotencyOf } from "./idempotency";
+import { invalidateStockOfProducts } from "./order-cache";
 import { expireSessionForCancel } from "../payment/payment.cancel";
 import { PAYMENT_WINDOW_MINUTES } from "../payment/constants/payment.constants";
 import {
@@ -214,6 +215,11 @@ export class OrderService {
 
       this.logCreated(result, userId, idempotency);
 
+      // The stock left the shelf in that commit, so the counters follow it (AC-7 a).
+      if (!result.replay) {
+        await invalidateStockOfProducts(productIds);
+      }
+
       return result;
     } catch (error) {
       // A keyed failure is resolved against the key first, because the loser of a
@@ -386,6 +392,11 @@ export class OrderService {
       userId,
       restoredLines: order.orderItems.length,
     });
+
+    // The returned stock is visible to the next read, not after a lifetime (AC-7 b).
+    await invalidateStockOfProducts(
+      order.orderItems.map((item) => item.productId),
+    );
 
     return order;
   }

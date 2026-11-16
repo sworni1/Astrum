@@ -28,11 +28,11 @@
     "db:pickup-point": "pnpm --filter @astrum/db pickup-point",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
-    "docker:prod:build": "docker compose -f docker-compose.prod.yml build",
-    "docker:prod:up": "docker compose -f docker-compose.prod.yml up -d --build",
-    "docker:prod:down": "docker compose -f docker-compose.prod.yml down",
-    "docker:prod:logs": "docker compose -f docker-compose.prod.yml logs -f --tail=100",
-    "docker:prod:scale": "docker compose -f docker-compose.prod.yml up -d --no-deps --scale api=3 api",
+    "docker:prod:build": "docker compose -f docker-compose.prod.yml --env-file .env.prod build",
+    "docker:prod:up": "docker compose stop astrum-db astrum-redis astrum-rabbit astrum-mailpit && docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build",
+    "docker:prod:down": "docker compose -f docker-compose.prod.yml --env-file .env.prod down",
+    "docker:prod:logs": "docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f --tail=100",
+    "docker:prod:scale": "docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --no-deps --scale api=3 api",
     "prepare": "husky"
   },
   "lint-staged": {

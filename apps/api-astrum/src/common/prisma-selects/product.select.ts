@@ -9,11 +9,6 @@ export const productPreviewPublicSelect = {
   discount: true,
   stars: true,
   currency: true,
-  _count: {
-    select: {
-      impressions: true,
-    },
-  },
 };
 
 export const productPublicSelect = {
@@ -37,13 +32,7 @@ export const productPublicSelect = {
   previewImage: true,
   sales: true,
   views: true,
-  impressions: true,
   properties: true,
-  _count: {
-    select: {
-      impressions: true,
-    },
-  },
 };
 
 export const cartActionsPublicSelect = {

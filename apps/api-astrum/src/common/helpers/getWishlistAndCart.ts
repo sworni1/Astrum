@@ -47,6 +47,41 @@ export const getCartItem = async (userId: string, productId: Product["id"]) => {
   }
 };
 
+export type PageMarks = {
+  wishlisted: Set<string>;
+  cart: Map<string, number>;
+};
+
+/**
+ * The marks of one page in two queries, never two per card (spec 0022, AC-4).
+ * They stay out of the cache on purpose: a shared payload never carries a
+ * caller's own cart or wishlist state (AC-3).
+ */
+export const readPageMarks = async (
+  userId: string,
+  productIds: readonly string[],
+): Promise<PageMarks> => {
+  if (productIds.length === 0) {
+    return { wishlisted: new Set(), cart: new Map() };
+  }
+
+  const [wishlistItems, cartItems] = await Promise.all([
+    prisma.wishlistItem.findMany({
+      where: { userId, productId: { in: [...productIds] } },
+      select: { productId: true },
+    }),
+    prisma.cartItem.findMany({
+      where: { userId, productId: { in: [...productIds] } },
+      select: { productId: true, quantity: true },
+    }),
+  ]);
+
+  return {
+    wishlisted: new Set(wishlistItems.map((item) => item.productId)),
+    cart: new Map(cartItems.map((item) => [item.productId, item.quantity])),
+  };
+};
+
 export const getWishlistProductIds = async (userId: string) => {
   try {
     const wishlistItems = await prisma.wishlistItem.findMany({
