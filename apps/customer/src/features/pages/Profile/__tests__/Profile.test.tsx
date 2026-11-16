@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   user: {
     profileData: undefined as
       | {
+          nickName: string;
+          email: string;
           isSeller: boolean;
           status: "ACTIVE" | "PENDING";
           staffRoles: Array<"POINT_WORKER" | "COURIER">;
@@ -95,6 +97,8 @@ describe("Profile seller entry", () => {
 
   it("shows the section for an account that does not sell (AC-2)", async () => {
     mocks.user.profileData = {
+      nickName: "wefr",
+      email: "wefr@example.com",
       isSeller: false,
       status: "ACTIVE",
       staffRoles: [],
@@ -106,8 +110,25 @@ describe("Profile seller entry", () => {
     ).not.toBeNull();
   });
 
+  it("renders the security card under a loaded profile (AC-7)", async () => {
+    mocks.user.profileData = {
+      nickName: "wefr",
+      email: "wefr@example.com",
+      isSeller: false,
+      status: "ACTIVE",
+      staffRoles: [],
+    };
+    await render(<Profile />);
+
+    expect(
+      container.querySelector("[data-testid='profile-security']"),
+    ).not.toBeNull();
+  });
+
   it("hides the section for a seller (AC-2)", async () => {
     mocks.user.profileData = {
+      nickName: "wefr",
+      email: "wefr@example.com",
       isSeller: true,
       status: "ACTIVE",
       staffRoles: [],

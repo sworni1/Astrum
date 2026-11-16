@@ -1,27 +1,45 @@
 "use client";
 
+import { Store } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import ProfileCard from "@/features/pages/Profile/components/ProfileCard";
+import {
+  ACTION_SIZE,
+  CARD_TEXT,
+  CARD_TITLE,
+  ICON_TILE,
+  ROLE_HEAD,
+} from "@/features/pages/Profile/lib/styles";
 
-/** The profile entry point of the seller onboarding (spec 0008, AC-2). */
+/** The seller role card of the profile (spec 0008 AC-2, spec 0023 AC-6). */
 const SellOnAstrum = () => {
   const t = useTranslations("seller");
 
   return (
-    <div className="mt-8 pt-4" data-testid="sell-on-astrum">
-      <h2 className="text-xl font-medium">
-        {t("onboarding.profileSectionTitle")}
-      </h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {t("onboarding.profileSectionText")}
-      </p>
-      <Button asChild className="mt-4">
-        <Link href="/seller/onboarding">
-          {t("onboarding.profileSectionAction")}
-        </Link>
-      </Button>
-    </div>
+    <ProfileCard
+      testId="sell-on-astrum"
+      className="flex flex-col"
+      bodyClassName="flex-1"
+      footer={
+        <Button asChild className={ACTION_SIZE}>
+          <Link href="/seller/onboarding">
+            {t("onboarding.profileSectionAction")}
+          </Link>
+        </Button>
+      }
+    >
+      <div className={ROLE_HEAD}>
+        <div className={ICON_TILE} aria-hidden="true">
+          <Store className="size-5" />
+        </div>
+        <div>
+          <h2 className={CARD_TITLE}>{t("onboarding.profileSectionTitle")}</h2>
+          <p className={CARD_TEXT}>{t("onboarding.profileSectionText")}</p>
+        </div>
+      </div>
+    </ProfileCard>
   );
 };
 

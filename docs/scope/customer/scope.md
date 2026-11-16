@@ -9,25 +9,29 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 
 ## At a glance
 
-| #   | Feature                                    | Phase    | Status   |
-| --- | ------------------------------------------ | -------- | -------- |
-| A   | Sign in and register screens               | Existing | existing |
-| B   | Home and categories                        | Existing | existing |
-| C   | Product page                               | Existing | existing |
-| D   | Cart and wishlist                          | Existing | existing |
-| E   | Orders                                     | Existing | existing |
-| F   | Profile and profile editing                | Existing | existing |
-| 1   | Registration form: age rule and date entry | Slice 1  | done     |
+| #   | Feature                                    | Phase    | Status      |
+|-----|--------------------------------------------|----------|-------------|
+| A   | Sign in and register screens               | Existing | existing    |
+| B   | Home and categories                        | Existing | existing    |
+| C   | Product page                               | Existing | existing    |
+| D   | Cart and wishlist                          | Existing | existing    |
+| E   | Orders                                     | Existing | existing    |
+| F   | Profile and profile editing                | Existing | existing    |
+| 1   | Registration form: age rule and date entry | Slice 1  | done        |
 | 2   | Storefront coding standard                 | Slice 2  | in-progress |
 | 3   | Order page decomposition                   | Slice 2  | in-progress |
 | 4   | One quantity stepper for the shop          | Slice 2  | in-progress |
-| 5   | Product reviews: real state                | Slice 2  | done     |
-| 6   | Checkout form decomposition                | Slice 2  | planned  |
-| 7   | Optimized image decomposition              | Slice 2  | planned  |
-| 8   | Cart money and selection                   | Slice 2  | planned  |
-| 9   | Seller onboarding and profile form split   | Slice 2  | planned  |
-| 10  | HTTP client out of the fetcher hook        | Slice 2  | planned  |
-| 11  | Product card layout tokens                 | Slice 2  | planned  |
+| 5   | Product reviews: real state                | Slice 2  | done        |
+| 6   | Checkout form decomposition                | Slice 2  | planned     |
+| 7   | Optimized image decomposition              | Slice 2  | planned     |
+| 8   | Cart money and selection                   | Slice 2  | planned     |
+| 9   | Seller onboarding and profile form split   | Slice 2  | planned     |
+| 10  | HTTP client out of the fetcher hook        | Slice 2  | planned     |
+| 11  | Product card layout tokens                 | Slice 2  | planned     |
+| 12  | Design tokens and the profile screen       | Slice 3  | done        |
+| 13  | Checkout on its own route                  | Slice 3  | planned     |
+| 14  | Orders screen: stats, tabs, search         | Slice 3  | planned     |
+| 15  | Seller sales screen                        | Slice 3  | planned     |
 
 ## Already built
 
@@ -138,6 +142,46 @@ Two page files of 271 and 257 lines mix schema wiring, error mapping, restore lo
 The card holds itself together with `h-[40px]`, `h-[55px]`, `mb-[-15px]`, `h-[100px]` and a clamp applied twice, once as a class and once inline.
 **Done when:** the card lines up in a grid without fixed pixel heights on text blocks, the inline style is gone, and the layout holds at 200 percent zoom and in the second locale.
 - [ ] Build it: `/develop product card layout tokens`
+
+## Slice 3: Account screens
+
+Four screens redrawn from the reference mockups in `C:/Users/ADMIN/Downloads/` (`Профиль-html`, `Оформление заказа-html`, `Мои заказы-html (1)`, `Продажи-html`). The exact colours, sizes and states are copied into the specs, so the build never opens a `.dc.html` file, and the pickers stay Radix Select and Popover with Calendar, so no screen here uses a native `select` or `input[type=date]`. The mockups were drawn without the shared header, so their own top tabs are not part of these features: `Navbar/index.tsx:105` and `MobileMenuSheet` already lead to `/orders`, `/seller/orders` and `/profile`. Feature 13 absorbs row 6 (checkout form decomposition) when it lands, because the checkout leaves the cart page as one and the same change.
+
+### 12. Design tokens and the profile screen · done
+
+The storefront dark theme is shadcn `neutral`: `--card` prints `#171717`, `--border` about `#222222`, `--ring` `#737373`. The mockups are zinc: page `#09090b`, card `#0c0c0e`, border `#27272a`, muted `#a1a1aa`, focus outline `#52525b`. `/profile` is a flat list of forms under a `Separator`, with no header, no avatar and no role.
+**Done when:** the dark theme carries the mockup values plus `--success`, `--destructive-soft` and `--destructive-line`, the four redesigned screens and five existing screens (home, category, product, cart, wishlist) render with no contrast regression at 390 and 1280 wide, and `/profile` shows the avatar initial header, the profile data card with read only birthday and gender, the two role cards, the security card and the red account removal card, with every existing action still working.
+- [x] Design it (spec): `/architect design tokens and the profile screen`
+- [x] Build it: `/develop design tokens and the profile screen`
+- [x] Verify it: `/check verify design tokens and the profile screen`
+- [x] Test it: `/test design tokens and the profile screen`
+
+### 13. Checkout on its own route · planned
+
+Checkout is a boolean in the cart page (`showCheckout`, `apps/customer/src/features/pages/Cart/index.tsx:18`), so it has no address of its own, cannot be linked and loses the browser back button. The form itself is one Card in one column with the summary at its bottom.
+**Done when:** `/checkout` is a route of its own under `(content)`, the cart hands the selected lines over in `sessionStorage` and the route reconciles them against the live cart, the screen is two columns with a sticky summary, delivery and payment are radio cards, the pickers keep Radix in theme tokens, and the submit button stays disabled with a hint naming the missing field until the form is valid.
+- [x] Design it (spec): `/architect checkout on its own route`
+- [ ] Build it: `/develop checkout on its own route`
+- [ ] Verify it: `/check verify checkout on its own route`
+- [ ] Test it: `/test checkout on its own route`
+
+### 14. Orders screen: stats, tabs, search · planned
+
+One card per order with a link to the detail, an empty state and nothing else: no numbers, no filter, no search, and the card cannot show what was inside the order. The list route answers `orderItemsCount` and one preview image only.
+**Done when:** the screen prints three stats (orders, spent, received), the tabs group the list by delivered and canceled, the search finds an order by its number and by any product name inside it, each order group lists its own lines, and the only action is `Открыть заказ`.
+- [x] Design it (spec): `/architect orders screen stats tabs search`
+- [ ] Build it: `/develop orders screen stats tabs search`
+- [ ] Verify it: `/check verify orders screen stats tabs search`
+- [ ] Test it: `/test orders screen stats tabs search`
+
+### 15. Seller sales screen · planned
+
+The seller panel is one read only table with a pagination and four state screens, and it reports no money at all: no revenue, no units sold, no count of delivered or canceled orders.
+**Done when:** the panel prints four stats over the whole set (revenue, units sold, delivered, canceled), the tabs filter by the same grouping as the customer screen, the search finds by order number and product name, the table is redrawn in the palette with the six mockup columns, and no control sends a request.
+- [x] Design it (spec): `/architect seller sales screen`
+- [ ] Build it: `/develop seller sales screen`
+- [ ] Verify it: `/check verify seller sales screen`
+- [ ] Test it: `/test seller sales screen`
 
 ## Legend
 
