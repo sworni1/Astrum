@@ -26,7 +26,7 @@ pnpm db:generate            # prisma generate into packages/Astrum-db/generated
 pnpm prisma:migrate:dev     # create a migration
 pnpm db:up                  # Postgres and Redis containers
 pnpm docker:prod:build      # build the deployable images
-pnpm docker:prod:up         # rebuild the images and start the full stack in replicas behind Caddy (80/443, mail UI 8025)
+pnpm docker:prod:up         # stop the dev support containers, rebuild the images and start the full stack in replicas behind Caddy (80/443, mail UI 8025)
 pnpm docker:prod:down       # stop the stack
 pnpm docker:prod:logs       # follow every service log
 pnpm docker:prod:scale      # rebuild and restart the api replicas only
@@ -45,13 +45,14 @@ api, auth, worker -> db:5432
 ```
 
 - Runtime configuration comes from `.env.prod` (template: `.env.prod.example`); service hostnames inside the network are `db`, `auth`, `api`, `worker`, `rabbitmq`, `redis`, `mailpit`, `proxy`.
+- Every `docker:prod:*` script passes `--env-file .env.prod`, so variable interpolation (`RABBITMQ_USER`, `RABBITMQ_PASSWORD`, `DOMAIN`, `POSTGRES_VOLUME`) reads the same file as the services' `env_file`. A key added to `.env.prod.example` belongs in `.env.prod` too, otherwise the container gets the compose default rather than the intended value.
 - Only `proxy` (80/443) and `mailpit` (8025) publish host ports. `api:3580`, `auth:4580` and `worker:5580` are reachable inside the `astrum` network only.
 - `migrate` is a one-shot service that runs before anything else starts.
 - Replicas are discovered by Caddy through `dynamic a <service> <port>`; plain `reverse_proxy service:port` balances nothing.
 - `GET /health` exists on customer, api, auth and worker and is the only probe URL.
 - The worker consumes the `mail.confirmation` queue bound to `astrum.events` and delivers through `SMTP_URL`; with no `SMTP_URL` it writes the letter into `MAIL_OUTBOX_DIR`. Retries wait 60, 300 and 900 seconds, then the message lands in `mail.confirmation.dead`.
 - Two compose files, one meaning each: `docker-compose.yml` is the dev path (`pnpm dev` starts its Postgres, Redis, RabbitMQ and Mailpit containers, `pnpm db:up` starts Postgres and Redis), `docker-compose.prod.yml` is the deployable stack. Do not run `docker compose up` from the dev file expecting the new topology.
-- The stack shares the Postgres volume `astrum_astrum-db-data` with the dev container (`POSTGRES_VOLUME` in `.env`). Never run `pnpm dev` and `pnpm docker:prod:up` at the same time — two postmasters on one data directory.
+- The stack shares the Postgres volume `astrum_astrum-db-data` with the dev container (`POSTGRES_VOLUME` in `.env.prod`) and publishes the same host port 8025, so it cannot run beside the dev stack: `docker:prod:up` stops the dev support containers first. Never start the dev containers during it — two postmasters on one data directory.
 - See `docs/adr/0003-container-topology-and-load-balancing.md`.
 
 ## Rules
