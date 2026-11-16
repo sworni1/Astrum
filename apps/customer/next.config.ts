@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
   // Trace from the workspace root so the standalone bundle keeps the monorepo
   // layout (apps/customer/server.js) instead of copying only this package.
   outputFileTracingRoot: path.join(__dirname, "../../"),
+  // Recorded by `next upgrade --agent=security` so the in-app reminder keeps
+  // watching only security releases for this app.
+  experimental: {
+    agentUpgrade: "security",
+  },
   async rewrites() {
     return [
       {
