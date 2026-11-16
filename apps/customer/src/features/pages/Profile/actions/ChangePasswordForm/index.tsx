@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -27,8 +28,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  ACTION_SIZE,
+  ROW,
+  ROW_HINT,
+  ROW_TEXT,
+} from "@/features/pages/Profile/lib/styles";
 import { useUser } from "@/hooks/user/useUser";
 
+/** One row of the security card: the password change behind a dialog (AC-7). */
 const ChangePasswordForm = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -78,15 +86,16 @@ const ChangePasswordForm = () => {
   };
 
   return (
-    <div className="mt-8 pt-4">
-      <h2 className="text-xl font-medium ">{t("changePasswordTitle")}</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {t("changePasswordSubtitle")}
-      </p>
+    <div className={ROW} data-testid="change-password-row">
+      <div>
+        <div className={ROW_TEXT}>{t("changePasswordTitle")}</div>
+        <p className={ROW_HINT}>{t("changePasswordSubtitle")}</p>
+      </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogTrigger asChild>
-          <Button type="button" variant="destructive" className="mt-4">
+          <Button type="button" variant="outline" className={ACTION_SIZE}>
+            <Lock />
             {t("changePasswordButton")}
           </Button>
         </DialogTrigger>

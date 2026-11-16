@@ -3,15 +3,23 @@
 import { useTranslations } from "next-intl";
 import { showToast } from "@/common/helpers/showToast";
 import EditProfileFormSkeleton from "@/components/skeletons/EditProfileFormSkeleton";
-import { Separator } from "@/components/ui/separator";
+import {
+  PROFILE_STACK,
+  PROFILE_WRAPPER,
+  ROLE_GRID,
+} from "@/features/pages/Profile/lib/styles";
 import { useUser } from "@/hooks/user/useUser";
-import ChangePasswordForm from "./actions/ChangePasswordForm";
 import DeleteAccountForm from "./actions/DeleteAccountForm";
 import EditProfileForm from "./actions/EditProfileForm";
-import LogOutForm from "./actions/LogOutForm";
 import SellOnAstrum from "./actions/SellOnAstrum";
 import WorkOnAstrum from "./actions/WorkOnAstrum";
+import ProfileHeader from "./components/ProfileHeader";
+import ProfileSecurityCard from "./components/ProfileSecurityCard";
 
+/**
+ * The account screen: a header, the profile data, the two role cards, the
+ * security card and the removal card (spec 0023, AC-4 to AC-7).
+ */
 export default function Profile() {
   const { profileData, profileIsLoading, profileIsError } = useUser();
   const t = useTranslations("profile");
@@ -24,12 +32,9 @@ export default function Profile() {
   }
 
   return (
-    <section className="py-4 antialiased md:py-8 space-y-6">
-      <div className="mx-auto max-w-screen-xl px-4 2xl:px-0">
-        <h2 className="text-xl font-medium ">{t("title")}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
-
-        <Separator className="my-4" />
+    <section className={PROFILE_WRAPPER}>
+      <div className={PROFILE_STACK}>
+        {profileData ? <ProfileHeader profileData={profileData} /> : null}
 
         {!profileIsLoading && profileData ? (
           <EditProfileForm profileData={profileData} />
@@ -37,16 +42,17 @@ export default function Profile() {
           <EditProfileFormSkeleton />
         )}
 
-        {!profileIsLoading &&
-        !profileIsError &&
-        profileData?.isSeller === false ? (
-          <SellOnAstrum />
-        ) : null}
+        <div className={ROLE_GRID}>
+          {!profileIsLoading &&
+          !profileIsError &&
+          profileData?.isSeller === false ? (
+            <SellOnAstrum />
+          ) : null}
 
-        <WorkOnAstrum />
+          <WorkOnAstrum />
+        </div>
 
-        <ChangePasswordForm />
-        <LogOutForm />
+        <ProfileSecurityCard />
         <DeleteAccountForm />
       </div>
     </section>

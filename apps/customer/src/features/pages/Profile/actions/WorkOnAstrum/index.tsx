@@ -1,18 +1,27 @@
 "use client";
 
+import { Briefcase } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { heldRoles } from "@/common/helpers/staffRoles";
 import { Button } from "@/components/ui/button";
+import ProfileCard from "@/features/pages/Profile/components/ProfileCard";
+import {
+  ACTION_SIZE,
+  CARD_TEXT,
+  CARD_TITLE,
+  ICON_TILE,
+  ROLE_HEAD,
+} from "@/features/pages/Profile/lib/styles";
 import { hasRole } from "@/hooks/staff/staff.types";
 import { useUser } from "@/hooks/user/useUser";
 import PointLine from "./PointLine";
 import RoleLines from "./RoleLines";
 
 /**
- * The profile entry point of the staff roles: one sentence and a link for an
- * account without a role, the roles and the point for an account that holds
- * one (spec 0017, AC-2).
+ * The staff role card of the profile: one sentence and a link for an account
+ * without a role, the roles and the point for an account that holds one
+ * (spec 0017 AC-2, spec 0023 AC-6).
  */
 const WorkOnAstrum = () => {
   const t = useTranslations("staff");
@@ -26,28 +35,39 @@ const WorkOnAstrum = () => {
   const pending = profileData.status === "PENDING";
 
   return (
-    <div className="mt-8 pt-4" data-testid="work-on-astrum">
-      <h2 className="text-xl font-medium">{t("profile.sectionTitle")}</h2>
-
-      {roles.length === 0 ? (
-        <>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("profile.sectionText")}
-          </p>
-          <Button asChild className="mt-4">
+    <ProfileCard
+      testId="work-on-astrum"
+      className="flex flex-col"
+      bodyClassName="flex-1"
+      footer={
+        roles.length === 0 ? (
+          <Button asChild className={ACTION_SIZE}>
             <Link href="/staff/onboarding">{t("profile.action")}</Link>
           </Button>
-        </>
-      ) : (
-        <>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("profile.rolesLabel")}
+        ) : undefined
+      }
+    >
+      <div className={ROLE_HEAD}>
+        <div className={ICON_TILE} aria-hidden="true">
+          <Briefcase className="size-5" />
+        </div>
+        <div>
+          <h2 className={CARD_TITLE}>{t("profile.sectionTitle")}</h2>
+          <p className={CARD_TEXT}>
+            {roles.length === 0
+              ? t("profile.sectionText")
+              : t("profile.rolesLabel")}
           </p>
+        </div>
+      </div>
+
+      {roles.length === 0 ? null : (
+        <>
           <RoleLines roles={roles} />
           {hasRole(roles, "POINT_WORKER") && <PointLine pending={pending} />}
         </>
       )}
-    </div>
+    </ProfileCard>
   );
 };
 

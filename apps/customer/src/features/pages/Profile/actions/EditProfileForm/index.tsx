@@ -31,8 +31,17 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import ProfileCard from "@/features/pages/Profile/components/ProfileCard";
+import ProfileField from "@/features/pages/Profile/components/ProfileField";
+import {
+  ACTION_SIZE,
+  FIELD_GRID,
+  FIELD_HINT,
+  INPUT,
+  INPUT_READONLY,
+} from "@/features/pages/Profile/lib/styles";
 import { useUser } from "@/hooks/user/useUser";
+import { cn } from "@/lib/utils";
 
 type Props = {
   profileData: UserData;
@@ -167,86 +176,108 @@ const EditProfileForm = ({ profileData }: Props) => {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(editUser)} className="space-y-8">
-        <FormField
-          control={form.control}
-          name="nickName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("username")}</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="shadcn"
-                  {...field}
-                  value={field.value ?? ""}
-                  disabled={isPending}
-                />
-              </FormControl>
-              {isPending ? (
-                <FormDescription>{t("nicknameLocked")}</FormDescription>
-              ) : null}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("email")}</FormLabel>
-              <FormControl>
-                <Input placeholder="email" {...field} />
-              </FormControl>
-              <FormDescription>
-                {isPending ? t("emailPendingNote") : t("emailChangeNote")}
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+      <form onSubmit={form.handleSubmit(editUser)}>
+        <ProfileCard
+          title={t("title")}
+          text={t("subtitle")}
+          testId="profile-data-card"
+          footer={
+            <>
+              <span className={FIELD_HINT}>{t("readOnlyHint")}</span>
 
-        <div className="space-y-2">
-          <Label htmlFor="dateOfBirth">{t("dateOfBirth")}</Label>
-          <Input
-            id="dateOfBirth"
-            readOnly
-            disabled
-            value={format.dateTime(new Date(profileData.dateOfBirth), {
-              dateStyle: "long",
-            })}
+              <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    type="button"
+                    className={ACTION_SIZE}
+                    disabled={!isFormChanged || !form.formState.isValid}
+                  >
+                    {t("updateProfile")}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{t("sureTitle")}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t("saveConfirmText")}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{common("cancel")}</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => editUser(form.getValues())}
+                    >
+                      {common("confirm")}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
+          }
+        >
+          <FormField
+            control={form.control}
+            name="nickName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("username")}</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="shadcn"
+                    className={INPUT}
+                    {...field}
+                    value={field.value ?? ""}
+                    disabled={isPending}
+                  />
+                </FormControl>
+                {isPending ? (
+                  <FormDescription>{t("nicknameLocked")}</FormDescription>
+                ) : null}
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("email")}</FormLabel>
+                <FormControl>
+                  <Input placeholder="email" className={INPUT} {...field} />
+                </FormControl>
+                <FormDescription>
+                  {isPending ? t("emailPendingNote") : t("emailChangeNote")}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <div className="space-y-2">
-          <Label htmlFor="gender">{t("gender")}</Label>
-          <Input id="gender" readOnly disabled value={genderLabel} />
-        </div>
+          <div className={FIELD_GRID}>
+            <ProfileField label={t("dateOfBirth")} htmlFor="dateOfBirth">
+              <Input
+                id="dateOfBirth"
+                readOnly
+                disabled
+                className={cn(INPUT, INPUT_READONLY)}
+                value={format.dateTime(new Date(profileData.dateOfBirth), {
+                  dateStyle: "long",
+                })}
+              />
+            </ProfileField>
 
-        <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <AlertDialogTrigger asChild>
-            <Button
-              type="button"
-              disabled={!isFormChanged || !form.formState.isValid}
-            >
-              {t("updateProfile")}
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{t("sureTitle")}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {t("saveConfirmText")}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{common("cancel")}</AlertDialogCancel>
-              <AlertDialogAction onClick={() => editUser(form.getValues())}>
-                {common("confirm")}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+            <ProfileField label={t("gender")} htmlFor="gender">
+              <Input
+                id="gender"
+                readOnly
+                disabled
+                className={cn(INPUT, INPUT_READONLY)}
+                value={genderLabel}
+              />
+            </ProfileField>
+          </div>
+        </ProfileCard>
       </form>
     </Form>
   );
