@@ -5,8 +5,7 @@ import { useSWRConfig } from "swr";
 import useSWRMutation from "swr/mutation";
 import type { PayOrderResponse } from "@/common/types/order.types";
 import { useFetcher } from "@/hooks/useFetcher";
-
-const ORDER_LIST_KEY = "/orders";
+import { isOrderListKey } from "./orderListKey";
 
 export interface UsePayOrderReturn {
   /** Opens a provider session and answers where the browser goes (AC-13). */
@@ -25,7 +24,7 @@ export const usePayOrder = (orderId: string): UsePayOrderReturn => {
   const revalidateOrder = useCallback(async (): Promise<void> => {
     // allSettled, not all: the toast is the answer the customer needs, and a
     // failed re read must not replace it (AC-13).
-    await Promise.allSettled([mutate(orderKey), mutate(ORDER_LIST_KEY)]);
+    await Promise.allSettled([mutate(orderKey), mutate(isOrderListKey)]);
   }, [mutate, orderKey]);
 
   const { trigger, isMutating } = useSWRMutation<

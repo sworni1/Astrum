@@ -1,59 +1,68 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { showToast } from "@/common/helpers/showToast";
-import { Card, CardContent } from "@/components/ui/card";
-import { useGetOrders } from "@/hooks/order/useGetOrders";
-import OrderCard from "./OrderCard";
+import FailureBlock from "@/features/general/FailureBlock";
+import {
+  HEADING,
+  HEADING_MUTED,
+  HEADING_ROW,
+  SCREEN_WRAPPER,
+} from "@/features/general/lib/screenStyles";
+import OrderGroup from "./components/OrderGroup";
+import OrdersToolbar from "./components/OrdersToolbar";
+import OrdersEmpty from "./components/OrdersStates/OrdersEmpty";
+import OrdersSkeleton from "./components/OrdersStates/OrdersSkeleton";
+import StatsRow from "./components/StatsRow";
+import { useOrdersScreen } from "./hooks/useOrdersScreen";
 
+/**
+ * The orders screen: three tiles, three tabs with their counts, one search
+ * field, one group card per order (spec 0025). Composition only.
+ */
 export default function Orders() {
-  const { orders, isLoading, error } = useGetOrders();
   const t = useTranslations("orders");
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex justify-center items-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (error) {
-    showToast({
-      title: t("failed"),
-      type: "error",
-    });
-  }
+  const screen = useOrdersScreen();
 
   return (
-    <div className="min-h-screen mx-auto max-w-screen-xl px-4 2xl:px-3 p-4 md:p-6">
-      <div className="mb-4 items-end justify-between space-y-4 sm:flex sm:space-y-0 md:mb-8">
-        <h2 className="mt-3 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
-          {t("title")}
-        </h2>
-        {orders && orders.length > 0 && (
-          <p className="text-muted-foreground">
-            {t("found", { count: orders.length })}
+    <div className={SCREEN_WRAPPER}>
+      <div className={HEADING_ROW}>
+        <h1 className={HEADING}>{t("title")}</h1>
+        {screen.page === undefined ? null : (
+          <p className={HEADING_MUTED}>
+            {t("found", { count: screen.page.items.length })}
           </p>
         )}
       </div>
 
-      {!orders || orders.length === 0 ? (
-        <Card className="w-full">
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <div className="text-center space-y-2">
-              <h3 className="text-lg font-medium">{t("emptyTitle")}</h3>
-              <p className="text-muted-foreground">{t("emptyText")}</p>
-            </div>
-          </CardContent>
-        </Card>
+      {screen.firstLoad ? (
+        <OrdersSkeleton />
       ) : (
-        <div className="grid gap-4">
-          {orders.map((order) => (
-            <OrderCard key={order.id} order={order} />
+        <StatsRow counts={screen.page?.counts} spent={screen.page?.spent} />
+      )}
+
+      <OrdersToolbar
+        status={screen.status}
+        counts={screen.page?.counts}
+        onSelect={screen.selectStatus}
+        query={screen.inputValue}
+        queryIsBusy={screen.isValidating}
+        onQueryChange={screen.setInputValue}
+      />
+
+      {screen.failed ? (
+        <FailureBlock
+          title={t("failed")}
+          retryLabel={t("retry")}
+          onRetry={screen.retry}
+        />
+      ) : screen.empty === "none" ? (
+        <>
+          {screen.page?.items.map((order) => (
+            <OrderGroup key={order.id} order={order} />
           ))}
-        </div>
+        </>
+      ) : (
+        <OrdersEmpty state={screen.empty} query={screen.debouncedQuery} />
       )}
     </div>
   );

@@ -2,7 +2,13 @@ jest.mock("../../../../lib/prisma", () => ({
   prisma: {
     $transaction: jest.fn(),
     product: { findMany: jest.fn() },
-    order: { findFirst: jest.fn(), findMany: jest.fn() },
+    business: { findMany: jest.fn() },
+    payment: { findFirst: jest.fn() },
+    order: {
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      groupBy: jest.fn(),
+    },
   },
 }));
 
@@ -30,8 +36,20 @@ type ProductRow = {
 const prismaMock = prisma as unknown as {
   $transaction: jest.Mock;
   product: { findMany: jest.Mock };
-  order: { findFirst: jest.Mock; findMany: jest.Mock };
+  business: { findMany: jest.Mock };
+  payment: { findFirst: jest.Mock };
+  order: { findFirst: jest.Mock; findMany: jest.Mock; groupBy: jest.Mock };
 };
+
+/** One detail line, with the two ids the detail read joins on. */
+const line = (overrides: Record<string, unknown> = {}) => ({
+  id: "line-1",
+  price: new Prisma.Decimal("19.99"),
+  quantity: 2,
+  businessId: "business-1",
+  productId: "product-1",
+  ...overrides,
+});
 
 const makeProduct = (overrides: Partial<ProductRow> = {}): ProductRow => ({
   id: "p-1",
@@ -529,6 +547,9 @@ describe("mergeOrderLines", () => {
 describe("OrderService.getOrderById", () => {
   beforeEach(() => {
     jest.spyOn(console, "info").mockImplementation(() => undefined);
+    prismaMock.business.findMany.mockReset().mockResolvedValue([]);
+    prismaMock.product.findMany.mockReset().mockResolvedValue([]);
+    prismaMock.payment.findFirst.mockReset().mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -565,7 +586,7 @@ describe("OrderService.getOrderById", () => {
     const order = await new OrderService().getOrderById("order-1", "user-1");
 
     expect(order.orderItems).toEqual([
-      { id: "line-1", price: new Prisma.Decimal("19.99") },
+      { id: "line-1", price: new Prisma.Decimal("19.99"), brandName: "", kind: null },
     ]);
     expect(order.shippingMethodName).toBe("Standard");
     expect(order.deliveryPrice.toFixed(2)).toBe("5.99");
@@ -573,37 +594,220 @@ describe("OrderService.getOrderById", () => {
     expect(order).not.toHaveProperty("OrderItem");
     expect(order).not.toHaveProperty("shippingMethod");
   });
+
+  it("добавляет магазин, вид и оплату строк тремя запросами (AC-1)", async () => {
+    prismaMock.order.findFirst.mockResolvedValue({
+      id: "order-1",
+      userId: "user-1",
+      OrderItem: [
+        line({ id: "line-1", businessId: "business-1", productId: "product-1" }),
+        line({ id: "line-2", businessId: "business-1", productId: "product-2" }),
+        line({ id: "line-3", businessId: "business-2", productId: "product-2" }),
+      ],
+    });
+    prismaMock.business.findMany.mockResolvedValue([
+      { id: "business-1", name: "Parker" },
+      { id: "business-2", name: "Bic" },
+    ]);
+    prismaMock.product.findMany.mockResolvedValue([
+      { id: "product-1", subcategory: "Ручки" },
+      { id: "product-2", subcategory: "Шины" },
+    ]);
+    prismaMock.payment.findFirst.mockResolvedValue({
+      paidAt: new Date("2026-11-14T15:08:00.000Z"),
+    });
+
+    const order = await new OrderService().getOrderById("order-1", "user-1");
+
+    expect(prismaMock.business.findMany).toHaveBeenCalledTimes(1);
+    expect(prismaMock.business.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ["business-1", "business-2"] } },
+      select: { id: true, name: true },
+    });
+    expect(prismaMock.product.findMany).toHaveBeenCalledTimes(1);
+    expect(prismaMock.product.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ["product-1", "product-2"] } },
+      select: { id: true, subcategory: true },
+    });
+    expect(prismaMock.payment.findFirst).toHaveBeenCalledWith({
+      where: { orderId: "order-1", status: "PAID", paidAt: { not: null } },
+      orderBy: { paidAt: "desc" },
+      select: { paidAt: true },
+    });
+    expect(order.orderItems.map((item) => [item.brandName, item.kind])).toEqual([
+      ["Parker", "Ручки"],
+      ["Parker", "Шины"],
+      ["Bic", "Шины"],
+    ]);
+    expect(order.paidAt).toEqual(new Date("2026-11-14T15:08:00.000Z"));
+  });
+
+  it("оставляет вид пустым, когда товара с таким id уже нет (AC-1, AC-3)", async () => {
+    prismaMock.order.findFirst.mockResolvedValue({
+      id: "order-1",
+      userId: "user-1",
+      OrderItem: [line({ businessId: "business-1", productId: "gone" })],
+    });
+    prismaMock.business.findMany.mockResolvedValue([
+      { id: "business-1", name: "Parker" },
+    ]);
+
+    const order = await new OrderService().getOrderById("order-1", "user-1");
+
+    expect(order.orderItems[0].kind).toBeNull();
+    expect(order.paidAt).toBeNull();
+  });
 });
 
 describe("OrderService.getOrdersByUserId", () => {
-  it("loads an item count and one preview instead of every order item", async () => {
-    prismaMock.order.findMany.mockResolvedValue([
+  const listRow = {
+    id: "order-1",
+    status: "DELIVERED",
+    createdAt: new Date("2026-11-14T10:00:00.000Z"),
+    grandTotal: new Prisma.Decimal("1234.50"),
+    currency: "RUB",
+    OrderItem: [
+      {
+        id: "line-1",
+        name: "Parker Urban T200",
+        previewImage: "https://cdn.test/pen.png",
+        quantity: 18,
+        status: "DELIVERED",
+        receiptDate: new Date("2026-11-19T10:00:00.000Z"),
+      },
+    ],
+  };
+
+  const prepare = (
+    rows: unknown[],
+    statusGroups: unknown[],
+    currencyGroups: unknown[],
+  ) => {
+    prismaMock.order.findMany.mockResolvedValue(rows);
+    prismaMock.order.groupBy
+      .mockReset()
+      .mockResolvedValueOnce(statusGroups)
+      .mockResolvedValueOnce(currencyGroups);
+    prismaMock.$transaction.mockReset();
+    prismaMock.$transaction.mockImplementation((operations: unknown[]) =>
+      Promise.all(operations),
+    );
+  };
+
+  it("читает строки, счётчики и потраченное одним снимком RepeatableRead (AC-1)", async () => {
+    prepare(
+      [listRow],
+      [
+        { status: "DELIVERED", _count: { _all: 2 } },
+        { status: "CANCELED", _count: { _all: 1 } },
+      ],
+      [{ currency: "RUB", _sum: { grandTotal: new Prisma.Decimal("120.00") } }],
+    );
+
+    const page = await new OrderService().getOrdersByUserId("user-1", {});
+
+    expect(prismaMock.$transaction).toHaveBeenCalledWith(expect.any(Array), {
+      isolationLevel: "RepeatableRead",
+    });
+    expect(page.items).toEqual([
       {
         id: "order-1",
-        _count: { OrderItem: 2 },
-        OrderItem: [{ previewImage: "https://cdn.test/preview.png" }],
+        status: "DELIVERED",
+        createdAt: listRow.createdAt,
+        grandTotal: listRow.grandTotal,
+        currency: "RUB",
+        orderItems: listRow.OrderItem,
       },
     ]);
+    expect(page.counts).toEqual({ all: 3, delivered: 2, canceled: 1 });
+    expect(page.spent).toEqual([
+      { currency: "RUB", amount: new Prisma.Decimal("120.00") },
+    ]);
+  });
 
-    const orders = await new OrderService().getOrdersByUserId("user-1");
+  it("берёт строки по фильтрам, а счётчики по всем заказам покупателя (AC-3, AC-4)", async () => {
+    prepare([listRow], [], []);
+
+    await new OrderService().getOrdersByUserId("user-1", {
+      status: "DELIVERED",
+      q: "parker",
+    });
 
     expect(prismaMock.order.findMany).toHaveBeenCalledWith({
-      where: { userId: "user-1" },
+      where: {
+        userId: "user-1",
+        AND: [
+          { status: "DELIVERED" },
+          {
+            OR: [
+              { id: { contains: "parker", mode: "insensitive" } },
+              {
+                OrderItem: {
+                  some: { name: { contains: "parker", mode: "insensitive" } },
+                },
+              },
+            ],
+          },
+        ],
+      },
       orderBy: { createdAt: "desc" },
-      include: {
-        _count: { select: { OrderItem: true } },
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        grandTotal: true,
+        currency: true,
         OrderItem: {
-          select: { previewImage: true },
+          select: {
+            id: true,
+            name: true,
+            previewImage: true,
+            quantity: true,
+            status: true,
+            receiptDate: true,
+          },
           orderBy: { id: "asc" },
-          take: 1,
         },
       },
     });
-    expect(orders[0].orderItemsCount).toBe(2);
-    expect(orders[0].previewImage).toBe("https://cdn.test/preview.png");
-    expect(orders[0]).not.toHaveProperty("orderItems");
-    expect(orders[0]).not.toHaveProperty("OrderItem");
-    expect(orders[0]).not.toHaveProperty("_count");
+    expect(prismaMock.order.groupBy).toHaveBeenNthCalledWith(1, {
+      by: ["status"],
+      where: { userId: "user-1" },
+      _count: { _all: true },
+    });
+  });
+
+  it("считает деньги без отменённых и без неоплаченных в пути (AC-5)", async () => {
+    prepare([], [], []);
+
+    await new OrderService().getOrdersByUserId("user-1", {});
+
+    expect(prismaMock.order.groupBy).toHaveBeenNthCalledWith(2, {
+      by: ["currency"],
+      where: {
+        userId: "user-1",
+        status: { not: "CANCELED" },
+        AND: [{ OR: [{ paymentStatus: "PAID" }, { status: "DELIVERED" }] }],
+      },
+      _sum: { grandTotal: true },
+    });
+  });
+
+  it("оставляет валюту без подходящих заказов за пределами ответа (AC-5)", async () => {
+    prepare(
+      [],
+      [],
+      [
+        { currency: "USD", _sum: { grandTotal: null } },
+        { currency: "RUB", _sum: { grandTotal: new Prisma.Decimal("99.00") } },
+      ],
+    );
+
+    const page = await new OrderService().getOrdersByUserId("user-1", {});
+
+    expect(page.spent).toEqual([
+      { currency: "RUB", amount: new Prisma.Decimal("99.00") },
+    ]);
   });
 });
 

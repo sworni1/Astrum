@@ -50,6 +50,7 @@ vi.mock("@/components/ThemeSwitcher", () => ({
   default: () => <span data-themeswitcher="" />,
 }));
 
+import { showToast } from "@/common/helpers/showToast";
 import Navbar from "@/features/layout/Navbar";
 
 const SELLER_HREF = 'a[href="/seller/orders"]';
@@ -74,8 +75,13 @@ const render = async (
     wishlistError: null,
   });
   useGetOrders.mockReturnValue({
-    orders: [],
+    page: {
+      items: [],
+      counts: { all: 0, delivered: 0, canceled: 0 },
+      spent: [],
+    },
     isLoading: false,
+    isValidating: false,
     error: null,
   });
   useUser.mockReturnValue({
@@ -259,5 +265,76 @@ describe("Point and courier items in the navigation", () => {
 
     expect(sheetLinks(POINT_HREF)).toHaveLength(0);
     expect(sheetLinks(COURIER_HREF)).toHaveLength(0);
+  });
+});
+
+
+describe("A failed read in the navigation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: (query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }),
+    });
+  });
+
+  afterEach(async () => {
+    await act(async () => root?.unmount());
+    container?.remove();
+  });
+
+  /** Every read answers, except the orders one, which failed once. */
+  const renderWithFailedOrders = async (error: object): Promise<void> => {
+    useGetCart.mockReturnValue({
+      cart: [],
+      cartIsLoading: false,
+      cartError: null,
+    });
+    useGetWishlist.mockReturnValue({
+      wishlist: [],
+      wishlistIsLoading: false,
+      wishlistError: null,
+    });
+    useGetOrders.mockReturnValue({
+      page: undefined,
+      isLoading: false,
+      isValidating: false,
+      error,
+    });
+    useUser.mockReturnValue({
+      profileData: { isSeller: false, staffRoles: [] },
+    });
+
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    await act(async () => {
+      root.render(<Navbar />);
+    });
+  };
+
+  it("raises one toast for one failed read, not one per render (AC-13)", async () => {
+    await renderWithFailedOrders({ message: "orders are down" });
+
+    expect(showToast).toHaveBeenCalledTimes(1);
+
+    await openMobileSheet();
+
+    expect(showToast).toHaveBeenCalledTimes(1);
+    expect(showToast).toHaveBeenCalledWith({
+      title: "nav.ordersFailed",
+      type: "error",
+    });
   });
 });

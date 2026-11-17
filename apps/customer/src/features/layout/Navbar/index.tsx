@@ -3,12 +3,12 @@
 import { MapPin, Store, Truck } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FiPackage } from "react-icons/fi";
 import { LuMenu } from "react-icons/lu";
 import { MdFavoriteBorder, MdOutlineShoppingCart } from "react-icons/md";
 import { TbCategory } from "react-icons/tb";
-import { showToast } from "@/common/helpers/showToast";
+import { showLoadFailureOnce } from "@/common/helpers/showLoadFailureOnce";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -29,7 +29,7 @@ export default function Navbar() {
   const { cart, cartIsLoading, cartError } = useGetCart();
   const { wishlist, wishlistIsLoading, wishlistError } = useGetWishlist();
   const {
-    orders,
+    page: ordersPage,
     isLoading: ordersIsLoading,
     error: ordersError,
   } = useGetOrders();
@@ -37,26 +37,14 @@ export default function Navbar() {
   const isSeller = profileData?.isSeller === true;
   const staffRoles = profileData?.staffRoles ?? [];
 
-  if (cartError) {
-    showToast({
-      title: t("cartFailed"),
-      type: "error",
-    });
-  }
-
-  if (ordersError) {
-    showToast({
-      title: t("ordersFailed"),
-      type: "error",
-    });
-  }
-
-  if (wishlistError) {
-    showToast({
-      title: t("wishlistFailed"),
-      type: "error",
-    });
-  }
+  // A failed read is a side effect, so the toast is raised from an effect and
+  // never from the render body (storefront rule S4). One toast per failed read,
+  // shared with a screen that watches the same key (spec 0025, AC-13).
+  useEffect(() => {
+    showLoadFailureOnce(cartError, t("cartFailed"));
+    showLoadFailureOnce(wishlistError, t("wishlistFailed"));
+    showLoadFailureOnce(ordersError, t("ordersFailed"));
+  }, [cartError, wishlistError, ordersError, t]);
 
   return (
     <nav className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50 items-center align-middle">
@@ -95,7 +83,7 @@ export default function Navbar() {
           />
           <NavItem
             icon={<FiPackage size={25} />}
-            count={orders?.length}
+            count={ordersPage?.counts.all}
             href={"/orders"}
             loading={ordersIsLoading}
           />
@@ -148,7 +136,7 @@ export default function Navbar() {
             wishlistIsLoading={wishlistIsLoading}
             cartCount={cart?.length}
             cartIsLoading={cartIsLoading}
-            orderCount={orders?.length}
+            orderCount={ordersPage?.counts.all}
             orderIsLoading={ordersIsLoading}
             isSeller={isSeller}
             staffRoles={staffRoles}

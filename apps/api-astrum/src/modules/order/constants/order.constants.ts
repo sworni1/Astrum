@@ -23,7 +23,20 @@ export const ORDER_ERROR_CODES = {
   pickupPointNotAllowed: "PICKUP_POINT_NOT_ALLOWED",
   nothingToHandOver: "NOTHING_TO_HAND_OVER",
   sellerPanelReadOnly: "SELLER_PANEL_READ_ONLY",
+  invalidStatusFilter: "INVALID_STATUS_FILTER",
+  searchQueryTooLong: "SEARCH_QUERY_TOO_LONG",
 } as const;
+
+/**
+ * The three tabs of the orders screen, as the read receives them (spec 0025,
+ * AC-2). `ALL` means no status filter, and no other value is accepted.
+ */
+export const ORDER_LIST_STATUSES = ["ALL", "DELIVERED", "CANCELED"] as const;
+
+export type OrderListStatus = (typeof ORDER_LIST_STATUSES)[number];
+
+/** A search query longer than this is refused, not truncated (spec 0025, AC-2). */
+export const ORDER_SEARCH_MAX_LENGTH = 64;
 
 /**
  * The line status one payment method writes when the order is created (AC-1):
