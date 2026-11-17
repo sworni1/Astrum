@@ -5,7 +5,7 @@ import {
   DELIVERY_STEPS,
   deliverySteps,
   STATUS_KEYS,
-  statusColor,
+  STATUS_TONES,
 } from "@/features/pages/Orders/OrderPage/lib/status";
 
 describe("canCancel", () => {
@@ -31,17 +31,16 @@ describe("STATUS_KEYS", () => {
   });
 });
 
-describe("statusColor", () => {
-  it("paints the badge by the status the order reached", () => {
-    expect(statusColor(OrderStatus.PENDING)).toBe("bg-yellow-500");
-    expect(statusColor(OrderStatus.CONFIRMED)).toBe("bg-yellow-500");
-    expect(statusColor(OrderStatus.SHIPPED)).toBe("bg-blue-500");
-    expect(statusColor(OrderStatus.DELIVERED)).toBe("bg-green-500");
-    expect(statusColor(OrderStatus.CANCELED)).toBe("bg-red-500");
-  });
+describe("STATUS_TONES", () => {
+  it("lands every order status on one of the three token sets (AC-8)", () => {
+    expect(STATUS_TONES[OrderStatus.DELIVERED]).toBe("success");
+    expect(STATUS_TONES[OrderStatus.CANCELED]).toBe("destructive");
 
-  it("falls back to grey for a status the storefront does not know", () => {
-    expect(statusColor("SOMETHING_NEW" as OrderStatus)).toBe("bg-gray-500");
+    for (const status of Object.values(OrderStatus)) {
+      expect(["success", "destructive", "neutral"]).toContain(
+        STATUS_TONES[status],
+      );
+    }
   });
 });
 

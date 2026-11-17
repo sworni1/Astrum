@@ -10,48 +10,37 @@ type Props = {
 };
 
 /**
- * The delivery rail, drawn once for both breakpoints: the disc and the label
- * change size with the screen, the step list does not change at all.
+ * The receiving rail: one 6px track, one fill, and the four step labels under
+ * it, drawn once for both breakpoints (spec 0027, AC-5). A cancelled order never
+ * reaches this component, and a status it does not know fills nothing.
  */
 const DeliveryProgress = ({ status }: Props) => {
   const t = useTranslations('orders');
   const steps = deliverySteps(status);
 
   return (
-    <div className='relative mb-6 lg:mb-8'>
+    <div className='mt-4'>
       <div
-        className='hidden lg:block absolute top-5 left-6 right-5 h-0.5 bg-gray-500'
+        className='h-1.5 w-full overflow-hidden rounded-full bg-border'
+        data-testid='order-progress'
       >
         <div
-          className='h-full bg-green-500 motion-safe:transition-[width] motion-safe:duration-300'
-          style={{ width: `${DELIVERY_PROGRESS[status]}%` }}
+          className='h-full rounded-full bg-foreground motion-safe:transition-[width] motion-safe:duration-300'
+          style={{ width: `${DELIVERY_PROGRESS[status] ?? 0}%` }}
         />
       </div>
-      <div className='relative flex items-center justify-between'>
-        {steps.map((step) => {
-          const Icon = step.icon;
-
-          return (
-            <div key={step.key} className='flex flex-col items-center'>
-              <div
-                className={`w-12 h-12 lg:w-10 lg:h-10 rounded-full mb-2 lg:mb-3 flex items-center text-white justify-center ${
-                  step.active ? 'bg-green-500' : 'bg-gray-600'
-                }`}
-              >
-                <Icon className='h-5 w-5' />
-              </div>
-              <span
-                className={`text-xs lg:text-sm text-center ${
-                  step.active
-                    ? 'font-medium'
-                    : 'font-medium lg:font-normal text-muted-foreground'
-                }`}
-              >
-                {t(`status.${step.key}`)}
-              </span>
-            </div>
-          );
-        })}
+      <div className='mt-2.5 flex justify-between text-[12.5px]'>
+        {steps.map((step) => (
+          <span
+            key={step.key}
+            data-testid='order-progress-step'
+            className={
+              step.active ? 'text-foreground' : 'text-muted-foreground'
+            }
+          >
+            {t(`status.${step.key}`)}
+          </span>
+        ))}
       </div>
     </div>
   );

@@ -13,6 +13,7 @@ import {
 } from "@/features/pages/Orders/OrderPage/lib/payment";
 import { paymentRefusal } from "@/features/pages/Orders/OrderPage/lib/paymentRefusal";
 import { ICON_SIZE } from "@/features/pages/Orders/OrderPage/lib/styles";
+import { browserTimeZone } from "@/features/pages/SellerOrders/lib/format";
 import { usePayOrder } from "@/hooks/order/usePayOrder";
 import type { PaymentReturnBranch } from "@/hooks/order/useSyncOrderPayment";
 
@@ -97,6 +98,7 @@ const PaymentActions = ({ order, branch }: Props) => {
               {t("payment.payBefore", {
                 time: format.dateTime(new Date(order.paymentExpiresAt), {
                   timeStyle: "short",
+                  timeZone: browserTimeZone(),
                 }),
               })}
             </p>

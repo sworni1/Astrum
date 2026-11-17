@@ -1,27 +1,28 @@
 import { useTranslations } from "next-intl";
 import type { OrderStatus } from "@/common/types/order.types";
-import { Badge } from "@/components/ui/badge";
+import Pill from "@/features/pages/Orders/OrderPage/components/Pill";
 import {
   STATUS_KEYS,
-  statusColor,
+  STATUS_TONES,
 } from "@/features/pages/Orders/OrderPage/lib/status";
-import { cn } from "@/lib/utils";
 
 type Props = {
   status: OrderStatus;
-  className?: string;
+  testId?: string;
 };
 
-/** The status pill: one color and one label wherever the order screen shows it. */
-const OrderStatusBadge = ({ status, className }: Props) => {
+/**
+ * The order status pill: one tone from `STATUS_TONES` and one label from the
+ * catalog wherever the screen shows the state (spec 0027, AC-8). The vendored
+ * `Badge` is gone from here, because its palette cannot follow the theme tokens.
+ */
+const OrderStatusBadge = ({ status, testId }: Props) => {
   const t = useTranslations("orders");
 
   return (
-    <Badge
-      className={cn("text-white px-3 py-1", statusColor(status), className)}
-    >
-      {t(`status.${STATUS_KEYS[status]}`)}
-    </Badge>
+    <Pill tone={STATUS_TONES[status] ?? "neutral"} testId={testId}>
+      {t(`status.${STATUS_KEYS[status] ?? "pending"}`)}
+    </Pill>
   );
 };
 

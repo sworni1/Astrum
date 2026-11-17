@@ -1,14 +1,14 @@
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import type { Order } from "@/common/types/order.types";
 import { Button } from "@/components/ui/button";
 import CancelOrderDialog from "@/features/pages/Orders/OrderPage/components/CancelOrderDialog";
+import CopyOrderNumber from "@/features/pages/Orders/OrderPage/components/CopyOrderNumber";
+import OrderStatusBadge from "@/features/pages/Orders/OrderPage/components/OrderStatusBadge";
 import { canCancel } from "@/features/pages/Orders/OrderPage/lib/status";
-import {
-  ICON_SIZE,
-  OUTLINE_BUTTON_CLASS,
-} from "@/features/pages/Orders/OrderPage/lib/styles";
+import { ICON_SIZE } from "@/features/pages/Orders/OrderPage/lib/styles";
+import { browserTimeZone } from "@/features/pages/SellerOrders/lib/format";
 
 type Props = {
   order: Order;
@@ -16,42 +16,54 @@ type Props = {
   onCancel: () => void;
 };
 
-/** Back out of the screen, the order number with its date, print and cancel. */
+/**
+ * The order header of the mockup: the way back, the number with its copy
+ * control, the line count with the placed date, and at the far right the status
+ * pill with the cancel action (spec 0027, AC-2). There is no print control,
+ * because nothing behind it could print a receipt (AC-10).
+ */
 const OrderPageHeader = ({ order, isCancelling, onCancel }: Props) => {
   const router = useRouter();
   const t = useTranslations("orders");
   const format = useFormatter();
 
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3 lg:gap-4">
+    <div className="flex flex-wrap items-start justify-between gap-2.5">
+      <div className="flex items-start gap-1">
         <Button
           onClick={() => router.back()}
           variant="ghost"
-          size="icon"
-          className="text-muted-foreground h-8 w-8 lg:h-10 lg:w-10"
+          size="icon-sm"
+          className="text-muted-foreground"
+          aria-label={t("backToOrders")}
+          data-testid="order-back"
         >
-          <ArrowLeft className={ICON_SIZE} />
+          <ArrowLeft className={ICON_SIZE} aria-hidden />
         </Button>
         <div>
-          <h1 className="text-xl lg:text-2xl font-bold">
-            {t("number", { number: order.id.slice(-8) })}
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            {t("placedOn", {
-              date: format.dateTime(new Date(order.createdAt), {
-                dateStyle: "long",
-                timeStyle: "short",
-              }),
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1
+              className="text-2xl font-bold tracking-[-0.02em]"
+              data-testid="order-number"
+            >
+              {t("number", { number: order.id.slice(-8) })}
+            </h1>
+            <CopyOrderNumber orderId={order.id} />
+          </div>
+          <p
+            className="mt-1.5 text-sm text-muted-foreground"
+            data-testid="order-subtitle"
+          >
+            {t("itemsCount", { count: order.orderItems.length })} ·{" "}
+            {format.dateTime(new Date(order.createdAt), {
+              dateStyle: "long",
+              timeZone: browserTimeZone(),
             })}
           </p>
         </div>
       </div>
-      <div className="flex gap-2 lg:gap-3">
-        <Button variant="outline" size="sm" className={OUTLINE_BUTTON_CLASS}>
-          <Printer className={ICON_SIZE} />{" "}
-          <span className="ml-1 lg:ml-2">{t("print")}</span>
-        </Button>
+      <div className="flex items-center gap-2">
+        <OrderStatusBadge status={order.status} testId="order-status-pill" />
         {canCancel(order.status) && (
           <CancelOrderDialog
             order={order}
