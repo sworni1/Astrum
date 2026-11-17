@@ -421,6 +421,8 @@ Bugs found while verifying a slice, recorded here once the fix lands so the plan
 Kept so the plan stays honest, built only when the loop above runs.
 
 - **Registration answers 500**: `POST /api/auth/register` fails before the insert for any fresh address, through the gateway and on the auth service directly, and writes no `User` row · bug, found while verifying spec 0018
+- **Popover and Select surfaces paint transparent**: the delivery date calendar and the pickup point list show the receipt fields behind them, because the popover content computes `opacity: 0` with an `enter` animation that never settles and the select panel computes a transparent background · bug, found while verifying spec 0024
+- **No in screen way back to the cart**: `/checkout` carries no link or button to `/cart`, so only the browser back button and the navbar return a customer with their ticks · from spec 0024 · needs a decision
 - **The mobile menu trigger is not a control**: the navbar opens the sheet from a bare `LuMenu` icon with an `onClick`, so it takes no keyboard focus and has no accessible name, and every page that carries the navbar inherits it (`apps/customer/src/features/layout/Navbar/index.tsx`) · bug, found while verifying spec 0017
 - **Courier delivery**: a shipping address instead of a pickup point · needs a decision
 - **Returns and refunds** · needs a decision · from spec 0015 (a paid order cancelled now owes a manual refund and logs `payment.refund_owed`)
@@ -444,8 +446,9 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Delivery method management screen**: create a method, change its price, switch it off; an operator still edits rows by hand · from spec 0009 · needs a decision
 - **Confirming a changed delivery price**: the create call stores the price in force at the commit without comparing it with what the customer saw; a `409 SHIPPING_PRICE_CHANGED` needs the request to carry the displayed price · from spec 0009 · needs a decision
 - **Order total rule in AGENTS.md**: the `grandTotal = totalPrice + deliveryPrice` rule that no constraint enforces · from spec 0009
-- **Cart currency**: the cart read carries none, so the checkout cannot offer only the methods that match the cart · from spec 0009
+- **Cart currency**: the cart read carries none, so the checkout cannot offer only the methods that match the cart · from spec 0009, 0024
 - **Dollar sign on the other surfaces**: product pages, the cart and the wishlist still print `$` over ruble amounts · from spec 0009
+- **Cart line subtitle and stock badge**: `/cart` selects no `description` and no `isOutOfStock` (`cartPublicSelect`), so a checkout line cannot print the mockup's size line or a stock badge · from spec 0024
 - **Delivery method names in Russian**: names are English database data shown in the Russian interface · from spec 0009 · needs a decision
 - **Free delivery threshold**: the catalog claims free shipping over $100 with no rule behind it · from spec 0009 · needs a decision
 - **Seller facing product management screen**: create, edit and publish products from the storefront; the gateway route and DTO exist · from spec 0008 · needs a decision
@@ -493,6 +496,9 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Two seller refusal paths that always answer `404`**: remove them once no stale storefront bundle can be older than one release · from spec 0020
 - **An unused order status hook**: `apps/customer/src/hooks/order/useUpdateOrderItemStatus.ts` has no importer and targets a path that now always refuses · from spec 0020
 - **The last page fallback of the seller panel is unreachable**: the page number is component state and never in the URL, `Далее` is disabled on the last page and nothing revalidates while mounted, so the effect that follows an answer with no rows and `total` above zero can never fire; a page number in the URL or a revalidating read would make it live · from spec 0020 · needs a decision
+- **Receipt actions on the order screen**: download, email and print need a receipt document, a PDF render and a delivery path, and nothing in the schema or the gateway carries one · from customer row 16 · needs a decision
+- **Discount and savings on an order**: the order mockup prints a discount line and a savings note, while `Order` holds `totalPrice`, `deliveryPrice` and `grandTotal` only · from customer row 16 · needs a decision
+- **Support contact from the order screen**: the order mockup's support card names no channel and no destination · from customer row 16 · needs a decision
 
 ## Legend
 
