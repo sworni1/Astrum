@@ -1,5 +1,3 @@
-"use client";
-
 import { CalendarIcon } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import type { Control } from "react-hook-form";
@@ -18,13 +16,24 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  DATE_TRIGGER,
+  FIELD,
+  FIELD_LABEL,
+  REQUIRED_MARK,
+} from "@/features/pages/Checkout/lib/styles";
+import { browserTimeZone } from "@/features/pages/SellerOrders/lib/format";
 import { cn } from "@/lib/utils";
 
 type Props = {
   control: Control<CheckoutFormData>;
 };
 
-const DeliveryDate = ({ control }: Props) => {
+/**
+ * The delivery date stays a `Popover` over a `Calendar` at the mockup's control
+ * geometry, never a native date input (spec 0024, AC-12).
+ */
+const DeliveryDateField = ({ control }: Props) => {
   const t = useTranslations("cart");
   const format = useFormatter();
 
@@ -33,21 +42,28 @@ const DeliveryDate = ({ control }: Props) => {
       control={control}
       name="deliveryDate"
       render={({ field }) => (
-        <FormItem className="flex flex-col">
-          <FormLabel>{t("deliveryDate")}</FormLabel>
+        <FormItem className={FIELD}>
+          <FormLabel className={FIELD_LABEL}>
+            {t("deliveryDate")}
+            <span className={REQUIRED_MARK}>*</span>
+          </FormLabel>
           <Popover>
             <PopoverTrigger asChild>
               <FormControl>
                 <Button
+                  type="button"
                   variant="outline"
                   className={cn(
-                    "w-full justify-start text-left font-normal",
+                    DATE_TRIGGER,
                     !field.value && "text-muted-foreground",
                   )}
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  <CalendarIcon className="mr-2 size-4" />
                   {field.value ? (
-                    format.dateTime(field.value, { dateStyle: "long" })
+                    format.dateTime(field.value, {
+                      dateStyle: "long",
+                      timeZone: browserTimeZone(),
+                    })
                   ) : (
                     <span>{t("pickDeliveryDate")}</span>
                   )}
@@ -55,7 +71,7 @@ const DeliveryDate = ({ control }: Props) => {
               </FormControl>
             </PopoverTrigger>
             <PopoverContent
-              className="w-auto p-0 bg-background border"
+              className="w-auto border bg-background p-0"
               align="start"
             >
               <Calendar
@@ -76,4 +92,4 @@ const DeliveryDate = ({ control }: Props) => {
   );
 };
 
-export default DeliveryDate;
+export default DeliveryDateField;

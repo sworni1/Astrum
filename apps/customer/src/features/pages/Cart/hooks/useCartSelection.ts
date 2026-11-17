@@ -1,9 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  readCheckoutSelection,
+  writeCheckoutSelection,
+} from "@/common/helpers/checkoutSelection";
 import type { ProductCartProps } from "@/common/types/product.types";
 
 type CartSelection = {
   selectedIds: Set<string>;
-  selectedItems: ProductCartProps[];
   subtotal: number;
   allSelected: boolean;
   someSelected: boolean;
@@ -11,8 +14,37 @@ type CartSelection = {
   toggleAll: (checked: boolean) => void;
 };
 
+/**
+ * The ticked lines of the cart. It is the only writer of the checkout handoff
+ * key: a restored id the live cart no longer holds is dropped, and the write
+ * happens on every change so a return from `/checkout` finds the same lines
+ * (spec 0024, AC-2, AC-6).
+ */
 export const useCartSelection = (items: ProductCartProps[]): CartSelection => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const restored = useRef(false);
+
+  useEffect(() => {
+    if (restored.current || items.length === 0) {
+      return;
+    }
+
+    restored.current = true;
+    const live = new Set(items.map((item) => item.id));
+    const stored = readCheckoutSelection().filter((id) => live.has(id));
+
+    if (stored.length > 0) {
+      setSelectedIds(new Set(stored));
+    }
+  }, [items]);
+
+  useEffect(() => {
+    if (!restored.current) {
+      return;
+    }
+
+    writeCheckoutSelection([...selectedIds]);
+  }, [selectedIds]);
 
   const selectedItems = useMemo(
     () => items.filter((item) => selectedIds.has(item.id)),
@@ -44,7 +76,6 @@ export const useCartSelection = (items: ProductCartProps[]): CartSelection => {
 
   return {
     selectedIds,
-    selectedItems,
     subtotal,
     allSelected: items.length > 0 && selectedIds.size === items.length,
     someSelected: selectedIds.size > 0,

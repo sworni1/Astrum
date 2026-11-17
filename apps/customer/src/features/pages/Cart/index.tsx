@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Currency } from "@/common/types/product.types";
 import { useGetCart } from "@/hooks/product/useCart/useGetCart";
 import CartEmpty from "./components/CartEmpty";
@@ -8,18 +8,15 @@ import CartHeader from "./components/CartHeader";
 import CartItemsList from "./components/CartItemsList";
 import CartLoading from "./components/CartLoading";
 import CartSummary from "./components/CartSummary";
-import CheckoutScreen from "./components/CheckoutScreen";
 import SelectAllBar from "./components/SelectAllBar";
 import { useCartSelection } from "./hooks/useCartSelection";
 import { useLoadFailureToast } from "./hooks/useLoadFailureToast";
 
 export default function Cart() {
   const { cart, cartIsLoading, cartError } = useGetCart();
-  const [showCheckout, setShowCheckout] = useState(false);
   const items = useMemo(() => cart ?? [], [cart]);
   const {
     selectedIds,
-    selectedItems,
     subtotal,
     allSelected,
     someSelected,
@@ -35,16 +32,6 @@ export default function Cart() {
 
   if (items.length === 0) {
     return <CartEmpty />;
-  }
-
-  if (showCheckout) {
-    return (
-      <CheckoutScreen
-        cartItems={selectedItems}
-        subtotal={subtotal}
-        onBack={() => setShowCheckout(false)}
-      />
-    );
   }
 
   return (
@@ -72,7 +59,6 @@ export default function Cart() {
             selectedCount={selectedIds.size}
             subtotal={subtotal}
             currency={Currency.RUB}
-            onCheckout={() => setShowCheckout(true)}
           />
         </div>
       </div>

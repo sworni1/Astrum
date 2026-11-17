@@ -29,9 +29,14 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("next-intl", () => ({
+  useLocale: () => "ru",
   useTranslations: (namespace: string) => (key: string) =>
     `${namespace}.${key}`,
   useFormatter: () => ({ dateTime: (value: Date) => value.toISOString() }),
+}));
+
+vi.mock("next/image", () => ({
+  default: () => <span data-testid="line-image" />,
 }));
 
 vi.mock("@/hooks/order/useCheckout", () => ({
@@ -48,15 +53,15 @@ vi.mock("@/hooks/pickup/usePickupPoints", () => ({
 
 vi.mock("@/common/helpers/showToast", () => ({ showToast: state.toast }));
 
-import CheckoutForm from "@/features/pages/Cart/components/CheckoutForm";
+import CheckoutForm from "@/features/pages/Checkout/components/CheckoutForm";
 
 const METHODS: Method[] = [
   { id: "sm-1", name: "Standard Delivery", price: 299, currency: "RUB" },
   { id: "sm-2", name: "Express Delivery", price: 799, currency: "RUB" },
 ];
 
-const CART = [
-  { id: "p-1", name: "Drill", price: 56, quantityInCart: 2 },
+const LINES = [
+  { id: "p-1", name: "Drill", price: 56, quantityInCart: 2, previewImage: "" },
 ] as never;
 
 let container: HTMLDivElement;
@@ -74,20 +79,23 @@ const render = async (): Promise<void> => {
   root = createRoot(container);
 
   await act(async () => {
-    root.render(<CheckoutForm cartItems={CART} subtotal={112} />);
+    root.render(<CheckoutForm lines={LINES} />);
   });
   await flush();
 };
 
 const text = (): string => container.textContent ?? "";
-const trigger = (): HTMLButtonElement =>
-  container.querySelector("[data-slot='select-trigger']") as HTMLButtonElement;
 const submit = (): HTMLButtonElement =>
   container.querySelector("button[type='submit']") as HTMLButtonElement;
 const buttonByText = (label: string): HTMLButtonElement =>
   [...container.querySelectorAll("button")].find(
     (button) => button.textContent?.trim() === label,
   ) as HTMLButtonElement;
+const methods = (): HTMLInputElement[] => [
+  ...container.querySelectorAll<HTMLInputElement>(
+    "input[name='shippingMethodId']",
+  ),
+];
 
 describe("CheckoutForm delivery states", () => {
   beforeEach(() => {
@@ -108,21 +116,20 @@ describe("CheckoutForm delivery states", () => {
     container?.remove();
   });
 
-  it("показывает загрузку на самом триггере и закрывает выбор (AC-9, AC-10)", async () => {
+  it("держит загрузку на способе доставки и закрывает отправку (AC-9, AC-14)", async () => {
     state.shipping.isLoading = true;
 
     await render();
 
-    expect(trigger().textContent).toContain("cart.shippingLoading");
-    expect(trigger().disabled).toBe(true);
+    expect(text()).toContain("cart.shippingMethod");
+    expect(text()).toContain("cart.hintShippingLoading");
     expect(submit().disabled).toBe(true);
   });
 
-  it("показывает недоступность доставки и повторяет запрос (AC-10)", async () => {
+  it("показывает недоступность доставки и повторяет запрос (AC-15)", async () => {
     await render();
 
     expect(text()).toContain("cart.shippingUnavailable");
-    expect(trigger().disabled).toBe(true);
     expect(submit().disabled).toBe(true);
 
     await act(async () => {
@@ -133,38 +140,40 @@ describe("CheckoutForm delivery states", () => {
     expect(state.shipping.mutate).toHaveBeenCalledTimes(1);
   });
 
-  it("держит ту же недоступность, когда запрос упал (AC-10)", async () => {
+  it("держит ту же недоступность, когда запрос упал (AC-15)", async () => {
     state.shipping.error = { message: "gateway is down" };
 
     await render();
 
     expect(text()).toContain("cart.shippingUnavailable");
-    expect(trigger().disabled).toBe(true);
+    expect(submit().disabled).toBe(true);
   });
 
-  it("показывает три суммы в рублях без знака доллара (AC-9)", async () => {
+  it("печатает три суммы в рублях и цену каждого способа (AC-11, AC-13)", async () => {
     state.shipping.methods = METHODS;
 
     await render();
 
-    expect(text()).toContain("₽112.00");
-    expect(text()).toContain("₽0.00");
-    expect(text()).toContain("₽112.00");
+    expect(text()).toContain("112,00\u00A0₽");
+    expect(text()).toContain("0,00\u00A0₽");
     expect(text()).not.toContain("$");
-    expect(trigger().disabled).toBe(false);
+    expect(text()).toContain("Standard Delivery");
+    expect(text()).toContain("299,00\u00A0₽");
+    expect(text()).toContain("799,00\u00A0₽");
+    expect(methods()).toHaveLength(2);
   });
 
-  it("не отправляет заказ, пока способ доставки не выбран (AC-10)", async () => {
+  it("не отправляет заказ, пока способ доставки не выбран (AC-14)", async () => {
     state.shipping.methods = METHODS;
 
     await render();
 
     expect(text()).toContain("cart.placeOrder");
-    expect(text()).not.toContain("${price}");
+    expect(text()).toContain("cart.hintShippingMethod");
     expect(submit().disabled).toBe(true);
   });
 
-  it("держит поле адреса, пока способ не выбран, и не показывает поле точки (AC-6)", async () => {
+  it("держит поле адреса, пока способ не выбран, и не показывает поле точки (AC-8)", async () => {
     state.shipping.methods = [
       ...METHODS,
       {
@@ -182,7 +191,6 @@ describe("CheckoutForm delivery states", () => {
     await render();
 
     expect(container.querySelector("textarea")).not.toBeNull();
-    expect(text()).toContain("cart.fullAddress");
     expect(text()).toContain("cart.deliveryAddress");
     expect(text()).not.toContain("cart.pickupSelect");
     expect(submit().disabled).toBe(true);

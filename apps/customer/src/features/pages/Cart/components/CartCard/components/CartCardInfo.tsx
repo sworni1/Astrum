@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { formatMoney } from "@/common/helpers/money";
+import { Currency } from "@/common/types/product.types";
 
 type Props = {
   id: string;
@@ -11,6 +13,7 @@ type Props = {
 
 const CartCardInfo = ({ id, name, price }: Props) => {
   const t = useTranslations("cart");
+  const locale = useLocale();
 
   return (
     <div>
@@ -22,7 +25,7 @@ const CartCardInfo = ({ id, name, price }: Props) => {
         {"Grey"} • {15}
       </p>
       <p className="text-sm font-medium mt-1">
-        {t("eachPrice", { price: price.toFixed(2) })}
+        {t("eachPrice", { price: formatMoney(price, Currency.RUB, locale) })}
       </p>
     </div>
   );

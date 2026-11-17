@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PickupPoint } from "@/common/types/order.types";
 import type { CheckoutFormData } from "@/common/zodSchemes/checkout.scheme";
 import { Form } from "@/components/ui/form";
-import PickupPointField from "@/features/pages/Cart/components/CheckoutForm/components/formFields/PickupPointField";
+import PickupPointField from "@/features/pages/Checkout/components/fields/PickupPointField";
 
 vi.mock("next-intl", () => ({
   useTranslations: (namespace: string) => (key: string) =>
@@ -59,7 +59,7 @@ describe("PickupPointField", () => {
     container?.remove();
   });
 
-  it("читает загрузку на триггере и закрывает выбор (AC-6)", async () => {
+  it("читает загрузку на триггере и закрывает выбор (AC-12)", async () => {
     await render({
       points: [],
       isLoading: true,
@@ -71,7 +71,7 @@ describe("PickupPointField", () => {
     expect(trigger().disabled).toBe(true);
   });
 
-  it("зовёт точку к выбору и держит выбор открытым (AC-6)", async () => {
+  it("зовёт точку к выбору и держит выбор открытым (AC-12)", async () => {
     await render({
       points: [{ id: "pp-1", name: "Central Pickup", address: "Tverskaya 12" }],
       isLoading: false,
@@ -83,7 +83,7 @@ describe("PickupPointField", () => {
     expect(trigger().disabled).toBe(false);
   });
 
-  it("показывает отказ, закрывает выбор и повторяет запрос (AC-6)", async () => {
+  it("показывает отказ, закрывает выбор и повторяет запрос (AC-15)", async () => {
     const onRetry = vi.fn();
 
     await render({
