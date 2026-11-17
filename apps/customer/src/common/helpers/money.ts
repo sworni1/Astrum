@@ -1,5 +1,4 @@
 import { Currency } from "@/common/types/product.types";
-import { getCurrencyEmoji } from "./getCurrencyEmoji";
 
 /**
  * Maps the currency string the API returns onto the enum. An unknown value
@@ -16,6 +15,20 @@ export const toCurrency = (value: string): Currency => {
   }
 };
 
-/** One amount with its sign and two decimals, in the given currency (AC-9). */
-export const formatMoney = (amount: number, currency: Currency): string =>
-  `${getCurrencyEmoji(toCurrency(currency))}${amount.toFixed(2)}`;
+/**
+ * One amount in the reader's own locale, grouped and signed by `Intl`: `ru`
+ * prints `46 332,00 ₽` and `en` prints `₽46,332.00`. `narrowSymbol` is the one
+ * option that keeps the sign glued to the digits, because the default display
+ * prints `RUB 46,332.00` in English (spec 0026, AC-14).
+ */
+export const formatMoney = (
+  amount: number,
+  currency: Currency,
+  locale: string,
+): string =>
+  new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: toCurrency(currency),
+    currencyDisplay: "narrowSymbol",
+  }).format(amount);
+

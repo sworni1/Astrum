@@ -99,7 +99,7 @@
     "proceed": "Перейти к оформлению ({count, plural, one {# товар} few {# товара} many {# товаров} other {# товара}})",
     "empty": "Ваша корзина пуста",
     "back": "Назад в корзину",
-    "eachPrice": "${price} за штуку",
+    "eachPrice": "{price} за штуку",
     "removeTitle": "Удалить товар из корзины",
     "removeText": "Вы уверены, что хотите удалить выбранный товар? Действие необратимо.",
     "failed": "Не удалось загрузить корзину",
@@ -110,11 +110,10 @@
     "checkoutSubtitle": "Заполните данные заказа ниже",
     "checkoutSelectedItems": "Выбранные товары ({count})",
     "deliveryAddress": "Адрес доставки",
-    "fullAddress": "Полный адрес *",
     "fullAddressPlaceholder": "Укажите полный адрес доставки: улица, город, индекс и страна",
-    "shippingMethod": "Способ доставки *",
+    "shippingMethod": "Способ доставки",
     "selectShippingMethod": "Выберите способ доставки",
-    "deliveryDate": "Желаемая дата доставки *",
+    "deliveryDate": "Желаемая дата доставки",
     "pickDeliveryDate": "Выберите дату доставки",
     "paymentMethod": "Способ оплаты",
     "paymentOnlineCard": "Банковская карта",
@@ -137,7 +136,7 @@
     "shippingInactive": "Этот способ доставки больше не предлагается. Выберите другой.",
     "shippingUnknown": "Такого способа доставки больше нет. Выберите другой.",
     "shippingCurrencyMismatch": "Этот способ доставки указан в другой валюте.",
-    "pickupPoint": "Пункт выдачи *",
+    "pickupPoint": "Пункт выдачи",
     "pickupSelect": "Выберите пункт выдачи",
     "pickupLoading": "Загружаем пункты выдачи…",
     "pickupRetry": "Повторить",
@@ -145,7 +144,20 @@
     "pickupLoadFailed": "Не удалось загрузить пункты выдачи.",
     "unknownPickupPoint": "Такого пункта выдачи больше нет. Выберите другой.",
     "pickupInactive": "Этот пункт выдачи закрыт. Выберите другой.",
-    "pickupNotAllowed": "Этот способ доставки не доставляет в пункт выдачи. Выберите другой."
+    "pickupNotAllowed": "Этот способ доставки не доставляет в пункт выдачи. Выберите другой.",
+    "retry": "Повторить",
+    "nothingSelected": "Выберите хотя бы один товар для оформления",
+    "selectionPartlyUnavailable": "Часть выбранных товаров больше недоступна",
+    "checkoutSummaryTitle": "Ваш заказ",
+    "receiptTitle": "Получение",
+    "lineQuantity": "{count, plural, one {# шт.} few {# шт.} many {# шт.} other {# шт.}}",
+    "hintShippingLoading": "Ждём загрузку способов доставки",
+    "hintShippingUnavailable": "Без способа доставки заказ не оформить",
+    "hintPickupUnavailable": "Без пункта выдачи заказ не оформить",
+    "hintShippingMethod": "Выберите способ доставки, чтобы продолжить",
+    "hintPickupPoint": "Выберите пункт выдачи, чтобы продолжить",
+    "hintDeliveryAddress": "Введите адрес доставки, чтобы продолжить",
+    "hintDeliveryDate": "Выберите дату доставки, чтобы продолжить"
   },
   "wishlist": {
     "title": "Избранное",
@@ -161,7 +173,37 @@
     "emptyText": "Вы ещё ничего не заказывали. Начните покупать, и заказы появятся здесь!",
     "failed": "Не удалось загрузить заказы",
     "number": "Заказ #{number}",
+    "copyNumber": "Скопировать номер заказа",
+    "copySuccess": "Номер заказа скопирован",
+    "copyFailed": "Не удалось скопировать номер заказа",
+    "stats": {
+      "orders": "Всего заказов",
+      "spent": "Потрачено",
+      "received": "Получено"
+    },
+    "tabs": {
+      "all": "Все {count}",
+      "delivered": "Доставлены {count}",
+      "canceled": "Отменены {count}"
+    },
+    "search": {
+      "placeholder": "Номер заказа или товар",
+      "label": "Поиск по заказам"
+    },
+    "fields": {
+      "number": "Номер заказа",
+      "date": "Дата заказа",
+      "amount": "Сумма"
+    },
+    "quantity": "{count} шт.",
+    "lineMeta": "{kind} · {count, plural, one {# шт.} few {# шт.} many {# шт.} other {# шт.}}",
+    "emptySearchTitle": "Ничего не найдено",
+    "emptySearchText": "По запросу «{query}» заказов нет. Измените запрос или очистите поле.",
+    "emptyTabTitle": "В этой вкладке пусто",
+    "emptyTabText": "Заказов с таким статусом нет. Откройте «Все», чтобы увидеть остальные.",
+    "retry": "Повторить",
     "totalPaid": "Оплачено",
+    "totalNote": "Сводка по оплате заказа",
     "itemsCount": "{count, plural, one {# товар} few {# товара} many {# товаров} other {# товара}}",
     "viewDetails": "Подробнее",
     "cancelOrder": "Отменить заказ",
@@ -172,8 +214,6 @@
     "notFoundTitle": "Заказ не найден",
     "notFoundText": "Заказа, который вы ищете, нет или у вас нет прав на его просмотр.",
     "backToOrders": "Назад к заказам",
-    "placedOn": "Оформлен {date}",
-    "print": "Печать",
     "cancel": "Отмена",
     "cancelDialog": {
       "text": "Все позиции, которые ещё не отменены, вернутся на склад, и отменить это на этом экране нельзя.",
@@ -191,26 +231,16 @@
     },
     "deliveryAddress": "Адрес доставки",
     "paymentMethod": "Способ оплаты",
-    "shippingMethod": "Способ доставки",
-    "price": "Стоимость: {price}",
-    "summary": "Итог заказа",
-    "subtotal": "Стоимость товаров",
-    "shipping": "Доставка",
     "total": "Итого",
-    "deliveryStatus": "Статус доставки",
-    "deliveryDate": "Дата доставки: {date}",
+    "goods": "Товары",
+    "delivery": "Доставка",
     "pickupPoint": "Пункт выдачи",
-    "pickupDate": "Дата получения: {date}",
-    "handedOverAt": "Выдан: {date}",
-    "itemsTitle": "Товары в заказе ({count})",
+    "receiving": "Получение",
+    "receivingLine": "{method} · {point}",
+    "handedOverOn": "Выдан {date}",
+    "expectedOn": "Ожидается {date}",
     "productFallback": "Товар {id}",
     "productImage": "Изображение товара",
-    "columns": {
-      "product": "Товар",
-      "quantity": "Количество",
-      "price": "Цена",
-      "status": "Статус"
-    },
     "status": {
       "pending": "В обработке",
       "confirmed": "Подтверждён",
@@ -476,16 +506,32 @@
   "seller": {
     "title": "Продажи",
     "subtitle": "Строки заказов, которые должна собрать ваша лавка.",
-    "found": "{count, plural, one {# заказ} few {# заказа} many {# заказов} other {# заказа}}",
+    "found": "{count, plural, one {# позиция} few {# позиции} many {# позиций} other {# позиции}}",
     "orderNumber": "Заказ №{number}",
-    "paymentLabel": "Оплата: {status}",
-    "statusCount": "{status}: {count}",
     "productFallback": "Товар {id}",
     "retry": "Повторить",
-    "handedOverAt": "Выдан: {date}",
+    "quantity": "{count} шт.",
+    "handedOverAt": "выдан {date}",
+    "stats": {
+      "revenue": "Выручка",
+      "units": "Продано, шт.",
+      "delivered": "Доставлено",
+      "canceled": "Отменено"
+    },
+    "tabs": {
+      "all": "Все {count}",
+      "delivered": "Доставлены {count}",
+      "canceled": "Отменены {count}",
+      "label": "Вкладки продаж"
+    },
+    "search": {
+      "placeholder": "Номер заказа или товар",
+      "label": "Поиск по продажам"
+    },
     "columns": {
       "orderNumber": "Заказ",
       "product": "Товар",
+      "receipt": "Получение",
       "subtotal": "Сумма",
       "date": "Дата",
       "status": "Статус"
@@ -495,6 +541,10 @@
       "back": "Назад",
       "next": "Вперёд",
       "pageOf": "Страница {page} из {totalPages}"
+    },
+    "receipt": {
+      "courier": "Курьер",
+      "noAddress": "Адрес не указан"
     },
     "states": {
       "loadingLabel": "Загрузка строк заказов",
@@ -506,6 +556,10 @@
       "emptyTitle": "Нечего собирать",
       "emptyText": "Пока нет ни одного заказа со строками вашей лавки."
     },
+    "emptySearchTitle": "Ничего не найдено",
+    "emptySearchText": "По запросу «{query}» позиций нет. Измените запрос или очистите поле.",
+    "emptyTabTitle": "В этой вкладке пусто",
+    "emptyTabText": "Позиций с таким статусом нет. Откройте «Все», чтобы увидеть остальные.",
     "onboarding": {
       "title": "Откройте свою лавку",
       "subtitle": "Назовите лавку один раз, и она откроется для этого аккаунта.",
@@ -685,7 +739,8 @@
           "validation": "Запрос не подошёл. Обновите список и попробуйте снова.",
           "generic": "Действие не прошло. Попробуйте через минуту.",
           "retry": "Попробовать снова"
-        }
+        },
+        "deliveryDate": "Дата доставки: {date}"
       }
     },
     "profile": {
