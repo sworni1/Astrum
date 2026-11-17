@@ -145,15 +145,12 @@ describeWithDatabase("Seller order read against Postgres", () => {
     const otherRead = await sellers.getSellerOrders(otherSellerId);
 
     expect(ownRead.total).toBe(1);
-    expect(ownRead.orders[0].orderItems.map((item) => item.id)).toEqual([
-      sellerLine.id,
-    ]);
-    expect(ownRead.orders[0].orderItems[0].name).toBe(`${suffix} drill`);
-    expect(ownRead.orders[0]).not.toHaveProperty("totalPrice");
-    expect(ownRead.orders[0].orderItems[0]).not.toHaveProperty("businessId");
-    expect(ownRead.orders[0].orderItems[0]).not.toHaveProperty("userId");
-    expect(otherRead.orders[0].orderItems.map((item) => item.id)).toEqual([
-      otherLine.id,
-    ]);
+    expect(ownRead.items.map((item) => item.id)).toEqual([sellerLine.id]);
+    expect(ownRead.items[0].name).toBe(`${suffix} drill`);
+    expect(ownRead.items[0]).not.toHaveProperty("totalPrice");
+    expect(ownRead.items[0]).not.toHaveProperty("businessId");
+    expect(ownRead.items[0]).not.toHaveProperty("userId");
+    expect(ownRead.items[0].subtotal).toBe(20);
+    expect(otherRead.items.map((item) => item.id)).toEqual([otherLine.id]);
   }, 30000);
 });
