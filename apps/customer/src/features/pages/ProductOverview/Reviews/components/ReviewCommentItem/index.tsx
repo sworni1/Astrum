@@ -10,6 +10,7 @@ import type {
 } from "@/common/types/review.types";
 import { Button } from "@/components/ui/button";
 import DeleteReviewCommentDialog from "@/features/pages/ProductOverview/Reviews/components/DeleteReviewCommentDialog";
+import { browserTimeZone } from "@/features/pages/SellerOrders/lib/format";
 import { useDeleteReviewComment } from "@/hooks/review/useDeleteReviewComment";
 
 type Props = {
@@ -103,6 +104,7 @@ const ReviewCommentItem = ({
               {format.dateTime(new Date(comment.createdAt), {
                 dateStyle: "medium",
                 timeStyle: "short",
+                timeZone: browserTimeZone(),
               })}
             </time>
           </div>

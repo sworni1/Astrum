@@ -3,7 +3,7 @@
 import { Star } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { formatMoney } from '@/common/helpers/money';
 import { showToast } from '@/common/helpers/showToast';
 import ProductOverviewSkeleton from '@/components/skeletons/ProductOverviewSkeleton';
@@ -24,6 +24,7 @@ import { formatAverageRating } from './Reviews/lib/distribution';
 
 export default function ProductOverview() {
   const t = useTranslations('product');
+  const locale = useLocale();
   const reviewsT = useTranslations('reviews');
   const params = useParams<{ productId: string }>();
   const productId = params.productId;
@@ -55,7 +56,7 @@ export default function ProductOverview() {
 
             <div className='flex items-center gap-4'>
               <span className='text-3xl font-bold'>
-                {formatMoney(product.price, product.currency)}
+                {formatMoney(product.price, product.currency, locale)}
               </span>
               {aggregate ? (
                 <Link

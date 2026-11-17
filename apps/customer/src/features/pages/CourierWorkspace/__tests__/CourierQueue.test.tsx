@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next-intl", () => ({
+  useLocale: () => "ru",
   useTranslations:
     (namespace: string) =>
     (key: string): string =>
@@ -157,9 +158,9 @@ describe("CourierQueue", () => {
 
     expect(card?.textContent).toContain("orders.number");
     expect(card?.textContent).toContain("14 Nov 2026, 11:30");
-    expect(card?.textContent).toContain("orders.deliveryDate");
+    expect(card?.textContent).toContain("staff.courier.queue.deliveryDate");
     expect(card?.textContent).toContain("Drill × 2");
-    expect(card?.textContent).toContain("119.98");
+    expect(card?.textContent).toContain("119,98\u00A0₽");
     expect(card?.textContent).toContain("orders.itemStatus.shipped");
     expect(byId("courier-order-address")).toBeNull();
     expect(triggers()).toHaveLength(1);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { itemStatusKey } from "@/common/helpers/itemStatus";
 import { formatMoney } from "@/common/helpers/money";
 import { browserTimeZone } from "@/features/pages/SellerOrders/lib/format";
@@ -24,8 +24,15 @@ type Props = {
  * the controls. The delivery address shows only on a parcel the caller claimed,
  * because the gateway answers `null` on every pool row (spec 0019, AC-3, AC-11).
  */
-const CourierOrderCard = ({ order, scope, pending, onRun, onClosed }: Props) => {
+const CourierOrderCard = ({
+  order,
+  scope,
+  pending,
+  onRun,
+  onClosed,
+}: Props) => {
   const t = useTranslations("staff.courier.queue");
+  const locale = useLocale();
   const tOrders = useTranslations("orders");
   const tStatus = useTranslations("orders.itemStatus");
   const format = useFormatter();
@@ -49,11 +56,14 @@ const CourierOrderCard = ({ order, scope, pending, onRun, onClosed }: Props) => 
 
       <p className="mt-1 text-sm text-muted-foreground">
         {/*
-         * No zone override: the request config pins UTC and the checkout writes
-         * noon local, which is what keeps the calendar date the buyer picked.
+         * The browser zone prints the day the buyer picked, because the checkout
+         * writes noon local and the request config pins the formatter to UTC.
          */}
-        {tOrders("deliveryDate", {
-          date: format.dateTime(deliveryAt, { dateStyle: "long" }),
+        {t("deliveryDate", {
+          date: format.dateTime(deliveryAt, {
+            dateStyle: "long",
+            timeZone: browserTimeZone(),
+          }),
         })}
       </p>
 
@@ -70,7 +80,7 @@ const CourierOrderCard = ({ order, scope, pending, onRun, onClosed }: Props) => 
                 {line.name} × {line.quantity}
               </span>
               <span className="text-muted-foreground">
-                {formatMoney(line.price, line.currency)} ·{" "}
+                {formatMoney(line.price, line.currency, locale)} ·{" "}
                 {statusKey ? tStatus(statusKey) : line.status}
               </span>
             </li>
@@ -91,7 +101,7 @@ const CourierOrderCard = ({ order, scope, pending, onRun, onClosed }: Props) => 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm" data-testid="courier-order-total">
           <span className="text-muted-foreground">{t("totalLabel")}</span>{" "}
-          <strong>{formatMoney(order.grandTotal, order.currency)}</strong>
+          <strong>{formatMoney(order.grandTotal, order.currency, locale)}</strong>
         </p>
 
         <OrderActions
