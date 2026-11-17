@@ -127,32 +127,83 @@ describe("OrderController", () => {
     });
   });
 
-  it("отдаёт список заказов с тремя суммами числом (AC-7)", async () => {
-    jest.spyOn(OrderService.prototype, "getOrdersByUserId").mockResolvedValue([
-      {
-        id: "order-1",
-        totalPrice: new Prisma.Decimal("10.00"),
-        deliveryPrice: new Prisma.Decimal("299.00"),
-        grandTotal: new Prisma.Decimal("309.00"),
-        orderItemsCount: 2,
-        previewImage: "https://cdn.test/preview.png",
-      },
-    ] as never);
+  it("отдаёт список с фильтрами, счётчиками и потраченным числом (AC-1, AC-5)", async () => {
+    const getOrders = jest
+      .spyOn(OrderService.prototype, "getOrdersByUserId")
+      .mockResolvedValue({
+        items: [
+          {
+            id: "order-1",
+            status: "DELIVERED",
+            createdAt: new Date("2026-11-14T10:00:00.000Z"),
+            grandTotal: new Prisma.Decimal("309.00"),
+            currency: "RUB",
+            orderItems: [
+              {
+                id: "line-1",
+                name: "Parker Urban T200",
+                previewImage: "",
+                quantity: 18,
+                status: "DELIVERED",
+                receiptDate: null,
+              },
+            ],
+          },
+        ],
+        counts: { all: 3, delivered: 2, canceled: 1 },
+        spent: [{ currency: "RUB", amount: new Prisma.Decimal("309.00") }],
+      } as never);
     const res = createMockResponse();
 
-    await new OrderController().getOrdersByUserId(createRequest(), res);
+    await new OrderController().getOrdersByUserId(
+      createRequest({ query: { status: "DELIVERED", q: " parker " } }),
+      res,
+    );
 
+    expect(getOrders).toHaveBeenCalledWith("user-1", {
+      status: "DELIVERED",
+      q: "parker",
+    });
     expect(res.status).toHaveBeenCalledWith(StatusCodes.OK);
-    expect(res.json).toHaveBeenCalledWith([
-      {
-        id: "order-1",
-        totalPrice: 10,
-        deliveryPrice: 299,
-        grandTotal: 309,
-        orderItemsCount: 2,
-        previewImage: "https://cdn.test/preview.png",
-      },
-    ]);
+    expect(res.json).toHaveBeenCalledWith({
+      items: [
+        {
+          id: "order-1",
+          status: "DELIVERED",
+          createdAt: new Date("2026-11-14T10:00:00.000Z"),
+          grandTotal: 309,
+          currency: "RUB",
+          orderItems: [
+            {
+              id: "line-1",
+              name: "Parker Urban T200",
+              previewImage: "",
+              quantity: 18,
+              status: "DELIVERED",
+              receiptDate: null,
+            },
+          ],
+        },
+      ],
+      counts: { all: 3, delivered: 2, canceled: 1 },
+      spent: [{ currency: "RUB", amount: 309 }],
+    });
+  });
+
+  it("отказывает неверному фильтру статуса кодом из parseOrderListQuery (AC-2)", async () => {
+    const getOrders = jest.spyOn(OrderService.prototype, "getOrdersByUserId");
+    const res = createMockResponse();
+
+    await new OrderController().getOrdersByUserId(
+      createRequest({ query: { status: "BOGUS" } }),
+      res,
+    );
+
+    expect(getOrders).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ code: "INVALID_STATUS_FILTER" }),
+    );
   });
 
   it("отвечает 200 на отмену заказа и отдаёт деньги числом (AC-1)", async () => {
@@ -210,48 +261,74 @@ describe("OrderController", () => {
     });
   });
 
-  it("returns seller orders with numeric prices and caller pagination (AC-5)", async () => {
+  it("returns the seller page, its counts and its money unchanged (AC-1)", async () => {
     const createdAt = new Date("2026-11-07T10:00:00.000Z");
-    const item = {
-      id: "line-1",
-      productId: "product-1",
-      name: "Drill",
-      previewImage: "https://cdn.test/drill.png",
-      quantity: 2,
-      price: new Prisma.Decimal("19.99"),
-      currency: "RUB",
-      status: "PENDING",
+    const answer = {
+      items: [
+        {
+          id: "line-1",
+          orderId: "order-12345678",
+          productId: "product-1",
+          name: "Drill",
+          previewImage: "https://cdn.test/drill.png",
+          quantity: 2,
+          price: 19.99,
+          subtotal: 39.98,
+          currency: "RUB",
+          status: "DELIVERED",
+          createdAt,
+          isPickup: true,
+          pickupPointName: "Central",
+          pickupPointAddress: "Tverskaya 12",
+          handedOverAt: null,
+          deliveryAddress: null,
+        },
+      ],
+      counts: { all: 4, delivered: 1, canceled: 2 },
+      stats: { revenue: [{ currency: "RUB", amount: 39.98 }], units: 2 },
+      page: 2,
+      limit: 10,
+      total: 4,
+      totalPages: 1,
     };
     const getSellerOrders = jest
       .spyOn(SellerOrderService.prototype, "getSellerOrders")
-      .mockResolvedValue({
-        orders: [{ id: "order-1", createdAt, orderItems: [item] }],
-        page: 2,
-        limit: 10,
-        total: 1,
-        totalPages: 1,
-      } as never);
+      .mockResolvedValue(answer as never);
     const res = createMockResponse();
 
     await new OrderController().getSellerOrders(
-      createRequest({ query: { page: "2", limit: "10" } }),
+      createRequest({
+        query: { status: "DELIVERED", q: " drill ", page: "2", limit: "10" },
+      }),
       res,
     );
 
-    expect(getSellerOrders).toHaveBeenCalledWith("user-1", "2", "10");
+    expect(getSellerOrders).toHaveBeenCalledWith(
+      "user-1",
+      { status: "DELIVERED", q: "drill" },
+      "2",
+      "10",
+    );
     expect(res.status).toHaveBeenCalledWith(StatusCodes.OK);
-    expect(res.json).toHaveBeenCalledWith({
-      page: 2,
-      limit: 10,
-      total: 1,
-      totalPages: 1,
-      orders: [
-        {
-          id: "order-1",
-          createdAt,
-          orderItems: [{ ...item, price: 19.99 }],
-        },
-      ],
-    });
+    expect(res.json).toHaveBeenCalledWith(answer);
+  });
+
+  it("refuses a bogus seller status filter before the read (AC-2)", async () => {
+    const getSellerOrders = jest.spyOn(
+      SellerOrderService.prototype,
+      "getSellerOrders",
+    );
+    const res = createMockResponse();
+
+    await new OrderController().getSellerOrders(
+      createRequest({ query: { status: "delivered" } }),
+      res,
+    );
+
+    expect(getSellerOrders).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(StatusCodes.BAD_REQUEST);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ code: "INVALID_STATUS_FILTER" }),
+    );
   });
 });

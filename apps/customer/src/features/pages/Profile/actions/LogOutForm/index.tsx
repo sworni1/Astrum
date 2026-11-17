@@ -1,5 +1,6 @@
 "use client";
 
+import { LogOut } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
   AlertDialog,
@@ -13,23 +14,31 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  ACTION_SIZE,
+  ROW,
+  ROW_HINT,
+  ROW_TEXT,
+} from "@/features/pages/Profile/lib/styles";
 import { useLogOut } from "@/hooks/useLogOut";
 
+/** One row of the security card: the logout behind a confirmation (AC-7). */
 const LogOutForm = () => {
   const { logOut } = useLogOut();
   const t = useTranslations("profile");
   const common = useTranslations("common");
 
   return (
-    <div className="mt-8 pt-4">
-      <h2 className="text-xl font-medium ">{t("logoutTitle")}</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {t("logoutSubtitle")}
-      </p>
+    <div className={ROW} data-testid="log-out-row">
+      <div>
+        <div className={ROW_TEXT}>{t("logoutTitle")}</div>
+        <p className={ROW_HINT}>{t("logoutSubtitle")}</p>
+      </div>
 
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button type="button" variant="destructive" className="mt-4">
+          <Button type="button" variant="outline" className={ACTION_SIZE}>
+            <LogOut />
             {t("logoutButton")}
           </Button>
         </AlertDialogTrigger>

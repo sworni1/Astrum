@@ -99,7 +99,7 @@
     "proceed": "Proceed to Checkout ({count, plural, one {# item} other {# items}})",
     "empty": "Your cart is empty",
     "back": "Back to Cart",
-    "eachPrice": "${price} each",
+    "eachPrice": "{price} each",
     "removeTitle": "Remove product from cart",
     "removeText": "Are you sure you want to delete the selected item? This action cannot be undone.",
     "failed": "Failed to load cart",
@@ -110,11 +110,10 @@
     "checkoutSubtitle": "Complete your order details below",
     "checkoutSelectedItems": "Selected Items ({count})",
     "deliveryAddress": "Delivery Address",
-    "fullAddress": "Full Address *",
     "fullAddressPlaceholder": "Enter your complete delivery address including street, city, zip code and country",
-    "shippingMethod": "Shipping Method *",
+    "shippingMethod": "Shipping Method",
     "selectShippingMethod": "Select shipping method",
-    "deliveryDate": "Preferred Delivery Date *",
+    "deliveryDate": "Preferred Delivery Date",
     "pickDeliveryDate": "Pick a delivery date",
     "paymentMethod": "Payment Method",
     "paymentOnlineCard": "Credit/Debit Card",
@@ -137,7 +136,7 @@
     "shippingInactive": "That delivery method is no longer offered. Pick another one.",
     "shippingUnknown": "That delivery method no longer exists. Pick another one.",
     "shippingCurrencyMismatch": "That delivery method is priced in another currency.",
-    "pickupPoint": "Pickup Point *",
+    "pickupPoint": "Pickup Point",
     "pickupSelect": "Choose a pickup point",
     "pickupLoading": "Loading pickup points…",
     "pickupRetry": "Retry",
@@ -145,7 +144,20 @@
     "pickupLoadFailed": "The pickup points could not be loaded.",
     "unknownPickupPoint": "That pickup point no longer exists. Pick another one.",
     "pickupInactive": "That pickup point is closed. Pick another one.",
-    "pickupNotAllowed": "This delivery method does not go to a pickup point. Pick another method."
+    "pickupNotAllowed": "This delivery method does not go to a pickup point. Pick another method.",
+    "retry": "Retry",
+    "nothingSelected": "Pick at least one item to check out",
+    "selectionPartlyUnavailable": "Part of your selection is no longer available",
+    "checkoutSummaryTitle": "Your order",
+    "receiptTitle": "Receipt",
+    "lineQuantity": "{count, plural, one {# pc} other {# pcs}}",
+    "hintShippingLoading": "Waiting for the delivery methods",
+    "hintShippingUnavailable": "An order needs a delivery method",
+    "hintPickupUnavailable": "An order needs a pickup point",
+    "hintShippingMethod": "Choose a delivery method to continue",
+    "hintPickupPoint": "Choose a pickup point to continue",
+    "hintDeliveryAddress": "Enter a delivery address to continue",
+    "hintDeliveryDate": "Choose a delivery date to continue"
   },
   "wishlist": {
     "title": "Wishlist",
@@ -161,7 +173,37 @@
     "emptyText": "You haven’t placed any orders yet. Start shopping to see your orders here!",
     "failed": "Failed to load orders",
     "number": "Order #{number}",
+    "copyNumber": "Copy order number",
+    "copySuccess": "Order number copied",
+    "copyFailed": "Could not copy the order number",
+    "stats": {
+      "orders": "Total orders",
+      "spent": "Spent",
+      "received": "Received"
+    },
+    "tabs": {
+      "all": "All {count}",
+      "delivered": "Delivered {count}",
+      "canceled": "Canceled {count}"
+    },
+    "search": {
+      "placeholder": "Order number or product",
+      "label": "Search orders"
+    },
+    "fields": {
+      "number": "Order number",
+      "date": "Order date",
+      "amount": "Amount"
+    },
+    "quantity": "{count} pcs",
+    "lineMeta": "{kind} · {count, plural, one {# pc} other {# pcs}}",
+    "emptySearchTitle": "Nothing found",
+    "emptySearchText": "No orders match «{query}». Change the query or clear the field.",
+    "emptyTabTitle": "Nothing in this tab",
+    "emptyTabText": "No orders carry this status. Open «All» to see the rest.",
+    "retry": "Try again",
     "totalPaid": "Total paid",
+    "totalNote": "Order payment summary",
     "itemsCount": "{count, plural, one {# item} other {# items}}",
     "viewDetails": "View Details",
     "cancelOrder": "Cancel Order",
@@ -172,8 +214,6 @@
     "notFoundTitle": "Order Not Found",
     "notFoundText": "The order you’re looking for doesn’t exist, or you don’t have permission to view it.",
     "backToOrders": "Back to Orders",
-    "placedOn": "Placed on {date}",
-    "print": "Print",
     "cancel": "Cancel",
     "cancelDialog": {
       "text": "Every item that is not cancelled yet returns to stock, and this screen cannot undo the cancellation.",
@@ -191,26 +231,16 @@
     },
     "deliveryAddress": "Delivery Address",
     "paymentMethod": "Payment Method",
-    "shippingMethod": "Shipping Method",
-    "price": "Price: {price}",
-    "summary": "Order Summary",
-    "subtotal": "Subtotal",
-    "shipping": "Shipping",
     "total": "Total",
-    "deliveryStatus": "Delivery Status",
-    "deliveryDate": "Delivery Date: {date}",
+    "goods": "Goods",
+    "delivery": "Delivery",
     "pickupPoint": "Pickup Point",
-    "pickupDate": "Pickup Date: {date}",
-    "handedOverAt": "Handed over: {date}",
-    "itemsTitle": "Order Items ({count})",
+    "receiving": "Receiving",
+    "receivingLine": "{method} · {point}",
+    "handedOverOn": "Handed over on {date}",
+    "expectedOn": "Expected on {date}",
     "productFallback": "Product {id}",
     "productImage": "Product image",
-    "columns": {
-      "product": "Product",
-      "quantity": "Quantity",
-      "price": "Price",
-      "status": "Status"
-    },
     "status": {
       "pending": "Pending",
       "confirmed": "Confirmed",
@@ -275,6 +305,12 @@
     "errorEmailUnchanged": "The address is already on your profile.",
     "errorEmailNotConfirmed": "While the address is unconfirmed, only the email can change.",
     "failed": "Failed to load the profile information",
+    "readOnlyHint": "Date of birth and gender cannot be edited.",
+    "securityTitle": "Security",
+    "securitySubtitle": "Control access to your account.",
+    "roleBuyer": "Buyer",
+    "roleSeller": "Seller",
+    "roleStaff": "Staff",
     "changePasswordTitle": "Change password",
     "changePasswordSubtitle": "Click the button below to change the password.",
     "changePasswordButton": "Change password",
@@ -286,7 +322,7 @@
     "passwordUpdated": "Password updated successfully",
     "oldPasswordWrong": "The old password is incorrect",
     "deleteTitle": "Delete account",
-    "deleteSubtitle": "Click the button below to delete your account.",
+    "deleteSubtitle": "Click the button below to delete your account. This cannot be undone.",
     "deleteButton": "Delete account",
     "deleteWarning": "This action cannot be undone. This will permanently delete your account and remove your data from our servers.",
     "logoutTitle": "Log out",
@@ -470,16 +506,32 @@
   "seller": {
     "title": "Sales",
     "subtitle": "The order lines your shop has to fulfil.",
-    "found": "{count, plural, one {# order} other {# orders}}",
+    "found": "{count, plural, one {# line} other {# lines}}",
     "orderNumber": "Order #{number}",
-    "paymentLabel": "Payment: {status}",
-    "statusCount": "{status}: {count}",
     "productFallback": "Product {id}",
     "retry": "Try again",
-    "handedOverAt": "Handed over: {date}",
+    "quantity": "{count} pcs",
+    "handedOverAt": "handed over {date}",
+    "stats": {
+      "revenue": "Revenue",
+      "units": "Units sold",
+      "delivered": "Delivered",
+      "canceled": "Canceled"
+    },
+    "tabs": {
+      "all": "All {count}",
+      "delivered": "Delivered {count}",
+      "canceled": "Canceled {count}",
+      "label": "Sales tabs"
+    },
+    "search": {
+      "placeholder": "Order number or product",
+      "label": "Search sales"
+    },
     "columns": {
       "orderNumber": "Order",
       "product": "Product",
+      "receipt": "Receipt",
       "subtotal": "Subtotal",
       "date": "Date",
       "status": "Status"
@@ -489,6 +541,10 @@
       "back": "Back",
       "next": "Next",
       "pageOf": "Page {page} of {totalPages}"
+    },
+    "receipt": {
+      "courier": "Courier",
+      "noAddress": "No address"
     },
     "states": {
       "loadingLabel": "Loading the order lines",
@@ -500,6 +556,10 @@
       "emptyTitle": "Nothing to fulfil",
       "emptyText": "No order holds a line from your shop yet."
     },
+    "emptySearchTitle": "Nothing found",
+    "emptySearchText": "No line matches «{query}». Change the query or clear the field.",
+    "emptyTabTitle": "Nothing in this tab",
+    "emptyTabText": "No line carries this status. Open «All» to see the rest.",
     "onboarding": {
       "title": "Open your shop",
       "subtitle": "Name the shop once and it opens for this account.",
@@ -679,7 +739,8 @@
           "validation": "That request was not valid. Refresh the list and try again.",
           "generic": "The move did not go through. Try again in a moment.",
           "retry": "Try again"
-        }
+        },
+        "deliveryDate": "Delivery date: {date}"
       }
     },
     "profile": {

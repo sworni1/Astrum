@@ -7,6 +7,7 @@ import type {
   UpdateOrderItemStatusDto,
 } from "@/common/types/order.types";
 import { useFetcher } from "@/hooks/useFetcher";
+import { isOrderListKey } from "./orderListKey";
 
 export type UpdateOrderItemStatusError = {
   message: string;
@@ -41,7 +42,7 @@ export const useUpdateOrderItemStatus = (
   >(`/order-items/${orderItemId}/status`, patchItem, {
     onSuccess: async (updatedItem) => {
       await mutate(`/orders/${updatedItem.orderId}`);
-      await mutate(`/orders`);
+      await mutate(isOrderListKey);
     },
   });
 

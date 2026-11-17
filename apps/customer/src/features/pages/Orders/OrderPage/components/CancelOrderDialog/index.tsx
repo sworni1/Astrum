@@ -15,10 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { showsPaymentSentence } from "@/features/pages/Orders/OrderPage/lib/cancelDialogCopy";
-import {
-  ICON_SIZE,
-  OUTLINE_BUTTON_CLASS,
-} from "@/features/pages/Orders/OrderPage/lib/styles";
+import { ICON_SIZE } from "@/features/pages/Orders/OrderPage/lib/styles";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -40,9 +37,8 @@ const CancelOrderDialog = ({ order, isCancelling, onConfirm }: Props) => {
     <AlertDialog>
       <AlertDialogTrigger asChild>
         <Button
-          variant="outline"
+          variant="destructive-outline"
           size="sm"
-          className={OUTLINE_BUTTON_CLASS}
           aria-label={t("cancel")}
           aria-busy={isCancelling}
           aria-disabled={isCancelling}

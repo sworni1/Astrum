@@ -13,6 +13,7 @@ import ReviewPhotos from "@/features/pages/ProductOverview/Reviews/components/Re
 import StarRating from "@/features/pages/ProductOverview/Reviews/components/StarRating";
 import type { ReviewCounts } from "@/features/pages/ProductOverview/Reviews/hooks/useReviewCounts";
 import { classifyReviewRefusal } from "@/features/pages/ProductOverview/Reviews/lib/refusal";
+import { browserTimeZone } from "@/features/pages/SellerOrders/lib/format";
 import type { ReviewLikes } from "@/hooks/review/useReviewLikes";
 
 type Props = {
@@ -106,6 +107,7 @@ const ReviewCard = ({ review, counts, likes }: Props) => {
             >
               {format.dateTime(new Date(review.createdAt), {
                 dateStyle: "long",
+                timeZone: browserTimeZone(),
               })}
             </time>
           </div>

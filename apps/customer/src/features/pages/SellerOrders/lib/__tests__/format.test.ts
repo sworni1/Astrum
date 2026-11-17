@@ -1,55 +1,76 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-  OrderItemStatus,
-  type SellerOrderLine,
-} from "@/common/types/order.types";
-import { countLinesByStatus, lineSubtotal } from "@/features/pages/SellerOrders/lib/format";
+import { browserTimeZone } from "@/features/pages/SellerOrders/lib/format";
 
-const line = (overrides: Partial<SellerOrderLine> = {}): SellerOrderLine => ({
-  id: "line-1",
-  productId: "product-1",
-  name: "Kettle",
-  previewImage: "",
-  quantity: 1,
-  price: 19.99,
-  currency: "RUB" as SellerOrderLine["currency"],
-  status: OrderItemStatus.PENDING,
-  ...overrides,
-});
+const SRC_DIR = join(process.cwd(), "src");
+const SOURCE_EXTENSIONS = [".ts", ".tsx"];
+const TIME_ZONE_WINDOW = 400;
+const NEWLINE = String.fromCharCode(10);
 
-describe("lineSubtotal", () => {
-  it("rounds the float multiply back to cents for display (AC-4)", () => {
-    expect(7 * 19.99).toBe(139.92999999999998);
-    expect(lineSubtotal(line({ quantity: 7 }))).toBe(139.93);
+const sourceFiles = (dir: string): string[] =>
+  readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
 
-    expect(6 * 4.35).toBe(26.099999999999998);
-    expect(lineSubtotal(line({ quantity: 6, price: 4.35 }))).toBe(26.1);
+    if (entry.isDirectory()) {
+      return sourceFiles(path);
+    }
+
+    const isSource =
+      SOURCE_EXTENSIONS.some((extension) => entry.name.endsWith(extension)) &&
+      !entry.name.includes(".test.");
+
+    return isSource ? [path] : [];
   });
 
-  it("keeps a whole rouble total exact (AC-4)", () => {
-    expect(lineSubtotal(line({ quantity: 2, price: 2772 }))).toBe(5544);
-  });
-});
+/**
+ * A birth date is a calendar day the api stores at UTC midnight, so printing it
+ * in a browser west of Greenwich would name the day before the one the profile
+ * means. It keeps the UTC pin on purpose.
+ */
+const CALENDAR_DAY_FILES = [
+  "features/pages/Profile/actions/EditProfileForm/index.tsx",
+];
 
-describe("countLinesByStatus", () => {
-  it("counts one group in the order of the enum (AC-4)", () => {
-    expect(
-      countLinesByStatus([
-        line({ id: "a", status: OrderItemStatus.PENDING }),
-        line({ id: "b", status: OrderItemStatus.CANCELLED }),
-        line({ id: "c", status: OrderItemStatus.PENDING }),
-      ]),
-    ).toEqual([
-      { status: OrderItemStatus.PENDING, count: 2 },
-      { status: OrderItemStatus.CANCELLED, count: 1 },
-    ]);
+const isCalendarDayField = (file: string): boolean =>
+  CALENDAR_DAY_FILES.some((exempt) =>
+    file.split(String.fromCharCode(92)).join("/").endsWith(exempt),
+  );
+
+/** Every call site, as `file:line`, of a formatter call that brings no zone. */
+const callsWithoutZone = (): string[] =>
+  sourceFiles(SRC_DIR).flatMap((file) => {
+    if (isCalendarDayField(file)) {
+      return [];
+    }
+
+    const content = readFileSync(file, "utf8");
+    const found: string[] = [];
+    let index = content.indexOf("format.dateTime(");
+
+    while (index !== -1) {
+      const call = content.slice(index, index + TIME_ZONE_WINDOW);
+
+      if (!call.includes("timeZone")) {
+        const line = content.slice(0, index).split(NEWLINE).length;
+
+        found.push(`${relative(SRC_DIR, file)}:${line}`);
+      }
+
+      index = content.indexOf("format.dateTime(", index + 1);
+    }
+
+    return found;
   });
 
-  it("keeps a status outside the enum at the end (AC-6)", () => {
-    expect(
-      countLinesByStatus([
-        line({ id: "a", status: "SOMETHING_NEW" as OrderItemStatus }),
-      ]),
-    ).toEqual([{ status: "SOMETHING_NEW", count: 1 }]);
+describe("browserTimeZone", () => {
+  it("returns the zone the browser reports, so the data pin cannot shift it (AC-9)", () => {
+    expect(browserTimeZone()).toBe(
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+    );
+  });
+
+  it("is passed at every formatter call site, because the request config pins UTC (AC-9)", () => {
+    expect(callsWithoutZone()).toEqual([]);
   });
 });

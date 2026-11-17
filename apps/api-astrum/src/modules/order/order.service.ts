@@ -24,6 +24,7 @@ import {
   REPLAY_ATTEMPTS,
   REPLAY_RETRY_DELAY_MS,
 } from "./constants/order.constants";
+import { orderListWhere, type OrderListQuery } from "./order-list-query";
 import {
   closeOrder,
   lockOrder,
@@ -52,11 +53,61 @@ type RefusalItem = {
 type CartRow = { productId: string; quantity: number };
 
 /** What a create and a detail read answer with, in the shape the storefront reads. */
-export type OrderDetail = Order & { orderItems: OrderItem[] };
+export type OrderDetailLine = OrderItem & {
+  /** The shop of the line; only the detail read resolves it (spec 0027, AC-1). */
+  brandName?: string;
+  /** `Product.subcategory`; null when no product row carries that id. */
+  kind?: string | null;
+};
 
-export type OrderSummary = Order & {
-  orderItemsCount: number;
-  previewImage: string | null;
+export type OrderDetail = Omit<Order, "OrderItem"> & {
+  orderItems: OrderDetailLine[];
+  /** Stamp of the newest PAID attempt; only the detail read resolves it. */
+  paidAt?: Date | null;
+};
+
+/** The three bounded lookups the detail read adds beside the row (AC-1). */
+type OrderDetailExtras = {
+  paidAt: Date | null;
+  brandNames: Map<string, string>;
+  kinds: Map<string, string | null>;
+};
+
+/**
+ * The list read answers three things in one snapshot: the filtered rows, the
+ * counts of every order of the caller and the money spent per currency
+ * (spec 0025, AC-1 to AC-5).
+ */
+export type OrderListLine = {
+  id: string;
+  name: string;
+  previewImage: string;
+  quantity: number;
+  status: OrderItemStatus;
+  receiptDate: Date | null;
+};
+
+export type OrderListRow = {
+  id: string;
+  status: OrderStatus;
+  createdAt: Date;
+  grandTotal: Prisma.Decimal;
+  currency: Currency;
+  orderItems: OrderListLine[];
+};
+
+export type OrderListCounts = {
+  all: number;
+  delivered: number;
+  canceled: number;
+};
+
+export type OrderSpentRow = { currency: Currency; amount: Prisma.Decimal };
+
+export type OrderListPage = {
+  items: OrderListRow[];
+  counts: OrderListCounts;
+  spent: OrderSpentRow[];
 };
 
 /** A create answers with the order and whether it came from a replay (spec 0003). */
@@ -72,14 +123,62 @@ const CUSTOMER_CANCELLATION_BLOCKERS: readonly OrderItemStatus[] = [
 
 const ORDER_DETAIL_INCLUDE = { OrderItem: true } as const;
 
-const ORDER_LIST_INCLUDE = {
-  _count: { select: { OrderItem: true } },
+const ORDER_LIST_SELECT = {
+  id: true,
+  status: true,
+  createdAt: true,
+  grandTotal: true,
+  currency: true,
   OrderItem: {
-    select: { previewImage: true },
+    select: {
+      id: true,
+      name: true,
+      previewImage: true,
+      quantity: true,
+      status: true,
+      receiptDate: true,
+    },
     orderBy: { id: "asc" },
-    take: 1,
   },
 } as const;
+
+/**
+ * One snapshot for the list and both aggregates: `ReadCommitted` gives every
+ * statement its own, so a cancel committing between them could print a tile
+ * that contradicts the list (spec 0025, AC-1).
+ */
+const ORDER_LIST_TRANSACTION_OPTIONS = {
+  isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+} as const;
+
+type StatusGroup = { status: OrderStatus; _count: { _all: number } };
+
+type CurrencyGroup = {
+  currency: Currency;
+  _sum: { grandTotal: Prisma.Decimal | null };
+};
+
+/** The counts describe every order of the caller, never the filtered subset. */
+const countByStatus = (groups: StatusGroup[]): OrderListCounts => {
+  const of = (status: OrderStatus): number =>
+    groups.find((group) => group.status === status)?._count._all ?? 0;
+
+  return {
+    all: groups.reduce((sum, group) => sum + group._count._all, 0),
+    delivered: of("DELIVERED"),
+    canceled: of("CANCELED"),
+  };
+};
+
+/** A currency with no qualifying order is absent, and the order is stable. */
+const spentByCurrency = (groups: CurrencyGroup[]): OrderSpentRow[] =>
+  groups
+    .flatMap((group) =>
+      group._sum.grandTotal === null
+        ? []
+        : [{ currency: group.currency, amount: group._sum.grandTotal }],
+    )
+    .sort((left, right) => left.currency.localeCompare(right.currency));
 
 const orderNotFound = () =>
   new AppError(
@@ -185,13 +284,28 @@ export const mergeOrderLines = (items: OrderItemDto[]): OrderLine[] => {
 /**
  * The answer carries the snapshot columns the order row holds: the delivery
  * method is named and priced at creation, so no relation is read here (AC-7).
+ * The detail read hands the three lookups of AC-1 over as `extras`; without them
+ * the answer keeps exactly the shape the create and the status route publish.
  */
 const toOrderDetail = (
   order: Order & { OrderItem: OrderItem[] },
+  extras?: OrderDetailExtras,
 ): OrderDetail => {
   const { OrderItem: orderItems, ...rest } = order;
 
-  return { ...rest, orderItems };
+  if (!extras) {
+    return { ...rest, orderItems };
+  }
+
+  return {
+    ...rest,
+    paidAt: extras.paidAt,
+    orderItems: orderItems.map((item) => ({
+      ...item,
+      brandName: extras.brandNames.get(item.businessId) ?? "",
+      kind: extras.kinds.get(item.productId) ?? null,
+    })),
+  };
 };
 
 export class OrderService {
@@ -345,21 +459,76 @@ export class OrderService {
       throw orderNotFound();
     }
 
-    return toOrderDetail(order);
+    // Three bounded lookups beside the row, never one per line (spec 0027, AC-1).
+    const businessIds = [...new Set(order.OrderItem.map((item) => item.businessId))];
+    const productIds = [...new Set(order.OrderItem.map((item) => item.productId))];
+
+    const [businesses, products, paidAttempt] = await Promise.all([
+      prisma.business.findMany({
+        where: { id: { in: businessIds } },
+        select: { id: true, name: true },
+      }),
+      prisma.product.findMany({
+        where: { id: { in: productIds } },
+        select: { id: true, subcategory: true },
+      }),
+      prisma.payment.findFirst({
+        where: { orderId, status: "PAID", paidAt: { not: null } },
+        orderBy: { paidAt: "desc" },
+        select: { paidAt: true },
+      }),
+    ]);
+
+    return toOrderDetail(order, {
+      paidAt: paidAttempt?.paidAt ?? null,
+      brandNames: new Map(businesses.map((row) => [row.id, row.name])),
+      kinds: new Map(products.map((row) => [row.id, row.subcategory])),
+    });
   }
 
-  async getOrdersByUserId(userId: string): Promise<OrderSummary[]> {
-    const orders = await prisma.order.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      include: ORDER_LIST_INCLUDE,
-    });
+  /**
+   * The list, the counts and the spent total come from one repeatable read
+   * snapshot, so no tile can claim what the list below contradicts. Every query
+   * carries the session `userId`, so the search reads only the caller's rows
+   * (spec 0025, AC-1 to AC-5).
+   */
+  async getOrdersByUserId(
+    userId: string,
+    query: OrderListQuery = {},
+  ): Promise<OrderListPage> {
+    const [rows, statusGroups, currencyGroups] = await prisma.$transaction(
+      [
+        prisma.order.findMany({
+          where: orderListWhere(userId, query),
+          orderBy: { createdAt: "desc" },
+          select: ORDER_LIST_SELECT,
+        }),
+        prisma.order.groupBy({
+          by: ["status"],
+          where: { userId },
+          _count: { _all: true },
+        }),
+        prisma.order.groupBy({
+          by: ["currency"],
+          where: {
+            userId,
+            status: { not: "CANCELED" },
+            AND: [{ OR: [{ paymentStatus: "PAID" }, { status: "DELIVERED" }] }],
+          },
+          _sum: { grandTotal: true },
+        }),
+      ],
+      ORDER_LIST_TRANSACTION_OPTIONS,
+    );
 
-    return orders.map(({ _count, OrderItem, ...order }) => ({
-      ...order,
-      orderItemsCount: _count.OrderItem,
-      previewImage: OrderItem[0]?.previewImage ?? null,
-    }));
+    return {
+      items: rows.map(({ OrderItem, ...row }) => ({
+        ...row,
+        orderItems: OrderItem,
+      })),
+      counts: countByStatus(statusGroups),
+      spent: spentByCurrency(currencyGroups),
+    };
   }
 
   async updateOrderStatus(

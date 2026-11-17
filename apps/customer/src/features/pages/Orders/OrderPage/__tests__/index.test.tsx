@@ -34,6 +34,7 @@ vi.mock("@/common/helpers/showToast", () => ({
 }));
 
 vi.mock("next-intl", () => ({
+  useLocale: () => "ru",
   useTranslations: () => (key: string) => key,
   useFormatter: () => ({ dateTime: () => "1 November 2026" }),
   createTranslator: () => (key: string) => key,
@@ -64,6 +65,7 @@ const order: Order = {
   pickupPointName: null,
   pickupPointAddress: null,
   handedOverAt: null,
+  paidAt: null,
   deliveryDate: new Date("2026-11-10T00:00:00.000Z"),
   orderItems: [
     {
@@ -72,7 +74,10 @@ const order: Order = {
       name: "Kettle",
       previewImage: "",
       quantity: 2,
-      price: 50,
+      price: 50.0,
+      brandName: "Parker",
+      kind: null,
+      subtotal: 100.0,
       orderId: "order-1234567890",
       status: OrderItemStatus.PENDING,
       userId: "user-1",
@@ -107,7 +112,7 @@ describe("OrderPage", () => {
     });
   };
 
-  it("composes the five named sections of the screen", async () => {
+  it("composes the sections of the mockup on live data", async () => {
     mocks.getOrder.mockReturnValue({
       order,
       isLoading: false,
@@ -120,18 +125,26 @@ describe("OrderPage", () => {
 
     for (const section of [
       "number",
+      "itemsCount",
       "deliveryAddress",
       "paymentMethod",
-      "shippingMethod",
-      "summary",
-      "deliveryStatus",
-      "itemsTitle",
+      "goods",
+      "delivery",
+      "totalPaid",
+      "receiving",
+      "expectedOn",
     ]) {
       expect(text).toContain(section);
     }
 
     expect(text).toContain("Kettle");
-    expect(text).toContain("itemStatus.pending");
+    expect(text).toContain("Parker");
+    expect(container.querySelector('[data-testid="order-grid"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="order-line"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="order-copy"]')).not.toBeNull();
+    expect(
+      container.querySelector('[data-testid="order-right-column"]'),
+    ).not.toBeNull();
   });
 
   it("raises the failure toast from an effect, once, and still renders a state", async () => {

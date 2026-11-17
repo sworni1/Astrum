@@ -5,6 +5,7 @@ import useSWRMutation from "swr/mutation";
 import type { CreateOrderDto, Order } from "@/common/types/order.types";
 import { useFetcher } from "@/hooks/useFetcher";
 import { useUser } from "@/hooks/user/useUser";
+import { isOrderListKey } from "./orderListKey";
 
 export type CreateOrderError = {
   message: string;
@@ -37,8 +38,8 @@ export const useCreateOrder = (): UseCreateOrderReturn => {
       onSuccess: async () => {
         // Clear cart after successful order creation
         await mutate("/cart");
-        // Refresh orders list
-        await mutate("/orders");
+        // Refresh the list and its counts, filtered forms included
+        await mutate(isOrderListKey);
       },
     },
   );

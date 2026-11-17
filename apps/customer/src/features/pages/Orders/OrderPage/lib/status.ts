@@ -1,6 +1,9 @@
 import { Check, type LucideIcon, Package, Truck } from "lucide-react";
 import { OrderStatus } from "@/common/types/order.types";
 
+/** The three tone sets of spec 0027, AC-8. */
+export type PillTone = "success" | "destructive" | "neutral";
+
 /** The catalog keys under `orders.status`; one per order status. */
 export type StatusLabelKey =
   | "pending"
@@ -30,21 +33,17 @@ const CANCELLABLE_STATUSES: readonly OrderStatus[] = [
 export const canCancel = (status: OrderStatus): boolean =>
   CANCELLABLE_STATUSES.includes(status);
 
-/** Badge background per status; an unknown status reads grey, never blank. */
-export const statusColor = (status: OrderStatus): string => {
-  switch (status) {
-    case OrderStatus.PENDING:
-    case OrderStatus.CONFIRMED:
-      return "bg-yellow-500";
-    case OrderStatus.SHIPPED:
-      return "bg-blue-500";
-    case OrderStatus.DELIVERED:
-      return "bg-green-500";
-    case OrderStatus.CANCELED:
-      return "bg-red-500";
-    default:
-      return "bg-gray-500";
-  }
+/**
+ * The pill tone of every order status: a delivered parcel reads success, a
+ * canceled order reads destructive, the steps in between stay neutral, so no
+ * status lands without a tone (spec 0027, AC-8).
+ */
+export const STATUS_TONES: Record<OrderStatus, PillTone> = {
+  [OrderStatus.PENDING]: "neutral",
+  [OrderStatus.CONFIRMED]: "neutral",
+  [OrderStatus.SHIPPED]: "neutral",
+  [OrderStatus.DELIVERED]: "success",
+  [OrderStatus.CANCELED]: "destructive",
 };
 
 export type DeliveryStep = {

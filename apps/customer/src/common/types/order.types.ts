@@ -59,6 +59,12 @@ export interface OrderItem {
   previewImage: string;
   quantity: number;
   price: number;
+  /** The shop of the line, resolved by the detail read (spec 0027, AC-1). */
+  brandName: string;
+  /** `Product.subcategory`; null when no product row carries that id. */
+  kind: string | null;
+  /** `price * quantity`, computed on the server so the browser never multiplies. */
+  subtotal: number;
   orderId: string;
   receiptDate?: string; // DateTime from DB
   status: OrderItemStatus;
@@ -94,12 +100,45 @@ export interface Order {
   pickupPointName: string | null;
   pickupPointAddress: string | null;
   handedOverAt: string | null;
+  /** Stamp of the newest PAID attempt, resolved by the detail read (spec 0027). */
+  paidAt: string | null;
 }
 
-export type OrderListItem = Omit<Order, "orderItems"> & {
-  orderItemsCount: number;
-  previewImage: string | null;
+/**
+ * One line of an order in the list read: the snapshot columns the screen prints,
+ * without price, currency or `businessId` (spec 0025, AC-6).
+ */
+export type OrderLineRow = {
+  id: string;
+  name: string;
+  previewImage: string;
+  quantity: number;
+  status: OrderItemStatus;
+  receiptDate: string | null;
 };
+
+/** One order of the list read, with its own lines and no service column (AC-6). */
+export type OrderListRow = {
+  id: string;
+  status: OrderStatus;
+  createdAt: string;
+  grandTotal: number;
+  currency: Currency;
+  orderItems: OrderLineRow[];
+};
+
+/** The three tabs the read understands, wire values (AC-2). */
+export type OrderListStatus = "ALL" | "DELIVERED" | "CANCELED";
+
+/**
+ * What `GET /orders` answers: the filtered rows, the counts of every order of
+ * the caller and the money spent per currency (spec 0025, AC-1).
+ */
+export interface OrderListPage {
+  items: OrderListRow[];
+  counts: { all: number; delivered: number; canceled: number };
+  spent: { currency: Currency; amount: number }[];
+}
 
 // DTOs for API calls
 export interface CreateOrderItemDto {
@@ -147,34 +186,53 @@ export interface OrdersResponse {
   totalPages: number;
 }
 
-export interface SellerOrderLine {
+/** The three tabs the seller read understands, wire values (spec 0026, AC-2). */
+export type SellerListStatus = "ALL" | "DELIVERED" | "CANCELED";
+
+/**
+ * One flat line of the seller table: the six columns plus the order facts the
+ * row repeats, with its own subtotal computed on the server (spec 0026, AC-3).
+ */
+export type SellerLineRow = {
   id: string;
+  orderId: string;
   productId: string;
   name: string;
   previewImage: string;
   quantity: number;
   price: number;
+  subtotal: number;
   currency: Currency;
   status: OrderItemStatus;
-}
-
-export interface SellerOrderGroup {
-  id: string;
   createdAt: string;
-  paymentStatus: PaymentStatus;
-  paymentMethod: PaymentMethod;
   isPickup: boolean;
-  pickupPointId: string | null;
   pickupPointName: string | null;
   pickupPointAddress: string | null;
   handedOverAt: string | null;
-  orderItems: SellerOrderLine[];
-}
+  deliveryAddress: string | null;
+};
 
-export interface SellerOrdersPage {
-  orders: SellerOrderGroup[];
+/** The three tab counts over every line of the seller (AC-4). */
+export type SellerLineCounts = {
+  all: number;
+  delivered: number;
+  canceled: number;
+};
+
+/** Revenue per currency and pieces sold, over delivered lines only (AC-5). */
+export type SellerSalesStats = {
+  revenue: { currency: Currency; amount: number }[];
+  units: number;
+};
+
+/** What `GET /seller/orders` answers (spec 0026, AC-1). */
+export interface SellerSalesPage {
+  items: SellerLineRow[];
+  counts: SellerLineCounts;
+  stats: SellerSalesStats;
   page: number;
   limit: number;
   total: number;
   totalPages: number;
 }
+

@@ -5,8 +5,7 @@ import { useSWRConfig } from "swr";
 import useSWRMutation from "swr/mutation";
 import type { Order, UpdateOrderStatusDto } from "@/common/types/order.types";
 import { useFetcher } from "@/hooks/useFetcher";
-
-const ORDER_LIST_KEY = "/orders";
+import { isOrderListKey } from "./orderListKey";
 
 export type UpdateOrderStatusError = {
   message: string;
@@ -36,7 +35,7 @@ export const useUpdateOrderStatus = (
   const revalidateOrder = useCallback(async (): Promise<void> => {
     // allSettled, not all: a failed re read must not reject out of the caller's
     // handler, because the toast is the answer the customer needs (AC-6).
-    await Promise.allSettled([mutate(orderKey), mutate(ORDER_LIST_KEY)]);
+    await Promise.allSettled([mutate(orderKey), mutate(isOrderListKey)]);
   }, [mutate, orderKey]);
 
   const {

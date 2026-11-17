@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useRef } from "react";
 import { useSWRConfig } from "swr";
+import { clearCheckoutSelection } from "@/common/helpers/checkoutSelection";
 import { showToast } from "@/common/helpers/showToast";
 import type { CreateOrderItemDto } from "@/common/types/order.types";
 import type { ProductCartProps } from "@/common/types/product.types";
@@ -11,6 +12,7 @@ import type { CheckoutFormData } from "@/common/zodSchemes/checkout.scheme";
 import { useFetcher } from "@/hooks/useFetcher";
 import { checkoutRefusalOf } from "./checkoutErrors";
 import { createIdempotencyKey, isTerminalAnswer } from "./idempotency";
+import { isOrderListKey } from "./orderListKey";
 
 export const useCheckout = () => {
   const { postItem } = useFetcher();
@@ -64,14 +66,16 @@ export const useCheckout = () => {
 
         idempotencyKey.current = null;
 
-        await Promise.all([mutate("/cart"), mutate("/orders")]);
+        await Promise.all([mutate("/cart"), mutate(isOrderListKey)]);
+
+        clearCheckoutSelection();
 
         showToast({
           title: t("orderPlaced"),
           type: "success",
         });
 
-        router.push(`/orders/${response.id}`);
+        router.replace(`/orders/${response.id}`);
 
         return response;
       } catch (error) {
@@ -89,7 +93,7 @@ export const useCheckout = () => {
 
         // A refused order means the cart or the stock moved, so reload both
         // before the customer sees the message and tries again.
-        await Promise.all([mutate("/cart"), mutate("/orders")]);
+        await Promise.all([mutate("/cart"), mutate(isOrderListKey)]);
 
         showToast({
           title: t("orderFailed"),

@@ -29,12 +29,13 @@ describe("DeliveryProgress", () => {
   };
 
   const labels = (): (string | null)[] =>
-    [...container.querySelectorAll("span")].map((span) => span.textContent);
-  const discs = (): HTMLElement[] => [
-    ...container.querySelectorAll<HTMLElement>("[class*='rounded-full']"),
-  ];
+    [...container.querySelectorAll("[data-testid='order-progress-step']")].map(
+      (span) => span.textContent,
+    );
+  const rail = (): HTMLElement | null =>
+    container.querySelector<HTMLElement>("[data-testid='order-progress']");
 
-  it("renders the four steps once, not one copy per breakpoint", async () => {
+  it("renders the four step labels once, not one copy per breakpoint", async () => {
     await render(OrderStatus.SHIPPED);
 
     expect(labels()).toEqual([
@@ -43,26 +44,31 @@ describe("DeliveryProgress", () => {
       "status.shipped",
       "status.delivered",
     ]);
-    expect(discs()).toHaveLength(4);
   });
 
-  it("paints the steps up to the current one green", async () => {
+  it("paints the labels up to the current step as reached", async () => {
     await render(OrderStatus.CONFIRMED);
 
-    expect(
-      discs().filter((disc) => disc.className.includes("bg-green-500")),
-    ).toHaveLength(2);
-    expect(
-      discs().filter((disc) => disc.className.includes("bg-gray-600")),
-    ).toHaveLength(2);
+    const reached = [
+      ...container.querySelectorAll<HTMLElement>(
+        "[data-testid='order-progress-step']",
+      ),
+    ].filter((span) => span.className.includes("text-foreground"));
+
+    expect(reached).toHaveLength(2);
   });
 
   it("paints no step for a cancelled order", async () => {
     await render(OrderStatus.CANCELED);
 
-    expect(
-      discs().filter((disc) => disc.className.includes("bg-green-500")),
-    ).toHaveLength(0);
+    const reached = [
+      ...container.querySelectorAll<HTMLElement>(
+        "[data-testid='order-progress-step']",
+      ),
+    ].filter((span) => span.className.includes("text-foreground"));
+
+    expect(reached).toHaveLength(0);
+    expect(rail()?.querySelector<HTMLElement>("div")?.style.width).toBe("0%");
   });
 
   it.each([
@@ -74,7 +80,7 @@ describe("DeliveryProgress", () => {
   ])("shows %s progress", async (status, expectedWidth) => {
     await render(status);
 
-    expect(container.querySelector<HTMLElement>("[style]")?.style.width).toBe(
+    expect(rail()?.querySelector<HTMLElement>("div")?.style.width).toBe(
       expectedWidth,
     );
   });

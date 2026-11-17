@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { itemStatusKey } from "@/common/helpers/itemStatus";
 import { formatMoney } from "@/common/helpers/money";
 import { browserTimeZone } from "@/features/pages/SellerOrders/lib/format";
@@ -25,6 +25,7 @@ type Props = {
  */
 const PointOrderCard = ({ order, actionsDisabled, pending, onRun }: Props) => {
   const t = useTranslations("staff");
+  const locale = useLocale();
   const tOrders = useTranslations("orders");
   const tStatus = useTranslations("orders.itemStatus");
   const format = useFormatter();
@@ -58,7 +59,7 @@ const PointOrderCard = ({ order, actionsDisabled, pending, onRun }: Props) => {
                 {line.name} × {line.quantity}
               </span>
               <span className="text-muted-foreground">
-                {formatMoney(line.price, line.currency)} ·{" "}
+                {formatMoney(line.price, line.currency, locale)} ·{" "}
                 {statusKey ? tStatus(statusKey) : line.status}
               </span>
             </li>
@@ -71,7 +72,7 @@ const PointOrderCard = ({ order, actionsDisabled, pending, onRun }: Props) => {
           <span className="text-muted-foreground">
             {t("point.queue.totalLabel")}
           </span>{" "}
-          <strong>{formatMoney(order.grandTotal, order.currency)}</strong>
+          <strong>{formatMoney(order.grandTotal, order.currency, locale)}</strong>
         </p>
 
         <OrderActions

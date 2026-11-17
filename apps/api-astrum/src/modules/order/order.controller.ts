@@ -2,7 +2,9 @@ import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { handleErrors } from "../../common/helpers/errorHandler";
 import { toOrderJson, toOrderListJson } from "./order.mapper";
+import { parseOrderListQuery } from "./order-list-query";
 import { OrderService } from "./order.service";
+import { parseSellerOrderQuery } from "./seller-order-query";
 import { SellerOrderService } from "./seller-order.service";
 
 const orderService = new OrderService();
@@ -11,19 +13,6 @@ const sellerOrderService = new SellerOrderService();
 const userIdOf = (req: Request): string =>
   (req as Request & { userId: string }).userId;
 
-type PriceRow = { price: { toFixed: (digits: number) => string } };
-
-/** The storefront reads an amount as a number, never as a decimal string. */
-const withNumberPrices = <G extends { orderItems: PriceRow[] }>(
-  group: G,
-): G =>
-  ({
-    ...group,
-    orderItems: group.orderItems.map((item) => ({
-      ...item,
-      price: Number(item.price.toFixed(2)),
-    })),
-  }) as G;
 
 export class OrderController {
   async createOrder(req: Request, res: Response) {
@@ -48,9 +37,12 @@ export class OrderController {
 
   async getOrdersByUserId(req: Request, res: Response) {
     try {
-      const orders = await orderService.getOrdersByUserId(userIdOf(req));
+      const page = await orderService.getOrdersByUserId(
+        userIdOf(req),
+        parseOrderListQuery(req.query),
+      );
 
-      res.status(StatusCodes.OK).json(toOrderListJson(orders));
+      res.status(StatusCodes.OK).json(toOrderListJson(page));
     } catch (error) {
       handleErrors(res, error);
     }
@@ -58,17 +50,14 @@ export class OrderController {
 
   async getSellerOrders(req: Request, res: Response) {
     try {
-      const { orders, ...pagination } =
-        await sellerOrderService.getSellerOrders(
-          userIdOf(req),
-          req.query.page,
-          req.query.limit,
-        );
+      const page = await sellerOrderService.getSellerOrders(
+        userIdOf(req),
+        parseSellerOrderQuery(req.query),
+        req.query.page,
+        req.query.limit,
+      );
 
-      res.status(StatusCodes.OK).json({
-        ...pagination,
-        orders: orders.map(withNumberPrices),
-      });
+      res.status(StatusCodes.OK).json(page);
     } catch (error) {
       handleErrors(res, error);
     }

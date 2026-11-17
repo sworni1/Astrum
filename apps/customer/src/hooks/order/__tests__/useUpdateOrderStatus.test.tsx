@@ -80,8 +80,14 @@ describe("useUpdateOrderStatus", () => {
     expect(state.mutate.mock.calls).toEqual([
       ["/orders/order-1", order, false],
       ["/orders/order-1"],
-      ["/orders"],
+      [expect.any(Function)],
     ]);
+
+    // The list matcher covers the filtered keys too, and never the detail key.
+    const [matcher] = state.mutate.mock.calls[2];
+
+    expect(matcher("/orders?status=DELIVERED&q=pen")).toBe(true);
+    expect(matcher("/orders/order-1")).toBe(false);
   });
 
   it("never rejects a re read, so a failed read cannot swallow the toast (AC-6)", async () => {

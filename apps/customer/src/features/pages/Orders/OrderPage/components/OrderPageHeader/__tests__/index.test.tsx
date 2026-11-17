@@ -37,6 +37,7 @@ const order = (status: OrderStatus): Order => ({
   pickupPointName: null,
   pickupPointAddress: null,
   handedOverAt: null,
+  paidAt: null,
   deliveryDate: new Date("2026-11-10T00:00:00.000Z"),
   orderItems: [
     {
@@ -45,7 +46,10 @@ const order = (status: OrderStatus): Order => ({
       name: "Kettle",
       previewImage: "",
       quantity: 1,
-      price: 100,
+      price: 100.0,
+      brandName: "Parker",
+      kind: null,
+      subtotal: 100.0,
       orderId: "order-1234567890",
       status: OrderItemStatus.PENDING,
       userId: "user-1",

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useSWRConfig } from "swr";
 import { useFetcher } from "@/hooks/useFetcher";
+import { isOrderListKey } from "./orderListKey";
 
 /** Which of the two return branches the provider sent the customer to. */
 export type PaymentReturnBranch = "return" | "cancelled" | null;
@@ -65,7 +66,7 @@ export const useSyncOrderPayment = (
       .then(async () => {
         await Promise.allSettled([
           mutate(`/orders/${orderId}`),
-          mutate("/orders"),
+          mutate(isOrderListKey),
         ]);
       })
       // A failed sync leaves the order as it was read and still offers the pay

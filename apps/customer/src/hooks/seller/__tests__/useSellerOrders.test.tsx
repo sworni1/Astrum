@@ -7,7 +7,13 @@ const { getData } = vi.hoisted(() => ({ getData: vi.fn() }));
 
 vi.mock("@/hooks/useFetcher", () => ({ useFetcher: () => ({ getData }) }));
 
-import { useSellerOrders } from "@/hooks/seller/useSellerOrders";
+import {
+  SELLER_ORDERS_PAGE_SIZE,
+  sellerOrdersKey,
+  useSellerOrders,
+  type SellerOrdersFilters,
+} from "@/hooks/seller/useSellerOrders";
+import { Currency } from "@/common/types/product.types";
 
 type Snapshot = {
   kind: string;
@@ -15,16 +21,18 @@ type Snapshot = {
   total?: number;
   pages?: number;
   first?: string;
+  units?: number;
 };
 
-const Probe = ({ page }: { page: number }) => {
-  const { data, kind, isLoading } = useSellerOrders(page);
+const Probe = ({ filters }: { filters: SellerOrdersFilters }) => {
+  const { page, kind, isLoading } = useSellerOrders(filters);
   const snapshot: Snapshot = {
     kind,
     loading: isLoading,
-    total: data?.total,
-    pages: data?.totalPages,
-    first: data?.orders[0]?.id,
+    total: page?.total,
+    pages: page?.totalPages,
+    first: page?.items[0]?.id,
+    units: page?.stats.units,
   };
 
   return <span data-state={JSON.stringify(snapshot)} />;
@@ -44,7 +52,7 @@ const flush = async (): Promise<void> => {
   });
 };
 
-const render = async (page: number): Promise<void> => {
+const render = async (filters: SellerOrdersFilters): Promise<void> => {
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
@@ -52,22 +60,57 @@ const render = async (page: number): Promise<void> => {
   await act(async () => {
     root.render(
       <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
-        <Probe page={page} />
+        <Probe filters={filters} />
       </SWRConfig>,
     );
   });
   await flush();
 };
 
-const page = {
-  orders: [
-    { id: "order-1", createdAt: "2026-11-08T10:00:00.000Z", orderItems: [] },
+const answer = {
+  items: [
+    {
+      id: "line-1",
+      orderId: "order-12345678",
+      productId: "product-1",
+      name: "Kettle",
+      previewImage: "",
+      quantity: 2,
+      price: 19.99,
+      subtotal: 39.98,
+      currency: Currency.RUB,
+      status: "DELIVERED",
+      createdAt: "2026-11-08T10:00:00.000Z",
+      isPickup: true,
+      pickupPointName: null,
+      pickupPointAddress: null,
+      handedOverAt: null,
+      deliveryAddress: null,
+    },
   ],
+  counts: { all: 21, delivered: 1, canceled: 0 },
+  stats: { revenue: [{ currency: Currency.RUB, amount: 39.98 }], units: 2 },
   page: 1,
   limit: 20,
   total: 21,
   totalPages: 2,
 };
+
+describe("sellerOrdersKey", () => {
+  it("sends the bare first page when no filter is set (AC-7, AC-8)", () => {
+    expect(sellerOrdersKey()).toBe("/seller/orders?page=1&limit=20");
+    expect(sellerOrdersKey({ status: "ALL" })).toBe(
+      "/seller/orders?page=1&limit=20",
+    );
+    expect(sellerOrdersKey({ q: "   " })).toBe("/seller/orders?page=1&limit=20");
+  });
+
+  it("carries the chosen tab, the trimmed query and the page (AC-2)", () => {
+    expect(sellerOrdersKey({ status: "CANCELED", q: " drill ", page: 2 })).toBe(
+      `/seller/orders?status=CANCELED&q=drill&page=2&limit=${SELLER_ORDERS_PAGE_SIZE}`,
+    );
+  });
+});
 
 describe("useSellerOrders", () => {
   beforeEach(() => {
@@ -79,27 +122,28 @@ describe("useSellerOrders", () => {
     container?.remove();
   });
 
-  it("reads one page of 20 lines grouped by order (AC-4, AC-5, AC-15)", async () => {
-    getData.mockResolvedValue(page);
+  it("reads one page of 20 lines with their counts and money (AC-1, AC-10)", async () => {
+    getData.mockResolvedValue(answer);
 
-    await render(1);
+    await render({});
 
     expect(getData).toHaveBeenCalledWith("/seller/orders?page=1&limit=20");
     expect(read()).toMatchObject({
       kind: "none",
       total: 21,
       pages: 2,
-      first: "order-1",
+      first: "line-1",
+      units: 2,
     });
   });
 
-  it("reads a refusal from an account without a business as not a seller (AC-11, AC-15)", async () => {
+  it("reads a refusal from an account without a business as not a seller (AC-11)", async () => {
     getData.mockRejectedValue({
       isAxiosError: true,
       response: { status: 403, data: { code: "SELLER_NOT_ASSIGNED" } },
     });
 
-    await render(1);
+    await render({});
 
     expect(read().kind).toBe("notSeller");
     expect(read().total).toBeUndefined();
@@ -111,7 +155,7 @@ describe("useSellerOrders", () => {
       response: { status: 500, data: {} },
     });
 
-    await render(1);
+    await render({});
 
     expect(read().kind).toBe("failure");
   });

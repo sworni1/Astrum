@@ -1,9 +1,15 @@
 jest.mock("../../../../lib/prisma", () => ({
   prisma: {
+    $transaction: jest.fn(),
     $queryRaw: jest.fn(),
     business: { findUnique: jest.fn() },
     order: { findMany: jest.fn(), updateMany: jest.fn(), update: jest.fn() },
-    orderItem: { update: jest.fn(), updateMany: jest.fn() },
+    orderItem: {
+      count: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+    },
   },
 }));
 
@@ -11,6 +17,7 @@ import type { AddressInfo } from "node:net";
 import cookieParser from "cookie-parser";
 import express, { type Express } from "express";
 import { sign } from "jsonwebtoken";
+import { Prisma } from "../../../../generated/prisma/client";
 import { prisma } from "../../../../lib/prisma";
 import { logger } from "../../../common/helpers/logger";
 import { createAuthenticateToken } from "../../../middlewares/authenticateToken";
@@ -18,10 +25,16 @@ import type { SessionStore } from "../../../session/sessionStore";
 import sellerOrderRoutes, { refuseSellerWrite } from "../seller-order.routes";
 
 const prismaMock = prisma as unknown as {
+  $transaction: jest.Mock;
   $queryRaw: jest.Mock;
   business: { findUnique: jest.Mock };
   order: { findMany: jest.Mock; updateMany: jest.Mock; update: jest.Mock };
-  orderItem: { update: jest.Mock; updateMany: jest.Mock };
+  orderItem: {
+    count: jest.Mock;
+    findMany: jest.Mock;
+    update: jest.Mock;
+    updateMany: jest.Mock;
+  };
 };
 
 const JWT_SECRET = "seller-panel-read-only-secret";
@@ -59,28 +72,32 @@ const startServer = async (): Promise<Harness> => {
   };
 };
 
-const sellerOrderRow = {
-  id: "order-1",
-  createdAt: new Date("2026-11-14T09:00:00.000Z"),
-  paymentStatus: "PENDING" as const,
-  paymentMethod: "ONLINE_CARD" as const,
-  pickupPointId: "pp-1",
-  pickupPointName: "Central",
-  pickupPointAddress: "Tverskaya 12",
-  handedOverAt: null,
-  shippingMethod: { isPickup: true },
-  OrderItem: [
-    {
-      id: "line-1",
-      productId: "product-1",
-      name: "Drill",
-      previewImage: null,
-      quantity: 2,
-      price: 19.99,
-      currency: "RUB",
-      status: "CONFIRMED" as const,
-    },
-  ],
+const sellerLineRow = {
+  id: "line-1",
+  orderId: "order-12345678",
+  productId: "product-1",
+  name: "Drill",
+  previewImage: "https://cdn.test/drill.png",
+  quantity: 2,
+  price: new Prisma.Decimal("19.99"),
+  currency: "RUB",
+  status: "CONFIRMED" as const,
+  order: {
+    createdAt: new Date("2026-11-14T09:00:00.000Z"),
+    pickupPointName: "Central",
+    pickupPointAddress: "Tverskaya 12",
+    handedOverAt: null,
+    deliveryAddress: null,
+    shippingMethod: { isPickup: true },
+  },
+};
+
+const sellerAggregateRow = {
+  status: "CONFIRMED",
+  currency: "RUB",
+  count: 1,
+  units: "2",
+  revenue: "39.98",
 };
 
 const routeWithPath = (path: string) =>
@@ -97,8 +114,12 @@ describe("Seller panel refusals", () => {
 
   beforeEach(() => {
     prismaMock.business.findUnique.mockResolvedValue({ id: "business-1" });
-    prismaMock.$queryRaw.mockResolvedValue([{ total: 1 }]);
-    prismaMock.order.findMany.mockResolvedValue([sellerOrderRow]);
+    prismaMock.$transaction.mockImplementation(
+      (operations: Array<Promise<unknown>>) => Promise.all(operations),
+    );
+    prismaMock.orderItem.count.mockResolvedValue(1);
+    prismaMock.orderItem.findMany.mockResolvedValue([sellerLineRow]);
+    prismaMock.$queryRaw.mockResolvedValue([sellerAggregateRow]);
     (sessionStore.get as jest.Mock).mockResolvedValue(
       JSON.stringify({ userId: USER_ID }),
     );
@@ -158,7 +179,7 @@ describe("Seller panel refusals", () => {
 
   it("answers 404 to a seller line status change and leaves the rows untouched (AC-9)", async () => {
     const warn = jest.spyOn(logger, "warn").mockImplementation(() => undefined);
-    const rowBefore = JSON.stringify(sellerOrderRow);
+    const rowBefore = JSON.stringify(sellerLineRow);
     const server = await startServer();
 
     try {
@@ -178,7 +199,7 @@ describe("Seller panel refusals", () => {
       expect(await response.json()).toMatchObject({
         code: "SELLER_PANEL_READ_ONLY",
       });
-      expect(JSON.stringify(sellerOrderRow)).toBe(rowBefore);
+      expect(JSON.stringify(sellerLineRow)).toBe(rowBefore);
       expect(prismaMock.orderItem.update).not.toHaveBeenCalled();
       expect(prismaMock.orderItem.updateMany).not.toHaveBeenCalled();
       expect(warn).toHaveBeenCalledWith({
@@ -237,7 +258,7 @@ describe("Seller panel refusals", () => {
     }
   });
 
-  it("serves the read with exactly the documented keys and no buyer identity (AC-6)", async () => {
+  it("serves the read with exactly the documented keys and no buyer identity (AC-3)", async () => {
     const server = await startServer();
 
     try {
@@ -245,7 +266,9 @@ describe("Seller panel refusals", () => {
         headers: { Cookie: authCookie() },
       });
       const body = (await response.json()) as {
-        orders: Array<Record<string, unknown> & { orderItems: Array<object> }>;
+        items: Array<Record<string, unknown>>;
+        counts: Record<string, number>;
+        stats: { revenue: Array<{ currency: string; amount: number }>; units: number };
         total: number;
         page: number;
         limit: number;
@@ -254,28 +277,47 @@ describe("Seller panel refusals", () => {
 
       expect(response.status).toBe(200);
       expect(body.total).toBe(1);
-      expect(Object.keys(body.orders[0]).sort()).toEqual([
+      expect(body.counts).toEqual({ all: 1, delivered: 0, canceled: 0 });
+      expect(body.stats).toEqual({ revenue: [], units: 0 });
+      expect(Object.keys(body.items[0]).sort()).toEqual([
         "createdAt",
+        "currency",
+        "deliveryAddress",
         "handedOverAt",
         "id",
         "isPickup",
-        "orderItems",
-        "paymentMethod",
-        "paymentStatus",
-        "pickupPointAddress",
-        "pickupPointId",
-        "pickupPointName",
-      ]);
-      expect(Object.keys(body.orders[0].orderItems[0]).sort()).toEqual([
-        "currency",
-        "id",
         "name",
+        "orderId",
+        "pickupPointAddress",
+        "pickupPointName",
         "previewImage",
         "price",
         "productId",
         "quantity",
         "status",
+        "subtotal",
       ]);
+      expect(body.items[0].price).toBe(19.99);
+      expect(body.items[0].subtotal).toBe(39.98);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("refuses a bogus status filter with its own code (AC-2)", async () => {
+    const server = await startServer();
+
+    try {
+      const response = await fetch(
+        `${server.url}/api/seller/orders?status=delivered`,
+        { headers: { Cookie: authCookie() } },
+      );
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        code: "INVALID_STATUS_FILTER",
+      });
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
     } finally {
       await server.close();
     }

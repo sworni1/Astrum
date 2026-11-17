@@ -64,7 +64,7 @@ A constant, a table or a helper with one consumer lives in that feature's `lib/`
 
 ### S4. Side effects, money and dates
 
-No `showToast`, `router.push`, `document` access or DOM write runs in a render body, and no DOM write behind React runs anywhere, handlers included: a refusal or a failed read surfaces as a toast raised from a handler or an effect plus a rendered state, never a silent `return null`. A user facing amount prints through `formatMoney(amount, currency)` from `src/common/helpers/money.ts`; `toFixed`, a currency symbol in JSX and `getCurrencyEmoji` used as an amount renderer are not amounts. A date shown as content prints through `useFormatter` from next-intl; a date input may use `date-fns` to parse and validate the typed string.
+No `showToast`, `router.push`, `document` access or DOM write runs in a render body, and no DOM write behind React runs anywhere, handlers included: a refusal or a failed read surfaces as a toast raised from a handler or an effect plus a rendered state, never a silent `return null`. A user facing amount prints through `formatMoney(amount, currency, locale)` from `src/common/helpers/money.ts`, with the locale from `useLocale()`; `toFixed` and a currency symbol in JSX are not amounts. A date shown as content prints through `useFormatter` from next-intl; a date input may use `date-fns` to parse and validate the typed string.
 
 ### S5. Imports and one formatter
 
