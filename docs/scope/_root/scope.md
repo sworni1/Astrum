@@ -1,6 +1,6 @@
 # Scope: Astrum order flow
 
-One order moves through three places: the storefront (`apps/customer`), the gateway (`apps/api-astrum`) and the shared schema (`packages/Astrum-db`). This plan holds the whole order path, slice by slice, so the storefront and backend scopes stay about their own pages. The seller surface began with the order panel, spec 0007. Session state and account confirmation cross the same places plus the auth service and a new worker, so their slices live here too. Becoming a seller crosses the storefront, the gateway and one `Business` row, so it is planned here as well. A handover at a collection point and by a courier needs two roles of its own, so Slice 10 lives here too.
+One order moves through three places: the storefront (`apps/customer`), the gateway (`apps/api-astrum`) and the shared schema (`packages/Astrum-db`). This plan holds the whole order path, slice by slice, so the storefront and backend scopes stay about their own pages. The seller surface began with the order panel, spec 0007. Session state and account confirmation cross the same places plus the auth service and a new worker, so their slices live here too. Becoming a seller crosses the storefront, the gateway and one `Business` row, so it is planned here as well. A handover at a collection point and by a courier needs two roles of its own, so Slice 10 lives here too. A visitor with no account needs a cart, a wishlist and a shop to look at before signing up, and that identity crosses the storefront, the gateway and the schema, so Slice 11 lives here too.
 
 **Build approach:** Tracer Bullet (every slice runs end to end through the storefront and the gateway).
 **Workflow:** Beta (after `/develop`: `/check verify`, then `/test`). Features that move money or stock, or guard access, carry a `· GA` tag.
@@ -9,30 +9,31 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 
 ## At a glance
 
-| #   | Feature                               | Phase    | Status      |
-| --- | ------------------------------------- | -------- | ----------- |
-| 1   | Order price and stock on the server   | Slice 1  | done        |
-| 2   | Idempotent checkout and cart clearing | Slice 1  | done        |
-| 3   | Shipping methods from the API         | Slice 1  | done        |
-| 4   | Order statuses with seller ownership  | Slice 2  | done        |
-| 5   | Seller order panel                    | Slice 2  | done        |
-| 6   | Customer cancel on the order screen   | Slice 2  | done        |
-| 7   | Pickup handover                       | Slice 3  | done        |
-| 8   | Reviews on the product screen         | Slice 4  | done        |
-| 9   | Order flow end to end test and CI     | Slice 4  | planned     |
-| 10  | Session store in Redis                | Slice 5  | done        |
-| 11  | Account confirmation by email         | Slice 6  | in-progress |
-| 12  | English interface by default          | Slice 7  | in-progress |
-| 13  | Seller onboarding                     | Slice 8  | done        |
-| 14  | Review likes and comments             | Slice 4  | done        |
-| 15  | Payment through a test provider       | Slice 9  | in-progress |
-| 16  | Order letters                         | Slice 9  | planned     |
-| 17  | Confirm order lines when paid         | Slice 9  | in-progress |
-| 18  | Become a point worker or a courier    | Slice 10 | done        |
-| 19  | Handover at the pickup point          | Slice 10 | done        |
-| 20  | Handover by the courier               | Slice 10 | in-progress |
-| 21  | Read only seller panel                | Slice 10 | in-progress |
-| 22  | Real rating on the product card       | Slice 4  | in-progress |
+| #   | Feature                                  | Phase    | Status      |
+| --- | ---------------------------------------- | -------- | ----------- |
+| 1   | Order price and stock on the server      | Slice 1  | done        |
+| 2   | Idempotent checkout and cart clearing    | Slice 1  | done        |
+| 3   | Shipping methods from the API            | Slice 1  | done        |
+| 4   | Order statuses with seller ownership     | Slice 2  | done        |
+| 5   | Seller order panel                       | Slice 2  | done        |
+| 6   | Customer cancel on the order screen      | Slice 2  | done        |
+| 7   | Pickup handover                          | Slice 3  | done        |
+| 8   | Reviews on the product screen            | Slice 4  | done        |
+| 9   | Order flow end to end test and CI        | Slice 4  | planned     |
+| 10  | Session store in Redis                   | Slice 5  | done        |
+| 11  | Account confirmation by email            | Slice 6  | in-progress |
+| 12  | English interface by default             | Slice 7  | in-progress |
+| 13  | Seller onboarding                        | Slice 8  | done        |
+| 14  | Review likes and comments                | Slice 4  | done        |
+| 15  | Payment through a test provider          | Slice 9  | in-progress |
+| 16  | Order letters                            | Slice 9  | planned     |
+| 17  | Confirm order lines when paid            | Slice 9  | in-progress |
+| 18  | Become a point worker or a courier       | Slice 10 | done        |
+| 19  | Handover at the pickup point             | Slice 10 | done        |
+| 20  | Handover by the courier                  | Slice 10 | in-progress |
+| 21  | Read only seller panel                   | Slice 10 | in-progress |
+| 22  | Real rating on the product card          | Slice 4  | in-progress |
+| 23  | Guest cart, wishlist and recommendations | Slice 11 | done        |
 
 ## Slice 1: the order thread
 
@@ -407,6 +408,28 @@ The seller keeps sight of their own orders and loses every action, because hando
   spec [0020](../../specs/_root/0020-read-only-seller-panel/index.md)
   code in `apps/api-astrum/src/modules/order` (`seller-order.routes.ts`, `seller-order.service.ts`, `order.controller.ts`), `apps/customer/src/features/pages/SellerOrders/`, `apps/customer/src/hooks/seller/`, `apps/customer/messages`
 
+## Slice 11: shopping without an account
+
+The shop asks for an account before anything else: `apps/customer/src/proxy.ts` sends every route that is not one of the three auth pages to `/auth/signin`, and the gateway mounts `/api/cart`, `/api/wishlist` and `/api/products` behind `authenticateToken` (`apps/api-astrum/src/app.ts:81`), so a visitor with no cookie reads `401` everywhere. There is nothing to hang a guest cart on either: `CartItem` and `WishlistItem` are keyed by `userId` alone (`packages/Astrum-db/prisma/schema.prisma:53`, `:64`), and the `__auth` cookie is a signed token pointing at a Redis `session:<sid>` record that only a sign in writes. The recommendations read itself is not personal: its page comes from the catalogue cache and the `userId` only adds the wishlist and cart marks on top, so a guest needs a guest shaped answer rather than a second query.
+
+### 23. Guest cart, wishlist and recommendations · done · GA
+
+A visitor can look at the shop, add to the cart and add to the wishlist before owning an account; the account becomes a requirement at checkout, the way it works in Ozon. Add to cart and add to wishlist are today refused to anyone without a session, and the storefront never shows a page at all.
+**Done when:** home, categories, the product screen, the cart and the wishlist render for a browser with no `__auth` cookie and no redirect fires; a guest adds to the cart and to the wishlist, sees both after a reload, in a new tab and on a second visit, and another browser sees an empty one; the guest identity is a cookie the gateway issues and reads, a token that is forged, expired or belongs to another guest starts an empty cart instead of answering an error, and no request carrying one guest token can read another guest's lines; signing in or registering moves the guest lines into the account cart and wishlist under one stated quantity rule, leaves no line doubled and no line lost, and discards the guest identity, while an account's own lines always win over a stale guest token; checkout, orders, review writes, likes and every staff screen still answer `401` without a session, and the checkout leads a guest to sign in and back instead of failing with a toast; the guest copy is in both catalogs and the guest screens hold at 390 and 1280 wide.
+- [x] Design it (spec): `/architect guest cart wishlist and recommendations` — 2026-11-18: spec 0028, 16 acceptance criteria after a cross check
+- [x] Build it: `/develop guest cart wishlist and recommendations`
+  - [x] Identity and the two tables: the nullable owners, the `guestId` unique keys, `updatedAt` with its default, the `CHECK`, the four schema copies, then the owner resolver, the cookie and the mount changes (AC-1 to AC-7) — migration applied and the check constraint read back from the database
+  - [x] Cart and wishlist under either owner: the reads, the upsert add capped at stock, the wishlist upsert, the gone product filter and the missing `await` (AC-8 to AC-10, AC-12) — a second guest add on the running gateway answered quantity 2, a second wishlist add kept one row
+  - [x] Merge and the sweep: `POST /api/cart/merge` in one transaction, then the retention pass at boot and daily (AC-11, AC-16) — both suites green; the merge itself is walked by `Verify it` with a real session
+  - [x] Storefront for a guest: the route policy, the shell without an account read, `SESSION_MISSING` out of the refusal set, the header and the notice band, the accepted return path and the merge call (AC-13 to AC-15) — suite green, the rendered screens belong to `Verify it`
+  - [x] Copy and gates: both catalogs and the new suites (AC-16) — `catalog-parity` nav 20/20 and cart 82/82, api 489 tests, customer 458 tests, customer lint 0 errors; the tree wide `pnpm quality-gate` runs at `Verify it`
+- [x] Verify it: `/check verify guest cart wishlist and recommendations` — 2026-11-18: all 16 steps driven against the running stack (guest cookie, refused tokens, two guests, catalogue marks, merge, sweep on a controlled gateway, the guest screens at 390 and 1280, the sign in return path), per step evidence in `verify.md`; `pnpm check-types` exit 0, api 489 tests, customer 458 tests, customer lint 0 errors
+- [x] Test it: waived at close (2026-11-18, the owner closed the feature on the verify result) · no dedicated `/test` pass ran, and the coverage that exists is the suites written with the build (`guest.identity.spec.ts`, `guest.merge.spec.ts`, `guest.sweep.spec.ts`, `cart.owner.spec.ts`, `wishlist.owner.spec.ts`, `product-routes.guard.spec.ts`, `proxy.test.ts`, `returnPath.test.ts`): api 489 tests, customer 458 tests, all green, plus the 16 criteria proven live against the running stack
+- [x] Review it (fresh model): waived at close (2026-11-18, the owner closed the feature here) · no fresh model review ran, so the tree carries no independent read of this diff
+- [x] Document it: waived at close (2026-11-18) · the record is this spec, its `verify.md` with the run notes, and the rows above
+  spec [0028](../../specs/_root/0028-guest-cart-wishlist-and-recommendations/index.md)
+  code in `packages/Astrum-db/prisma` (`schema.prisma`, `migrations/20261118120000_guest_owner`), `apps/api-astrum/src/middlewares/resolveOwner.ts`, `apps/api-astrum/src/modules/guest/`, `apps/api-astrum/src/modules/cart`, `apps/api-astrum/src/modules/wishlist`, `apps/api-astrum/src/common/helpers/getWishlistAndCart.ts`, `apps/customer/src/proxy.ts`, `apps/customer/src/common/helpers/returnPath.ts`, `apps/customer/src/features/layout/Navbar`, `apps/customer/src/features/pages/Cart`, `apps/customer/messages`
+
 ## Fixed
 
 Bugs found while verifying a slice, recorded here once the fix lands so the plan stays honest.
@@ -423,6 +446,7 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Registration answers 500**: `POST /api/auth/register` fails before the insert for any fresh address, through the gateway and on the auth service directly, and writes no `User` row · bug, found while verifying spec 0018
 - **Popover and Select surfaces paint transparent**: the delivery date calendar and the pickup point list show the receipt fields behind them, because the popover content computes `opacity: 0` with an `enter` animation that never settles and the select panel computes a transparent background · bug, found while verifying spec 0024
 - **No in screen way back to the cart**: `/checkout` carries no link or button to `/cart`, so only the browser back button and the navbar return a customer with their ticks · from spec 0024 · needs a decision
+- **The guest header overflows between 1024 and 1109 pixels wide**: at a 1037 viewport the navbar's right cluster (categories, `Войти`, `Регистрация`) runs past the edge, `document.documentElement.scrollWidth` reads 1109 against an `innerWidth` of 1037, and the register button is clipped on `/`, `/cart` and `/wishlist` (`apps/customer/src/features/layout/Navbar/index.tsx`) · bug, found while verifying spec 0028
 - **The mobile menu trigger is not a control**: the navbar opens the sheet from a bare `LuMenu` icon with an `onClick`, so it takes no keyboard focus and has no accessible name, and every page that carries the navbar inherits it (`apps/customer/src/features/layout/Navbar/index.tsx`) · bug, found while verifying spec 0017
 - **Courier delivery**: a shipping address instead of a pickup point · needs a decision
 - **Returns and refunds** · needs a decision · from spec 0015 (a paid order cancelled now owes a manual refund and logs `payment.refund_owed`)
