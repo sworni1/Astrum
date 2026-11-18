@@ -53,23 +53,31 @@ model LastViewedProduct {
 model WishlistItem {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
-  userId    String
+  userId    String?
+  guestId   String?
   productId String
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@unique([userId, productId])
+  @@unique([guestId, productId])
   @@index([userId])
+  @@index([guestId])
   @@index([productId])
 }
 
 model CartItem {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
-  userId    String
+  userId    String?
+  guestId   String?
   productId String
   quantity  Int      @default(1) @db.Integer
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@unique([userId, productId])
+  @@unique([guestId, productId])
   @@index([userId])
+  @@index([guestId])
   @@index([productId])
 }
 
