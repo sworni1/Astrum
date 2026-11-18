@@ -18,6 +18,7 @@ type Props = {
   selectedCount: number;
   subtotal: number;
   currency: Currency;
+  guest: boolean;
 };
 
 const CartSummary = ({
@@ -25,6 +26,7 @@ const CartSummary = ({
   selectedCount,
   subtotal,
   currency,
+  guest,
 }: Props) => {
   const t = useTranslations("cart");
 
@@ -42,7 +44,7 @@ const CartSummary = ({
           currency={currency}
         />
         <CartFeatures />
-        <CheckoutButton selectedCount={selectedCount} />
+        <CheckoutButton selectedCount={selectedCount} guest={guest} />
       </CardContent>
     </Card>
   );

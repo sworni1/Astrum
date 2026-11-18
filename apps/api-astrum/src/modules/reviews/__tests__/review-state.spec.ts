@@ -7,6 +7,7 @@ jest.mock("../../../../lib/prisma", () => ({
 
 import { prisma } from "../../../../lib/prisma";
 import { readReviewState } from "../review-state";
+import { userOwner } from "../../../common/types/owner";
 
 const prismaMock = prisma as unknown as {
   orderItem: { findFirst: jest.Mock };
@@ -19,7 +20,7 @@ describe("readReviewState", () => {
   it("answers ELIGIBLE with the line of the newest order that carries no review (AC-7)", async () => {
     prismaMock.orderItem.findFirst.mockResolvedValue({ id: "line-newest" });
 
-    const state = await readReviewState("user-1", "product-1");
+    const state = await readReviewState(userOwner("user-1"), "product-1");
 
     expect(state).toEqual({ status: "ELIGIBLE", orderItemId: "line-newest" });
     expect(prismaMock.orderItem.findFirst).toHaveBeenCalledWith({
@@ -38,7 +39,7 @@ describe("readReviewState", () => {
     prismaMock.orderItem.findFirst.mockResolvedValue(null);
     prismaMock.review.findFirst.mockResolvedValue({ id: "review-1" });
 
-    const state = await readReviewState("user-1", "product-1");
+    const state = await readReviewState(userOwner("user-1"), "product-1");
 
     expect(state).toEqual({ status: "ALREADY_REVIEWED", orderItemId: null });
   });
@@ -47,7 +48,7 @@ describe("readReviewState", () => {
     prismaMock.orderItem.findFirst.mockResolvedValue(null);
     prismaMock.review.findFirst.mockResolvedValue(null);
 
-    const state = await readReviewState("user-1", "product-1");
+    const state = await readReviewState(userOwner("user-1"), "product-1");
 
     expect(state).toEqual({ status: "NOT_PURCHASED", orderItemId: null });
   });

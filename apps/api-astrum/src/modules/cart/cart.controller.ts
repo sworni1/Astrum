@@ -2,16 +2,22 @@ import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { handleErrors } from "../../common/helpers/errorHandler";
 import type { AuthenticatedUserRequest } from "../../common/types/jwt.payload";
+import { GuestMergeService } from "../guest/guest-merge.service";
+import {
+  clearGuestCookie,
+  ownerForRead,
+  ownerForWrite,
+  readGuestId,
+} from "../guest/guest.identity";
 import { CartService } from "./cart.service";
 
 const cartService = new CartService();
+const guestMergeService = new GuestMergeService();
 
 export class CartController {
   async getCart(req: Request, res: Response) {
     try {
-      const { userId } = req as AuthenticatedUserRequest;
-
-      const cart = await cartService.getCart(userId);
+      const cart = await cartService.getCart(ownerForRead(req));
 
       res.status(StatusCodes.OK).json(cart);
     } catch (err) {
@@ -21,9 +27,10 @@ export class CartController {
 
   async addProductToCart(req: Request, res: Response) {
     try {
-      const { userId } = req as AuthenticatedUserRequest;
-
-      const cartItem = await cartService.addProductToCart(userId, req.body);
+      const cartItem = await cartService.addProductToCart(
+        ownerForWrite(req, res),
+        req.body,
+      );
 
       res.status(StatusCodes.OK).json(cartItem);
     } catch (err) {
@@ -33,11 +40,10 @@ export class CartController {
 
   async changeProductCartQuantity(req: Request, res: Response) {
     try {
-      const { userId } = req as AuthenticatedUserRequest;
       const productId = req.params.productId as string;
 
       const cartItem = await cartService.changeProductCartQuantity(
-        userId,
+        ownerForWrite(req, res),
         productId,
         req.body,
       );
@@ -50,15 +56,33 @@ export class CartController {
 
   async deleteProductFromCart(req: Request, res: Response) {
     try {
-      const { userId } = req as AuthenticatedUserRequest;
       const productId = req.params.productId as string;
 
       const deletedProduct = await cartService.deleteProductFromCart(
-        userId,
+        ownerForWrite(req, res),
         productId,
       );
 
       res.status(StatusCodes.OK).json(deletedProduct);
+    } catch (err) {
+      handleErrors(res, err);
+    }
+  }
+
+  /**
+   * The visitor picked a cart before signing in, so the account absorbs it
+   * (spec 0028, AC-11). The cookie is cleared only after the move committed, so
+   * a failed merge leaves the guest lines where a retry finds them.
+   */
+  async mergeGuestCart(req: Request, res: Response) {
+    try {
+      const { userId } = req as AuthenticatedUserRequest;
+
+      const counts = await guestMergeService.merge(userId, readGuestId(req));
+
+      clearGuestCookie(res);
+
+      res.status(StatusCodes.OK).json(counts);
     } catch (err) {
       handleErrors(res, err);
     }

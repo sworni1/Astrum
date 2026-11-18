@@ -10,6 +10,7 @@ import {
 } from "../../cache/cache";
 import { cacheKeys } from "../../cache/cacheKeys";
 import { AppError } from "../../common/helpers/appError";
+import type { Owner } from "../../common/types/owner";
 import type { CreateReviewCommentDto } from "./dto/create-review-comment.dto";
 import type { CreateReviewDto } from "./dto/create-review.dto";
 import {
@@ -244,15 +245,21 @@ export class ReviewsService {
   /**
    * The ids of this product's approved reviews the caller liked, oldest like
    * first (AC-3). An empty array covers a product with nothing liked in it, so
-   * the screen never reads a `404` as "nobody liked anything".
+   * the screen never reads a `404` as "nobody liked anything". A visitor with no
+   * identity has liked nothing and the read asks no query at all (spec 0028,
+   * AC-6).
    */
   async getLikedReviewIds(
-    userId: string,
+    owner: Owner | null,
     productId: string,
   ): Promise<{ reviewIds: string[] }> {
+    if (!owner || owner.kind !== "user") {
+      return { reviewIds: [] };
+    }
+
     const rows = await prisma.reviewLike.findMany({
       where: {
-        userId,
+        userId: owner.userId,
         Review: { productId, status: ReviewStatus.APPROVED },
       },
       select: { reviewId: true },

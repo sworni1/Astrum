@@ -4,6 +4,7 @@ import type { ProductCategory } from "../../../generated/prisma/enums";
 import { handleErrors } from "../../common/helpers/errorHandler";
 import { productCategoryMap } from "../../common/helpers/productCategoryMap";
 import type { AuthenticatedUserRequest } from "../../common/types/jwt.payload";
+import { ownerForRead } from "../guest/guest.identity";
 import { ProductService } from "./product.service";
 
 const productService = new ProductService();
@@ -11,10 +12,12 @@ const productService = new ProductService();
 export class ProductController {
   async getProduct(req: Request, res: Response) {
     try {
-      const { userId } = req as AuthenticatedUserRequest;
       const productId = req.params.productId as string;
 
-      const product = await productService.getProduct(userId, productId);
+      const product = await productService.getProduct(
+        ownerForRead(req),
+        productId,
+      );
 
       res.status(StatusCodes.OK).json(product);
     } catch (err) {
@@ -24,11 +27,10 @@ export class ProductController {
 
   async getRecommendations(req: Request, res: Response) {
     try {
-      const { userId } = req as AuthenticatedUserRequest;
       const { cursor } = req.query;
 
       const products = await productService.getRecommendations(
-        userId,
+        ownerForRead(req),
         {},
         cursor as string,
       );
@@ -41,7 +43,6 @@ export class ProductController {
 
   async getCategoryProducts(req: Request, res: Response) {
     try {
-      const { userId } = req as AuthenticatedUserRequest;
       const category = req.params.category as string;
 
       const { cursor, search_query } = req.query;
@@ -56,7 +57,7 @@ export class ProductController {
       };
 
       const products = await productService.getCategoryProducts(
-        userId,
+        ownerForRead(req),
         filters,
         cursor as string,
       );

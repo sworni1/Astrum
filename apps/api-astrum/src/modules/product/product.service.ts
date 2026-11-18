@@ -23,6 +23,7 @@ import {
 } from "../../common/prisma-selects/product.select";
 import { roundAverageRating } from "../reviews/review.serializer";
 import { readReviewState } from "../reviews/review-state";
+import type { Owner } from "../../common/types/owner";
 import { PRODUCT_ERROR_CODES } from "./constants/product.constants";
 import type { CreateProductDto } from "./dto/create-product.dto";
 
@@ -60,10 +61,11 @@ const readPageRatings = async (
 export class ProductService {
   /**
    * The shared row comes from Redis, the caller's own marks and review state
-   * stay live, so two accounts read one cached product and each sees its own
-   * wishlist, cart and review state (spec 0022, AC-2, AC-3).
+   * stay live, so two readers share one cached product and each sees its own
+   * wishlist, cart and review state (spec 0022, AC-2, AC-3). A visitor with no
+   * identity owns no mark, so the shared row is all it reads (spec 0028, AC-6).
    */
-  async getProduct(userId: string, productId: Product["id"]) {
+  async getProduct(owner: Owner | null, productId: Product["id"]) {
     const version = await readVersion(cacheKeys.productVersion(productId));
 
     const product = await getOrSet({
@@ -73,8 +75,10 @@ export class ProductService {
     });
 
     const [{ wishlistItem, cartItem }, reviewState] = await Promise.all([
-      getWishlistAndCartItem(userId, productId),
-      readReviewState(userId, productId),
+      owner
+        ? getWishlistAndCartItem(owner, productId)
+        : Promise.resolve({ cartItem: null, wishlistItem: null }),
+      readReviewState(owner, productId),
     ]);
 
     const { properties, ...rest } = product;
@@ -91,7 +95,7 @@ export class ProductService {
   }
 
   async getRecommendations(
-    userId: string,
+    owner: Owner | null,
     filters?: {
       category?: ProductCategory;
       search_query?: string;
@@ -118,7 +122,7 @@ export class ProductService {
 
     // Two queries for the page, merged after the cached payload is read (AC-4).
     const marks = await readPageMarks(
-      userId,
+      owner,
       page.products.map((product) => product.id),
     );
 

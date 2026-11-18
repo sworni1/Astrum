@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireSession } from "../../middlewares/resolveOwner";
 import { validateDto } from "../../middlewares/validateDto";
 import {
   productReviewLikesRouter,
@@ -18,6 +19,7 @@ productRoutes.get(
 );
 productRoutes.post(
   "/",
+  requireSession,
   validateDto(CreateProductDto),
   productController.createProduct,
 );

@@ -27,8 +27,10 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { cn } from "@/lib/utils";
 
-export default function SignIn() {
-  const { handleSignIn } = useAuth();
+type SignInProps = { next?: string };
+
+export default function SignIn({ next }: SignInProps) {
+  const { handleSignIn } = useAuth(next);
   const t = useTranslations("auth");
   const validation = useTranslations("validation");
 

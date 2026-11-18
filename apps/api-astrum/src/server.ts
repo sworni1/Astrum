@@ -3,6 +3,7 @@ import type { Server } from "node:http";
 import { prisma } from "../lib/prisma";
 import app from "./app";
 import { closeCacheStore } from "./cache/cacheStore";
+import { startGuestSweep } from "./modules/guest/guest.sweep";
 import { startOrderShipping } from "./modules/order/order-shipping";
 import { startPaymentSweep } from "./modules/payment/payment.sweep";
 
@@ -27,12 +28,18 @@ const sweep = startPaymentSweep();
 // timer, so the payment sweep stays about money (spec 0016, amendments).
 const shipping = startOrderShipping();
 
+// Guest lines nobody claimed die after the retention bound, swept once at boot
+// and then daily (spec 0028, AC-16).
+const guestSweep = startGuestSweep();
+
 const shutdown = (signal: NodeJS.Signals): void => {
   console.log(`[api] ${signal} received, draining connections`);
 
   clearInterval(sweep);
 
   clearInterval(shipping);
+
+  clearInterval(guestSweep);
 
   server.close(() => {
     void closeCacheStore()

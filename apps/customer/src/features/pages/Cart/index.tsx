@@ -8,11 +8,14 @@ import CartHeader from "./components/CartHeader";
 import CartItemsList from "./components/CartItemsList";
 import CartLoading from "./components/CartLoading";
 import CartSummary from "./components/CartSummary";
+import GuestCartNotice from "./components/GuestCartNotice";
 import SelectAllBar from "./components/SelectAllBar";
 import { useCartSelection } from "./hooks/useCartSelection";
 import { useLoadFailureToast } from "./hooks/useLoadFailureToast";
 
-export default function Cart() {
+type CartProps = { guest: boolean };
+
+export default function Cart({ guest }: CartProps) {
   const { cart, cartIsLoading, cartError } = useGetCart();
   const items = useMemo(() => cart ?? [], [cart]);
   const {
@@ -31,11 +34,17 @@ export default function Cart() {
   }
 
   if (items.length === 0) {
-    return <CartEmpty />;
+    return (
+      <div className="mx-auto w-full max-w-7xl p-6">
+        {guest ? <GuestCartNotice /> : null}
+        <CartEmpty />
+      </div>
+    );
   }
 
   return (
     <div className="mx-auto w-full max-w-7xl p-6">
+      {guest ? <GuestCartNotice /> : null}
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <CartHeader itemCount={items.length} />
@@ -59,6 +68,7 @@ export default function Cart() {
             selectedCount={selectedIds.size}
             subtotal={subtotal}
             currency={Currency.RUB}
+            guest={guest}
           />
         </div>
       </div>

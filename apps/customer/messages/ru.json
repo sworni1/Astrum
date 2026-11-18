@@ -36,7 +36,9 @@
     "ordersFailed": "Не удалось загрузить заказы",
     "sales": "Продажи",
     "point": "Мой пункт",
-    "courier": "Курьер"
+    "courier": "Курьер",
+    "signIn": "Войти",
+    "register": "Регистрация"
   },
   "footer": {
     "about": "О магазине",
@@ -79,6 +81,8 @@
   },
   "cart": {
     "title": "Корзина",
+    "guestNotice": "Покупать можно без аккаунта. Войдите при оформлении, чтобы сохранить корзину.",
+    "guestSignIn": "Войти и оформить",
     "itemCount": "{count, plural, one {# товар} few {# товара} many {# товаров} other {# товара}} в корзине",
     "selectAll": "Выбрать все товары ({count})",
     "selectedOf": "Выбрано {selected} из {total}",

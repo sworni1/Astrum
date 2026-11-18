@@ -1,17 +1,33 @@
 import type { Product } from "../../../generated/prisma/client";
 import { prisma } from "../../../lib/prisma";
+import type { Owner } from "../types/owner";
+
+/** The owner columns of one row: an account id or a guest id, never both (spec 0028, AC-1). */
+export const ownerColumns = (
+  owner: Owner,
+): { userId: string } | { guestId: string } =>
+  owner.kind === "user" ? { userId: owner.userId } : { guestId: owner.guestId };
+
+/** The named unique key the owner columns select, so an upsert and a read agree. */
+export const ownerUniqueKey = (
+  owner: Owner,
+  productId: Product["id"],
+):
+  | { userId_productId: { userId: string; productId: string } }
+  | { guestId_productId: { guestId: string; productId: string } } =>
+  owner.kind === "user"
+    ? { userId_productId: { userId: owner.userId, productId } }
+    : { guestId_productId: { guestId: owner.guestId, productId } };
 
 export const getWishlistAndCartItem = async (
-  userId: string,
+  owner: Owner,
   productId: Product["id"],
 ) => {
   try {
     const [cartItem, wishlistItem] = await Promise.all([
-      prisma.cartItem.findUnique({
-        where: { userId_productId: { userId, productId } },
-      }),
+      prisma.cartItem.findUnique({ where: ownerUniqueKey(owner, productId) }),
       prisma.wishlistItem.findUnique({
-        where: { userId_productId: { userId, productId } },
+        where: ownerUniqueKey(owner, productId),
       }),
     ]);
 
@@ -25,22 +41,22 @@ export const getWishlistAndCartItem = async (
 };
 
 export const getWishlistItem = async (
-  userId: string,
+  owner: Owner,
   productId: Product["id"],
 ) => {
   try {
     return await prisma.wishlistItem.findUnique({
-      where: { userId_productId: { userId, productId } },
+      where: ownerUniqueKey(owner, productId),
     });
   } catch (_error) {
     throw new Error(`getWishlistItem error`);
   }
 };
 
-export const getCartItem = async (userId: string, productId: Product["id"]) => {
+export const getCartItem = async (owner: Owner, productId: Product["id"]) => {
   try {
     return await prisma.cartItem.findUnique({
-      where: { userId_productId: { userId, productId } },
+      where: ownerUniqueKey(owner, productId),
     });
   } catch (_error) {
     throw new Error(`getCartItem error`);
@@ -55,23 +71,24 @@ export type PageMarks = {
 /**
  * The marks of one page in two queries, never two per card (spec 0022, AC-4).
  * They stay out of the cache on purpose: a shared payload never carries a
- * caller's own cart or wishlist state (AC-3).
+ * caller's own cart or wishlist state (AC-3). A reader with no identity owns no
+ * row, so the answer is empty without a query (spec 0028, AC-6).
  */
 export const readPageMarks = async (
-  userId: string,
+  owner: Owner | null,
   productIds: readonly string[],
 ): Promise<PageMarks> => {
-  if (productIds.length === 0) {
+  if (!owner || productIds.length === 0) {
     return { wishlisted: new Set(), cart: new Map() };
   }
 
   const [wishlistItems, cartItems] = await Promise.all([
     prisma.wishlistItem.findMany({
-      where: { userId, productId: { in: [...productIds] } },
+      where: { ...ownerColumns(owner), productId: { in: [...productIds] } },
       select: { productId: true },
     }),
     prisma.cartItem.findMany({
-      where: { userId, productId: { in: [...productIds] } },
+      where: { ...ownerColumns(owner), productId: { in: [...productIds] } },
       select: { productId: true, quantity: true },
     }),
   ]);
@@ -82,10 +99,10 @@ export const readPageMarks = async (
   };
 };
 
-export const getWishlistProductIds = async (userId: string) => {
+export const getWishlistProductIds = async (owner: Owner) => {
   try {
     const wishlistItems = await prisma.wishlistItem.findMany({
-      where: { userId },
+      where: ownerColumns(owner),
       select: {
         productId: true,
       },
@@ -97,10 +114,10 @@ export const getWishlistProductIds = async (userId: string) => {
   }
 };
 
-export const getCartProductIds = async (userId: string) => {
+export const getCartProductIds = async (owner: Owner) => {
   try {
     const cartItems = await prisma.cartItem.findMany({
-      where: { userId },
+      where: ownerColumns(owner),
       select: {
         productId: true,
       },

@@ -1,5 +1,5 @@
 import "@/app/index.css";
-import { verifySession } from "@/common/helpers/session";
+import { readSessionUserId } from "@/common/helpers/session";
 import ConfirmEmailBanner from "@/features/layout/ConfirmEmailBanner";
 import Footer from "@/features/layout/Footer";
 import Navbar from "@/features/layout/Navbar";
@@ -9,13 +9,14 @@ export default async function ContentLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await verifySession();
-  if (!session) return null;
+  // A visitor renders the shop with no account read mounted at all, so nothing
+  // behind the header asks for a session it does not have (spec 0028, AC-13).
+  const guest = (await readSessionUserId()) === null;
 
   return (
     <>
-      <ConfirmEmailBanner />
-      <Navbar />
+      {guest ? null : <ConfirmEmailBanner />}
+      <Navbar guest={guest} />
       {children}
       <Footer />
     </>

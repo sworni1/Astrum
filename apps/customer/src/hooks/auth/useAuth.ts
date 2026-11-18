@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
 import type { SubmitHandler } from "react-hook-form";
+import { acceptedReturnPath } from "@/common/helpers/returnPath";
 import { createSession } from "@/common/helpers/session";
 import { showToast } from "@/common/helpers/showToast";
 import {
@@ -14,7 +15,11 @@ import {
 import { resetSessionEnded, useFetcher } from "@/hooks/useFetcher";
 import { useSessionCacheReset } from "@/hooks/useSessionCacheReset";
 
-export const useAuth = () => {
+/**
+ * `next` arrives from the sign in page as a query parameter, so it is accepted
+ * only through one helper (spec 0028, AC-15).
+ */
+export const useAuth = (next?: string | null) => {
   const { fetcher } = useFetcher();
 
   const resetSessionCache = useSessionCacheReset();
@@ -25,7 +30,23 @@ export const useAuth = () => {
 
   const [emailTaken, setEmailTaken] = useState(false);
 
-  const goNext = useCallback(() => router.push("/"), [router]);
+  const goNext = useCallback(
+    () => router.push(acceptedReturnPath(next)),
+    [next, router],
+  );
+
+  /**
+   * The lines a visitor picked before signing in move into the account in one
+   * call, before any navigation. A failure is logged and never traps the
+   * customer on the form: the account is the point of this step (AC-11).
+   */
+  const mergeGuestLines = useCallback(async () => {
+    try {
+      await fetcher.post("/cart/merge");
+    } catch (error) {
+      console.error("cart merge failed", error);
+    }
+  }, [fetcher]);
 
   const goConfirmEmail = useCallback(
     () => router.push("/auth/confirm-email"),
@@ -43,6 +64,8 @@ export const useAuth = () => {
           setEmailTaken(false);
 
           await createSession(res.data.token);
+
+          await mergeGuestLines();
 
           resetSessionCache({ revalidate: true });
 
@@ -81,7 +104,7 @@ export const useAuth = () => {
         }
       }
     },
-    [goConfirmEmail, fetcher, resetSessionCache, t],
+    [goConfirmEmail, fetcher, mergeGuestLines, resetSessionCache, t],
   );
 
   const handleSignIn: SubmitHandler<SignInCredentials> = useCallback(
@@ -91,6 +114,8 @@ export const useAuth = () => {
 
         if (res.status === 200) {
           await createSession(res.data.token);
+
+          await mergeGuestLines();
 
           resetSessionCache({ revalidate: true });
 
@@ -130,7 +155,7 @@ export const useAuth = () => {
         }
       }
     },
-    [goNext, fetcher, resetSessionCache, router, t],
+    [goNext, fetcher, mergeGuestLines, resetSessionCache, router, t],
   );
 
   return useMemo(

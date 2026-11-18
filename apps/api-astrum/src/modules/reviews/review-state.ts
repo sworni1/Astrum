@@ -1,5 +1,6 @@
 import { OrderItemStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../../lib/prisma";
+import type { Owner } from "../../common/types/owner";
 
 /** The three answers the storefront knows; anything else renders no control. */
 export const REVIEW_STATE_STATUS = {
@@ -22,9 +23,17 @@ export type ReviewState = {
  * when several do, the line whose order was created last wins, ties by line id.
  */
 export const readReviewState = async (
-  userId: string,
+  owner: Owner | null,
   productId: string,
 ): Promise<ReviewState> => {
+  // A visitor with no account has no order behind it, so nothing is filterable
+  // on an undefined id (spec 0028, AC-6).
+  if (!owner || owner.kind !== "user") {
+    return { status: REVIEW_STATE_STATUS.notPurchased, orderItemId: null };
+  }
+
+  const { userId } = owner;
+
   const deliveredLine = await prisma.orderItem.findFirst({
     where: {
       userId,
