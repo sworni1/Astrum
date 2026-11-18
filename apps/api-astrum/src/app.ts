@@ -22,11 +22,13 @@ import shippingRoutes from "./modules/shipping/shipping.routes";
 import staffRoutes from "./modules/staff/staff.routes";
 import userRoutes from "./modules/user/user.routes";
 import wishlistRoutes from "./modules/wishlist/wishlist.routes";
+import { createOptionalAuth } from "./middlewares/resolveOwner";
 import { getSessionStore } from "./session/sessionStore";
 
 const app: Express = express();
 const sessionStore = getSessionStore();
 const authenticateToken = createAuthenticateToken(sessionStore);
+const optionalAuth = createOptionalAuth(sessionStore);
 const authServiceUrl = process.env.AUTH_SERVICE_URL;
 
 if (!authServiceUrl) {
@@ -78,9 +80,12 @@ app.get("/health", async (_req, res) => {
 });
 
 app.use("/api/users", authenticateToken, userRoutes);
-app.use("/api/products", authenticateToken, productRoutes);
-app.use("/api/wishlist", authenticateToken, wishlistRoutes);
-app.use("/api/cart", authenticateToken, cartRoutes);
+// The catalogue and the guest cart answer visitors: the shared payload is the
+// same for everyone and only the marks are personal, so the guard moves from
+// the mount to every write route inside (spec 0028, AC-6).
+app.use("/api/products", optionalAuth, productRoutes);
+app.use("/api/wishlist", optionalAuth, wishlistRoutes);
+app.use("/api/cart", optionalAuth, cartRoutes);
 app.use("/api/orders", authenticateToken, orderRoutes);
 app.use(
   "/api",

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireSession } from "../../middlewares/resolveOwner";
 import { validateDto } from "../../middlewares/validateDto";
 import { CartController } from "./cart.controller";
 import { AddProductToCartDto } from "./dto/add-product.dto";
@@ -9,6 +10,7 @@ const cartController = new CartController();
 const cartRoutes: Router = Router();
 
 cartRoutes.get("/", cartController.getCart);
+cartRoutes.post("/merge", requireSession, cartController.mergeGuestCart);
 cartRoutes.delete("/:productId", cartController.deleteProductFromCart);
 cartRoutes.patch(
   "/:productId",

@@ -43,6 +43,7 @@ jest.mock("../../../cache/cache", () => {
 
 import { prisma } from "../../../../lib/prisma";
 import { ProductService } from "../product.service";
+import { userOwner } from "../../../common/types/owner";
 
 type Mocked = jest.Mock;
 
@@ -99,7 +100,7 @@ describe("ProductService.getRecommendations", () => {
     const service = new ProductService();
 
     const first = await service.getRecommendations(
-      "user-1",
+      userOwner("user-1"),
       {},
       CURSOR_MISS,
       8,
@@ -109,7 +110,7 @@ describe("ProductService.getRecommendations", () => {
     expect(first.products).toHaveLength(8);
 
     const second = await service.getRecommendations(
-      "user-1",
+      userOwner("user-1"),
       {},
       CURSOR_MISS,
       8,
@@ -121,7 +122,7 @@ describe("ProductService.getRecommendations", () => {
 
   it("reads the rating of the page in one grouped query, never one per card (AC-4)", async () => {
     await new ProductService().getRecommendations(
-      "user-1",
+      userOwner("user-1"),
       {},
       CURSOR_AGGREGATE,
       8,
@@ -149,8 +150,8 @@ describe("ProductService.getRecommendations", () => {
     );
     const service = new ProductService();
 
-    const mine = await service.getRecommendations("user-1", {}, CURSOR_MARKS);
-    const theirs = await service.getRecommendations("user-2", {}, CURSOR_MARKS);
+    const mine = await service.getRecommendations(userOwner("user-1"), {}, CURSOR_MARKS);
+    const theirs = await service.getRecommendations(userOwner("user-2"), {}, CURSOR_MARKS);
 
     expect(mine.products[0]).toMatchObject({ isWishlisted: false, quantityInCart: 2 });
     expect(mine.products[1]).toMatchObject({ isWishlisted: true, quantityInCart: 0 });
@@ -163,8 +164,8 @@ describe("ProductService.getRecommendations", () => {
   it("keeps the cache key free of any account (AC-3)", async () => {
     const service = new ProductService();
 
-    const mine = await service.getRecommendations("user-1", {}, CURSOR_ACCOUNT);
-    const theirs = await service.getRecommendations("user-2", {}, CURSOR_ACCOUNT);
+    const mine = await service.getRecommendations(userOwner("user-1"), {}, CURSOR_ACCOUNT);
+    const theirs = await service.getRecommendations(userOwner("user-2"), {}, CURSOR_ACCOUNT);
 
     expect(theirs.nextCursor).toBe(mine.nextCursor);
     // The second call reads the same stored page: one product query in total.

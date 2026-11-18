@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { handleErrors } from "../../common/helpers/errorHandler";
 import type { AuthenticatedUserRequest } from "../../common/types/jwt.payload";
+import { ownerForRead } from "../guest/guest.identity";
 import { ReviewsService } from "./reviews.service";
 
 const reviewsService = new ReviewsService();
@@ -54,9 +55,11 @@ export class ReviewsController {
   async getProductReviewLikes(req: Request, res: Response) {
     try {
       const productId = req.params.productId as string;
-      const { userId } = req as AuthenticatedUserRequest;
 
-      const result = await reviewsService.getLikedReviewIds(userId, productId);
+      const result = await reviewsService.getLikedReviewIds(
+        ownerForRead(req),
+        productId,
+      );
 
       res.status(StatusCodes.OK).json(result);
     } catch (err) {

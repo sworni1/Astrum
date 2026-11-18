@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { handleErrors } from "../../common/helpers/errorHandler";
-import type { AuthenticatedUserRequest } from "../../common/types/jwt.payload";
+import { ownerForRead, ownerForWrite } from "../guest/guest.identity";
 import { WishlistService } from "./wishlist.service";
 
 const wishlistService = new WishlistService();
@@ -9,9 +9,7 @@ const wishlistService = new WishlistService();
 export class WishlistController {
   async getWishlist(req: Request, res: Response) {
     try {
-      const { userId } = req as AuthenticatedUserRequest;
-
-      const wishlist = await wishlistService.getWishlist(userId);
+      const wishlist = await wishlistService.getWishlist(ownerForRead(req));
 
       res.status(StatusCodes.OK).json(wishlist);
     } catch (err) {
@@ -21,10 +19,8 @@ export class WishlistController {
 
   async addProductToWishlist(req: Request, res: Response) {
     try {
-      const { userId } = req as AuthenticatedUserRequest;
-
       const wishlistItem = await wishlistService.addProductToWishlist(
-        userId,
+        ownerForWrite(req, res),
         req.body,
       );
 
@@ -36,11 +32,10 @@ export class WishlistController {
 
   async deleteProductFromWishlist(req: Request, res: Response) {
     try {
-      const { userId } = req as AuthenticatedUserRequest;
       const productId = req.params.productId as string;
 
       const deletedProduct = await wishlistService.deleteProductFromWishlist(
-        userId,
+        ownerForWrite(req, res),
         productId,
       );
 

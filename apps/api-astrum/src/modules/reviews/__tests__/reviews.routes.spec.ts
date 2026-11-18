@@ -6,6 +6,7 @@ import type { AddressInfo } from "node:net";
 import express from "express";
 import { prisma } from "../../../../lib/prisma";
 import type { AuthenticatedUserRequest } from "../../../common/types/jwt.payload";
+import { userOwner } from "../../../common/types/owner";
 import productRoutes from "../../product/product.routes";
 import { ReviewsService } from "../reviews.service";
 
@@ -22,7 +23,12 @@ describe("productReviewsRouter params", () => {
     const app = express();
     app.use(express.json());
     app.use((req, _res, next) => {
-      (req as AuthenticatedUserRequest).userId = "user-1";
+      const authenticated = req as AuthenticatedUserRequest & {
+        owner?: ReturnType<typeof userOwner>;
+      };
+      authenticated.userId = "user-1";
+      // `optionalAuth` sets both: the controllers read the owner (spec 0028).
+      authenticated.owner = userOwner("user-1");
       next();
     });
     app.use("/api/products", productRoutes);
@@ -82,7 +88,7 @@ describe("productReviewsRouter params", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ reviewIds: ["review-1"] });
-    expect(likedSet).toHaveBeenCalledWith("user-1", "product-from-path");
+    expect(likedSet).toHaveBeenCalledWith(userOwner("user-1"), "product-from-path");
   });
 
   it("never reads the product from the request body (AC-11)", async () => {

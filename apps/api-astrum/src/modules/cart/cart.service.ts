@@ -4,11 +4,14 @@ import {
   getCartProductIds,
   getWishlistAndCartItem,
   getWishlistItem,
+  ownerColumns,
+  ownerUniqueKey,
 } from "../../common/helpers/getWishlistAndCart";
 import {
   cartActionsPublicSelect,
   cartPublicSelect,
 } from "../../common/prisma-selects/product.select";
+import type { Owner } from "../../common/types/owner";
 import { ProductService } from "../product/product.service";
 import type { AddProductToCartDto } from "./dto/add-product.dto";
 import type { ChangeQuantityDto } from "./dto/change-quantity.dto";
@@ -16,57 +19,63 @@ import type { ChangeQuantityDto } from "./dto/change-quantity.dto";
 export class CartService {
   private productService = new ProductService();
 
-  async addProductToCart(userId: string, dto: AddProductToCartDto) {
-    try {
-      const wishlistItem = await getWishlistItem(userId, dto.productId);
-      const { productId } = dto;
+  /**
+   * One line per owner and product: a repeated add raises the quantity capped at
+   * the stock instead of failing on the unique key (spec 0028, AC-10).
+   */
+  async addProductToCart(owner: Owner, dto: AddProductToCartDto) {
+    const { productId } = dto;
 
-      const product = await this.productService.getProduct(userId, productId);
+    const product = await this.productService.getProduct(owner, productId);
 
-      if (product.quantity > 0) {
-        const cartItem = await prisma.cartItem.create({
-          data: { userId, productId, quantity: 1 },
-          select: cartActionsPublicSelect,
-        });
-
-        if (!cartItem) {
-          throw new Error("addProductToCart error");
-        }
-
-        return {
-          ...cartItem,
-          isWishlisted: !!wishlistItem,
-          quantityInCart: 1,
-        };
-      } else {
-        throw new Error(`Product quantity limit`);
-      }
-    } catch (_error) {
-      throw new Error(`addProductToCart error`);
+    if (product.quantity <= 0) {
+      throw new Error("Product quantity limit");
     }
+
+    const wishlistItem = await getWishlistItem(owner, productId);
+
+    const cartItem = await prisma.$transaction(async (tx) => {
+      const existing = await tx.cartItem.findUnique({
+        where: ownerUniqueKey(owner, productId),
+      });
+
+      const quantity = Math.min(
+        (existing?.quantity ?? 0) + 1,
+        product.quantity,
+      );
+
+      return await tx.cartItem.upsert({
+        where: ownerUniqueKey(owner, productId),
+        create: { ...ownerColumns(owner), productId, quantity },
+        update: { quantity },
+        select: cartActionsPublicSelect,
+      });
+    });
+
+    return {
+      ...cartItem,
+      isWishlisted: !!wishlistItem,
+      quantityInCart: cartItem.quantity,
+    };
   }
 
   async changeProductCartQuantity(
-    userId: string,
+    owner: Owner,
     productId: string,
     dto: ChangeQuantityDto,
   ) {
     try {
-      const product = await this.productService.getProduct(userId, productId);
+      const product = await this.productService.getProduct(owner, productId);
 
       if (dto.quantity > 0) {
         if (product.quantity >= dto.quantity) {
-          const wishlistItem = await getWishlistItem(userId, productId);
+          const wishlistItem = await getWishlistItem(owner, productId);
 
           const cartItem = await prisma.cartItem.update({
-            where: { userId_productId: { userId, productId: productId } },
+            where: ownerUniqueKey(owner, productId),
             data: { quantity: dto.quantity },
             select: cartActionsPublicSelect,
           });
-
-          if (!cartItem) {
-            throw new Error("changeProductCartQuantity error");
-          }
 
           return {
             ...cartItem,
@@ -77,16 +86,20 @@ export class CartService {
           throw new Error(`Product quantity limit`);
         }
       } else {
-        return this.deleteProductFromCart(userId, productId);
+        return this.deleteProductFromCart(owner, productId);
       }
     } catch (_error) {
       throw new Error(`changeProductCartQuantity error`);
     }
   }
 
-  async getCart(userId: string) {
+  async getCart(owner: Owner | null) {
     try {
-      const cartProductIds = await getCartProductIds(userId);
+      if (!owner) {
+        return [];
+      }
+
+      const cartProductIds = await getCartProductIds(owner);
 
       const cart = await prisma.product.findMany({
         where: {
@@ -101,7 +114,7 @@ export class CartService {
       const cartWithData = await Promise.all(
         cart.map(async (product) => {
           const { wishlistItem, cartItem } = await getWishlistAndCartItem(
-            userId,
+            owner,
             product.id,
           );
 
@@ -119,12 +132,13 @@ export class CartService {
     }
   }
 
-  async deleteProductFromCart(userId: string, productId: Product["id"]) {
+  async deleteProductFromCart(owner: Owner, productId: Product["id"]) {
     try {
-      const wishlistItem = getWishlistItem(userId, productId);
+      // Awaited on purpose: without it every delete answered `true` (AC-8).
+      const wishlistItem = await getWishlistItem(owner, productId);
 
       await prisma.cartItem.delete({
-        where: { userId_productId: { userId, productId } },
+        where: ownerUniqueKey(owner, productId),
       });
 
       return {
