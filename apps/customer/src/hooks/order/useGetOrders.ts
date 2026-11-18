@@ -28,15 +28,18 @@ const ORDER_LIST_CONFIG = {
   shouldRetryOnError: false,
 } as const;
 
+type UseGetOrdersOptions = { enabled?: boolean };
+
 export const useGetOrders = (
   filters: OrderListFilters = {},
+  { enabled = true }: UseGetOrdersOptions = {},
 ): UseGetOrdersReturn => {
   const { getData } = useFetcher();
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<
     OrderListPage,
     GetOrdersError
-  >(orderListKey(filters), getData, ORDER_LIST_CONFIG);
+  >(enabled ? orderListKey(filters) : null, getData, ORDER_LIST_CONFIG);
 
   return {
     page: data,

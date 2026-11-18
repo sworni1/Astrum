@@ -23,7 +23,9 @@ import { MobileMenuSheet } from "./MobileMenuSheet";
 import NavItem from "./NavItem";
 import Searchbar from "./Searchbar";
 
-export default function Navbar() {
+type NavbarProps = { guest: boolean };
+
+export default function Navbar({ guest }: NavbarProps) {
   const t = useTranslations("nav");
   const [sheetOpen, setSheetOpen] = useState(false);
   const { cart, cartIsLoading, cartError } = useGetCart();
@@ -32,8 +34,8 @@ export default function Navbar() {
     page: ordersPage,
     isLoading: ordersIsLoading,
     error: ordersError,
-  } = useGetOrders();
-  const { profileData } = useUser();
+  } = useGetOrders({}, { enabled: !guest });
+  const { profileData } = useUser({ enabled: !guest });
   const isSeller = profileData?.isSeller === true;
   const staffRoles = profileData?.staffRoles ?? [];
 
@@ -81,12 +83,14 @@ export default function Navbar() {
             href={"/cart"}
             loading={cartIsLoading}
           />
-          <NavItem
-            icon={<FiPackage size={25} />}
-            count={ordersPage?.counts.all}
-            href={"/orders"}
-            loading={ordersIsLoading}
-          />
+          {guest ? null : (
+            <NavItem
+              icon={<FiPackage size={25} />}
+              count={ordersPage?.counts.all}
+              href={"/orders"}
+              loading={ordersIsLoading}
+            />
+          )}
           {isSeller && (
             <NavItem
               icon={<Store size={25} />}
@@ -108,16 +112,27 @@ export default function Navbar() {
               label={t("courier")}
             />
           )}
-          <Link href={"/profile"}>
-            <Button
-              variant="ghost"
-              className="relative h-8 w-8 rounded-full cursor-pointer"
-            >
-              <Avatar className="h-8 w-8">
-                <AvatarFallback>JH</AvatarFallback>
-              </Avatar>
-            </Button>
-          </Link>
+          {guest ? (
+            <div className="flex items-center gap-2">
+              <Button asChild variant="ghost" size="sm">
+                <Link href={"/auth/signin"}>{t("signIn")}</Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link href={"/auth/register"}>{t("register")}</Link>
+              </Button>
+            </div>
+          ) : (
+            <Link href={"/profile"}>
+              <Button
+                variant="ghost"
+                className="relative h-8 w-8 rounded-full cursor-pointer"
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback>JH</AvatarFallback>
+                </Avatar>
+              </Button>
+            </Link>
+          )}
         </div>
 
         <div className="block sm:hidden">

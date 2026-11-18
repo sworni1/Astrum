@@ -22,7 +22,13 @@ const USER_SWR_CONFIG = {
   errorRetryInterval: 2000,
 } as const;
 
-export const useUser = () => {
+type UseUserOptions = { enabled?: boolean };
+
+/**
+ * `enabled: false` mounts no account read: a guest screen asks for nothing it
+ * cannot have (spec 0028, AC-13).
+ */
+export const useUser = ({ enabled = true }: UseUserOptions = {}) => {
   const { getData, deleteItem, patchItem } = useFetcher();
   const { logOut } = useLogOut();
 
@@ -31,7 +37,7 @@ export const useUser = () => {
     isLoading: profileIsLoading,
     error: profileIsError,
     mutate: mutateProfile,
-  } = useSWR<UserData>("/users/me", getData, USER_SWR_CONFIG);
+  } = useSWR<UserData>(enabled ? "/users/me" : null, getData, USER_SWR_CONFIG);
 
   const {
     trigger: updateAccountTrigger,

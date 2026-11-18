@@ -1,21 +1,31 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { decrypt } from "./common/helpers/session";
 
-const publicRoutes = ["/auth/signin", "/auth/register", "/auth/confirm-email"];
+/** A visitor with no account reads these paths; everything else needs a session. */
+const guestPaths = ["/", "/cart", "/wishlist"];
+const guestPrefixes = ["/auth", "/categories", "/products"];
+
+export const isGuestPath = (path: string): boolean =>
+  guestPaths.includes(path) ||
+  guestPrefixes.some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+  );
 
 export default async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
-  const isPublicRoute = publicRoutes.includes(path);
 
   const cookie = req.cookies.get("__auth")?.value;
 
   const session = await decrypt(cookie);
 
-  if (!isPublicRoute && !session?.userId) {
-    return NextResponse.redirect(new URL("/auth/signin", req.nextUrl));
+  if (session?.userId || isGuestPath(path)) {
+    return NextResponse.next();
   }
 
-  return NextResponse.next();
+  const signIn = new URL("/auth/signin", req.nextUrl);
+  signIn.searchParams.set("next", path);
+
+  return NextResponse.redirect(signIn);
 }
 
 export const config = {

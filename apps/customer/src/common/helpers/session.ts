@@ -132,3 +132,14 @@ export const readVerifiedSession = async () => {
 };
 
 export const verifySession = cache(readVerifiedSession);
+
+/**
+ * The shell's own question: is there a signed session at all? No cookie is an
+ * answer, not a failure, because a guest reads the shop too (spec 0028, AC-13).
+ */
+export const readSessionUserId = async (): Promise<string | null> => {
+  const cookie = (await cookies()).get("__auth")?.value;
+  const session = await decrypt(cookie);
+
+  return typeof session?.userId === "string" ? session.userId : null;
+};

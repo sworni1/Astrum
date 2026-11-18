@@ -27,12 +27,13 @@ let activeTranslator: ErrorsTranslator | undefined;
 const translateErrors = (): ErrorsTranslator =>
   activeTranslator ?? fallbackTranslator;
 
-/** The session is really gone: the cookie cannot be used any more. */
-const SESSION_GONE_CODES = [
-  "SESSION_REVOKED",
-  "TOKEN_INVALID",
-  "SESSION_MISSING",
-];
+/**
+ * The session is really gone: the cookie cannot be used any more. A missing
+ * cookie is not in this list, because a guest with no cookie reads the shop and
+ * a redirect on the first render would kill the page (spec 0028, AC-13); a
+ * cookie that never existed is caught by the route guard on the next navigation.
+ */
+const SESSION_GONE_CODES = ["SESSION_REVOKED", "TOKEN_INVALID"];
 
 /**
  * One session ends once, however many requests notice it: the flag stops a

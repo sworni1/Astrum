@@ -93,7 +93,7 @@ const render = async (
   root = createRoot(container);
 
   await act(async () => {
-    root.render(<Navbar />);
+    root.render(<Navbar guest={false} />);
   });
 };
 
@@ -320,7 +320,7 @@ describe("A failed read in the navigation", () => {
     root = createRoot(container);
 
     await act(async () => {
-      root.render(<Navbar />);
+      root.render(<Navbar guest={false} />);
     });
   };
 

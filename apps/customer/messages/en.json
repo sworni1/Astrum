@@ -36,7 +36,9 @@
     "ordersFailed": "Failed to load orders",
     "sales": "Sales",
     "point": "My point",
-    "courier": "Courier"
+    "courier": "Courier",
+    "signIn": "Sign in",
+    "register": "Register"
   },
   "footer": {
     "about": "About",
@@ -79,6 +81,8 @@
   },
   "cart": {
     "title": "Shopping Cart",
+    "guestNotice": "You can shop without an account. Sign in at checkout to keep this cart.",
+    "guestSignIn": "Sign in to check out",
     "itemCount": "{count, plural, one {# item} other {# items}} in your cart",
     "selectAll": "Select all items ({count})",
     "selectedOf": "{selected} of {total} selected",
