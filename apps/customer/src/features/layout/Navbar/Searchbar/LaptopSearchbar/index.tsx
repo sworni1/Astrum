@@ -4,6 +4,10 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { categoryList } from "@/common/constants/category.list";
+import {
+  categoryLabelKey,
+  categorySlug,
+} from "@/common/helpers/localizeHelper";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,6 +26,7 @@ type FormValues = {
 
 const LaptopSearchbar = () => {
   const t = useTranslations("nav");
+  const enumT = useTranslations("enums");
   const router = useRouter();
 
   const form = useForm<FormValues>({
@@ -81,8 +86,11 @@ const LaptopSearchbar = () => {
                     <SelectGroup>
                       <SelectItem value="all">{t("allCategories")}</SelectItem>
                       {categoryList.map((category) => (
-                        <SelectItem key={category.href} value={category.href}>
-                          {category.name}
+                        <SelectItem
+                          key={category}
+                          value={categorySlug(category)}
+                        >
+                          {enumT(categoryLabelKey(category))}
                         </SelectItem>
                       ))}
                     </SelectGroup>

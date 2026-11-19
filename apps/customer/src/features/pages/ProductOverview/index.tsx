@@ -5,6 +5,10 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { formatMoney } from '@/common/helpers/money';
+import {
+  isPropertyLabel,
+  propertyLabelKey,
+} from '@/common/helpers/localizeHelper';
 import { showToast } from '@/common/helpers/showToast';
 import ProductOverviewSkeleton from '@/components/skeletons/ProductOverviewSkeleton';
 import {
@@ -24,6 +28,7 @@ import { formatAverageRating } from './Reviews/lib/distribution';
 
 export default function ProductOverview() {
   const t = useTranslations('product');
+  const enumT = useTranslations('enums');
   const locale = useLocale();
   const reviewsT = useTranslations('reviews');
   const params = useParams<{ productId: string }>();
@@ -114,12 +119,20 @@ export default function ProductOverview() {
                 <AccordionTrigger>{t('specifications')}</AccordionTrigger>
                 <AccordionContent>
                   <div className='grid gap-4'>
-                    {product?.properties.map((property) => (
-                      <div key={property.id} className='grid grid-cols-2'>
-                        <span className='font-medium'>{property.label}</span>
-                        <span>{property.value}</span>
-                      </div>
-                    ))}
+                    {product?.properties.map((property) => {
+                      const label = String(property.label);
+
+                      return (
+                        <div key={property.id} className='grid grid-cols-2'>
+                          <span className='font-medium'>
+                            {isPropertyLabel(label)
+                              ? enumT(propertyLabelKey(label))
+                              : label}
+                          </span>
+                          <span>{property.value}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </AccordionContent>
               </AccordionItem>

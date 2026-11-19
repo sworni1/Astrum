@@ -65,7 +65,8 @@
     "title": "Shop by category",
     "results": "Results",
     "end": "No more results",
-    "failed": "Failed to load the products of this category"
+    "failed": "Failed to load the products of this category",
+    "emptyCategory": "No products in this category yet"
   },
   "product": {
     "specifications": "Specifications",
@@ -437,7 +438,8 @@
     "signInSuccessText": "You have successfully signed in",
     "signInFailedTitle": "Error!",
     "signInFailedText": "The account doesn’t exist, or the login or password is wrong",
-    "accessDenied": "Access denied. Please try again later."
+    "accessDenied": "Access denied. Please try again later.",
+    "back": "Back"
   },
   "confirmEmail": {
     "metaTitle": "Email confirmation · Astrum",
@@ -767,6 +769,49 @@
       "roleUnavailable": "The job could not be read. Try again in a moment.",
       "emailNotConfirmed": "Confirm your email address first.",
       "validation": "Check the chosen pickup point."
+    }
+  },
+  "enums": {
+    "category": {
+      "Electronics": "Electronics",
+      "Fashion": "Fashion",
+      "Home": "Home",
+      "Food": "Food",
+      "Beauty": "Beauty",
+      "Books": "Books",
+      "Sports": "Sports",
+      "Toys": "Toys",
+      "Automotive": "Automotive",
+      "Office": "Office"
+    },
+    "property": {
+      "Color": "Colour",
+      "Size": "Size",
+      "Material": "Material",
+      "Brand": "Brand",
+      "Weight": "Weight",
+      "Dimensions": "Dimensions",
+      "Warranty": "Warranty",
+      "EnergyEfficiency": "Energy efficiency",
+      "StorageCapacity": "Storage capacity",
+      "OperatingSystem": "Operating system",
+      "Processor": "Processor",
+      "GraphicsCard": "Graphics card",
+      "ScreenSize": "Screen size",
+      "BatteryLife": "Battery life",
+      "Type": "Type",
+      "Power": "Power",
+      "Features": "Features",
+      "Control": "Control",
+      "NoiseLevel": "Noise level",
+      "PowerSource": "Power source",
+      "Display": "Display",
+      "Capacity": "Capacity",
+      "Installation": "Installation",
+      "Speed": "Speed",
+      "Construction": "Construction",
+      "RAM": "RAM",
+      "Connectivity": "Connectivity"
     }
   }
 }

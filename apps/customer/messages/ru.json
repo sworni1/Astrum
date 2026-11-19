@@ -65,7 +65,8 @@
     "title": "Покупки по категориям",
     "results": "Результаты",
     "end": "Больше товаров нет",
-    "failed": "Не удалось загрузить товары этой категории"
+    "failed": "Не удалось загрузить товары этой категории",
+    "emptyCategory": "В этой категории пока нет товаров"
   },
   "product": {
     "specifications": "Характеристики",
@@ -437,7 +438,8 @@
     "signInSuccessText": "Вы успешно вошли в аккаунт",
     "signInFailedTitle": "Ошибка!",
     "signInFailedText": "Аккаунта нет, или логин с паролем неверны",
-    "accessDenied": "Доступ запрещён. Повторите попытку позже."
+    "accessDenied": "Доступ запрещён. Повторите попытку позже.",
+    "back": "Назад"
   },
   "confirmEmail": {
     "metaTitle": "Подтверждение почты · Astrum",
@@ -767,6 +769,49 @@
       "roleUnavailable": "Не удалось прочитать роль. Попробуйте через минуту.",
       "emailNotConfirmed": "Сначала подтвердите адрес почты.",
       "validation": "Проверьте выбранный пункт выдачи."
+    }
+  },
+  "enums": {
+    "category": {
+      "Electronics": "Электроника",
+      "Fashion": "Мода",
+      "Home": "Дом",
+      "Food": "Еда",
+      "Beauty": "Красота",
+      "Books": "Книги",
+      "Sports": "Спорт",
+      "Toys": "Игрушки",
+      "Automotive": "Авто",
+      "Office": "Офис"
+    },
+    "property": {
+      "Color": "Цвет",
+      "Size": "Размер",
+      "Material": "Материал",
+      "Brand": "Бренд",
+      "Weight": "Вес",
+      "Dimensions": "Габариты",
+      "Warranty": "Гарантия",
+      "EnergyEfficiency": "Энергоэффективность",
+      "StorageCapacity": "Объём памяти",
+      "OperatingSystem": "Операционная система",
+      "Processor": "Процессор",
+      "GraphicsCard": "Видеокарта",
+      "ScreenSize": "Диагональ экрана",
+      "BatteryLife": "Время работы",
+      "Type": "Тип",
+      "Power": "Мощность",
+      "Features": "Особенности",
+      "Control": "Управление",
+      "NoiseLevel": "Уровень шума",
+      "PowerSource": "Питание",
+      "Display": "Дисплей",
+      "Capacity": "Ёмкость",
+      "Installation": "Установка",
+      "Speed": "Скорость",
+      "Construction": "Конструкция",
+      "RAM": "Оперативная память",
+      "Connectivity": "Подключения"
     }
   }
 }

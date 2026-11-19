@@ -1,10 +1,15 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { categoryList } from "@/common/constants/category.list";
+import {
+  categoryLabelKey,
+  categorySlug,
+} from "@/common/helpers/localizeHelper";
 import { Alert } from "@/components/ui/alert";
 
 const Categories = async () => {
   const t = await getTranslations("catalog");
+  const enumT = await getTranslations("enums");
 
   return (
     <section className="py-8 antialiased md:py-16">
@@ -14,9 +19,9 @@ const Categories = async () => {
         </div>
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {categoryList.map((category) => (
-            <Link key={category.href} href={`/categories/${category.href}`}>
+            <Link key={category} href={`/categories/${categorySlug(category)}`}>
               <Alert className="max-w-full h-[38px] cursor-pointer flex items-center">
-                {category.name}
+                {enumT(categoryLabelKey(category))}
               </Alert>
             </Link>
           ))}
