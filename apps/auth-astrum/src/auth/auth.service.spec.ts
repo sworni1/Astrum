@@ -2,7 +2,7 @@ import { ServiceUnavailableException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { Test, type TestingModule } from "@nestjs/testing";
-import { Prisma } from "../../generated/prisma/client";
+import { Prisma } from "@astrum/db/client";
 import { EventsService } from "../events/events.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { RedisService } from "../redis/redis.service";

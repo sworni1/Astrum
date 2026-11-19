@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
-import { PrismaClientKnownRequestError } from "../../../generated/prisma/internal/prismaNamespace";
+import { Prisma } from "@astrum/db/client";
 import { PrismaService } from "../../prisma/prisma.service";
 
 @Injectable()
@@ -26,7 +26,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, "jwt") {
       delete user.passwordhash;
       return user;
     } catch (err) {
-      if (err instanceof PrismaClientKnownRequestError) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError) {
         throw err;
       }
     }

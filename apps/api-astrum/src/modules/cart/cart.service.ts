@@ -1,4 +1,4 @@
-import type { Product } from "../../../generated/prisma/client";
+import type { Product } from "@astrum/db/client";
 import { prisma } from "../../../lib/prisma";
 import {
   getCartProductIds,

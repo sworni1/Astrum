@@ -9,13 +9,13 @@ jest.mock("../../payment/payment.cancel", () => ({
   expireSessionForCancel: jest.fn(),
 }));
 
-import { Prisma } from "../../../../generated/prisma/client";
+import { Prisma } from "@astrum/db/client";
 import type {
   OrderItemStatus,
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
-} from "../../../../generated/prisma/enums";
+} from "@astrum/db/enums";
 import { prisma } from "../../../../lib/prisma";
 import { AppError } from "../../../common/helpers/appError";
 import { expireSessionForCancel } from "../../payment/payment.cancel";

@@ -1,5 +1,5 @@
-import type { Prisma } from "../../../generated/prisma/client";
-import type { OrderItemStatus } from "../../../generated/prisma/enums";
+import type { Prisma } from "@astrum/db/client";
+import type { OrderItemStatus } from "@astrum/db/enums";
 import { AppError } from "../../common/helpers/appError";
 import {
   ORDER_ERROR_CODES,

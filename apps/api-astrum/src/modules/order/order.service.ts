@@ -3,12 +3,12 @@ import type {
   Order,
   OrderItem,
   ShippingMethod,
-} from "../../../generated/prisma/client";
-import { Prisma } from "../../../generated/prisma/client";
+} from "@astrum/db/client";
+import { Prisma } from "@astrum/db/client";
 import type {
   OrderItemStatus,
   OrderStatus,
-} from "../../../generated/prisma/enums";
+} from "@astrum/db/enums";
 import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
 import { logger } from "../../common/helpers/logger";

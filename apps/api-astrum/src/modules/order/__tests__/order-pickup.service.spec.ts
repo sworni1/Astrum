@@ -6,7 +6,7 @@ jest.mock("../../../../lib/prisma", () => ({
   },
 }));
 
-import { Prisma } from "../../../../generated/prisma/client";
+import { Prisma } from "@astrum/db/client";
 import { prisma } from "../../../../lib/prisma";
 import { AppError } from "../../../common/helpers/appError";
 import type { CreateOrderDto } from "../dto/create-order.dto";

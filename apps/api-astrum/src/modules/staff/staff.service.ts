@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { Prisma } from "../../../generated/prisma/client";
+import { Prisma } from "@astrum/db/client";
 import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
 import { logger } from "../../common/helpers/logger";

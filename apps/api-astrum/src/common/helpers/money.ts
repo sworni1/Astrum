@@ -1,4 +1,4 @@
-import type { Prisma } from "../../../generated/prisma/client";
+import type { Prisma } from "@astrum/db/client";
 
 /**
  * Money reaches JSON as a number with at most two decimals. Every handler that

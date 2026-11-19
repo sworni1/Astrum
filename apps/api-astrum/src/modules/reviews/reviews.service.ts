@@ -1,5 +1,5 @@
-import { Prisma } from "../../../generated/prisma/client";
-import { OrderItemStatus, ReviewStatus } from "../../../generated/prisma/enums";
+import { Prisma } from "@astrum/db/client";
+import { OrderItemStatus, ReviewStatus } from "@astrum/db/enums";
 import { prisma } from "../../../lib/prisma";
 import {
   getOrSet,

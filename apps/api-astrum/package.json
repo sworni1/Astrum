@@ -2,7 +2,6 @@
   "name": "@astrum/api",
   "scripts": {
     "build": "tsc",
-    "prisma:generate": "prisma generate",
     "check-types": "tsc --noEmit",
     "start:dev": "dotenv run -- tsx watch src/server.ts",
     "dev": "dotenv run -- tsx watch src/server.ts",
@@ -16,6 +15,7 @@
     "quality-gate": "pnpm check-types && pnpm lint && pnpm test"
   },
   "dependencies": {
+    "@astrum/db": "workspace:*",
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
     "amqplib": "^2.2.1",
@@ -44,13 +44,12 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/morgan": "^1.9.9",
     "@types/node": "^22.19.15",
-    "@types/pg": "^8.23.1",
     "@typescript/native": "npm:typescript@^7.0.2",
     "dotenv-cli": "^11.1.0",
     "jest": "^30.5.2",
-    "prisma": "^7.10.1",
     "ts-jest": "^29.4.15",
     "tsx": "^4.23.15",
-    "typescript": "npm:@typescript/typescript6@^6.0.2"
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "@types/pg": "^8.23.1"
   }
 }

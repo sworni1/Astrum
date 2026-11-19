@@ -1,5 +1,5 @@
 import type { ConfirmChannel, ConsumeMessage } from "amqplib";
-import type { PrismaClient } from "../generated/prisma/client";
+import type { PrismaClient } from "@astrum/db/client";
 import { buildConfirmationLetter, resolveLetterLocale } from "./letter";
 import { describeError, logger } from "./logger";
 import type { Mailer } from "./mailer";

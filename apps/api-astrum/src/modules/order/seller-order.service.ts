@@ -1,6 +1,6 @@
-import type { Currency } from "../../../generated/prisma/client";
-import { Prisma } from "../../../generated/prisma/client";
-import type { OrderItemStatus } from "../../../generated/prisma/enums";
+import type { Currency } from "@astrum/db/client";
+import { Prisma } from "@astrum/db/client";
+import type { OrderItemStatus } from "@astrum/db/enums";
 import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
 import { toMoney } from "../../common/helpers/money";

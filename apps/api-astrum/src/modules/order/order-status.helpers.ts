@@ -1,10 +1,10 @@
-import type { Order, OrderItem } from "../../../generated/prisma/client";
-import { Prisma } from "../../../generated/prisma/client";
+import type { Order, OrderItem } from "@astrum/db/client";
+import { Prisma } from "@astrum/db/client";
 import type {
   OrderItemStatus,
   OrderStatus,
   PaymentStatus,
-} from "../../../generated/prisma/enums";
+} from "@astrum/db/enums";
 
 export const ORDER_TRANSACTION_OPTIONS = {
   maxWait: 5000,

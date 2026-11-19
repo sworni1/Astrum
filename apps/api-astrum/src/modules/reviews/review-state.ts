@@ -1,4 +1,4 @@
-import { OrderItemStatus } from "../../../generated/prisma/enums";
+import { OrderItemStatus } from "@astrum/db/enums";
 import { prisma } from "../../../lib/prisma";
 import type { Owner } from "../../common/types/owner";
 

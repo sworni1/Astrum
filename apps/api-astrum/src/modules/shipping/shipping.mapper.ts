@@ -1,4 +1,4 @@
-import type { ShippingMethod } from "../../../generated/prisma/client";
+import type { ShippingMethod } from "@astrum/db/client";
 import { toMoney } from "../../common/helpers/money";
 
 type ShippingRow = Pick<

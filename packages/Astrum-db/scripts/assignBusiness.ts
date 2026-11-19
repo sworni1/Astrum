@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import type { Prisma } from "../generated/prisma/client";
-import { prisma } from "../lib/index";
+import type { Prisma } from "../generated/prisma/client.js";
+import { prisma } from "../lib/index.js";
 
 const BUSINESS_ID_PREFIX = "biz_";
 

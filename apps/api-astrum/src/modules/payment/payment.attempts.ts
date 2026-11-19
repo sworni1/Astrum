@@ -1,4 +1,4 @@
-import type { Payment } from "../../../generated/prisma/client";
+import type { Payment } from "@astrum/db/client";
 import { prisma } from "../../../lib/prisma";
 import type { OrderWithLines } from "./payment.apply";
 import type { ProviderEvent } from "./payment.gateway";

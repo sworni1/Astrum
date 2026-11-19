@@ -2,33 +2,30 @@
   "name": "@astrum/db",
   "version": "1.0.0",
   "description": "",
-  "main": "./lib/index.ts",
-  "types": "./lib/index.ts",
   "exports": {
-    ".": {
-      "types": "./lib/index.ts",
-      "default": "./lib/index.ts",
-      "*": "./generated/prisma/client/*"
+    "./client": {
+      "types": "./dist/generated/prisma/client.d.ts",
+      "default": "./dist/generated/prisma/client.js"
     },
-    "./prisma": {
-      "types": "./lib/prisma.ts",
-      "default": "./lib/prisma.ts"
+    "./enums": {
+      "types": "./dist/generated/prisma/enums.d.ts",
+      "default": "./dist/generated/prisma/enums.js"
     }
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module",
   "scripts": {
     "db:generate": "prisma generate",
     "prisma:generate": "prisma generate",
-    "build": "prisma generate",
+    "build": "prisma generate && node scripts/writeSchemaHash.mjs && tsc -p tsconfig.build.json",
     "lint": "echo \"[astrum-db] no ESLint configured — skipping\" && exit 0",
     "format": "echo \"[astrum-db] no Prettier configured — skipping\" && exit 0",
     "format:check": "echo \"[astrum-db] no Prettier configured — skipping\" && exit 0",
-    "check-types": "tsc --noEmit",
+    "check-types": "prisma generate && tsc -p tsconfig.check.json --noEmit",
     "test": "tsx --test src/**/*.test.ts",
-    "quality-gate": "pnpm check-types && pnpm test",
+    "verify:build": "node scripts/verifyBuild.mjs",
+    "quality-gate": "pnpm check-types && pnpm test && pnpm verify:build",
     "prisma:deploy": "prisma migrate deploy && prisma generate",
     "seed:excel": "node --max-old-space-size=8192 ./node_modules/tsx/dist/cli.mjs prisma/seedFromExcel.ts",
     "assign-business": "tsx scripts/assignBusiness.ts",

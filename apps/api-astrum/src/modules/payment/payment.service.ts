@@ -1,4 +1,4 @@
-import type { Payment } from "../../../generated/prisma/client";
+import type { Payment } from "@astrum/db/client";
 import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
 import { logger } from "../../common/helpers/logger";

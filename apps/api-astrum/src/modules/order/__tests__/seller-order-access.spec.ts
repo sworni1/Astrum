@@ -17,7 +17,7 @@ import type { AddressInfo } from "node:net";
 import cookieParser from "cookie-parser";
 import express, { type Express } from "express";
 import { sign } from "jsonwebtoken";
-import { Prisma } from "../../../../generated/prisma/client";
+import { Prisma } from "@astrum/db/client";
 import { prisma } from "../../../../lib/prisma";
 import { logger } from "../../../common/helpers/logger";
 import { createAuthenticateToken } from "../../../middlewares/authenticateToken";

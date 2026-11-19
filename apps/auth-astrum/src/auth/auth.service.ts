@@ -9,7 +9,7 @@ import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 import * as argon from "argon2";
-import type { User } from "../../generated/prisma/client";
+import type { User } from "@astrum/db/client";
 import type { ConfirmOutcome } from "../config/auth.config";
 import { EventsService } from "../events/events.service";
 import { DEFAULT_LETTER_LOCALE, type LetterLocale } from "../events/locale";

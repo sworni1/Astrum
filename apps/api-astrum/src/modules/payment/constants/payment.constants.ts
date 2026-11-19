@@ -1,4 +1,4 @@
-import { PaymentMethod } from "../../../../generated/prisma/enums";
+import { PaymentMethod } from "@astrum/db/enums";
 
 /** Machine readable codes the storefront branches on (spec 0015, AC-4, AC-10). */
 export const PAYMENT_ERROR_CODES = {

@@ -17,7 +17,7 @@ import {
   ProductCategory,
   ProductVisibility,
   PropertyLabel,
-} from "../../../../generated/prisma/enums";
+} from "@astrum/db/enums";
 
 export class CreateProductDto {
   @Expose()

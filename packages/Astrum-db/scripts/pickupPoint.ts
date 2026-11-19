@@ -1,5 +1,5 @@
-import type { PickupPoint } from "../generated/prisma/client";
-import { prisma } from "../lib/index";
+import type { PickupPoint } from "../generated/prisma/client.js";
+import { prisma } from "../lib/index.js";
 
 const MIN_ADDRESS_LENGTH = 5;
 
