@@ -1,4 +1,4 @@
-import type { Order } from "../../../generated/prisma/client";
+import type { Order } from "@astrum/db/client";
 import { toMoney } from "../../common/helpers/money";
 import type {
   OrderDetail,

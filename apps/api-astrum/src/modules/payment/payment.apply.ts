@@ -1,6 +1,6 @@
-import type { Order, OrderItem } from "../../../generated/prisma/client";
-import { Prisma } from "../../../generated/prisma/client";
-import type { PaymentStatus } from "../../../generated/prisma/enums";
+import type { Order, OrderItem } from "@astrum/db/client";
+import { Prisma } from "@astrum/db/client";
+import type { PaymentStatus } from "@astrum/db/enums";
 import { logger } from "../../common/helpers/logger";
 import {
   closeOrder,

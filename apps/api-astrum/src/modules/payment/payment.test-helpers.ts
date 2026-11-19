@@ -1,4 +1,4 @@
-import type { Prisma } from "../../../generated/prisma/client";
+import type { Prisma } from "@astrum/db/client";
 
 export type FakeAttempt = {
   id?: string;

@@ -1,10 +1,10 @@
-import type { OrderItem } from "../../../generated/prisma/client";
-import { Prisma } from "../../../generated/prisma/client";
+import type { OrderItem } from "@astrum/db/client";
+import { Prisma } from "@astrum/db/client";
 import type {
   Currency,
   OrderItemStatus,
   PaymentStatus,
-} from "../../../generated/prisma/enums";
+} from "@astrum/db/enums";
 import { AppError } from "../../common/helpers/appError";
 import { logger } from "../../common/helpers/logger";
 import { returnOrderStock } from "../order/order-status.helpers";

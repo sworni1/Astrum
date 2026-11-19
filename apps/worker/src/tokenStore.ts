@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../generated/prisma/client";
+import type { PrismaClient } from "@astrum/db/client";
 import { expiresAtFrom, hashToken, mintRawToken } from "./token";
 
 export type MintedToken = {

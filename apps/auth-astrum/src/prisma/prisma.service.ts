@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../../generated/prisma/client";
+import { PrismaClient } from "@astrum/db/client";
 
 const poolSize = Number(process.env.DB_POOL_SIZE ?? 10);
 
@@ -15,7 +15,7 @@ export class PrismaService extends PrismaClient {
     super({ adapter });
   }
 
-  cleandb() {
+  cleandb(): Promise<{ count: number }[]> {
     return this.$transaction([this.user.deleteMany()]);
   }
 }

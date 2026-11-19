@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import BackButton from "@/features/auth/BackButton";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { useResendConfirmation } from "@/hooks/user/useResendConfirmation";
 import { cn } from "@/lib/utils";
@@ -67,6 +68,7 @@ export default function Register() {
 
   return (
     <div className={cn("flex flex-col gap-6")}>
+      <BackButton />
       <Card className="bg-[hsl(var(--card))]">
         <CardHeader>
           <CardTitle className="text-2xl">{t("registerTitle")}</CardTitle>

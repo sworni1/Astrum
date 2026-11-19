@@ -1,8 +1,8 @@
 import type {
   Product,
   ProductCategory,
-} from "../../../generated/prisma/client";
-import { ReviewStatus } from "../../../generated/prisma/enums";
+} from "@astrum/db/client";
+import { ReviewStatus } from "@astrum/db/enums";
 import { prisma } from "../../../lib/prisma";
 import {
   getOrSet,

@@ -1,4 +1,4 @@
-import type { Prisma } from "../../../generated/prisma/client";
+import type { Prisma } from "@astrum/db/client";
 import { prisma } from "../../../lib/prisma";
 import { getOrSet, listTtlSeconds } from "../../cache/cache";
 import { cacheKeys } from "../../cache/cacheKeys";

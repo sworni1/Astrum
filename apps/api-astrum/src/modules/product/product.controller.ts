@@ -1,8 +1,7 @@
 import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import type { ProductCategory } from "../../../generated/prisma/enums";
+import { ProductCategory } from "@astrum/db/enums";
 import { handleErrors } from "../../common/helpers/errorHandler";
-import { productCategoryMap } from "../../common/helpers/productCategoryMap";
 import type { AuthenticatedUserRequest } from "../../common/types/jwt.payload";
 import { ownerForRead } from "../guest/guest.identity";
 import { ProductService } from "./product.service";
@@ -47,9 +46,11 @@ export class ProductController {
 
       const { cursor, search_query } = req.query;
 
-      const productCategory = productCategoryMap[
-        category.toLowerCase()
-      ] as ProductCategory;
+      const segment = category.toLowerCase();
+
+      const productCategory = (
+        Object.values(ProductCategory) as ProductCategory[]
+      ).find((value) => value.toLowerCase() === segment);
 
       const filters = {
         category: productCategory,

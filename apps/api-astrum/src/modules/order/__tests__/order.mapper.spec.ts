@@ -1,4 +1,4 @@
-import { Prisma } from "../../../../generated/prisma/client";
+import { Prisma } from "@astrum/db/client";
 import { toOrderJson, toOrderListJson } from "../order.mapper";
 
 const order = {

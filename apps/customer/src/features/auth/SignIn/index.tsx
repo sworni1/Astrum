@@ -24,6 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import BackButton from "@/features/auth/BackButton";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +57,7 @@ export default function SignIn({ next }: SignInProps) {
 
   return (
     <div className={cn("flex flex-col gap-6")}>
+      <BackButton />
       <Card className="bg-[hsl(var(--card))]">
         <CardHeader>
           <CardTitle className="text-2xl">{t("signInTitle")}</CardTitle>

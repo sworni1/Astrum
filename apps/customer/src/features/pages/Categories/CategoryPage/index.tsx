@@ -2,6 +2,10 @@
 
 import { useParams, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import {
+  categoryFromSlug,
+  categoryLabelKey,
+} from "@/common/helpers/localizeHelper";
 import { showToast } from "@/common/helpers/showToast";
 import ProductCardsSkeleton from "@/components/skeletons/ProductCardsSkeleton/ProductCardsSkeleton";
 import ProductCard from "@/features/general/ProductCard";
@@ -10,10 +14,12 @@ import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 
 export const CategoryPage = () => {
   const t = useTranslations("catalog");
+  const enumT = useTranslations("enums");
   const params = useParams<{ category: string }>();
   const searchParams = useSearchParams();
 
   const category = params.category;
+  const categoryValue = categoryFromSlug(category);
   const search_query = searchParams.get("search_query") || "";
 
   const {
@@ -31,6 +37,11 @@ export const CategoryPage = () => {
     setSize,
   });
 
+  const isEmptyCategory =
+    previewProductsByCategory !== undefined &&
+    !previewProductsByCategoryLoading &&
+    !previewProductsByCategoryError;
+
   if (previewProductsByCategoryError) {
     showToast({
       title: t("failed"),
@@ -43,7 +54,9 @@ export const CategoryPage = () => {
       <div className="mx-auto max-w-screen-2xl px-4 2xl:px-3">
         <div className="mb-4 items-end justify-between space-y-4 sm:flex sm:space-y-0 md:mb-8">
           <h2 className="mt-3 text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
-            {t("results")}
+            {categoryValue
+              ? enumT(categoryLabelKey(categoryValue))
+              : t("results")}
           </h2>
         </div>
 
@@ -52,6 +65,10 @@ export const CategoryPage = () => {
             products.map((product) => (
               <ProductCard key={product.id} {...product} />
             ))
+          ) : isEmptyCategory ? (
+            <div className="col-span-full text-center py-8 text-gray-500">
+              {t("emptyCategory")}
+            </div>
           ) : (
             <div className="col-span-full text-center py-8 text-gray-500">
               {t("end")}

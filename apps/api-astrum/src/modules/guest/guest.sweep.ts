@@ -1,4 +1,4 @@
-import { Prisma } from "../../../generated/prisma/client";
+import { Prisma } from "@astrum/db/client";
 import { prisma } from "../../../lib/prisma";
 import { logger } from "../../common/helpers/logger";
 import {

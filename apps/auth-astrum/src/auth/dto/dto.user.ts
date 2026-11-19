@@ -9,7 +9,7 @@ import {
   MaxLength,
   MinLength,
 } from "class-validator";
-import { Gender } from "../../../generated/prisma/enums";
+import { Gender } from "@astrum/db/enums";
 import { MIN_AGE_YEARS, MinAge } from "./min-age.validator";
 
 export class RegisterUserDto {

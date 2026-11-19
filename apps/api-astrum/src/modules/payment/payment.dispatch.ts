@@ -1,4 +1,4 @@
-import { Prisma } from "../../../generated/prisma/client";
+import { Prisma } from "@astrum/db/client";
 import { prisma } from "../../../lib/prisma";
 import { ORDER_TRANSACTION_OPTIONS } from "../order/order-status.helpers";
 import { invalidateStockOfOrder } from "../order/order-cache";

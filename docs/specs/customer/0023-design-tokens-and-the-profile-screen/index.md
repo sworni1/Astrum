@@ -1,7 +1,7 @@
 # 0023. Design tokens and the profile screen
 
 **Date**: 2026-11-16
-**Status**: In Progress
+**Status**: Accepted
 
 _This is the build spec. The decision record (context, options, rationale) lives in [rationale.md](rationale.md); the verification steps live in [verify.md](verify.md)._
 

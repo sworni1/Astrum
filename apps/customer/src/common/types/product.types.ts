@@ -56,6 +56,19 @@ export enum PropertyLabel {
   GraphicsCard = "GraphicsCard",
   ScreenSize = "ScreenSize",
   BatteryLife = "BatteryLife",
+  Type = "Type",
+  Power = "Power",
+  Features = "Features",
+  Control = "Control",
+  NoiseLevel = "NoiseLevel",
+  PowerSource = "PowerSource",
+  Display = "Display",
+  Capacity = "Capacity",
+  Installation = "Installation",
+  Speed = "Speed",
+  Construction = "Construction",
+  RAM = "RAM",
+  Connectivity = "Connectivity",
 }
 
 export enum ProductCategory {
@@ -68,6 +81,7 @@ export enum ProductCategory {
   Sports = "Sports",
   Toys = "Toys",
   Automotive = "Automotive",
+  Office = "Office",
 }
 
 export enum ProductStatus {

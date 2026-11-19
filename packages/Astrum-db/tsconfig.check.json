@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.build.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "lib/**/*.ts",
+    "generated/**/*.ts",
+    "prisma/**/*.ts",
+    "scripts/**/*.ts",
+    "src/**/*.ts"
+  ]
+}

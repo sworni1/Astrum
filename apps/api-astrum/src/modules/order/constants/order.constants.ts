@@ -1,7 +1,7 @@
 import type {
   OrderItemStatus,
   PaymentMethod,
-} from "../../../../generated/prisma/enums";
+} from "@astrum/db/enums";
 
 /** Machine readable codes the storefront branches on. */
 export const ORDER_ERROR_CODES = {

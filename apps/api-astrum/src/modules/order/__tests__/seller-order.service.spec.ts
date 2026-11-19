@@ -7,7 +7,7 @@ jest.mock("../../../../lib/prisma", () => ({
   },
 }));
 
-import { Prisma } from "../../../../generated/prisma/client";
+import { Prisma } from "@astrum/db/client";
 import { prisma } from "../../../../lib/prisma";
 import { SellerOrderService } from "../seller-order.service";
 

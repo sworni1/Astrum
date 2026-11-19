@@ -1,4 +1,4 @@
-import type { PaymentAttemptStatus } from "../../../generated/prisma/enums";
+import type { PaymentAttemptStatus } from "@astrum/db/enums";
 import { prisma } from "../../../lib/prisma";
 import { logger } from "../../common/helpers/logger";
 import {

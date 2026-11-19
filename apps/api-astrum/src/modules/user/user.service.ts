@@ -1,7 +1,7 @@
 import { hash, verify } from "argon2";
 import { StatusCodes } from "http-status-codes";
-import { Prisma, type User } from "../../../generated/prisma/client";
-import { UserStatus } from "../../../generated/prisma/enums";
+import { Prisma, type User } from "@astrum/db/client";
+import { UserStatus } from "@astrum/db/enums";
 import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
 import { staffRolesOf } from "../../common/helpers/staffRoles";

@@ -9,8 +9,8 @@ import {
   ProductStatus,
   ProductVisibility,
   PropertyLabel,
-} from "../generated/prisma/client";
-import { prisma } from "../lib/prisma";
+} from "../generated/prisma/client.js";
+import { prisma } from "../lib/prisma.js";
 
 const PRODUCTS_PER_FILE = 500;
 const CANDIDATES_PER_FILE = 2000;

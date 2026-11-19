@@ -1,11 +1,11 @@
-import type { OrderItem } from "../../../generated/prisma/client";
-import { Prisma } from "../../../generated/prisma/client";
+import type { OrderItem } from "@astrum/db/client";
+import { Prisma } from "@astrum/db/client";
 import type {
   Currency,
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
-} from "../../../generated/prisma/enums";
+} from "@astrum/db/enums";
 import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
 import { logger } from "../../common/helpers/logger";

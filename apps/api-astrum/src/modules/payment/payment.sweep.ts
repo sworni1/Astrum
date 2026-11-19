@@ -1,5 +1,5 @@
-import { Prisma } from "../../../generated/prisma/client";
-import type { PaymentAttemptStatus } from "../../../generated/prisma/enums";
+import { Prisma } from "@astrum/db/client";
+import type { PaymentAttemptStatus } from "@astrum/db/enums";
 import { prisma } from "../../../lib/prisma";
 import { logger } from "../../common/helpers/logger";
 import { invalidateStockOfOrder } from "../order/order-cache";

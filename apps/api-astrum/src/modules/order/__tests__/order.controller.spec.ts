@@ -2,7 +2,7 @@ jest.mock("../../../../lib/prisma", () => ({ prisma: {} }));
 
 import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import { Prisma } from "../../../../generated/prisma/client";
+import { Prisma } from "@astrum/db/client";
 import { AppError } from "../../../common/helpers/appError";
 import { OrderController } from "../order.controller";
 import { OrderService } from "../order.service";

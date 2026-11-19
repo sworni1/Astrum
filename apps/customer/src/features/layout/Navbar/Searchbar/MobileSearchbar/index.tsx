@@ -5,6 +5,10 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { categoryList } from "@/common/constants/category.list";
+import {
+  categoryLabelKey,
+  categorySlug,
+} from "@/common/helpers/localizeHelper";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,6 +35,7 @@ type FormValues = {
 
 const MobileSearchbar = () => {
   const t = useTranslations("nav");
+  const enumT = useTranslations("enums");
   const router = useRouter();
   const [openDialoog, setOpenDialoog] = useState(false);
 
@@ -112,10 +117,10 @@ const MobileSearchbar = () => {
                           </SelectItem>
                           {categoryList.map((category) => (
                             <SelectItem
-                              key={category.href}
-                              value={category.href}
+                              key={category}
+                              value={categorySlug(category)}
                             >
-                              {category.name}
+                              {enumT(categoryLabelKey(category))}
                             </SelectItem>
                           ))}
                         </SelectGroup>

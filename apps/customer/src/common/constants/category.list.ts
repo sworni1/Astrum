@@ -1,11 +1,14 @@
-export const categoryList = [
-  { name: "Electronics", href: "electronics" },
-  { name: "Fashion", href: "fashion" },
-  { name: "Home", href: "home" },
-  { name: "Food", href: "food" },
-  { name: "Beauty", href: "beauty" },
-  { name: "Books", href: "books" },
-  { name: "Sports", href: "sports" },
-  { name: "Toys", href: "toys" },
-  { name: "Automotive", href: "automotive" },
+import { ProductCategory } from "@/common/types/product.types";
+
+export const categoryList: readonly ProductCategory[] = [
+  ProductCategory.Electronics,
+  ProductCategory.Fashion,
+  ProductCategory.Home,
+  ProductCategory.Food,
+  ProductCategory.Beauty,
+  ProductCategory.Books,
+  ProductCategory.Sports,
+  ProductCategory.Toys,
+  ProductCategory.Automotive,
+  ProductCategory.Office,
 ];
