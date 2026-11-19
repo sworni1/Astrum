@@ -1,6 +1,6 @@
 # Scope: Astrum order flow
 
-One order moves through three places: the storefront (`apps/customer`), the gateway (`apps/api-astrum`) and the shared schema (`packages/Astrum-db`). This plan holds the whole order path, slice by slice, so the storefront and backend scopes stay about their own pages. The seller surface began with the order panel, spec 0007. Session state and account confirmation cross the same places plus the auth service and a new worker, so their slices live here too. Becoming a seller crosses the storefront, the gateway and one `Business` row, so it is planned here as well. A handover at a collection point and by a courier needs two roles of its own, so Slice 10 lives here too. A visitor with no account needs a cart, a wishlist and a shop to look at before signing up, and that identity crosses the storefront, the gateway and the schema, so Slice 11 lives here too.
+One order moves through three places: the storefront (`apps/customer`), the gateway (`apps/api-astrum`) and the shared schema (`packages/Astrum-db`). This plan holds the whole order path, slice by slice, so the storefront and backend scopes stay about their own pages. The seller surface began with the order panel, spec 0007. Session state and account confirmation cross the same places plus the auth service and a new worker, so their slices live here too. Becoming a seller crosses the storefront, the gateway and one `Business` row, so it is planned here as well. A handover at a collection point and by a courier needs two roles of its own, so Slice 10 lives here too. A visitor with no account needs a cart, a wishlist and a shop to look at before signing up, and that identity crosses the storefront, the gateway and the schema, so Slice 11 lives here too. The schema and the generated client sit in four copies, one per app, so cleaning that up crosses the shared package and every app, and Slice 12 lives here too.
 
 **Build approach:** Tracer Bullet (every slice runs end to end through the storefront and the gateway).
 **Workflow:** Beta (after `/develop`: `/check verify`, then `/test`). Features that move money or stock, or guard access, carry a `· GA` tag.
@@ -34,6 +34,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | 21  | Read only seller panel                   | Slice 10 | in-progress |
 | 22  | Real rating on the product card          | Slice 4  | in-progress |
 | 23  | Guest cart, wishlist and recommendations | Slice 11 | done        |
+| 24  | One database client from the package     | Slice 12 | in-progress |
 
 ## Slice 1: the order thread
 
@@ -430,6 +431,22 @@ A visitor can look at the shop, add to the cart and add to the wishlist before o
   spec [0028](../../specs/_root/0028-guest-cart-wishlist-and-recommendations/index.md)
   code in `packages/Astrum-db/prisma` (`schema.prisma`, `migrations/20261118120000_guest_owner`), `apps/api-astrum/src/middlewares/resolveOwner.ts`, `apps/api-astrum/src/modules/guest/`, `apps/api-astrum/src/modules/cart`, `apps/api-astrum/src/modules/wishlist`, `apps/api-astrum/src/common/helpers/getWishlistAndCart.ts`, `apps/customer/src/proxy.ts`, `apps/customer/src/common/helpers/returnPath.ts`, `apps/customer/src/features/layout/Navbar`, `apps/customer/src/features/pages/Cart`, `apps/customer/messages`
 
+## Slice 12: one database client
+
+### 24. One database client from the package · in-progress
+The repository keeps one Prisma schema and its generated client in four copies, one per app, and the three services import their own copies in 63 files. The copies have to stay byte identical by hand, so a drift arrives as a failing suite instead of an honest error, and the shared package that already re exports the client is imported by nobody. Read one schema, generate one client, let every app take it from `@astrum/db`. This does not split the schema per service, and the migration history stays in the shared package.
+**Done when:** `packages/Astrum-db/prisma/schema.prisma` is the only schema in the repository, the three app copies and their `prisma.config.ts` files are gone, `api-astrum`, `auth-astrum` and `worker` depend on `@astrum/db` with `workspace:*` and import the client from it, one generate step feeds every app, and the Docker images carry the client, and the package builds itself into `dist` in CommonJS with types that every image copies, so no app runs `prisma generate` any more.
+- [x] Design it (spec): `/architect one database client from the package` — 2026-11-19: spec 0030, 8 acceptance criteria
+- [x] Build it: `/develop one database client from the package` — 2026-11-19: two phases, package 1 to 3 then the three services
+   - [x] The package builds itself: generator format, exports map, `dist`, staleness guard (AC-2, AC-3) — `moduleFormat = "cjs"` and `importFileExtension = "js"`, exports only `./client` and `./enums`, `pnpm --filter @astrum/db build` emits `dist/generated/prisma/{client,enums}.{js,d.ts}`; `verify:build` reads prisma `^7.10.1` on both sides, finds all four targets and matches schema md5 `36c8408…` against `dist/.schema-hash`
+   - [x] One schema: three copies and three configs gone, `prisma` CLI leaves the apps (AC-1) — `find . -name schema.prisma -not -path '*/node_modules/*' -not -path '*/generated/*'` prints one path, `find . -name prisma.config.ts` one path, `prisma` left the three `devDependencies` with their `prisma:generate` scripts
+   - [x] The graph: `workspace:*` edges and `^build` in turbo (AC-4) — three dependencies in `dependencies`, `build` and `dev` on `["^build"]`, `check-types` on `["^build", "^check-types"]`, root `prisma:generate` deleted, `dev` keeps the built client
+   - [x] The gateway thread: 55 files rewritten, its own client kept, suite green (AC-5, AC-6, AC-8) — `grep -rn "generated/prisma" apps` prints nothing, api check-types exit 0, jest 58 suites and 489 tests passed
+   - [x] Auth and worker: imports and Dockerfiles (AC-5, AC-6) — 5 auth files and 3 worker files rewritten, auth `PrismaService` keeps `extends PrismaClient`, all type checks and suites green (auth 44, worker 26); the three images carrying `packages/Astrum-db/dist` and `/health` on the running stack belong to `Verify it` (AC-7)
+- [ ] Verify it: `/check verify one database client from the package`
+- [ ] Test it: `/test one database client from the package`
+spec [0030](../../specs/_root/0030-one-database-client-from-the-package/index.md)
+
 ## Fixed
 
 Bugs found while verifying a slice, recorded here once the fix lands so the plan stays honest.
@@ -474,6 +491,8 @@ Kept so the plan stays honest, built only when the loop above runs.
 - **Dollar sign on the other surfaces**: product pages, the cart and the wishlist still print `$` over ruble amounts · from spec 0009
 - **Cart line subtitle and stock badge**: `/cart` selects no `description` and no `isOutOfStock` (`cartPublicSelect`), so a checkout line cannot print the mockup's size line or a stock badge · from spec 0024
 - **Delivery method names in Russian**: names are English database data shown in the Russian interface · from spec 0009 · needs a decision
+- **An unknown category slug answers the whole catalogue**: `product.controller.ts` resolves the path segment and a miss leaves the filter unset, so `/api/products/categories/nonsense` answers every product, and with no category the cache key falls back to the recommendations slot (`product.service.ts:107`), which the menu search with `all` fills too · from spec 0029 · needs a decision
+- **Property values are not translated**: 27721 rows carry 6617 distinct free text values seeded in Russian from the Excel catalogue, so an English reader sees Russian values beside English labels · from spec 0029 · needs a decision
 - **Free delivery threshold**: the catalog claims free shipping over $100 with no rule behind it · from spec 0009 · needs a decision
 - **Seller facing product management screen**: create, edit and publish products from the storefront; the gateway route and DTO exist · from spec 0008 · needs a decision
 - **Shop name policy**: reserved names, impersonation and moderation before a name is public · from spec 0008 · needs a decision
