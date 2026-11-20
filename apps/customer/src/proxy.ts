@@ -18,14 +18,28 @@ export default async function proxy(req: NextRequest) {
 
   const session = await decrypt(cookie);
 
-  if (session?.userId || isGuestPath(path)) {
-    return NextResponse.next();
+  const staleCookie = cookie !== undefined && !session?.userId;
+
+  if (!session?.userId && !isGuestPath(path)) {
+    const signIn = new URL("/auth/signin", req.nextUrl);
+    signIn.searchParams.set("next", path);
+
+    const redirect = NextResponse.redirect(signIn);
+
+    if (staleCookie) {
+      redirect.cookies.delete("__auth");
+    }
+
+    return redirect;
   }
 
-  const signIn = new URL("/auth/signin", req.nextUrl);
-  signIn.searchParams.set("next", path);
+  const response = NextResponse.next();
 
-  return NextResponse.redirect(signIn);
+  if (staleCookie) {
+    response.cookies.delete("__auth");
+  }
+
+  return response;
 }
 
 export const config = {

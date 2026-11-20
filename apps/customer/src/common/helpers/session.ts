@@ -26,8 +26,15 @@ export async function decrypt(session: string | undefined = "") {
       algorithms: ["HS256"],
     });
     return payload;
-  } catch {
-    console.error("Failed to verify session");
+  } catch (error) {
+    if ((error as { code?: string }).code !== "ERR_JWT_EXPIRED") {
+      console.error(
+        JSON.stringify({
+          event: "session.decrypt_failed",
+          reason: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }
   }
 }
 
