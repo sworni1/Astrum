@@ -1,8 +1,3 @@
-/**
- * The class names of the table geometry in spec 0026 that more than one file
- * needs: the card, the head, a row, a cell and the pieces inside a cell. One
- * place per value, the same way `Orders/lib/styles.ts` holds its card geometry.
- */
 export const TABLE_CARD = "overflow-hidden rounded-xl border border-border bg-card";
 
 export const HEAD_CELL =

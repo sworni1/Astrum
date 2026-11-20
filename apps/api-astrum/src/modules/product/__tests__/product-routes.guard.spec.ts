@@ -19,7 +19,6 @@ type Layer = {
 const layersOf = (router: unknown): Layer[] =>
   (router as { stack: Layer[] }).stack;
 
-/** Every router the tree mounts, the nested review routers included. */
 const collectRoutes = (
   router: unknown,
 ): Array<{ path: string; methods: string[]; handlers: string[] }> => {
@@ -43,11 +42,6 @@ const collectRoutes = (
   return found;
 };
 
-/**
- * The catalogue mount answers visitors, so the session guard moved from the
- * mount to every write route. This suite keeps a route added later from riding
- * the public mount by accident (spec 0028, AC-6).
- */
 describe("productRoutes write guards", () => {
   const routes = collectRoutes(productRoutes);
 

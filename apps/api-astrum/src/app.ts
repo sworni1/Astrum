@@ -56,8 +56,6 @@ app.use((_req, res, next) => {
 
 app.use("/api/auth", proxyOptions(authServiceUrl));
 
-// The provider callback is mounted before the JSON parser on purpose: its
-// signature is computed over the raw bytes (spec 0015, AC-5).
 app.use(STRIPE_WEBHOOK_PATH, paymentWebhookRoutes);
 
 app.use(express.json({ limit: "10mb" }));
@@ -80,9 +78,7 @@ app.get("/health", async (_req, res) => {
 });
 
 app.use("/api/users", authenticateToken, userRoutes);
-// The catalogue and the guest cart answer visitors: the shared payload is the
-// same for everyone and only the marks are personal, so the guard moves from
-// the mount to every write route inside (spec 0028, AC-6).
+
 app.use("/api/products", optionalAuth, productRoutes);
 app.use("/api/wishlist", optionalAuth, wishlistRoutes);
 app.use("/api/cart", optionalAuth, cartRoutes);

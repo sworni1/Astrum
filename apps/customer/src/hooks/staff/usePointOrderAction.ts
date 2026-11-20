@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useFetcher } from "@/hooks/useFetcher";
+import { NO_BODY } from "./staffPage";
 import type { PointOrder } from "./pointOrder.types";
 
 export type PointOrderActionName = "handover" | "cancel";
@@ -12,7 +13,6 @@ export type PendingPointOrderAction = {
 };
 
 export interface UsePointOrderActionReturn {
-  /** Null when a request is already in flight, so a second press sends nothing. */
   run: (
     orderId: string,
     action: PointOrderActionName,
@@ -20,13 +20,6 @@ export interface UsePointOrderActionReturn {
   pending: PendingPointOrderAction | null;
 }
 
-const NO_BODY = {} as Record<string, never>;
-
-/**
- * One action on one order, with the busy state the screen paints. The ref is
- * the second press guard, because a state update lands one render late
- * (spec 0018, AC-11).
- */
 export const usePointOrderAction = (): UsePointOrderActionReturn => {
   const { patchItem } = useFetcher();
   const [pending, setPending] = useState<PendingPointOrderAction | null>(null);

@@ -4,9 +4,8 @@ import type { NextFunction, Request, Response } from "express";
 import { ReasonPhrases, StatusCodes } from "http-status-codes";
 
 type ValidateDtoOptions = {
-  /** HTTP status for an invalid body. Defaults to 400. */
   status?: number;
-  /** Machine readable code added to the invalid body response. */
+
   code?: string;
 };
 

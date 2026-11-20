@@ -105,7 +105,7 @@ describe("guest identity", () => {
       kind: "guest",
       guestId,
     });
-    // A live cookie is not renewed: the identity is issued once.
+
     expect(second.cookie).not.toHaveBeenCalled();
   });
 

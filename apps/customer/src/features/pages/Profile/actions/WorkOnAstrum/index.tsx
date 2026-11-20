@@ -18,11 +18,6 @@ import { useUser } from "@/hooks/user/useUser";
 import PointLine from "./PointLine";
 import RoleLines from "./RoleLines";
 
-/**
- * The staff role card of the profile: one sentence and a link for an account
- * without a role, the roles and the point for an account that holds one
- * (spec 0017 AC-2, spec 0023 AC-6).
- */
 const WorkOnAstrum = () => {
   const t = useTranslations("staff");
   const { profileData, profileIsLoading, profileIsError } = useUser();

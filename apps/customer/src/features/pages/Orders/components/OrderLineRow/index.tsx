@@ -20,12 +20,6 @@ type Props = {
   line: OrderLineRowData;
 };
 
-/**
- * One line of a group: the image tile, the product name, its quantity and the
- * line state with the receipt date when the column carries one (spec 0025,
- * AC-11). An issued line prints no date, because `receiptDate` is the arrival
- * and the issue moment belongs to the receiving block (spec 0031, AC-7).
- */
 const OrderLineRow = ({ line }: Props) => {
   const t = useTranslations("orders");
   const format = useFormatter();

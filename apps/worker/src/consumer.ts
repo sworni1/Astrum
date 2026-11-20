@@ -57,12 +57,6 @@ export type ConfirmationHandler = (
   message: ConsumeMessage | null,
 ) => Promise<void>;
 
-/**
- * One delivery of one account confirmation event. The letter is minted and
- * sent on every attempt, because the raw token exists only in memory and in
- * the letter: a retry therefore replaces the previous link, which is the cost
- * the spec records for never storing a live secret in a queue.
- */
 export const createConfirmationHandler = (
   deps: ConsumerDeps,
 ): ConfirmationHandler => {
@@ -82,8 +76,6 @@ export const createConfirmationHandler = (
 
     logger.error({ event: "email.send.failed", attempt, reason });
 
-    // The retry names the attempt that comes next, so a redelivery steps one
-    // waiting queue further; the dead letter keeps the number that failed.
     const headers = {
       ...(message.properties.headers ?? {}),
       [ATTEMPT_HEADER]: attempt < MAX_ATTEMPTS ? attempt + 1 : attempt,

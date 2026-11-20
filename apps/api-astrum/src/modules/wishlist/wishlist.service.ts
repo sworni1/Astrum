@@ -47,7 +47,6 @@ export class WishlistService {
     }
   }
 
-  /** A second press answers `200` and leaves one row instead of failing (AC-10). */
   async addProductToWishlist(owner: Owner, dto: AddProductToWishlistDto) {
     try {
       const cartItem = await getCartItem(owner, dto.productId);

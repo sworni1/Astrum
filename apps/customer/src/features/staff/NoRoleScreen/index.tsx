@@ -9,7 +9,6 @@ type Props = {
   actionLabel: string;
 };
 
-/** The screen a page paints when the account holds no role for it. */
 const NoRoleScreen = ({ title, text, actionLabel }: Props) => (
   <section className="mx-auto max-w-screen-xl px-4 py-12 2xl:px-0">
     <div className="mx-auto max-w-xl space-y-3 rounded-xl border p-6">

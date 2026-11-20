@@ -23,11 +23,6 @@ type Props = {
   onGranted: (role: StaffRole, answer: StaffAnswer) => Promise<void>;
 };
 
-/**
- * The point half of the page: one select over the active points, the rule that
- * blocks an empty submit, every refusal the gateway can answer, and the point
- * list's own loading, empty and failed states (AC-3).
- */
 const PointGrantCard = ({ pending, onGranted }: Props) => {
   const t = useTranslations("staff");
   const cart = useTranslations("cart");

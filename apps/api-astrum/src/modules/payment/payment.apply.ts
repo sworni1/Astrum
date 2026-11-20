@@ -11,7 +11,6 @@ import { toMinorUnits } from "./payment.money";
 
 export type OrderWithLines = Order & { OrderItem: OrderItem[] };
 
-/** What an expiry did: it closed an untouched order, or it left a seller's one. */
 export type ExpiryOutcome = "closed" | "seller" | "unchanged";
 
 export type ApplyResult = "applied" | "ignored";
@@ -20,10 +19,6 @@ const UNKNOWN_ERROR_CODE = "unknown";
 
 const ERROR_MESSAGE_LIMIT = 255;
 
-/**
- * The amount and the currency the provider reports against the stored order,
- * compared in the one conversion helper both sides share (AC-5, invariant 5).
- */
 export const amountMatchesOrder = (
   order: Order,
   amount: number | null,
@@ -39,7 +34,6 @@ export const amountMatchesOrder = (
   );
 };
 
-/** Every write below happens under the order row lock, so two callers serialise. */
 const loadLockedOrder = async (
   tx: Prisma.TransactionClient,
   orderId: string,
@@ -66,15 +60,6 @@ const setPaymentStatus = async (
   return count;
 };
 
-/**
- * Money arrived. The order status is never touched by hand: it follows its
- * lines through `recomputeOrderStatus`, so the order reads ACCEPTED at once.
- * The shipping pass in `order-shipping.ts` marks it sent one minute later,
- * because this project runs no real delivery. Stock never moves here, because it
- * left the shelf when the order was created. An attempt that was cancelled or
- * expired first still becomes PAID, and the line says a refund is owed rather
- * than dropping money that did leave (AC-2, AC-3, AC-4).
- */
 export const applyPaidEvent = async (
   tx: Prisma.TransactionClient,
   orderId: string,
@@ -91,8 +76,6 @@ export const applyPaidEvent = async (
 
   const order = await loadLockedOrder(tx, orderId);
 
-  // An order another attempt already paid is written once: the sync can find an
-  // older FAILED attempt, and `newestOpenAttempt` never reads the paid one (AC-4).
   if (order.paymentStatus === "PAID") {
     return "ignored";
   }
@@ -115,8 +98,6 @@ export const applyPaidEvent = async (
     "PAID",
   );
 
-  // Only a line waiting for the money is confirmed; a cancelled, delivered or
-  // returned line keeps what it says (AC-3). The shipping pass ships it later.
   const { count: lineCount } = await tx.orderItem.updateMany({
     where: { orderId: order.id, status: "PENDING" },
     data: { status: "CONFIRMED" },
@@ -148,12 +129,6 @@ export const applyPaidEvent = async (
   return "applied";
 };
 
-/**
- * The window closed. An order no seller has touched is closed through the same
- * helper the customer cancel uses, so the stock comes back once; an order the
- * seller already accepted keeps its lines and stock and only loses its payment
- * (AC-8).
- */
 export const applyExpiredEvent = async (
   tx: Prisma.TransactionClient,
   orderId: string,
@@ -188,10 +163,6 @@ export const applyExpiredEvent = async (
   return "closed";
 };
 
-/**
- * The card was declined. The attempt stays PENDING, because the hosted session
- * is still usable for a retry; only the reason and the order label change (AC-7).
- */
 export const applyDeclinedEvent = async (
   tx: Prisma.TransactionClient,
   orderId: string,
@@ -219,7 +190,6 @@ export const applyDeclinedEvent = async (
   return changed > 0 ? "applied" : "ignored";
 };
 
-/** An async failure ends the attempt; the stock stays where it is (AC-7). */
 export const applyAsyncFailedEvent = async (
   tx: Prisma.TransactionClient,
   orderId: string,

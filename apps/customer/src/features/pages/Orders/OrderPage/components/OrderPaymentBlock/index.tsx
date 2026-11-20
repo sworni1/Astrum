@@ -16,11 +16,6 @@ type Props = {
   paymentBranch: PaymentReturnBranch;
 };
 
-/**
- * How the order pays: the method, the payment status pill and one second line,
- * the paid instant or the deadline still ahead. The pay control keeps its place
- * and its four window states (spec 0027, AC-4).
- */
 const OrderPaymentBlock = ({ order, paymentBranch }: Props) => {
   const t = useTranslations("orders");
   const format = useFormatter();

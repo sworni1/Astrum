@@ -20,16 +20,10 @@ const server: Server = app.listen(PORT, () => {
   console.log(`API Gateway running at http://localhost:${PORT}/api`);
 });
 
-// The reconciliation pass belongs to the running process, never to app.ts: a
-// test that imports the app must not start a timer (spec 0015, AC-9).
 const sweep = startPaymentSweep();
 
-// An accepted order is marked sent after ORDER_SHIPPING_DELAY_MS, on its own
-// timer, so the payment sweep stays about money (spec 0016, amendments).
 const shipping = startOrderShipping();
 
-// Guest lines nobody claimed die after the retention bound, swept once at boot
-// and then daily (spec 0028, AC-16).
 const guestSweep = startGuestSweep();
 
 const shutdown = (signal: NodeJS.Signals): void => {

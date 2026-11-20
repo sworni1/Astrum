@@ -8,7 +8,6 @@ type Props = {
   value: number;
 };
 
-/** The read only stars of a card or a summary; the number lives in the label. */
 const StarRating = ({ value }: Props) => {
   const t = useTranslations("reviews");
 

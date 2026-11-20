@@ -21,11 +21,6 @@ type Props = {
   line: SellerLineRow;
 };
 
-/**
- * One line of the table: the order number, the product, where it is received,
- * the line subtotal, the order date and the status badge. No control sends a
- * request (spec 0026, AC-9).
- */
 const SalesRow = ({ line }: Props) => {
   const t = useTranslations("seller");
   const tStatus = useTranslations("orders.itemStatus");

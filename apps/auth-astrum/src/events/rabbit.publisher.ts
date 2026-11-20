@@ -30,12 +30,6 @@ const withTimeout = async <T>(
   }
 };
 
-/**
- * Publishes with a confirm channel, so a message is on the broker before the
- * call resolves. The connection is opened on first use and the whole publish is
- * bounded: a refused, hung or unreachable broker is a failure the caller can
- * log, never a request that waits on a socket.
- */
 @Injectable()
 export class RabbitPublisher implements OnModuleDestroy {
   private readonly logger = new Logger(RabbitPublisher.name);

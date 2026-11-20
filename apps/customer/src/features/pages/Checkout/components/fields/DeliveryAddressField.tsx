@@ -20,10 +20,6 @@ type Props = {
   control: Control<CheckoutFormData>;
 };
 
-/**
- * The address a courier needs, shown whenever the chosen method is not a
- * pickup one and before any method is chosen (spec 0013, AC-6).
- */
 const DeliveryAddressField = ({ control }: Props) => {
   const t = useTranslations("cart");
 

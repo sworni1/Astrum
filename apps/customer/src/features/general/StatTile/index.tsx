@@ -8,7 +8,6 @@ type Props = {
   value?: string;
 };
 
-/** One tile is text, not a control: no hover, no focus, no handler. */
 const StatTile = ({ label, value }: Props) => (
   <div className={STAT_TILE}>
     <span className={STAT_LABEL}>{label}</span>

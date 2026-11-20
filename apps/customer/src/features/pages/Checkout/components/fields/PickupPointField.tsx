@@ -33,11 +33,6 @@ type Props = {
   onRetry: () => void;
 };
 
-/**
- * The point the parcel is collected from: one select over the active points, its
- * loading and failure states, the refusal a closed point produces, and the
- * chosen point's address under the trigger (spec 0013, AC-6; spec 0024, AC-12).
- */
 const PickupPointField = ({
   control,
   points,

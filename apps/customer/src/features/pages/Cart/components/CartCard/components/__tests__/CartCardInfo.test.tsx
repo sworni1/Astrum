@@ -8,8 +8,6 @@ const mocks = vi.hoisted(() => ({ locale: "ru" }));
 
 const NBSP = "\u00A0";
 
-// The real catalog entry is rendered, so a currency sign typed into the
-// sentence itself is under test as well as the amount.
 vi.mock("next-intl", async () => {
   const catalogs = {
     ru: (await import("@messages/ru.json")).default,

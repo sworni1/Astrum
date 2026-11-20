@@ -14,7 +14,6 @@ type Props = {
   currency: Currency;
 };
 
-/** The first card: what is being bought, one row per kept line (spec 0024, AC-10). */
 const SelectedLines = ({ lines, currency }: Props) => {
   const t = useTranslations("cart");
 

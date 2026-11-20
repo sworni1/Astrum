@@ -152,7 +152,6 @@ describe("ReviewCommentForm (spec 0014)", () => {
 
     expect(mocks.trigger).toHaveBeenCalledTimes(1);
 
-    // Released, so the module's send lock is free for the next test.
     await act(async () => {
       pending.resolve({ comment: { id: "comment-1" }, commentCount: 1 });
     });

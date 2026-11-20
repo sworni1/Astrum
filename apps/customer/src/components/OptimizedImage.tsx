@@ -124,7 +124,6 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
     }
 
     try {
-      // Handle different image source types
       let downloadUrl: string;
 
       if (typeof imageSrc === "string") {
@@ -307,13 +306,11 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
         containerClassName,
       )}
     >
-      {/* Loading State */}
+
       {renderLoadingState()}
 
-      {/* Error State */}
       {renderErrorState()}
 
-      {/* Main Image */}
       {!hasError &&
         (onImageClick ? (
           <button
@@ -328,10 +325,8 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
           imageElement
         ))}
 
-      {/* Overlay */}
       {renderOverlay()}
 
-      {/* Hover Ring Effect */}
       {enableHoverEffects && (
         <div
           className={cn(
@@ -349,5 +344,4 @@ OptimizedImage.displayName = "OptimizedImage";
 
 export default OptimizedImage;
 
-// Export types for better TypeScript support
 export type { OptimizedImageProps };

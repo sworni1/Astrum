@@ -45,7 +45,6 @@ const Probe = () => {
   );
 };
 
-/** The sign in screen: the store is reset there and no account hook is mounted. */
 const SignIn = () => {
   const resetSessionCache = useSessionCacheReset();
 
@@ -84,7 +83,6 @@ const flush = async (): Promise<void> => {
   });
 };
 
-/** Re-renders the same provider, so a navigation keeps the SWR global state. */
 const render = async (signedIn: boolean): Promise<void> => {
   await act(async () => {
     root.render(
@@ -120,7 +118,6 @@ describe("useSessionCacheReset", () => {
     await render(true);
     expect(read().nick).toBe("Alpha");
 
-    // Sign out: the next account signs in and the content page mounts again.
     await render(false);
     getData.mockResolvedValue({ nickName: "Beta", status: "PENDING" });
     await click("[data-switch]");

@@ -13,7 +13,6 @@ export const isLocale = (value: unknown): value is Locale =>
 export const resolveLocale = (value: unknown): Locale =>
   isLocale(value) ? value : defaultLocale;
 
-/** The letter follows the page: an explicit header, never the browser default. */
 export const localeHeader = (locale: Locale): string => locale;
 
 export const acceptLanguage = (): Record<string, string> => ({

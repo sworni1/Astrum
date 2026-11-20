@@ -9,7 +9,6 @@ type Props = {
   aggregate: ReviewAggregate;
 };
 
-/** Average, total and the five shares; nothing at all when nothing is rated. */
 const ReviewSummary = ({ aggregate }: Props) => {
   const t = useTranslations("reviews");
 

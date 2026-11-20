@@ -290,7 +290,7 @@ describe("PointWorkspace", () => {
   it("closes the row, re-reads the list and moves the focus to the heading (AC-11, AC-14)", async () => {
     mocks.point.point = POINT;
     mocks.queue.orders = [order("order-aaaaaaaa")];
-    // The closed order leaves the list on the re-read, so its card unmounts.
+
     mocks.queue.mutate.mockImplementation(async () => {
       mocks.queue.orders = [];
     });

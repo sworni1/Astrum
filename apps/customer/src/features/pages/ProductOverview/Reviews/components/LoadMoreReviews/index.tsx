@@ -11,7 +11,6 @@ type Props = {
   onLoadMore: () => void;
 };
 
-/** The paging control: one page at a time, and it disappears on the last one. */
 const LoadMoreReviews = ({
   hasNextPage,
   isLoadingMore,

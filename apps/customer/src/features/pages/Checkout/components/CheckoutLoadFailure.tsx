@@ -5,10 +5,6 @@ type Props = {
   onRetry: () => void;
 };
 
-/**
- * A failed cart read is not an empty selection, so it gets its own state with a
- * retry instead of the redirect to `/cart` (spec 0024, AC-4).
- */
 const CheckoutLoadFailure = ({ onRetry }: Props) => {
   const t = useTranslations("cart");
 

@@ -6,11 +6,6 @@ type Props = {
   order: Order;
 };
 
-/**
- * Where the parcel goes: the pickup point with its address, or the delivery
- * address. It prints no date, because the receiving card owns that one
- * (spec 0027, AC-4).
- */
 const OrderPickupBlock = ({ order }: Props) => {
   const t = useTranslations("orders");
   const isPickup = order.pickupPointId !== null;

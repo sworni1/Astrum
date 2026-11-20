@@ -6,10 +6,6 @@ import LogOutForm from "@/features/pages/Profile/actions/LogOutForm";
 import ProfileCard from "@/features/pages/Profile/components/ProfileCard";
 import { Separator } from "@/components/ui/separator";
 
-/**
- * The access card: the password row and the logout row, split by one line
- * (spec 0023, AC-7).
- */
 const ProfileSecurityCard = () => {
   const t = useTranslations("profile");
 

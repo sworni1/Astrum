@@ -41,7 +41,6 @@ const prismaMock = prisma as unknown as {
   order: { findFirst: jest.Mock; findMany: jest.Mock; groupBy: jest.Mock };
 };
 
-/** One detail line, with the two ids the detail read joins on. */
 const line = (overrides: Record<string, unknown> = {}) => ({
   id: "line-1",
   price: new Prisma.Decimal("19.99"),
@@ -892,7 +891,7 @@ describe("OrderService.updateOrderStatus", () => {
       where: { id: "order-1" },
       data: { status: "CANCELED" },
     });
-    // The payment is resolved in its own write, and the attempt closes with it (AC-11).
+
     expect(tx.order.update).toHaveBeenCalledWith({
       where: { id: "order-1" },
       data: { paymentStatus: "CANCELLED" },

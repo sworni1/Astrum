@@ -23,7 +23,6 @@ const ofOwner = (row: Row, where: { userId?: string; guestId?: string }): boolea
     ? row.userId === where.userId
     : row.guestId === where.guestId;
 
-/** The owner half of a compound key, with the product id taken off. */
 const ownerOnly = (where: { productId: string; userId?: string; guestId?: string }) => {
   const { productId: _productId, ...owner } = where;
 

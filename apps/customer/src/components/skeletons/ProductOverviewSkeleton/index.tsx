@@ -48,7 +48,6 @@ export default function ProductOverviewSkeleton() {
           </Carousel>
         </div>
 
-        {/* Product Info Skeleton */}
         <div className="flex flex-col gap-6">
           <Skeleton className="h-8 w-3/4 sm:h-10" />
 

@@ -42,10 +42,6 @@ const outboxFileName = (to: string, now: Date): string => {
   return `${stamp}-${safeTo}.eml`;
 };
 
-/**
- * Without SMTP_URL the letter goes to the log and to a file, so a developer
- * reads the confirmation link without running a mail server.
- */
 const createOutboxMailer = (mailFrom: string, outboxDir: string): Mailer => ({
   kind: "outbox",
   send: async (to, letter) => {

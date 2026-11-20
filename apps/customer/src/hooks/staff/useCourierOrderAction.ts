@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useFetcher } from "@/hooks/useFetcher";
+import { NO_BODY } from "./staffPage";
 import type { CourierOrder } from "./courierOrder.types";
 
 export type CourierOrderActionName = "claim" | "release" | "handover" | "cancel";
@@ -12,7 +13,6 @@ export type PendingCourierOrderAction = {
 };
 
 export interface UseCourierOrderActionReturn {
-  /** Null when a request is already in flight, so a second press sends nothing. */
   run: (
     orderId: string,
     action: CourierOrderActionName,
@@ -20,14 +20,6 @@ export interface UseCourierOrderActionReturn {
   pending: PendingCourierOrderAction | null;
 }
 
-const NO_BODY = {} as Record<string, never>;
-
-/**
- * One action on one parcel, with the busy state the screen paints. A claim is a
- * POST, a release is a DELETE with no body, and a handover or a cancel is a
- * PATCH, so the four share one entry point and one second press guard
- * (spec 0019, AC-10).
- */
 export const useCourierOrderAction = (): UseCourierOrderActionReturn => {
   const { postItem, deleteItem, patchItem } = useFetcher();
   const [pending, setPending] = useState<PendingCourierOrderAction | null>(null);

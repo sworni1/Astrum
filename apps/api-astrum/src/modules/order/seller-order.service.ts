@@ -12,7 +12,6 @@ import {
   type SellerOrderQuery,
 } from "./seller-order-query";
 
-/** One line as the read promises it: the six columns plus the order facts it repeats. */
 const SELLER_LINE_SELECT = {
   id: true,
   orderId: true,
@@ -81,7 +80,6 @@ export type SellerSalesPage = {
   totalPages: number;
 };
 
-/** One group of the status and currency aggregate, as Postgres hands it back. */
 type SellerAggregateRow = {
   status: string;
   currency: Currency;
@@ -90,10 +88,6 @@ type SellerAggregateRow = {
   revenue: string;
 };
 
-/**
- * The line flattens its parent order into the row and computes its own subtotal,
- * so the browser never multiplies money (spec 0026, AC-3).
- */
 export const toSellerOrderLineJson = (row: SellerLineSource): SellerLineJson => ({
   id: row.id,
   orderId: row.orderId,
@@ -121,17 +115,14 @@ const countOf = (
     .filter((row) => statuses.includes(row.status))
     .reduce((total, row) => total + row.count, 0);
 
-/** A line the buyer took, whether it left the counter or not (spec 0031, AC-9). */
 const SOLD_LINE_STATUSES = ["DELIVERED", "ISSUED"] as const;
 
-/** The counts describe every line of the seller, never the filtered page (AC-4). */
 const toCounts = (rows: SellerAggregateRow[]): SellerLineCounts => ({
   all: rows.reduce((total, row) => total + row.count, 0),
   delivered: countOf(rows, SOLD_LINE_STATUSES),
   canceled: countOf(rows, CANCELED_LINE_STATUSES),
 });
 
-/** Revenue and units come from the sold lines only, per currency (AC-5, spec 0031 AC-9). */
 const toStats = (rows: SellerAggregateRow[]): SellerSalesStats => {
   const sold = rows.filter((row) =>
     SOLD_LINE_STATUSES.some((status) => status === row.status),
@@ -165,23 +156,12 @@ const sellerNotAssigned = () =>
 const invalidPagination = () =>
   new AppError(422, ORDER_ERROR_CODES.validation, "Invalid pagination.");
 
-/**
- * All three reads share one snapshot: `ReadCommitted` gives every statement its
- * own, so a line status change committing between the list and the aggregate
- * could print a tile that contradicts the list (spec 0026, AC-1).
- */
 const SELLER_TRANSACTION_OPTIONS = {
   maxWait: 5000,
   timeout: 10000,
   isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
 } as const;
 
-/**
- * The seller read and nothing else: a shop owner watches their own lines and
- * holds no authority over a parcel any more, so this service cannot write (spec
- * 0020). Nothing here touches an order row, which is why the route needs no
- * account gate.
- */
 export class SellerOrderService {
   async getSellerOrders(
     userId: string,

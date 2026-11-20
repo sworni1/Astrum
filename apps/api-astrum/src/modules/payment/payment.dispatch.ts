@@ -22,11 +22,6 @@ export const inTransaction = async <T>(
   work: (tx: Prisma.TransactionClient) => Promise<T>,
 ): Promise<T> => await prisma.$transaction(work, ORDER_TRANSACTION_OPTIONS);
 
-/**
- * An expiry that closed an untouched order returned its stock, so the counters
- * are bumped once the transaction has committed, never inside it
- * (spec 0022, AC-7 b; invariant 4).
- */
 const expireAfterCommit = async (
   target: AttemptTarget,
 ): Promise<TransitionResult> => {
@@ -41,10 +36,6 @@ const expireAfterCommit = async (
   return outcome;
 };
 
-/**
- * One retrieved session, whatever asked for it (a callback, the sync route or the
- * sweep), lands on the same three transitions (AC-9, AC-10).
- */
 export const applySession = async (
   session: ProviderSession,
   target: AttemptTarget,
@@ -69,7 +60,6 @@ export const applySession = async (
   return "ignored";
 };
 
-/** A verified callback, dispatched on its type (AC-5, AC-7, AC-8). */
 export const applyProviderEvent = async (
   event: ProviderEvent,
   target: AttemptTarget,

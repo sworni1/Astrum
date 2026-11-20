@@ -132,7 +132,6 @@ describe("GuestMergeService", () => {
 
     const counts = await new GuestMergeService().merge("user-1", "guest-1");
 
-    // product-1: min(2 + 3, 4) = 4, product-2: min(0 + 5, 10) = 5
     expect(tx.cartItem.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         create: { userId: "user-1", productId: "product-1", quantity: 4 },
@@ -143,7 +142,6 @@ describe("GuestMergeService", () => {
       expect.objectContaining({ update: { quantity: 5 } }),
     );
 
-    // One wishlist line already exists, so only one is written.
     expect(counts).toEqual({ cartLines: 2, wishlistLines: 1 });
     expect(tx.cartItem.deleteMany).toHaveBeenCalledWith({ where: { guestId: "guest-1" } });
     expect(tx.wishlistItem.deleteMany).toHaveBeenCalledWith({ where: { guestId: "guest-1" } });

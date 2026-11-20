@@ -12,12 +12,6 @@ export type ItemStatusKey =
   | "backordered"
   | "replaced";
 
-/**
- * One status to catalog key table for the `orders.itemStatus` messages. The
- * customer order screen and the seller panel both read it, so a label is
- * written once. The `Record` names every member, so a status added later is a
- * type error instead of a screen printing the raw word (spec 0031, AC-7).
- */
 export const ITEM_STATUS_KEYS: Record<OrderItemStatus, ItemStatusKey> = {
   [OrderItemStatus.PENDING]: "pending",
   [OrderItemStatus.CONFIRMED]: "confirmed",
@@ -31,6 +25,5 @@ export const ITEM_STATUS_KEYS: Record<OrderItemStatus, ItemStatusKey> = {
   [OrderItemStatus.REPLACED]: "replaced",
 };
 
-/** An unknown status has no label; the screen shows the raw value instead. */
 export const itemStatusKey = (status: string): ItemStatusKey | undefined =>
   ITEM_STATUS_KEYS[status as OrderItemStatus];

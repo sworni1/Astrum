@@ -8,10 +8,6 @@ type Props = {
   query: string;
 };
 
-/**
- * One of the three empty states. The search field stays visible above, so the
- * customer can always clear the query from here (spec 0025, AC-12).
- */
 const OrdersEmpty = ({ state, query }: Props) => {
   const t = useTranslations("orders");
   const copy = EMPTY_COPY[state];

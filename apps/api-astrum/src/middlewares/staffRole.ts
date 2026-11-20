@@ -23,7 +23,6 @@ const refuse = (
   res.status(status).json({ code, message });
 };
 
-/** One indexed read of the caller's own row; a courier names no point. */
 const readOwnRow = async (
   role: StaffRole,
   userId: string,
@@ -52,12 +51,6 @@ type StaffRoleGuardConfig = {
   message: string;
 };
 
-/**
- * The authorisation rule of a staff role: the role row is read by the
- * authenticated id on every call, so a grant takes effect on the next request
- * and no cache goes stale. A failed read is a 503, never a 403, because an
- * outage must not read as a missing role (spec 0017, AC-10).
- */
 export const createStaffRoleGuard =
   ({ role, refusalCode, event, message }: StaffRoleGuardConfig) =>
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {

@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl";
 import CourierQueue from "./CourierQueue";
 
-/** The courier page: the job's heading, then the pool and the parcels he took (AC-11). */
 const CourierCard = () => {
   const t = useTranslations("staff");
 

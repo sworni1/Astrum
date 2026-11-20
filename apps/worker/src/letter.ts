@@ -22,7 +22,6 @@ const CATALOG: Record<LetterLocale, LetterCopy> = {
   ru: ruCopy,
 };
 
-/** An unknown or missing language is English, never a failed delivery. */
 export const resolveLetterLocale = (value: unknown): LetterLocale =>
   value === "ru" ? "ru" : "en";
 
@@ -33,7 +32,6 @@ const escapeHtml = (value: string): string =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
-/** One link, a plain part and a minimal HTML part, nothing else. */
 export const buildConfirmationLetter = (
   link: string,
   locale: LetterLocale = "en",

@@ -69,11 +69,6 @@ export class CartController {
     }
   }
 
-  /**
-   * The visitor picked a cart before signing in, so the account absorbs it
-   * (spec 0028, AC-11). The cookie is cleared only after the move committed, so
-   * a failed merge leaves the guest lines where a retry finds them.
-   */
   async mergeGuestCart(req: Request, res: Response) {
     try {
       const { userId } = req as AuthenticatedUserRequest;

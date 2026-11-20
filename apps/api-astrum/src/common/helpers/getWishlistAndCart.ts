@@ -2,13 +2,11 @@ import type { Product } from "@astrum/db/client";
 import { prisma } from "../../../lib/prisma";
 import type { Owner } from "../types/owner";
 
-/** The owner columns of one row: an account id or a guest id, never both (spec 0028, AC-1). */
 export const ownerColumns = (
   owner: Owner,
 ): { userId: string } | { guestId: string } =>
   owner.kind === "user" ? { userId: owner.userId } : { guestId: owner.guestId };
 
-/** The named unique key the owner columns select, so an upsert and a read agree. */
 export const ownerUniqueKey = (
   owner: Owner,
   productId: Product["id"],
@@ -68,12 +66,6 @@ export type PageMarks = {
   cart: Map<string, number>;
 };
 
-/**
- * The marks of one page in two queries, never two per card (spec 0022, AC-4).
- * They stay out of the cache on purpose: a shared payload never carries a
- * caller's own cart or wishlist state (AC-3). A reader with no identity owns no
- * row, so the answer is empty without a query (spec 0028, AC-6).
- */
 export const readPageMarks = async (
   owner: Owner | null,
   productIds: readonly string[],

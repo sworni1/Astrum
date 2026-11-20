@@ -9,11 +9,6 @@ import { AppError } from "../../common/helpers/appError";
 import { logger } from "../../common/helpers/logger";
 import { returnOrderStock } from "../order/order-status.helpers";
 
-/**
- * The lines a cancel closes at a counter or at a door. A delivered line is never
- * one of them, and the set is read under the order lock, never taken from the
- * request (spec 0018, AC-6; spec 0019, AC-8).
- */
 export const CANCELLABLE_STATUSES: readonly OrderItemStatus[] = [
   "PENDING",
   "CONFIRMED",
@@ -28,7 +23,6 @@ export type CancelLine = Pick<
 
 export type DeliverableLine = Pick<OrderItem, "id" | "status">;
 
-/** The money a cancel names: goods only, never the delivery price (spec 0018, AC-8). */
 export const sumOfLines = (lines: readonly CancelLine[]): string =>
   lines
     .reduce(
@@ -37,15 +31,9 @@ export const sumOfLines = (lines: readonly CancelLine[]): string =>
     )
     .toFixed(2);
 
-/** Whether a line belongs to the set a cancel may close. */
 export const isCancellable = (line: DeliverableLine): boolean =>
   CANCELLABLE_STATUSES.includes(line.status);
 
-/**
- * Cancels exactly these lines and returns their stock once. The caller reads the
- * set under the order lock, so a second press finds nothing left to cancel
- * (spec 0018, AC-7; spec 0019, AC-8).
- */
 export const cancelOrderLines = async (
   tx: Prisma.TransactionClient,
   lines: readonly CancelLine[],
@@ -61,13 +49,6 @@ export const cancelOrderLines = async (
   await returnOrderStock(tx, [...lines]);
 };
 
-/**
- * Issues every delivered line of one order and leaves every other line
- * untouched, so a second press finds nothing left to move. The count it answers
- * is the number of lines that moved; the moment of the handover belongs to the
- * order, not to the lines, and the arrival date already sits in `receiptDate`
- * (spec 0031, AC-3).
- */
 export const issueDeliveredLines = async (
   tx: Prisma.TransactionClient,
   lines: readonly DeliverableLine[],
@@ -96,16 +77,10 @@ export type CancelPaymentInput = {
   amount: string;
   currency: Currency;
   cancelledLineCount: number;
-  /** The counter fills its point; a courier has none and omits it (spec 0019, AC-8). */
+
   pointId?: string;
 };
 
-/**
- * Resolves the money of a cancelled order: an open attempt becomes cancelled, an
- * order that was never paid reads cancelled, and a paid order keeps `PAID` and
- * leaves one warning naming the money owed back. No route refunds anything
- * (spec 0018, AC-8; spec 0019, AC-8).
- */
 export const resolveCancelPayment = async ({
   tx,
   orderId,
@@ -147,10 +122,6 @@ export const resolveCancelPayment = async ({
   });
 };
 
-/**
- * One structured line for a refused write: a warning for an expected refusal code
- * and an error for anything the code table does not explain (spec 0018, AC-6).
- */
 export const logWriteRefusal = (
   event: string,
   fields: Record<string, unknown>,

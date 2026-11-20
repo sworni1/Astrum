@@ -106,11 +106,6 @@ const reset = async (): Promise<void> => {
   }
 };
 
-/**
- * Fire and forget with a bound: the profile change is already committed, so a
- * broker that is down is one log line and the resend button, never a request
- * that hangs on a socket.
- */
 export const publishConfirmationRequested = async ({
   userId,
   email,

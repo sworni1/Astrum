@@ -20,11 +20,6 @@ type Props = {
   order: OrderListRow;
 };
 
-/**
- * One order as one link: the header carries the number, the date and the total,
- * the lines follow under it, and nothing on the card sends a request
- * (spec 0025, AC-10).
- */
 const OrderGroup = ({ order }: Props) => {
   const t = useTranslations("orders");
   const locale = useLocale();

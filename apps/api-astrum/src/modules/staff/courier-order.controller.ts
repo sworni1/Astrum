@@ -11,11 +11,6 @@ import {
 
 const service = new CourierOrderService();
 
-/**
- * The list the caller asked for. `validateDto` reads a body only, so the query is
- * checked here, and a repeated `scope` arrives as an array and is refused like any
- * other unknown value (AC-2).
- */
 const readScope = (value: unknown): CourierScope => {
   if (value === undefined) {
     return "mine";

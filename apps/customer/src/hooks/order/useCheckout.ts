@@ -33,7 +33,6 @@ export const useCheckout = () => {
           quantity: item.quantityInCart,
         }));
 
-        // Set to noon local time so the date does not shift across timezones
         const deliveryDate = new Date(checkoutData.deliveryDate);
         const localDeliveryDate = new Date(
           deliveryDate.getFullYear(),
@@ -83,16 +82,12 @@ export const useCheckout = () => {
           idempotencyKey.current = null;
         }
 
-        // A delivery method refusal belongs to the form: it names the code,
-        // revalidates the list and shows one message, not two (AC-11).
         const refusal = checkoutRefusalOf(error);
 
         if (refusal) {
           throw refusal;
         }
 
-        // A refused order means the cart or the stock moved, so reload both
-        // before the customer sees the message and tries again.
         await Promise.all([mutate("/cart"), mutate(isOrderListKey)]);
 
         showToast({

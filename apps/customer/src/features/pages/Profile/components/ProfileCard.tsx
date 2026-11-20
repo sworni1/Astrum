@@ -15,7 +15,7 @@ type Props = {
   text?: string;
   footer?: ReactNode;
   children?: ReactNode;
-  /** Rows draw their own padding, so the body loses its gutters (AC-7). */
+
   flushBody?: boolean;
   className?: string;
   titleClassName?: string;
@@ -23,10 +23,6 @@ type Props = {
   testId?: string;
 };
 
-/**
- * One card of the profile screen: a header, a body and a footer strip, which is
- * the shape every mockup block has (spec 0023, AC-4, AC-5).
- */
 const ProfileCard = ({
   title,
   text,

@@ -1,8 +1,3 @@
-/**
- * The class names both order screens share: the geometry table of spec 0025,
- * moved out of `Orders/lib/styles.ts` so a value lives in one place instead of
- * in two features (spec 0026, AC-13).
- */
 export const SCREEN_WRAPPER =
   "mx-auto flex w-full max-w-[1120px] flex-col gap-6 px-10 pt-9 pb-16 max-sm:px-4 max-sm:pt-5";
 

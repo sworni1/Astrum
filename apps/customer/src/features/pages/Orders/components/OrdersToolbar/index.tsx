@@ -17,7 +17,6 @@ type Props = {
   onQueryChange: (value: string) => void;
 };
 
-/** The three tabs and the search, both read from the shared blocks (spec 0026, AC-13). */
 const OrdersToolbar = ({
   status,
   counts,

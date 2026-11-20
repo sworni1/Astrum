@@ -10,7 +10,6 @@ import {
   ORDER_ERROR_CODES,
 } from "./constants/order.constants";
 
-/** What a create answers with, so a repeat can be told from a new order. */
 export type Idempotency = { key: string; hash: string };
 
 type LineForFingerprint = { productId: string; quantity: number };
@@ -29,11 +28,6 @@ const invalidKeyError = (constraint: string) =>
     },
   );
 
-/**
- * The header is optional, but a header that is present must be a token a client
- * can send again unchanged (AC-1, AC-4). The key is validated before any cart or
- * stock read, because `validateDto` only ever looks at the body.
- */
 export const readIdempotencyKey = (
   headers: Request["headers"],
 ): string | undefined => {
@@ -62,10 +56,6 @@ export const readIdempotencyKey = (
   return value;
 };
 
-/**
- * Express middleware form of the reader, so a malformed key answers through the
- * single error shape instead of reaching the controller (AC-4).
- */
 export const attachIdempotencyKey = (
   req: Request,
   res: Response,
@@ -79,13 +69,6 @@ export const attachIdempotencyKey = (
   }
 };
 
-/**
- * A stable rendering of the order fields that decide identity: keys in a fixed
- * order, lines sorted by productId, and the delivery date normalised so `+03:00`
- * and `Z` bodies fingerprint alike (AC-2, AC-3). A body that names a point
- * hashes its address as null, because two pickup bodies that differ only in a
- * typed address describe one order (AC-7).
- */
 export const canonicalOrderBody = (
   dto: CreateOrderDto,
   lines: LineForFingerprint[],
@@ -113,7 +96,6 @@ export const canonicalOrderBody = (
 export const hashOrderBody = (body: string): string =>
   createHash("sha256").update(body, "utf8").digest("hex");
 
-/** The key plus the fingerprint of the body sent with it. */
 export const idempotencyOf = (
   key: string,
   dto: CreateOrderDto,

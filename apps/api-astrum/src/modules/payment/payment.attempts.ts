@@ -3,14 +3,12 @@ import { prisma } from "../../../lib/prisma";
 import type { OrderWithLines } from "./payment.apply";
 import type { ProviderEvent } from "./payment.gateway";
 
-/** One attempt together with the order it belongs to, loaded in one query. */
 export type AttemptWithOrder = Payment & { order: OrderWithLines };
 
 const ATTEMPT_WITH_ORDER = {
   order: { include: { OrderItem: true } },
 } as const;
 
-/** The attempt the order screen and the sweep read: newest first, still payable. */
 export const newestOpenAttempt = async (
   orderId: string,
 ): Promise<Payment | null> =>
@@ -19,7 +17,6 @@ export const newestOpenAttempt = async (
     orderBy: { createdAt: "desc" },
   });
 
-/** A stored session with a future deadline is reused instead of a second create. */
 export const reusableAttempt = async (
   orderId: string,
   now: Date,
@@ -57,12 +54,6 @@ const pendingOfOrder = async (
     include: ATTEMPT_WITH_ORDER,
   });
 
-/**
- * A session named by a callback can arrive before the pay route stored its id
- * (the customer paid faster than the answer was written). The order it names
- * still has one PENDING attempt with no session id, so that attempt adopts the
- * id and the next delivery takes the unique index branch (AC-5).
- */
 const adoptSession = async (
   attempt: AttemptWithOrder,
   sessionId: string | null,
@@ -79,10 +70,6 @@ const adoptSession = async (
   return { ...attempt, ...updated };
 };
 
-/**
- * The callback is matched to one attempt: by the session id it carries, then by
- * its payment intent, then by the order id in `metadata.order_id` (AC-5).
- */
 export const findAttemptForEvent = async (
   event: ProviderEvent,
 ): Promise<AttemptWithOrder | null> => {

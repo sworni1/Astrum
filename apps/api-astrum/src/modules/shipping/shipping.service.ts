@@ -16,7 +16,6 @@ export type ActiveShippingMethod = Prisma.ShippingMethodGetPayload<{
   select: typeof SHIPPING_METHOD_SELECT;
 }>;
 
-/** The methods a customer may pick: active rows only, ordered by name (AC-4). */
 export class ShippingService {
   async getActiveMethods(): Promise<ActiveShippingMethod[]> {
     return prisma.shippingMethod.findMany({
@@ -26,11 +25,6 @@ export class ShippingService {
     });
   }
 
-  /**
-   * The list every customer reads, from Redis when a fresh copy exists. The
-   * mapped body is what is cached, so a hit answers the same `price` numbers a
-   * miss does (spec 0022, AC-6).
-   */
   async getMethodListJson(): Promise<
     ReturnType<typeof toShippingMethodListJson>
   > {

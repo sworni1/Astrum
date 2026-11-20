@@ -17,13 +17,6 @@ const refuse = (
   res.status(status).json({ code, message });
 };
 
-/**
- * The authorisation rule of the account state: writes stay closed until the
- * address is confirmed. The answer comes from the `status` column by primary
- * key on every call, so no cache can go stale and a confirmation made in one
- * browser unlocks the account everywhere at once. A read that fails is a 503,
- * never a 403: an outage must not read as "your address is unconfirmed".
- */
 export const requireActiveAccount = async (
   req: Request,
   res: Response,

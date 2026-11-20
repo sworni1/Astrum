@@ -10,11 +10,6 @@ export class EventsService {
 
   constructor(private readonly publisher: RabbitPublisher) {}
 
-  /**
-   * Fire and forget on purpose: the account is already created, so a broker
-   * that is down leaves one log line and the resend button as the way out.
-   * The body carries no token, only the identity the letter is built from.
-   */
   async requestAccountConfirmation({
     userId,
     email,

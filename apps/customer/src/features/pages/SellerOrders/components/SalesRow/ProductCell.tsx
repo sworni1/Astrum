@@ -10,11 +10,6 @@ type Props = {
   line: SellerLineRow;
 };
 
-/**
- * The product of one line: the 40px tile and the name, both leading to the
- * product page, then the quantity as a muted note. The tile takes no tab stop,
- * because the name beside it already carries the same link (spec 0026, AC-9).
- */
 const ProductCell = ({ line }: Props) => {
   const t = useTranslations("seller");
   const name = line.name === "" ? t("productFallback", { id: line.productId }) : line.name;

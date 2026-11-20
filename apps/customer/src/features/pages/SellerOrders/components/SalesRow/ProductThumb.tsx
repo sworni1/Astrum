@@ -10,15 +10,6 @@ type Props = {
   src: string;
 };
 
-/**
- * The 40px thumbnail of one line. An empty column value and a source that fails
- * to load both render the parcel icon, because a broken image is not what the
- * screen is supposed to show (spec 0026, AC-9).
- *
- * A source that already failed before hydration never raises `error`, so the
- * mounted node is asked once through its ref: `complete` with a zero
- * `naturalWidth` is exactly a failed load.
- */
 const ProductThumb = ({ src }: Props) => {
   const [failed, setFailed] = useState(false);
 

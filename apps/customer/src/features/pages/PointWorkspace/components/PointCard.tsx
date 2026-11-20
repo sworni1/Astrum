@@ -6,10 +6,6 @@ import PointQueue from "./PointQueue";
 
 type Props = { point: StaffPoint };
 
-/**
- * The point a worker stands at: its name and address, and the banner that says
- * it is switched off. No count and no control that pretends to work (AC-13).
- */
 const PointCard = ({ point }: Props) => {
   const t = useTranslations("staff");
 

@@ -4,25 +4,20 @@ import { AppError } from "../../common/helpers/appError";
 import {
   ORDER_ERROR_CODES,
   ORDER_LIST_STATUSES,
+  ORDER_LIST_STATUS_FILTERS,
   ORDER_SEARCH_MAX_LENGTH,
   type OrderListStatus,
 } from "./constants/order.constants";
 
-/** What the seller list read receives once the wire values are validated (spec 0026, AC-2). */
 export type SellerOrderQuery = {
   status?: Exclude<OrderListStatus, "ALL">;
   q?: string;
 };
 
-/** An out of stock line is a lost sale the seller reads as canceled. */
 export const CANCELED_LINE_STATUSES: readonly OrderItemStatus[] = [
   "CANCELLED",
   "OUT_OF_STOCK",
 ];
-
-const STATUS_FILTERS = ORDER_LIST_STATUSES.filter(
-  (value): value is Exclude<OrderListStatus, "ALL"> => value !== "ALL",
-);
 
 const invalidStatus = (value: unknown): AppError =>
   new AppError(
@@ -46,7 +41,6 @@ const tooLongQuery = (): AppError =>
     `The search query cannot be longer than ${ORDER_SEARCH_MAX_LENGTH} characters.`,
   );
 
-/** `ALL`, an absent value and an empty string all mean "no status filter". */
 const readStatus = (raw: unknown): SellerOrderQuery["status"] => {
   if (raw === undefined || raw === "") {
     return undefined;
@@ -60,7 +54,7 @@ const readStatus = (raw: unknown): SellerOrderQuery["status"] => {
     return undefined;
   }
 
-  const match = STATUS_FILTERS.find((value) => value === raw);
+  const match = ORDER_LIST_STATUS_FILTERS.find((value) => value === raw);
 
   if (!match) {
     throw invalidStatus(raw);
@@ -69,7 +63,6 @@ const readStatus = (raw: unknown): SellerOrderQuery["status"] => {
   return match;
 };
 
-/** The query is trimmed once, so a trailing space is neither a filter nor a length. */
 const readQuery = (raw: unknown): string | undefined => {
   if (raw === undefined) {
     return undefined;
@@ -92,11 +85,6 @@ const readQuery = (raw: unknown): string | undefined => {
   return trimmed;
 };
 
-/**
- * Turns the two raw query values into the filters the seller read understands.
- * Every refusal is a `400` with its own code, so the storefront can branch on it
- * (spec 0026, AC-2).
- */
 export const parseSellerOrderQuery = (raw: {
   status?: unknown;
   q?: unknown;
@@ -110,12 +98,6 @@ export const parseSellerOrderQuery = (raw: {
   };
 };
 
-/**
- * The status filter and the search combine through one `AND` array, never through
- * two sibling `OR` keys in one object, which would silently replace each other
- * (spec 0026, AC-2). Every clause reads the line's own columns, so the search
- * costs no join.
- */
 export const sellerOrderWhere = (
   userId: string,
   query: SellerOrderQuery,
@@ -123,8 +105,6 @@ export const sellerOrderWhere = (
   const clauses: Prisma.OrderItemWhereInput[] = [];
 
   if (query.status === "DELIVERED") {
-    // A sold line is one the buyer took, so the tab folds both states in
-    // (spec 0031, AC-9).
     clauses.push({ status: { in: ["DELIVERED", "ISSUED"] } });
   }
 

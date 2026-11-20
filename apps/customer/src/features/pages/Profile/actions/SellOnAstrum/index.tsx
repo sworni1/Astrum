@@ -13,7 +13,6 @@ import {
   ROLE_HEAD,
 } from "@/features/pages/Profile/lib/styles";
 
-/** The seller role card of the profile (spec 0008 AC-2, spec 0023 AC-6). */
 const SellOnAstrum = () => {
   const t = useTranslations("seller");
 

@@ -8,10 +8,6 @@ import { resolveStaffPageState } from "@/hooks/staff/staffPage";
 import { useStaffPoint } from "@/hooks/staff/useStaffPoint";
 import PointCard from "./components/PointCard";
 
-/**
- * The page of a pickup point worker. Until the order queue arrives it shows the
- * stored point and nothing else (spec 0017, AC-13).
- */
 export default function PointWorkspace() {
   const t = useTranslations("staff");
   const { point, isLoading, error, mutate } = useStaffPoint();

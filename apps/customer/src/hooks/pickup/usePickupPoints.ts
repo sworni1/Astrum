@@ -18,7 +18,6 @@ export interface UsePickupPointsReturn {
   mutate: KeyedMutator<PickupPointsResponse>;
 }
 
-/** The collection points the shop runs, read from the gateway. */
 export const usePickupPoints = (): UsePickupPointsReturn => {
   const { getData } = useFetcher();
   const { data, error, isLoading, mutate } = useSWR<

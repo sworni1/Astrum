@@ -62,10 +62,6 @@ const POINT_ORDER_LINE_SELECT = {
   status: true,
 } as const;
 
-/**
- * The counter's card carries what a worker needs to find a parcel and no buyer
- * identity: no `userId`, name, email, phone or address (AC-2).
- */
 const POINT_ORDER_SELECT = {
   id: true,
   createdAt: true,
@@ -81,7 +77,6 @@ const POINT_ORDER_SELECT = {
   },
 } as const;
 
-/** The cancel also returns stock, so it reads the product of every line. */
 const CANCEL_ORDER_SELECT = {
   ...POINT_ORDER_SELECT,
   userId: true,
@@ -154,13 +149,7 @@ const nothingToCancel = () =>
     "No line of this order can be cancelled.",
   );
 
-/**
- * The counter's own reads and writes. Every route is scoped by the point the
- * role guard resolved, and every write runs one chain of checks inside one
- * transaction under the order lock (spec 0018).
- */
 export class PointOrderService {
-  /** The arrived parcels waiting at one point, oldest first, one page at a time (AC-1 to AC-3, spec 0031 AC-4). */
   async listPointOrders(
     pickupPointId: string,
     pageInput?: unknown,
@@ -190,10 +179,6 @@ export class PointOrderService {
     };
   }
 
-  /**
-   * One press closes the whole parcel: the delivered lines become issued, and the
-   * order is stamped once (AC-4, AC-5; spec 0031, AC-3).
-   */
   async handOver(
     orderId: string,
     userId: string,
@@ -225,19 +210,12 @@ export class PointOrderService {
     }
   }
 
-  /**
-   * The buyer changed their mind at the counter: every line still in the parcel
-   * is cancelled and its stock comes back once, a delivered line stays, and a
-   * paid order leaves one warning naming the money owed back (AC-6 to AC-8).
-   */
   async cancelOrder(
     orderId: string,
     userId: string,
     pickupPointId: string,
   ): Promise<{ order: PointOrderJson }> {
     try {
-      // The provider call goes before the transaction, never while the order row
-      // is locked, and it only runs for this point's own order (AC-8).
       await this.assertOwnOrder(orderId, pickupPointId);
       await expireSessionForCancel(orderId);
 
@@ -247,7 +225,6 @@ export class PointOrderService {
           ORDER_TRANSACTION_OPTIONS,
         );
 
-      // The counter's cancel returns stock, so the next read must see it (AC-7 b).
       await invalidateStockOfProducts(cancelledProductIds);
 
       logger.info({
@@ -296,8 +273,6 @@ export class PointOrderService {
       select: POINT_ORDER_SELECT,
     });
 
-    // A missing order and another point's order answer the same code, so the
-    // answer never says whether an order exists (AC-4).
     if (!order) {
       throw orderNotFound();
     }
@@ -355,8 +330,6 @@ export class PointOrderService {
 
     await this.requireActivePoint(tx, pickupPointId);
 
-    // Read under the lock, never from the request: so the stock comes back once
-    // even after a second press or a lost answer (AC-7).
     const cancellable = order.OrderItem.filter(isCancellable);
 
     if (cancellable.length === 0) {
@@ -395,7 +368,6 @@ export class PointOrderService {
     };
   }
 
-  /** A switched off point refuses both writes and keeps its queue (AC-9). */
   private async requireActivePoint(
     tx: Prisma.TransactionClient,
     pickupPointId: string,
@@ -409,5 +381,4 @@ export class PointOrderService {
       throw pickupPointInactive();
     }
   }
-
 }

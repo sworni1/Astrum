@@ -18,7 +18,6 @@ type Props = {
   profileData: UserData;
 };
 
-/** The avatar, the nickname, the email and the role badge (spec 0023, AC-4, AC-8). */
 const ProfileHeader = ({ profileData }: Props) => {
   const t = useTranslations("profile");
   const badge = roleBadgeKey(profileData.isSeller, profileData.staffRoles);

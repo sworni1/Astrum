@@ -52,11 +52,6 @@ export class AuthService {
     private events: EventsService,
   ) {}
 
-  /**
-   * Signs a token and records the session it carries. The record is written
-   * first: a token whose session was never stored would be refused by the
-   * gateway at the next request, so no token is issued when the write fails.
-   */
   async signToken(
     userId: User["id"],
     userAgent?: string | null,
@@ -164,11 +159,6 @@ export class AuthService {
     return this.signToken(user.id, userAgent);
   }
 
-  /**
-   * Ends the session carried by the cookie. A missing, expired or forged token
-   * deletes nothing, and a store failure is logged instead of answered, so the
-   * storefront can always treat logout as done.
-   */
   async logout(token: string | undefined): Promise<void> {
     const sid = await this.verifiedSid(token);
 
@@ -195,10 +185,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * One click from the letter. Only the sha256 of the parameter reaches the
-   * database, and every outcome is a value the page knows how to render.
-   */
   async confirm(rawToken: string | undefined): Promise<ConfirmOutcome> {
     const token = rawToken?.trim();
 
@@ -246,10 +232,6 @@ export class AuthService {
     return "ok";
   }
 
-  /**
-   * Reveals nothing: every outcome is the same 204. The limits count unknown
-   * addresses too, so the route cannot probe a mailbox for free.
-   */
   async resend(
     rawEmail: string,
     ip: string | undefined,

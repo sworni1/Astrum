@@ -1,8 +1,3 @@
-/**
- * The class names of the order card geometry in spec 0025. Anything both order
- * screens share lives in `features/general/lib/screenStyles.ts` instead, so this
- * file holds only what a group card and its lines need (spec 0026, AC-13).
- */
 export const GROUP_CARD =
   "block overflow-hidden rounded-group border border-border bg-card hover:border-ring/60 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring";
 

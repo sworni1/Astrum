@@ -26,10 +26,6 @@ type Props = {
   control: Control<CheckoutFormData>;
 };
 
-/**
- * The three payment methods as radio cards, the label of each taken from the
- * `cart` catalog (spec 0024, AC-11).
- */
 const PaymentMethodCards = ({ control }: Props) => {
   const t = useTranslations("cart");
 

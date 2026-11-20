@@ -8,7 +8,6 @@ type Props = {
   children: ReactNode;
 };
 
-/** One labelled control of a card body: label, control, optional hint (AC-5). */
 const ProfileField = ({ label, htmlFor, hint, children }: Props) => (
   <div className={FIELD}>
     <label className={FIELD_LABEL} htmlFor={htmlFor}>

@@ -16,14 +16,9 @@ import {
   REVIEW_COMMENT_MIN_LENGTH,
 } from "../constants/reviews.constants";
 
-/** The comment is trimmed before validation, so the length is the real one. */
 const trim = ({ value }: { value: unknown }): unknown =>
   typeof value === "string" ? value.trim() : value;
 
-/**
- * No `productId`: the product comes from the path, and a body product is
- * dropped here rather than trusted (spec 0012, AC-11).
- */
 export class CreateReviewDto {
   @Expose() @IsString() @IsNotEmpty() orderItemId!: string;
 

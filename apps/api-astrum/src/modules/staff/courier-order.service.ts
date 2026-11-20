@@ -29,7 +29,6 @@ import {
   sumOfLines,
 } from "./staff-order.helpers";
 
-/** The two lists one courier reads: his own parcels, and the pool (AC-2). */
 export type CourierScope = "mine" | "available";
 
 type CourierOrderLine = Pick<
@@ -68,10 +67,6 @@ const COURIER_ORDER_LINE_SELECT = {
   status: true,
 } as const;
 
-/**
- * The courier's card: the parcel and, on a row he claimed, its address. No buyer
- * identity, no point, no shipping method beyond the ownership proof (AC-3).
- */
 const COURIER_ORDER_SELECT = {
   id: true,
   createdAt: true,
@@ -91,7 +86,6 @@ const COURIER_ORDER_SELECT = {
   },
 } as const;
 
-/** The cancel returns stock and names the buyer, so it reads both privately (AC-8). */
 const COURIER_CANCEL_SELECT = {
   ...COURIER_ORDER_SELECT,
   userId: true,
@@ -115,7 +109,7 @@ export const toCourierOrderJson = (
   currency: row.currency,
   courierUserId: row.courierUserId,
   deliveryDate: row.deliveryDate,
-  // The claim is what buys the address: a pool row and a released row carry none.
+
   deliveryAddress:
     row.courierUserId === viewerId ? row.deliveryAddress : null,
   orderItems: row.OrderItem.map((line) => ({
@@ -139,12 +133,6 @@ export type CourierOrdersPage = {
   totalPages: number;
 };
 
-/**
- * Everything one write needs to know about the parcel, in one place, so the four
- * writes cannot drift apart on who may touch what (AC-4 to AC-8). A parcel reads
- * `notDelivered` until it has arrived, because only an arrived parcel can be
- * claimed or issued (spec 0031, AC-4).
- */
 export type CourierVerdict =
   | "notFound"
   | "alreadyHandedOver"
@@ -164,8 +152,6 @@ const classifyCourierOrder = (
   order: ClassifiableOrder | null,
   userId: string,
 ): CourierVerdict => {
-  // A counter parcel answers like a missing one, so a courier never learns it
-  // exists (AC-4).
   if (order === null || order.shippingMethod.isPickup) {
     return "notFound";
   }
@@ -219,18 +205,10 @@ const nothingToCancel = () =>
     "No line of this order can be cancelled.",
   );
 
-/** The two methods that collect money at the door (AC-7). */
 const collectsAtTheDoor = (method: PaymentMethod): boolean =>
   method === "CASH" || method === "CARD_ON_DELIVERY";
 
-/**
- * The courier's pool, his claims and the four writes that close a parcel. Every
- * write runs one transaction under the order lock and reads the parcel through
- * one classification, so two couriers pressing at once cannot both win (AC-2 to
- * AC-8).
- */
 export class CourierOrderService {
-  /** One page of one of the two lists, oldest first (AC-2, AC-3). */
   async listCourierOrders(
     userId: string,
     scope: CourierScope,
@@ -265,7 +243,6 @@ export class CourierOrderService {
     };
   }
 
-  /** One press takes a parcel out of the pool; a second press writes nothing (AC-4). */
   async claim(
     orderId: string,
     userId: string,
@@ -284,8 +261,6 @@ export class CourierOrderService {
       }
 
       if (verdict === "claimedByCaller") {
-        // A second press answers the same row and writes nothing, not even a log
-        // line (AC-4).
         return { order: toCourierOrderJson(row, userId), wrote: false };
       }
 
@@ -324,7 +299,6 @@ export class CourierOrderService {
     return { order };
   }
 
-  /** Gives a parcel back to the pool; a press on something the caller does not hold writes nothing (AC-5). */
   async release(
     orderId: string,
     userId: string,
@@ -355,8 +329,6 @@ export class CourierOrderService {
         return toCourierOrderJson({ ...row, courierUserId: null }, userId);
       }
 
-      // A release of something the caller does not hold has nothing to say about
-      // who holds it (AC-5).
       if (verdict === "notDelivered" && row.courierUserId === userId) {
         throw orderNotDelivered();
       }
@@ -374,7 +346,6 @@ export class CourierOrderService {
     return { order };
   }
 
-  /** The parcel is closed at the door: every delivered line is issued, and the money is recorded (AC-6, AC-7; spec 0031, AC-3). */
   async handOver(
     orderId: string,
     userId: string,
@@ -398,7 +369,6 @@ export class CourierOrderService {
             throw alreadyHandedOver();
           }
 
-          // An unclaimed or a foreign parcel is not the caller's to close (AC-6).
           if (row.courierUserId !== userId) {
             throw orderNotFound();
           }
@@ -468,14 +438,11 @@ export class CourierOrderService {
     }
   }
 
-  /** The buyer refuses at the door: every line still inside is cancelled and its stock returns (AC-8). */
   async cancelOrder(
     orderId: string,
     userId: string,
   ): Promise<{ order: CourierOrderJson }> {
     try {
-      // The provider call goes before the transaction, never while the order row
-      // is locked, and it only runs for the caller's own parcel (AC-8).
       await this.assertHeldOrder(orderId, userId);
       await expireSessionForCancel(orderId);
 
@@ -496,8 +463,6 @@ export class CourierOrderService {
             throw orderNotFound();
           }
 
-          // Read under the lock, never from the request: a second press finds
-          // nothing left to cancel (AC-8).
           const cancellable = row.OrderItem.filter(isCancellable);
 
           if (cancellable.length === 0) {
@@ -536,7 +501,6 @@ export class CourierOrderService {
           };
         }, ORDER_TRANSACTION_OPTIONS);
 
-      // The courier's cancel returns stock, so the next read must see it (AC-7 b).
       await invalidateStockOfProducts(cancelledProductIds);
 
       logger.info({
@@ -558,7 +522,6 @@ export class CourierOrderService {
     }
   }
 
-  /** The parcel the caller claimed, read before the transaction so the provider call runs unlocked (AC-8). */
   private async assertHeldOrder(orderId: string, userId: string): Promise<void> {
     const held = await prisma.order.findUnique({
       where: { id: orderId },

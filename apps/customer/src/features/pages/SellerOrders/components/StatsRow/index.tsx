@@ -17,7 +17,6 @@ type Props = {
 const countOf = (value: number | undefined): string | undefined =>
   value === undefined ? undefined : String(value);
 
-/** The four tiles of the mockup, in its own order, none of them a control (AC-6). */
 const StatsRow = ({ counts, stats }: Props) => {
   const t = useTranslations("seller");
   const locale = useLocale();

@@ -8,7 +8,6 @@ import type { StaffRole } from "@/common/types/user.types";
 
 type Props = { role: StaffRole };
 
-/** A role the account already holds: the confirmation line and the way in (AC-3). */
 const RoleHeldCard = ({ role }: Props) => {
   const t = useTranslations("staff");
   const isPoint = role === "POINT_WORKER";

@@ -52,32 +52,24 @@ type RefusalItem = {
 
 type CartRow = { productId: string; quantity: number };
 
-/** What a create and a detail read answer with, in the shape the storefront reads. */
 export type OrderDetailLine = OrderItem & {
-  /** The shop of the line; only the detail read resolves it (spec 0027, AC-1). */
   brandName?: string;
-  /** `Product.subcategory`; null when no product row carries that id. */
+
   kind?: string | null;
 };
 
 export type OrderDetail = Omit<Order, "OrderItem"> & {
   orderItems: OrderDetailLine[];
-  /** Stamp of the newest PAID attempt; only the detail read resolves it. */
+
   paidAt?: Date | null;
 };
 
-/** The three bounded lookups the detail read adds beside the row (AC-1). */
 type OrderDetailExtras = {
   paidAt: Date | null;
   brandNames: Map<string, string>;
   kinds: Map<string, string | null>;
 };
 
-/**
- * The list read answers three things in one snapshot: the filtered rows, the
- * counts of every order of the caller and the money spent per currency
- * (spec 0025, AC-1 to AC-5).
- */
 export type OrderListLine = {
   id: string;
   name: string;
@@ -110,7 +102,6 @@ export type OrderListPage = {
   spent: OrderSpentRow[];
 };
 
-/** A create answers with the order and whether it came from a replay (spec 0003). */
 export type CreateOrderResult = { order: OrderDetail; replay: boolean };
 
 const CUSTOMER_CANCELLATION_BLOCKERS: readonly OrderItemStatus[] = [
@@ -143,11 +134,6 @@ const ORDER_LIST_SELECT = {
   },
 } as const;
 
-/**
- * One snapshot for the list and both aggregates: `ReadCommitted` gives every
- * statement its own, so a cancel committing between them could print a tile
- * that contradicts the list (spec 0025, AC-1).
- */
 const ORDER_LIST_TRANSACTION_OPTIONS = {
   isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
 } as const;
@@ -159,11 +145,6 @@ type CurrencyGroup = {
   _sum: { grandTotal: Prisma.Decimal | null };
 };
 
-/**
- * The counts describe every order of the caller, never the filtered subset. An
- * issued order still counts as delivered, because the buyer reads one bucket for
- * "the parcel came" (spec 0031, AC-8).
- */
 const countByStatus = (groups: StatusGroup[]): OrderListCounts => {
   const of = (status: OrderStatus): number =>
     groups.find((group) => group.status === status)?._count._all ?? 0;
@@ -175,7 +156,6 @@ const countByStatus = (groups: StatusGroup[]): OrderListCounts => {
   };
 };
 
-/** A currency with no qualifying order is absent, and the order is stable. */
 const spentByCurrency = (groups: CurrencyGroup[]): OrderSpentRow[] =>
   groups
     .flatMap((group) =>
@@ -220,7 +200,6 @@ const PRODUCT_SELECT = {
 
 type ProductRow = Prisma.ProductGetPayload<{ select: typeof PRODUCT_SELECT }>;
 
-/** Raised inside the transaction so the stock check can re-read after the rollback. */
 class StockShortfall extends Error {
   constructor(readonly items: Array<{ productId: string; requested: number }>) {
     super(ORDER_ERROR_CODES.outOfStock);
@@ -245,10 +224,6 @@ const quotedNames = (products: Map<string, ProductRow>, items: RefusalItem[]) =>
     .map((item) => `"${products.get(item.productId)?.name ?? item.productId}"`)
     .join(", ");
 
-/**
- * Repeated products are merged after validation, so two lines of the same
- * product can never take the stock twice in one order (AC-7).
- */
 export const mergeOrderLines = (items: OrderItemDto[]): OrderLine[] => {
   const merged = new Map<string, number>();
 
@@ -286,12 +261,6 @@ export const mergeOrderLines = (items: OrderItemDto[]): OrderLine[] => {
   return lines;
 };
 
-/**
- * The answer carries the snapshot columns the order row holds: the delivery
- * method is named and priced at creation, so no relation is read here (AC-7).
- * The detail read hands the three lookups of AC-1 over as `extras`; without them
- * the answer keeps exactly the shape the create and the status route publish.
- */
 const toOrderDetail = (
   order: Order & { OrderItem: OrderItem[] },
   extras?: OrderDetailExtras,
@@ -334,15 +303,12 @@ export class OrderService {
 
       this.logCreated(result, userId, idempotency);
 
-      // The stock left the shelf in that commit, so the counters follow it (AC-7 a).
       if (!result.replay) {
         await invalidateStockOfProducts(productIds);
       }
 
       return result;
     } catch (error) {
-      // A keyed failure is resolved against the key first, because the loser of a
-      // race is refused before it ever reaches the unique index (AC-6).
       if (idempotency) {
         const existing = await this.findOrderByKey(userId, idempotency.key);
 
@@ -403,11 +369,6 @@ export class OrderService {
     });
   }
 
-  /**
-   * The winner commits before its index violation is visible, so a bounded
-   * re-read on the plain client is what turns a keyed refusal into an answer
-   * about the order that already exists (AC-6).
-   */
   private async findOrderByKey(
     userId: string,
     key: string,
@@ -430,7 +391,6 @@ export class OrderService {
     return null;
   }
 
-  /** Every path that finds the key compares the fingerprint (AC-2, AC-3). */
   private replayAnswer(
     order: OrderDetail,
     idempotency: Idempotency,
@@ -464,7 +424,6 @@ export class OrderService {
       throw orderNotFound();
     }
 
-    // Three bounded lookups beside the row, never one per line (spec 0027, AC-1).
     const businessIds = [...new Set(order.OrderItem.map((item) => item.businessId))];
     const productIds = [...new Set(order.OrderItem.map((item) => item.productId))];
 
@@ -491,12 +450,6 @@ export class OrderService {
     });
   }
 
-  /**
-   * The list, the counts and the spent total come from one repeatable read
-   * snapshot, so no tile can claim what the list below contradicts. Every query
-   * carries the session `userId`, so the search reads only the caller's rows
-   * (spec 0025, AC-1 to AC-5).
-   */
   async getOrdersByUserId(
     userId: string,
     query: OrderListQuery = {},
@@ -557,8 +510,6 @@ export class OrderService {
       );
     }
 
-    // The session is expired before the transaction opens, never inside it: the
-    // provider call must not run while the order row is locked (AC-11).
     await this.assertOwnOrder(orderId, userId);
     await expireSessionForCancel(orderId);
 
@@ -574,7 +525,6 @@ export class OrderService {
       restoredLines: order.orderItems.length,
     });
 
-    // The returned stock is visible to the next read, not after a lifetime (AC-7 b).
     await invalidateStockOfProducts(
       order.orderItems.map((item) => item.productId),
     );
@@ -593,7 +543,6 @@ export class OrderService {
     }
   }
 
-  /** Owner check, transition check, status write and stock return in one transaction. */
   private async cancelOrder(
     tx: Prisma.TransactionClient,
     orderId: string,
@@ -610,7 +559,6 @@ export class OrderService {
       throw orderNotFound();
     }
 
-    // A second cancel writes nothing, so the stock cannot be returned twice (AC-5).
     if (current.status === "CANCELED") {
       return toOrderDetail(current);
     }
@@ -630,8 +578,6 @@ export class OrderService {
 
     await closeOrder(tx, current);
 
-    // A close resolves the payment too: a pending or failed attempt is now
-    // cancelled, while a paid order keeps PAID (AC-11).
     await tx.payment.updateMany({
       where: { orderId: current.id, status: { in: ["PENDING", "FAILED"] } },
       data: { status: "CANCELLED" },
@@ -647,8 +593,6 @@ export class OrderService {
       });
     }
 
-    // Money that left for an order cancelled afterwards is never dropped: the
-    // payment stays PAID and one warning names the refund (AC-3).
     if (current.paymentStatus === "PAID") {
       logger.warn({
         event: "payment.refund_owed",
@@ -668,10 +612,6 @@ export class OrderService {
     );
   }
 
-  /**
-   * An increment cannot fail, so a product removed from the catalogue keeps a
-   * zero count instead of breaking the cancel (AC-2).
-   */
   private async buildOrder(
     tx: Prisma.TransactionClient,
     userId: string,
@@ -679,8 +619,6 @@ export class OrderService {
     lines: OrderLine[],
     idempotency?: Idempotency,
   ): Promise<CreateOrderResult> {
-    // Fast path: an order already under this key answers before anything is read
-    // or written again (AC-2, AC-3).
     if (idempotency) {
       const existing = await tx.order.findFirst({
         where: { userId, idempotencyKey: idempotency.key },
@@ -700,8 +638,6 @@ export class OrderService {
       where: { id: dto.shippingMethodId },
     });
 
-    // Fixed precedence: visibility and stock, then cart, then currency,
-    // then the delivery method (the first failing check decides the code).
     this.assertAvailable(products, lines);
     const cartRows = await this.assertInCart(tx, userId, lines);
 
@@ -761,8 +697,6 @@ export class OrderService {
       include: { OrderItem: true },
     });
 
-    // The order status is a mirror of its lines, so a cash order reads
-    // `CONFIRMED` and a prepaid one `PENDING` from the first read (AC-1).
     const status = await recomputeOrderStatus(tx, created.id);
 
     await this.clearCart(tx, created.id, userId, lines, cartRows);
@@ -851,12 +785,6 @@ export class OrderService {
     );
   }
 
-  /**
-   * The ordered lines leave the cart in the same commit that took the stock: a
-   * row at or below the ordered quantity is deleted, a larger row is decreased by
-   * exactly the ordered quantity, and a row another request already removed is
-   * logged instead of written (AC-5, AC-8).
-   */
   private async clearCart(
     tx: Prisma.TransactionClient,
     orderId: string,
@@ -954,12 +882,6 @@ export class OrderService {
     return currency;
   }
 
-  /**
-   * The method is read inside the transaction, so the price the order records
-   * is the price the row carries at that moment. An unknown id, a switched off
-   * row and a currency mismatch each answer their own code, in this order, and
-   * none of them writes anything (AC-5).
-   */
   private assertShippingMethod(
     method: ShippingMethod | null,
     currency: Currency,
@@ -995,13 +917,6 @@ export class OrderService {
     };
   }
 
-  /**
-   * The point is read inside the transaction, after the method checks, in the
-   * order the spec fixes: a courier method that names a point, then a pickup
-   * method without one, then an unknown id, then a switched off row. A pickup
-   * order keeps the name and the address as a snapshot, so a rename or a
-   * closure never rewrites history (AC-7).
-   */
   private async resolvePickupPoint(
     tx: Prisma.TransactionClient,
     method: ShippingMethod,
@@ -1051,7 +966,6 @@ export class OrderService {
     return { id: point.id, name: point.name, address: point.address };
   }
 
-  /** Conditional update per line: zero rows touched means the stock is short. */
   private async takeStock(
     tx: Prisma.TransactionClient,
     lines: OrderLine[],
@@ -1084,7 +998,6 @@ export class OrderService {
     }
   }
 
-  /** Availability is re-read after the rollback, so it is never the pre race value. */
   private async outOfStockError(
     short: Array<{ productId: string; requested: number }>,
   ): Promise<AppError> {

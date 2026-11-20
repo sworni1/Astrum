@@ -199,7 +199,7 @@ const createTx = (seed: OrderSeed | null) => {
   prismaMock.$transaction.mockImplementation(
     async (run: (client: typeof tx) => Promise<unknown>) => run(tx),
   );
-  // The ownership read before a cancel runs outside the transaction.
+
   prismaMock.order.findUnique.mockImplementation(async () =>
     seed === null
       ? null

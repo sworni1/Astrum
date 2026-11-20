@@ -7,11 +7,6 @@ import {
   CHECKOUT_WRAPPER,
 } from "@/features/pages/Checkout/lib/styles";
 
-/**
- * The screen's own shape while the cart read or the handoff is still unknown.
- * Nothing here decides anything, and no redirect runs in this state
- * (spec 0024, AC-4).
- */
 const CheckoutSkeleton = () => (
   <main className={CHECKOUT_WRAPPER} aria-busy="true">
     <div className={CHECKOUT_STACK}>

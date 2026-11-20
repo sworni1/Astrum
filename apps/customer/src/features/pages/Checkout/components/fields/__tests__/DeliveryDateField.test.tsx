@@ -11,8 +11,7 @@ const state = vi.hoisted(() => ({ calls: [] as Intl.DateTimeFormatOptions[] }));
 vi.mock("next-intl", () => ({
   useTranslations: (namespace: string) => (key: string) =>
     `${namespace}.${key}`,
-  // The request config pins the formatter to UTC, so a call that brings no
-  // timeZone of its own prints the UTC day, which is what the screen did.
+
   useFormatter: () => ({
     dateTime: (value: Date, options: Intl.DateTimeFormatOptions = {}) => {
       const timeZone = options.timeZone ?? "UTC";

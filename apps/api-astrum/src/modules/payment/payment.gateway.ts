@@ -1,6 +1,5 @@
 import Stripe from "stripe";
 
-/** The values a session create carries, so no builder invents one (Feature design). */
 export type CreateSessionInput = {
   attemptId: string;
   orderId: string;
@@ -14,7 +13,6 @@ export type CreateSessionInput = {
 
 export type CreatedSession = { sessionId: string; url: string };
 
-/** One session as the apply path reads it, already unwrapped from the provider. */
 export type ProviderSession = {
   id: string;
   status: string | null;
@@ -25,7 +23,6 @@ export type ProviderSession = {
   orderId: string | null;
 };
 
-/** One delivered event, in the shape the event log and the apply path share. */
 export type ProviderEvent = {
   id: string;
   type: string;
@@ -47,7 +44,6 @@ export interface PaymentGateway {
   constructEvent(payload: Buffer, signature: string): ProviderEvent;
 }
 
-/** A signature the provider would not vouch for; the route answers 400 (AC-5). */
 export class InvalidSignatureError extends Error {
   constructor() {
     super("The signature of this callback is not valid.");
@@ -55,11 +51,6 @@ export class InvalidSignatureError extends Error {
   }
 }
 
-/**
- * The provider binds an idempotency key to the parameters of its first use, so a
- * key whose payload changed (a new field in the create call) is refused for a
- * day. The caller retires that attempt and opens a fresh one (AC-4).
- */
 export class IdempotencyKeyReusedError extends Error {
   constructor(key: string) {
     super(`The provider refused the idempotency key ${key} for another payload.`);
@@ -109,10 +100,6 @@ const toProviderSession = (value: unknown): ProviderSession => {
   };
 };
 
-/**
- * A session event and an intent event are flattened into one record: the log
- * stores exactly these fields and never the customer name or email (AC-5).
- */
 const toProviderEvent = (value: unknown): ProviderEvent => {
   const event = asRecord(value);
   const object = asRecord(event.data && asRecord(event.data).object);
@@ -137,10 +124,6 @@ const toProviderEvent = (value: unknown): ProviderEvent => {
   };
 };
 
-/**
- * The provider sits behind this one adapter, so the apply path is fed plain
- * records and a test can fake Stripe without a network (Feature design).
- */
 export const createStripeGateway = (
   secretKey: string,
   webhookSecret: string,

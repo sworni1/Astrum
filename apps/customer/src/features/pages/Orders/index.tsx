@@ -15,10 +15,6 @@ import OrdersSkeleton from "./components/OrdersStates/OrdersSkeleton";
 import StatsRow from "./components/StatsRow";
 import { useOrdersScreen } from "./hooks/useOrdersScreen";
 
-/**
- * The orders screen: three tiles, three tabs with their counts, one search
- * field, one group card per order (spec 0025). Composition only.
- */
 export default function Orders() {
   const t = useTranslations("orders");
   const screen = useOrdersScreen();

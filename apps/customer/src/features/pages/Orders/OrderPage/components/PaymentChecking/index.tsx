@@ -1,7 +1,6 @@
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-/** Shown while the one sync call runs, before the order is read as truth (AC-14). */
 const PaymentChecking = () => {
   const t = useTranslations("orders");
 

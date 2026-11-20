@@ -1,4 +1,3 @@
-/** Machine readable codes the storefront branches on (spec 0017, AC-14). */
 export const STAFF_ERROR_CODES = {
   validation: "VALIDATION",
   notPointWorker: "NOT_POINT_WORKER",

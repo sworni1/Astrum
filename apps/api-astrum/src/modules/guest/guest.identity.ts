@@ -26,11 +26,6 @@ const route = (req: Request) => ({
   path: `${req.baseUrl}${req.path}`,
 });
 
-/**
- * The guest id the signed cookie carries, or null. A value that is forged,
- * expired, signed elsewhere or issued for the account is treated exactly like
- * no cookie: one log line, never an error (spec 0028, AC-3, AC-5).
- */
 export const readGuestId = (req: Request): string | null => {
   const token = (req.cookies as { __guest?: string } | undefined)?.__guest;
 
@@ -82,11 +77,6 @@ export const clearGuestCookie = (res: Response): void => {
   res.clearCookie(GUEST_COOKIE_NAME, cookieBase);
 };
 
-/**
- * The owner a write lands on: the session when one resolved, else the verified
- * guest cookie, else an identity minted in this request and set on the answer
- * (AC-2). A guest identity is issued once, so a live cookie is never renewed.
- */
 export const ownerForWrite = (req: Request, res: Response): Owner => {
   const resolved = (req as OwnerRequest).owner;
 
@@ -107,7 +97,6 @@ export const ownerForWrite = (req: Request, res: Response): Owner => {
   return { kind: "guest", guestId };
 };
 
-/** The owner a read asks about: null when the request carries no identity. */
 export const ownerForRead = (req: Request): Owner | null => {
   const resolved = (req as OwnerRequest).owner;
 

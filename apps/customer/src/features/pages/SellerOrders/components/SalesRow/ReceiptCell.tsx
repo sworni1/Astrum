@@ -8,11 +8,6 @@ type Props = {
   line: SellerLineRow;
 };
 
-/**
- * Where the line is received: a pickup point with its handover day, a courier
- * address, or nothing at all. A line with neither prints the "no address" note
- * instead of an empty cell, because a dash reads as data (spec 0026, AC-9).
- */
 const ReceiptCell = ({ line }: Props) => {
   const t = useTranslations("seller");
   const format = useFormatter();

@@ -10,15 +10,6 @@ export type CancelRefusal =
   | { key: "cancelFailed" }
   | { key: "cancelUnconfirmed" };
 
-/**
- * The gateway refuses a cancel while any line is shipped or otherwise finished
- * (spec 0002, AC-10) and names that line status in `from`, so the screen can
- * say why instead of showing a generic failure.
- *
- * A request that got no answer at all is not a refusal: the gateway may have
- * committed the cancellation before the answer was lost, so the screen says the
- * result is unknown instead of calling it a failure (spec 0011, AC-6).
- */
 export const cancelRefusal = (error: unknown): CancelRefusal => {
   if (!refusalAnswered(error)) {
     return { key: "cancelUnconfirmed" };

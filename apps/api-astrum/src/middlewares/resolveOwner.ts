@@ -29,12 +29,6 @@ const sessionOwner = (raw: string): string | undefined => {
   }
 };
 
-/**
- * The same checks `authenticateToken` runs, but a request that fails any of them
- * continues as a visitor instead of being refused: a public catalogue read and
- * the guest cart mount answer everyone, and only the mark part is personal
- * (spec 0028, AC-2).
- */
 export const createOptionalAuth =
   (store: SessionStore) =>
   async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
@@ -115,11 +109,6 @@ export const createOptionalAuth =
     next();
   };
 
-/**
- * A mount opened to visitors keeps every write behind the session (AC-6). Named
- * per route on purpose: without it `requireActiveAccount` would read an
- * undefined id and answer `503` instead of `401`.
- */
 export const requireSession = (
   req: Request,
   res: Response,

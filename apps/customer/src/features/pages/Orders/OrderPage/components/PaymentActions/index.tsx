@@ -19,11 +19,10 @@ import type { PaymentReturnBranch } from "@/hooks/order/useSyncOrderPayment";
 
 type Props = {
   order: Order;
-  /** The branch the provider sent the customer back on, if any (AC-14). */
+
   branch: PaymentReturnBranch;
 };
 
-/** The pay control, its deadline and the lines the payment state owes the customer. */
 const PaymentActions = ({ order, branch }: Props) => {
   const t = useTranslations("orders");
   const format = useFormatter();
@@ -36,7 +35,6 @@ const PaymentActions = ({ order, branch }: Props) => {
   const unconfirmed = paymentUnconfirmed(order);
 
   const pay = async (): Promise<void> => {
-    // A second press while the first request runs sends nothing (AC-13).
     if (inFlight.current) {
       return;
     }

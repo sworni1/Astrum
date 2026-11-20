@@ -1,7 +1,6 @@
 import { z } from "zod";
 import type { ValidationTranslator } from "./translator";
 
-/** The DTO bounds, mirrored so the browser refuses before the server does. */
 export const REVIEW_COMMENT_MIN_LENGTH = 5;
 export const REVIEW_COMMENT_MAX_LENGTH = 2000;
 
@@ -17,8 +16,7 @@ export const createReviewFormSchema = (t: ValidationTranslator) =>
     qualityRating: ratingField(t),
     deliveryRating: ratingField(t),
     accuracyRating: ratingField(t),
-    // The trim runs first, and the length is counted in UTF-16 units, which is
-    // what the server's MinLength counts, so an emoji weighs two on both sides.
+
     comment: z
       .string()
       .trim()

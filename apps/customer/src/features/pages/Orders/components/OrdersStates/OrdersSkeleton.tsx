@@ -3,7 +3,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { STAT_GRID, STAT_TILE } from "@/features/general/lib/screenStyles";
 
-/** The page shell of the first load: the heading and three tiles as skeletons. */
 const OrdersSkeleton = () => (
   <div className={STAT_GRID} aria-hidden>
     {[0, 1, 2].map((tile) => (

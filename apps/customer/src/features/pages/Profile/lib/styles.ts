@@ -1,8 +1,3 @@
-/**
- * Every class constant the profile screen prints (spec 0023, AC-4 to AC-7).
- * Values are the mockup's: 14px card radius, 40px controls, 20px gutters, and
- * the one raw colour of the feature — the avatar gradient (AC-3).
- */
 
 export const PROFILE_WRAPPER = "mx-auto w-full max-w-[880px] px-6 pt-14 pb-[72px]";
 export const PROFILE_STACK = "flex flex-col gap-7";

@@ -21,7 +21,6 @@ const write = (level: string, fields: LogFields): void => {
   console.info(line);
 };
 
-/** One structured line per event, the same shape the gateway and auth use. */
 export const logger = {
   info: (fields: LogFields) => write("info", fields),
   warn: (fields: LogFields) => write("warn", fields),

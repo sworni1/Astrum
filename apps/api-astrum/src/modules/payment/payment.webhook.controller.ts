@@ -26,11 +26,6 @@ const readSignature = (req: Request): string | null => {
   return value === undefined || value === "" ? null : value;
 };
 
-/**
- * The one public route of the feature. The signature is checked before any
- * database write, the body is the raw buffer because a parsed body cannot be
- * verified, and an unconfigured gateway writes nothing at all (AC-1, AC-5).
- */
 export const handleStripeWebhook = async (
   req: Request,
   res: Response,

@@ -15,11 +15,6 @@ const readOwnedShop = (userId: string): Promise<OwnedShop | null> =>
     select: { id: true, name: true },
   });
 
-/**
- * Opens one shop for the account. The first call creates the row; a repeat and
- * a lost race both answer with the existing shop, so the unique index on
- * `ownerUserId` stays the single source of "one shop per account" (AC-7).
- */
 export class SellerOnboardingService {
   async createShop(userId: string, name: string): Promise<OnboardingResult> {
     const existing = await readOwnedShop(userId);

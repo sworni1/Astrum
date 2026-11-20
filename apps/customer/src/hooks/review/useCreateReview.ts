@@ -18,7 +18,6 @@ export const useCreateReview = (productId: string) => {
   const reviewListKey = reviewsKey(productId);
   const productDetailKey = productKey(productId);
 
-  /** Re reads the list and the product, and never rejects on a failed read. */
   const revalidateReviewData = useCallback(async (): Promise<void> => {
     await Promise.allSettled([
       mutate(reviewListKey),
@@ -37,8 +36,6 @@ export const useCreateReview = (productId: string) => {
     CreateReviewDto
   >(`${reviewListKey}#create`, postItem, {
     onSuccess: async () => {
-      // The new row stands first because the first page is read again, and the
-      // product key follows so `reviewState` is re read (AC-9).
       await revalidateReviewData();
     },
   });

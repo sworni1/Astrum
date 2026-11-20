@@ -3,7 +3,6 @@ import type {
   PaymentMethod,
 } from "@astrum/db/enums";
 
-/** Machine readable codes the storefront branches on. */
 export const ORDER_ERROR_CODES = {
   outOfStock: "OUT_OF_STOCK",
   cartMismatch: "CART_MISMATCH",
@@ -27,22 +26,16 @@ export const ORDER_ERROR_CODES = {
   searchQueryTooLong: "SEARCH_QUERY_TOO_LONG",
 } as const;
 
-/**
- * The three tabs of the orders screen, as the read receives them (spec 0025,
- * AC-2). `ALL` means no status filter, and no other value is accepted.
- */
 export const ORDER_LIST_STATUSES = ["ALL", "DELIVERED", "CANCELED"] as const;
 
 export type OrderListStatus = (typeof ORDER_LIST_STATUSES)[number];
 
-/** A search query longer than this is refused, not truncated (spec 0025, AC-2). */
+export const ORDER_LIST_STATUS_FILTERS = ORDER_LIST_STATUSES.filter(
+  (value): value is Exclude<OrderListStatus, "ALL"> => value !== "ALL",
+);
+
 export const ORDER_SEARCH_MAX_LENGTH = 64;
 
-/**
- * The line status one payment method writes when the order is created (AC-1):
- * a cash order is accepted by the shop at once, a prepaid one waits for the
- * money. The `Record` forces a decision for every method added later.
- */
 export const LINE_STATUS_BY_PAYMENT_METHOD: Record<
   PaymentMethod,
   OrderItemStatus
@@ -54,35 +47,19 @@ export const LINE_STATUS_BY_PAYMENT_METHOD: Record<
   STRIPE: "PENDING",
 };
 
-/** At most 50 lines per order (AC-7). */
 export const MAX_ORDER_LINES = 50;
 
-/** At most 999 units per line, also after repeated products are merged (AC-7). */
 export const MAX_LINE_QUANTITY = 999;
 
-/** An idempotency key is 8 to 128 characters from this alphabet (spec 0003, AC-4). */
 export const IDEMPOTENCY_KEY_MIN_LENGTH = 8;
 export const IDEMPOTENCY_KEY_MAX_LENGTH = 128;
 export const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_-]+$/;
 
-/** A keyed refusal re-reads the key three times, 100 ms apart (spec 0003, AC-6). */
 export const REPLAY_ATTEMPTS = 3;
 export const REPLAY_RETRY_DELAY_MS = 100;
 
-/**
- * How long an accepted order waits before the platform marks it sent. This
- * project runs no real delivery, so an order the shop accepted (paid online, or
- * placed with cash) is on its way after this delay. Change this one number to
- * change the wait everywhere.
- */
 export const ORDER_SHIPPING_DELAY_MS = 60_000;
 
-/**
- * How often the shipping pass looks for orders that waited long enough. Equal to
- * the delay, so an order becomes sent between the delay and the delay plus one
- * tick (60 to 120 seconds after it was accepted).
- */
 export const ORDER_SHIPPING_INTERVAL_MS = 60_000;
 
-/** One pass ships at most this many orders, so a tick stays short. */
 export const ORDER_SHIPPING_BATCH = 20;

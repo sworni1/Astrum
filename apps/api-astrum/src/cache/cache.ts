@@ -3,13 +3,10 @@ import { describeError } from "../events/describe-error";
 import { cacheKeys } from "./cacheKeys";
 import { type CacheStore, getCacheStore } from "./cacheStore";
 
-/** The base lifetime of a list key, before the jitter (spec 0022, AC-13). */
 export const DEFAULT_LIST_TTL_SECONDS = 30;
 
-/** The base lifetime of a product or reviews key, before the jitter (AC-13). */
 export const DEFAULT_PRODUCT_TTL_SECONDS = 60;
 
-/** A list lives 30 through 33 seconds, a product 60 through 66 (AC-1, AC-10). */
 const LIST_TTL_JITTER_SECONDS = 4;
 const PRODUCT_TTL_JITTER_SECONDS = 7;
 
@@ -29,7 +26,6 @@ export const productTtlSeconds = (): number =>
     DEFAULT_PRODUCT_TTL_SECONDS,
   ) + Math.floor(Math.random() * PRODUCT_TTL_JITTER_SECONDS);
 
-/** One line per failed cache operation, so a degraded cache is visible (AC-8). */
 const warnCacheError = (key: string, error: unknown): void => {
   logger.warn({ event: "cache.error", key, reason: describeError(error) });
 };
@@ -70,17 +66,12 @@ const parsePayload = <T>(payload: string): T | null => {
 export type GetOrSetOptions<T> = {
   key: string;
   ttlSeconds: number;
-  /** The loader runs only on a miss; its answer is serialized once and stored. */
+
   load: () => Promise<T>;
-  /** The counter a list key names, logged beside the key because that read touches two. */
+
   epochKey?: string;
 };
 
-/**
- * The shared part of an answer: Redis when a fresh key exists, the loader
- * otherwise. A cache failure never reaches the caller: it is logged and the
- * answer comes from the database exactly as it would with the cache off.
- */
 export const getOrSet = async <T>({
   key,
   ttlSeconds,
@@ -121,7 +112,6 @@ export const getOrSet = async <T>({
   return value;
 };
 
-/** A counter's value, or `0` when the key was never written (AC-2, AC-5). */
 export const readVersion = async (counterKey: string): Promise<number> => {
   const store = getCacheStore();
 
@@ -155,20 +145,14 @@ const invalidate = async (keys: readonly string[]): Promise<void> => {
 
 const unique = (values: readonly string[]): string[] => [...new Set(values)];
 
-/** A new product or a changed card: every list key names a fresh epoch (AC-7 e). */
 export const invalidateLists = async (): Promise<void> => {
   await invalidate([cacheKeys.listsEpoch()]);
 };
 
-/** A like, a comment or a new review: the product's review pages go cold (AC-7 c, d). */
 export const invalidateReviews = async (productId: string): Promise<void> => {
   await invalidate([cacheKeys.reviewsVersion(productId)]);
 };
 
-/**
- * A stock write: the lists epoch plus one version per product, in one pipelined
- * batch, after the commit (AC-7 a, b).
- */
 export const invalidateProducts = async (
   productIds: readonly string[],
 ): Promise<void> => {
@@ -178,7 +162,6 @@ export const invalidateProducts = async (
   ]);
 };
 
-/** Shipping has no writer route today, so its lifetime is the bound (AC-6). */
 export const invalidateShipping = async (): Promise<void> => {
   const store = getCacheStore();
 

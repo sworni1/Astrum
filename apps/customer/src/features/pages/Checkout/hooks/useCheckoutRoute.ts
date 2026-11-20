@@ -16,11 +16,6 @@ export type CheckoutRoute =
   | { status: "empty" }
   | { status: "ready"; lines: ProductCartProps[]; missingCount: number };
 
-/**
- * The route's four states: no verdict before the cart answer exists, a failure
- * with its retry, and an empty or partly stale selection. Only a loaded answer
- * can send the customer back to `/cart` (spec 0024, AC-3, AC-4, AC-5).
- */
 export const useCheckoutRoute = (): CheckoutRoute => {
   const { cart, cartIsLoading, cartError } = useGetCart();
   const handedIds = useHandedIds();

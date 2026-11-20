@@ -4,16 +4,11 @@ import { AppError } from "../../common/helpers/appError";
 import {
   ORDER_ERROR_CODES,
   ORDER_LIST_STATUSES,
+  ORDER_LIST_STATUS_FILTERS,
   ORDER_SEARCH_MAX_LENGTH,
-  type OrderListStatus,
 } from "./constants/order.constants";
 
-/** What the list read receives once the wire values are validated (spec 0025, AC-2). */
 export type OrderListQuery = { status?: OrderStatus; q?: string };
-
-const STATUS_FILTERS = ORDER_LIST_STATUSES.filter(
-  (value): value is Exclude<OrderListStatus, "ALL"> => value !== "ALL",
-);
 
 const invalidStatus = (value: unknown): AppError =>
   new AppError(
@@ -37,7 +32,6 @@ const tooLongQuery = (): AppError =>
     `The search query cannot be longer than ${ORDER_SEARCH_MAX_LENGTH} characters.`,
   );
 
-/** `ALL`, an absent value and an empty string all mean "no status filter". */
 const readStatus = (raw: unknown): OrderStatus | undefined => {
   if (raw === undefined || raw === "") {
     return undefined;
@@ -55,7 +49,7 @@ const readStatus = (raw: unknown): OrderStatus | undefined => {
     return undefined;
   }
 
-  const match = STATUS_FILTERS.find((value) => value === raw);
+  const match = ORDER_LIST_STATUS_FILTERS.find((value) => value === raw);
 
   if (!match) {
     throw invalidStatus(raw);
@@ -64,7 +58,6 @@ const readStatus = (raw: unknown): OrderStatus | undefined => {
   return match;
 };
 
-/** The query is trimmed once, so a trailing space is neither a filter nor a length. */
 const readQuery = (raw: unknown): string | undefined => {
   if (raw === undefined) {
     return undefined;
@@ -91,11 +84,6 @@ const readQuery = (raw: unknown): string | undefined => {
   return trimmed;
 };
 
-/**
- * Turns the two raw query values into the filters the read understands. Every
- * refusal is a `400` with its own code, so the storefront can branch on it
- * (spec 0025, AC-2).
- */
 export const parseOrderListQuery = (raw: {
   status?: unknown;
   q?: unknown;
@@ -109,10 +97,6 @@ export const parseOrderListQuery = (raw: {
   };
 };
 
-/**
- * The status filter and the search combine through one `AND` array: two sibling
- * `OR` keys in one object would silently replace each other (spec 0025, AC-3).
- */
 export const orderListWhere = (
   userId: string,
   query: OrderListQuery,
@@ -120,8 +104,6 @@ export const orderListWhere = (
   const clauses: Prisma.OrderWhereInput[] = [];
 
   if (query.status === "DELIVERED") {
-    // The buyer reads one bucket for an arrived parcel, issued or not (spec
-    // 0031, AC-8).
     clauses.push({ status: { in: ["DELIVERED", "ISSUED"] } });
   } else if (query.status !== undefined) {
     clauses.push({ status: query.status });

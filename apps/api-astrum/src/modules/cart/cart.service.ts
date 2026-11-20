@@ -19,10 +19,6 @@ import type { ChangeQuantityDto } from "./dto/change-quantity.dto";
 export class CartService {
   private productService = new ProductService();
 
-  /**
-   * One line per owner and product: a repeated add raises the quantity capped at
-   * the stock instead of failing on the unique key (spec 0028, AC-10).
-   */
   async addProductToCart(owner: Owner, dto: AddProductToCartDto) {
     const { productId } = dto;
 
@@ -134,7 +130,6 @@ export class CartService {
 
   async deleteProductFromCart(owner: Owner, productId: Product["id"]) {
     try {
-      // Awaited on purpose: without it every delete answered `true` (AC-8).
       const wishlistItem = await getWishlistItem(owner, productId);
 
       await prisma.cartItem.delete({

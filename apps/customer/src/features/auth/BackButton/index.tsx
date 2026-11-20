@@ -5,10 +5,6 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 
-/**
- * The way back from the sign in and register screens: the previous page when
- * the browser has one, otherwise the storefront home.
- */
 export default function BackButton() {
   const router = useRouter();
   const t = useTranslations("auth");

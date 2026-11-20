@@ -22,11 +22,6 @@ type Props = {
   likes: ReviewLikes;
 };
 
-/**
- * One published review: author, stars, date, the detail ratings the form asked
- * for, the photos it carried, the like control and the comment control that
- * opens its thread in place (spec 0014, AC-1, AC-6, AC-11).
- */
 const ReviewCard = ({ review, counts, likes }: Props) => {
   const t = useTranslations("reviews");
   const format = useFormatter();
@@ -52,12 +47,6 @@ const ReviewCard = ({ review, counts, likes }: Props) => {
     },
   ];
 
-  /**
-   * The press moves the number before the answer, and the answer replaces it.
-   * A second press while this review's request runs returns before sending; a
-   * failure puts the number and the pressed state back where they were
-   * (spec 0014, AC-6).
-   */
   const toggleLike = async (): Promise<void> => {
     if (isLikePending) {
       return;
@@ -78,8 +67,6 @@ const ReviewCard = ({ review, counts, likes }: Props) => {
     } catch (error) {
       counts.setLikeCount(review.id, before);
 
-      // The confirmation branch already raised its own toast with a resend
-      // action, so a second one would only repeat it (AC-5).
       if (classifyReviewRefusal(error) !== "emailNotConfirmed") {
         showToast({ title: t("likeFailed"), type: "error" });
       }

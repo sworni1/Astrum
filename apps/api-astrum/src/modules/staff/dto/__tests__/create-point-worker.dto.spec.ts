@@ -2,7 +2,6 @@ import { plainToInstance } from "class-transformer";
 import { validate } from "class-validator";
 import { CreatePointWorkerDto } from "../create-point-worker.dto";
 
-/** Mirrors what `validateDto` does: strip, then validate (spec 0017). */
 const check = async (body: unknown): Promise<string[]> => {
   const dto = plainToInstance(CreatePointWorkerDto, body, {
     excludeExtraneousValues: true,

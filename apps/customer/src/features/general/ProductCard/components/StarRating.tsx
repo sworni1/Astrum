@@ -1,11 +1,6 @@
 import { memo } from 'react';
 import { FaStar } from 'react-icons/fa';
 
-/**
- * The rating line of a card: the average of the product's approved reviews with
- * one decimal, the bare zero when nothing has been reviewed yet, then the count.
- * Same numbers the product screen prints (spec 0021, AC-6).
- */
 const StarRating = memo(
   ({
     averageRating,

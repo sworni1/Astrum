@@ -11,10 +11,6 @@ export type HealthServer = {
   stop(): Promise<void>;
 };
 
-/**
- * The balancer asks one url. Until the broker connection is up the answer is a
- * 503, which is what keeps a worker with no queue out of rotation.
- */
 export const createHealthServer = ({
   port,
   isReady,

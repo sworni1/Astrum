@@ -1,11 +1,6 @@
 import axios from "axios";
 import type { ReviewValidationError } from "@/common/types/review.types";
 
-/**
- * What the dialog does with a refusal, keyed by the code the gateway answered
- * (AC-10). `emailNotConfirmed` raises no second toast: the shared fetcher
- * already raised the confirmation toast with its resend action.
- */
 export type ReviewRefusal =
   | "notDelivered"
   | "alreadyReviewed"
@@ -40,8 +35,6 @@ export const classifyReviewRefusal = (error: unknown): ReviewRefusal => {
 
   const status = error.response?.status;
 
-  // No answer at all: the gateway may have committed the review before the
-  // answer was lost, so the customer is told the result is unknown.
   if (!status) {
     return "unconfirmed";
   }
@@ -71,7 +64,6 @@ export const classifyReviewRefusal = (error: unknown): ReviewRefusal => {
   return "unconfirmed";
 };
 
-/** The field messages a `400` carries, ready for `form.setError`. */
 export const fieldErrorsOf = (
   error: unknown,
 ): { property: string; message: string }[] => {

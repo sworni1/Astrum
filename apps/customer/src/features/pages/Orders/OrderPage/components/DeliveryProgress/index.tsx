@@ -9,14 +9,6 @@ type Props = {
   status: OrderStatus;
 };
 
-/**
- * The receiving rail: one 6px track, one fill, and the four step labels under
- * it, drawn once for both breakpoints (spec 0027, AC-5; spec 0031, AC-7). Each
- * label owns a quarter of the width, so the longest Russian word wraps inside
- * its own column instead of running into the next one. The pending status has no
- * label here: its fill stays empty. A cancelled order never reaches this
- * component, and a status it does not know fills nothing.
- */
 const DeliveryProgress = ({ status }: Props) => {
   const t = useTranslations('orders');
   const steps = deliverySteps(status);

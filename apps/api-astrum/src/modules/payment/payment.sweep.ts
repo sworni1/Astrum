@@ -2,6 +2,7 @@ import { Prisma } from "@astrum/db/client";
 import type { PaymentAttemptStatus } from "@astrum/db/enums";
 import { prisma } from "../../../lib/prisma";
 import { logger } from "../../common/helpers/logger";
+import { SWEEP_TRANSACTION_OPTIONS } from "../../common/helpers/sweepTransaction";
 import { invalidateStockOfOrder } from "../order/order-cache";
 import { applyExpiredEvent, applyPaidEvent } from "./payment.apply";
 import {
@@ -22,13 +23,6 @@ const SWEEP_INCLUDE = {
 };
 
 type SweepOrder = Prisma.OrderGetPayload<{ include: typeof SWEEP_INCLUDE }>;
-
-/** A network call per order sits inside this transaction, so it needs room. */
-const SWEEP_TRANSACTION_OPTIONS = {
-  maxWait: 5000,
-  timeout: 60_000,
-  isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
-};
 
 const describe = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
@@ -60,11 +54,6 @@ const closeWithoutSession = async (
   }
 };
 
-/**
- * The provider session decides on its own: paid applies the paid transition, an
- * expired one the close, and a session still open past its deadline is expired
- * here first. A provider fault leaves the order for the next tick (AC-9).
- */
 const sweepWithSession = async (
   tx: Prisma.TransactionClient,
   gateway: PaymentGateway,
@@ -146,11 +135,6 @@ const selectOverdueOrders = async (
     include: SWEEP_INCLUDE,
   });
 
-/**
- * One pass, behind a transaction scoped advisory lock so one replica sweeps and
- * a tick is skipped while another holds it (AC-9). A session level lock would
- * outlive its pooled connection.
- */
 export const runPaymentSweep = async (
   gateway: PaymentGateway | null = paymentGateway(),
 ): Promise<void> => {
@@ -172,13 +156,11 @@ export const runPaymentSweep = async (
     }
   }, SWEEP_TRANSACTION_OPTIONS);
 
-  // A closed order returned its stock, so the counters follow the commit (AC-7 b).
   for (const orderId of closedOrderIds) {
     await invalidateStockOfOrder(orderId);
   }
 };
 
-/** Started from `server.ts` and never from `app.ts` (AC-9). */
 export const startPaymentSweep = (): NodeJS.Timeout => {
   const timer = setInterval(() => {
     void runPaymentSweep().catch((error: unknown) => {

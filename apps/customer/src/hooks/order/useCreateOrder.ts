@@ -36,9 +36,8 @@ export const useCreateOrder = (): UseCreateOrderReturn => {
     postItem,
     {
       onSuccess: async () => {
-        // Clear cart after successful order creation
         await mutate("/cart");
-        // Refresh the list and its counts, filtered forms included
+
         await mutate(isOrderListKey);
       },
     },
@@ -49,7 +48,6 @@ export const useCreateOrder = (): UseCreateOrderReturn => {
       throw new Error("User not authenticated");
     }
 
-    // Since DB expects userId but user data doesn't include id, we'll let the backend handle it
     const orderData: CreateOrderDto = {
       ...data,
     };

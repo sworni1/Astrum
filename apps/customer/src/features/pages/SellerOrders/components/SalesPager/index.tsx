@@ -10,10 +10,6 @@ type Props = {
   onNext: () => void;
 };
 
-/**
- * The pager slices lines, not orders, and is disabled at both ends of the range
- * (spec 0026, AC-10).
- */
 const SalesPager = ({ page, totalPages, onBack, onNext }: Props) => {
   const t = useTranslations("seller");
 

@@ -8,7 +8,6 @@ type Props = {
   orderId: string;
 };
 
-/** One press hands the order number to the clipboard, with a toast either way. */
 const CopyOrderNumber = ({ orderId }: Props) => {
   const t = useTranslations("orders");
   const { copyNumber } = useCopyOrderNumber(orderId);

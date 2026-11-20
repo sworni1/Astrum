@@ -6,11 +6,6 @@ export type MintedToken = {
   expiresAt: Date;
 };
 
-/**
- * One transaction writes the new row and kills every other unused row of the
- * user, which is what makes the newest letter the only working one. The raw
- * token leaves this function in memory only: the database keeps its sha256.
- */
 export const mintConfirmationToken = async (
   prisma: PrismaClient,
   { userId, email }: { userId: string; email: string },

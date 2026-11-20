@@ -8,11 +8,6 @@ import PointChangeControl from "./PointChangeControl";
 
 type Props = { pending: boolean };
 
-/**
- * The point line of the profile: read from `GET /api/staff/point` and rendered
- * only on a successful answer, so the section never claims the account works
- * nowhere while the read is in flight or failing (AC-2).
- */
 const PointLine = ({ pending }: Props) => {
   const t = useTranslations("staff");
   const { point, isLoading, error, mutate } = useStaffPoint();

@@ -9,10 +9,6 @@ type Props = {
   photos: string[];
 };
 
-/**
- * The photos a review carries. A URL that cannot be loaded leaves no box and no
- * alt text on screen, because a broken remote file must not reshuffle the card.
- */
 const ReviewPhotos = ({ reviewId, photos }: Props) => {
   const t = useTranslations("reviews");
   const [failed, setFailed] = useState<Record<number, boolean>>({});

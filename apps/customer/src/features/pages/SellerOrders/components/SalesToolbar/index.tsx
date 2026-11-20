@@ -20,7 +20,6 @@ type Props = {
   onQueryChange: (value: string) => void;
 };
 
-/** The three tabs with their counts and the search field (spec 0026, AC-7, AC-8). */
 const SalesToolbar = ({
   status,
   counts,

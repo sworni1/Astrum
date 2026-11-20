@@ -2,9 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useFetcher } from "@/hooks/useFetcher";
+import { STAFF_PAGE_SIZE } from "./staffPage";
 import type { PointOrder, PointOrdersPage } from "./pointOrder.types";
-
-const PAGE_SIZE = 20;
 
 export interface UsePointOrdersReturn {
   orders: PointOrder[];
@@ -18,12 +17,6 @@ export interface UsePointOrdersReturn {
   mutate: () => Promise<void>;
 }
 
-/**
- * The parcels of the caller's own point, one page at a time. `showMore` appends
- * the next page, and `mutate` drops every accumulated page and re-reads the
- * first one, so a closed order can never leave a shifted offset behind
- * (spec 0018, AC-10, AC-11).
- */
 export const usePointOrders = (): UsePointOrdersReturn => {
   const { getData } = useFetcher();
   const [orders, setOrders] = useState<PointOrder[]>([]);
@@ -45,10 +38,9 @@ export const usePointOrders = (): UsePointOrdersReturn => {
 
       try {
         const answer = (await getData(
-          `/staff/point/orders?page=${target}&limit=${PAGE_SIZE}`,
+          `/staff/point/orders?page=${target}&limit=${STAFF_PAGE_SIZE}`,
         )) as PointOrdersPage;
 
-        // A newer read has started, so this answer is already stale.
         if (generation.current !== own) {
           return;
         }

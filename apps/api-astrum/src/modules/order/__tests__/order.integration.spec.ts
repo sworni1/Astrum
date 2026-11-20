@@ -3,11 +3,6 @@ import { AppError } from "../../../common/helpers/appError";
 import type { CreateOrderDto } from "../dto/create-order.dto";
 import { OrderService } from "../order.service";
 
-/**
- * These specs run against a real Postgres, because the conditional stock update
- * is only proven by two transactions competing for the same row. Enable with
- * `ORDER_DB_TESTS=1 pnpm --filter @astrum/api test`.
- */
 const describeWithDatabase =
   process.env.ORDER_DB_TESTS === "1" ? describe : describe.skip;
 

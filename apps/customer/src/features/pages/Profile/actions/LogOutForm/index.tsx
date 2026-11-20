@@ -22,7 +22,6 @@ import {
 } from "@/features/pages/Profile/lib/styles";
 import { useLogOut } from "@/hooks/useLogOut";
 
-/** One row of the security card: the logout behind a confirmation (AC-7). */
 const LogOutForm = () => {
   const { logOut } = useLogOut();
   const t = useTranslations("profile");

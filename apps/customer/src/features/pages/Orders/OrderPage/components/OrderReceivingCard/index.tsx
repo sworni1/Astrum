@@ -9,13 +9,6 @@ type Props = {
   order: Order;
 };
 
-/**
- * The receiving block: the method with its point, the one date this screen
- * prints about the parcel, and the four step rail under it (spec 0027, AC-5).
- * The date reads the issue moment when it happened, the arrival once the parcel
- * is here, and the promised day before that. A canceled order never reaches this
- * block, because the column drops it (spec 0031, AC-10).
- */
 const OrderReceivingCard = ({ order }: Props) => {
   const t = useTranslations("orders");
   const format = useFormatter();

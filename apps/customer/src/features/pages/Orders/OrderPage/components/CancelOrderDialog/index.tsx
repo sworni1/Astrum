@@ -24,11 +24,6 @@ type Props = {
   onConfirm: () => void;
 };
 
-/**
- * The header's cancel action with the confirmation in front of it: only the
- * sending control sends, and the action stays focusable while the request runs
- * so closing the dialog can hand focus back to it (spec 0011, AC-2, AC-4, AC-10).
- */
 const CancelOrderDialog = ({ order, isCancelling, onConfirm }: Props) => {
   const t = useTranslations("orders");
   const keepRef = useRef<HTMLButtonElement>(null);

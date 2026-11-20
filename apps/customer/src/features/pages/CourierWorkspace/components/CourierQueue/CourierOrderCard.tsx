@@ -19,11 +19,6 @@ type Props = {
   onClosed: () => void;
 };
 
-/**
- * One courier parcel: its number, the two dates, every line inside, the total and
- * the controls. The delivery address shows only on a parcel the caller claimed,
- * because the gateway answers `null` on every pool row (spec 0019, AC-3, AC-11).
- */
 const CourierOrderCard = ({
   order,
   scope,
@@ -55,10 +50,7 @@ const CourierOrderCard = ({
       </header>
 
       <p className="mt-1 text-sm text-muted-foreground">
-        {/*
-         * The browser zone prints the day the buyer picked, because the checkout
-         * writes noon local and the request config pins the formatter to UTC.
-         */}
+
         {t("deliveryDate", {
           date: format.dateTime(deliveryAt, {
             dateStyle: "long",

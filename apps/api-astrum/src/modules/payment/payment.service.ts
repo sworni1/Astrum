@@ -73,10 +73,6 @@ const providerUnavailable = () =>
 const describe = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
-/**
- * The customer facing half of the provider: the pay route that opens a session
- * and the sync route the return screen calls (AC-4, AC-10).
- */
 export class PaymentService {
   constructor(
     private readonly resolveGateway: () => PaymentGateway | null = paymentGateway,
@@ -194,13 +190,6 @@ export class PaymentService {
     }
   }
 
-  /**
-   * One session per attempt: the attempt id is the idempotency key, so the loser
-   * of two concurrent presses gets the same session back from the provider and
-   * both requests answer one URL (AC-4). A key the provider refuses because its
-   * payload changed is retired once and the session opens under a fresh one, so a
-   * past deploy cannot freeze an order behind a dead key.
-   */
   private async openSession(
     gateway: PaymentGateway,
     order: OrderWithLines,
@@ -257,10 +246,6 @@ export class PaymentService {
     }
   }
 
-  /**
-   * Retires the attempt whose key the provider refuses and hands back a fresh
-   * row, so the next create call carries a key nobody has used yet.
-   */
   private async retireAndClaim(
     order: OrderWithLines,
     expiresAt: Date,
@@ -274,7 +259,6 @@ export class PaymentService {
     return this.claimAttempt(order, expiresAt);
   }
 
-  /** The attempt row plus the deadline, refreshed together (AC-4). */
   private async claimAttempt(
     order: OrderWithLines,
     expiresAt: Date,
@@ -331,7 +315,6 @@ export class PaymentService {
     }
   }
 
-  /** The window closed before the sweep noticed: close it in this request (AC-4). */
   private async closeExpiredWindow(orderId: string): Promise<void> {
     const attempt = await newestOpenAttempt(orderId);
 
@@ -340,7 +323,6 @@ export class PaymentService {
         applyExpiredEvent(tx, orderId, attempt.id),
       );
 
-      // A closed order returned its stock, so the counters follow the commit (AC-7 b).
       if (outcome === "closed") {
         await invalidateStockOfOrder(orderId);
       }

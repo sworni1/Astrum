@@ -42,11 +42,6 @@ const sessionOwner = (raw: string): string | undefined => {
   }
 };
 
-/**
- * The one guard every protected router inherits: the signature proves the token
- * was issued here, the store proves the session still exists, and the record
- * proves it belongs to the user in the token.
- */
 export const createAuthenticateToken =
   (store: SessionStore) =>
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {

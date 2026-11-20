@@ -22,11 +22,6 @@ const readRequired = (
 const withoutTrailingSlash = (value: string): string =>
   value.replace(/\/+$/, "");
 
-/**
- * Checked before the Nest application is created, so a missing variable ends
- * the boot with a readable reason instead of a confirm route that redirects
- * somewhere broken.
- */
 export const loadAuthConfig = (
   env: NodeJS.ProcessEnv = process.env,
 ): AuthConfig => ({

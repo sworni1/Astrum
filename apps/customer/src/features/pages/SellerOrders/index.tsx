@@ -19,11 +19,6 @@ import StatsRow from "./components/StatsRow";
 import { useSalesFilters } from "./hooks/useSalesFilters";
 import { StateScreen } from "./StateScreen";
 
-/**
- * The seller sales screen: four tiles, three tabs with their counts, one search
- * field, one flat line table and its pager. Composition only, and no control
- * writes anything (spec 0026).
- */
 export default function SellerOrders() {
   const t = useTranslations("seller");
   const screen = useSalesFilters();

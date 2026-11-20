@@ -7,16 +7,11 @@ type Props = {
   value: string;
   busy: boolean;
   placeholder: string;
-  /** The accessible name: a placeholder is not one. */
+
   label: string;
   onChange: (value: string) => void;
 };
 
-/**
- * The search field: an icon inside it, the input, and a spinner while a read is
- * in flight. Moved out of `Orders/components/OrdersToolbar/OrderSearchField.tsx`
- * so both order screens read one field (spec 0026, AC-13).
- */
 const SearchField = ({ value, busy, placeholder, label, onChange }: Props) => (
   <div className={SEARCH_FIELD}>
     <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden />

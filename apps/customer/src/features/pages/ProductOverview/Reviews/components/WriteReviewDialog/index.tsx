@@ -49,11 +49,6 @@ const DEFAULT_VALUES: CreateReviewFormValues = {
   comment: "",
 };
 
-/**
- * One send per press sequence, whatever the render timing says (AC-8): the
- * lock is taken before the request leaves and released in `finally`, so two
- * presses that land in the same tick still send once.
- */
 const sendsInFlight = new Set<string>();
 
 const claimSend = (productId: string): boolean => {
@@ -75,10 +70,6 @@ type Props = {
   orderItemId: string;
 };
 
-/**
- * The write form: four star groups and a comment, validated on press, sent
- * once, and answered by a toast per refusal code (AC-8, AC-9, AC-10).
- */
 const WriteReviewDialog = ({ productId, orderItemId }: Props) => {
   const t = useTranslations("reviews");
   const validation = useTranslations("validation");
@@ -121,12 +112,9 @@ const WriteReviewDialog = ({ productId, orderItemId }: Props) => {
 
         showToast({ title: t("refused.invalid"), type: "error" });
       } else if (refusal !== "emailNotConfirmed") {
-        // The confirmation branch already raised its own toast with a resend
-        // action, so a second one would only repeat it.
         showToast({ title: t(`refused.${refusal}`), type: "error" });
       }
 
-      // Never rejects: a failed re read must not escape the handler (AC-10).
       await revalidateReviewData();
     } finally {
       releaseSend(productId);

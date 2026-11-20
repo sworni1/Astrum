@@ -21,11 +21,6 @@ type Props = {
   state: CheckoutFormState;
 };
 
-/**
- * The sticky column: the three amounts, the submit and the one hint. It renders
- * whatever the delivery list is doing, and the shipping row prints a zero on the
- * same currency fallback as the total (spec 0024, AC-13, AC-14).
- */
 const SummaryCard = ({ state }: Props) => {
   const t = useTranslations("cart");
   const locale = useLocale();

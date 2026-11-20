@@ -16,7 +16,6 @@ type Props = {
   onClosed: () => void;
 };
 
-/** The controls of one card: a pool card can only be taken, a claimed card can be closed or given back. */
 const OrderActions = ({ order, scope, pending, onRun, onClosed }: Props) => {
   const busyAction = pending?.orderId === order.id ? pending.action : null;
 

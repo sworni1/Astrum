@@ -25,16 +25,10 @@ import CourierOrderCard from "./CourierOrderCard";
 type Props = {
   scope: CourierScope;
   data: UseCourierOrdersReturn;
-  /** A successful action reads page one of both sections, so no parcel stands in two lists (AC-11). */
+
   onRefreshAll: () => Promise<void>;
 };
 
-/**
- * One of the courier's two lists: its heading, its own refresh, its own states and
- * its own `Show more`, so a failure here never hides the other section's rows. The
- * heading sits inside the live region and takes the focus after an action, because
- * the row that held it leaves the list (spec 0019, AC-11, AC-13).
- */
 const CourierSection = ({ scope, data, onRefreshAll }: Props) => {
   const t = useTranslations("staff.courier.queue");
   const { orders, page, totalPages, isLoading, isValidating, error, showMore, mutate } =
@@ -50,7 +44,6 @@ const CourierSection = ({ scope, data, onRefreshAll }: Props) => {
     try {
       const answered = await run(order.id, action);
 
-      // A second press while the first is in flight sends nothing.
       if (answered === null) {
         return;
       }

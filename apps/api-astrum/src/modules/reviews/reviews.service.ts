@@ -54,10 +54,8 @@ export type CommentWriteAnswer = {
   commentCount: number;
 };
 
-/** A transaction handle, so a guard reads the same snapshot as the write. */
 type Tx = Prisma.TransactionClient;
 
-/** An integer clamped to 1 through 50, defaulting to the caller's page size. */
 const parseLimit = (raw: unknown, fallback: number): number => {
   if (raw === undefined) {
     return fallback;
@@ -78,8 +76,6 @@ const parseLimit = (raw: unknown, fallback: number): number => {
 
 export class ReviewsService {
   async createReview(userId: string, productId: string, dto: CreateReviewDto) {
-    // The purchase proof and the written row name the same product: the line is
-    // looked up inside this customer's own lines (spec 0012, AC-11).
     const orderItem = await prisma.orderItem.findFirst({
       where: { id: dto.orderItemId, userId },
       select: { id: true, productId: true, status: true },
@@ -126,13 +122,11 @@ export class ReviewsService {
         select: reviewRowSelect,
       });
 
-      // The new rating reaches the card and the product's review pages (AC-7 c).
       await invalidateLists();
       await invalidateReviews(productId);
 
       return serializeReview(row as ReviewRow);
     } catch (error) {
-      // The unique index on orderItemId decides the race: one 201, one 409.
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
@@ -148,10 +142,6 @@ export class ReviewsService {
     }
   }
 
-  /**
-   * The page, its counters and its distribution are the same for every reader,
-   * so they come from Redis; the caller filters nothing (spec 0022, AC-5).
-   */
   async getReviewsForProduct(productId: string, query: ReviewPageQuery = {}) {
     const limit = parseLimit(query.limit, REVIEW_PAGE_DEFAULT_LIMIT);
     const after = query.after === undefined ? undefined : String(query.after);
@@ -164,10 +154,6 @@ export class ReviewsService {
     });
   }
 
-  /**
-   * The queries behind a miss. The cursor check runs here and only here: a key
-   * exists only for a cursor that already passed it (AC-5).
-   */
   private async loadReviewPage(
     productId: string,
     limit: number,
@@ -195,8 +181,7 @@ export class ReviewsService {
         where,
         take: limit + 1,
         ...(after ? { cursor: { id: after }, skip: 1 } : {}),
-        // createdAt alone is not unique, and a cursor over a non unique sort
-        // both repeats and skips rows (AC-12).
+
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         select: reviewRowSelect,
       }),
@@ -242,13 +227,6 @@ export class ReviewsService {
     return review;
   }
 
-  /**
-   * The ids of this product's approved reviews the caller liked, oldest like
-   * first (AC-3). An empty array covers a product with nothing liked in it, so
-   * the screen never reads a `404` as "nobody liked anything". A visitor with no
-   * identity has liked nothing and the read asks no query at all (spec 0028,
-   * AC-6).
-   */
   async getLikedReviewIds(
     owner: Owner | null,
     productId: string,
@@ -269,10 +247,6 @@ export class ReviewsService {
     return { reviewIds: rows.map((row) => row.reviewId) };
   }
 
-  /**
-   * One like per review and customer. The insert itself is the guard, so a
-   * repeated press answers the same number instead of a `500` (AC-4).
-   */
   async likeReview(userId: string, reviewId: string): Promise<LikeAnswer> {
     const { answer, productId } = await prisma.$transaction(async (tx) => {
       const review = await this.requireApprovedReview(tx, reviewId);
@@ -306,16 +280,11 @@ export class ReviewsService {
       };
     });
 
-    // The like count is part of the cached review page (AC-7 d).
     await invalidateReviews(productId);
 
     return answer;
   }
 
-  /**
-   * Decrements only when exactly one row was removed, so a repeat answers the
-   * same number and the counter never reads `-1` (AC-4).
-   */
   async unlikeReview(userId: string, reviewId: string): Promise<LikeAnswer> {
     const { answer, productId } = await prisma.$transaction(async (tx) => {
       const review = await this.requireReview(tx, reviewId);
@@ -347,7 +316,6 @@ export class ReviewsService {
     return answer;
   }
 
-  /** One page of the flat thread, oldest first, ten rows by default (AC-7). */
   async getReviewComments(
     reviewId: string,
     viewerId: string,
@@ -400,11 +368,6 @@ export class ReviewsService {
     };
   }
 
-  /**
-   * The budget and the insert read and write one snapshot, so the eleventh
-   * comment in the hour is refused and a failed insert leaves the counter
-   * untouched (AC-8, AC-9).
-   */
   async createReviewComment(
     userId: string,
     reviewId: string,
@@ -448,16 +411,11 @@ export class ReviewsService {
       };
     });
 
-    // The comment count is part of the cached review page (AC-7 d).
     await invalidateReviews(productId);
 
     return answer;
   }
 
-  /**
-   * The author's own soft delete: the update is guarded by `deletedAt: null`,
-   * so a repeat answers the identical stub and decrements once (AC-10).
-   */
   async deleteReviewComment(
     userId: string,
     reviewId: string,
@@ -522,12 +480,6 @@ export class ReviewsService {
     return answer;
   }
 
-  /**
-   * A like or a comment needs an approved review; both delete routes act on
-   * existence alone, so a row written before a status change can be withdrawn
-   * (AC-5). The product comes back beside the id, because those writes carry a
-   * review id only and the cache is keyed per product (spec 0022, AC-7 d).
-   */
   private async requireApprovedReview(
     tx: Tx,
     reviewId: string,
@@ -560,7 +512,6 @@ export class ReviewsService {
     return review;
   }
 
-  // Kept for a future moderation write; nothing calls it today (spec 0012, Follow up).
   async updateProductAggregates(productId: string) {
     await prisma.$transaction(async (tx) => {
       const aggregate = await tx.review.aggregate({

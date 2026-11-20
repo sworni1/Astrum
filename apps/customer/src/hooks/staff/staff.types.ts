@@ -1,6 +1,5 @@
 import type { StaffRole } from "@/common/types/user.types";
 
-/** The point an answer carries; `isActive` false means it is switched off. */
 export type StaffPoint = {
   id: string;
   name: string;
@@ -8,7 +7,6 @@ export type StaffPoint = {
   isActive: boolean;
 };
 
-/** What every staff endpoint answers (spec 0017). */
 export type StaffAnswer = {
   staffRoles: StaffRole[];
   point: StaffPoint | null;

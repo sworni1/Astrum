@@ -10,8 +10,6 @@ const reviewsService = new ReviewsService();
 export class ReviewsController {
   async createReview(req: Request, res: Response) {
     try {
-      // The child router carries the parent's params (mergeParams), so the
-      // product always comes from the path and never from the body.
       const productId = req.params.productId as string;
       const { userId } = req as AuthenticatedUserRequest;
       const dto = req.body;

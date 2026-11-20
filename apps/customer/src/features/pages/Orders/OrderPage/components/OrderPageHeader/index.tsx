@@ -16,12 +16,6 @@ type Props = {
   onCancel: () => void;
 };
 
-/**
- * The order header of the mockup: the way back, the number with its copy
- * control, the line count with the placed date, and at the far right the status
- * pill with the cancel action (spec 0027, AC-2). There is no print control,
- * because nothing behind it could print a receipt (AC-10).
- */
 const OrderPageHeader = ({ order, isCancelling, onCancel }: Props) => {
   const router = useRouter();
   const t = useTranslations("orders");

@@ -37,11 +37,6 @@ type Props = {
   onRetry: () => void;
 };
 
-/**
- * The delivery methods as radio cards, each printing its own currency, because
- * a mixed currency list is exactly what the server refuses (spec 0024, AC-11).
- * A pickup method with no open point stays visible and disabled with its reason.
- */
 const ShippingMethodCards = ({
   control,
   methods,

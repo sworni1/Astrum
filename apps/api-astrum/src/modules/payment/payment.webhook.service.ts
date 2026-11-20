@@ -18,11 +18,6 @@ const isUniqueViolation = (error: unknown): boolean =>
   error !== null &&
   (error as { code?: unknown }).code === "P2002";
 
-/**
- * The delivery is written down before it is applied, and the unique key decides
- * a race: the loser of two concurrent deliveries answers without a second write
- * (AC-5).
- */
 const recordDelivery = async (event: ProviderEvent) => {
   try {
     return await prisma.paymentEvent.create({
@@ -47,11 +42,6 @@ const recordDelivery = async (event: ProviderEvent) => {
   }
 };
 
-/**
- * A verified callback: recorded, matched to one attempt, checked against the
- * stored order, then applied. Every branch answers 200 to the provider, because
- * a retry would only repeat the same outcome (AC-5).
- */
 export const handleWebhookEvent = async (
   event: ProviderEvent,
 ): Promise<WebhookOutcome> => {

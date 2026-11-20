@@ -10,11 +10,6 @@ type Props = {
   items: readonly SellerLineRow[];
 };
 
-/**
- * One flat table, one row per order line, six mockup columns. Below `sm` the
- * head hides and every row stacks into a card that names its own cells
- * (spec 0026, AC-9, AC-12).
- */
 const SalesTable = ({ items }: Props) => {
   const t = useTranslations("seller");
 

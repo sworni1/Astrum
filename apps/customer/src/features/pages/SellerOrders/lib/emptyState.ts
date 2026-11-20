@@ -1,4 +1,3 @@
-/** Which of the three empty states applies, or none of them. */
 export type SalesEmptyState = "none" | "noLines" | "noResults" | "emptyTab";
 
 export type SalesEmptyInput = {
@@ -9,12 +8,6 @@ export type SalesEmptyInput = {
   isValidating: boolean;
 };
 
-/**
- * The precedence is fixed: a read in flight claims nothing, then "no lines at
- * all" over the whole set (never the filtered `total`), then "nothing found",
- * then "this tab is empty". Every gate reads the settled query, never the raw
- * input (spec 0026, AC-11).
- */
 export const salesEmptyState = ({
   itemCount,
   allCount,
@@ -42,7 +35,6 @@ export type SalesEmptyCopy = {
   textKey: "states.emptyText" | "emptySearchText" | "emptyTabText";
 };
 
-/** The copy of each state; the "no lines at all" pair is reused, not duplicated. */
 export const SALES_EMPTY_COPY: Record<
   Exclude<SalesEmptyState, "none">,
   SalesEmptyCopy

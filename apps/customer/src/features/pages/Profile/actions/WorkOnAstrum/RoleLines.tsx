@@ -7,7 +7,6 @@ import type { StaffRole } from "@/common/types/user.types";
 
 type Props = { roles: StaffRole[] };
 
-/** The roles the account holds, each with the page it opens (AC-2, AC-12). */
 const RoleLines = ({ roles }: Props) => {
   const t = useTranslations("staff");
 

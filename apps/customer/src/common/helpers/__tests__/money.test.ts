@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { Currency } from "@/common/types/product.types";
 import { formatMoney, toCurrency } from "@/common/helpers/money";
 
-/** `ru` groups thousands and pads the sign with a non break space. */
 const NBSP = "\u00A0";
 
 describe("toCurrency", () => {

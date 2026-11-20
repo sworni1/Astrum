@@ -21,7 +21,7 @@ const ProductCard = memo<ProductCardProps>(function ProductCard({
   images,
   quantity,
   price,
-  // discount, // TODO: Implement discount display
+
   averageRating,
   reviewCount,
   currency,

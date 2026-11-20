@@ -1,8 +1,3 @@
-/**
- * Every class constant the checkout screen prints (spec 0024, AC-9 to AC-13).
- * Values are the mockup's: a 1080px wrapper, a 520/360 column pair, 14px cards,
- * 40px controls and 44px submit; no raw colour, only theme tokens.
- */
 
 export const CHECKOUT_WRAPPER =
   "mx-auto w-full max-w-[1080px] px-6 pt-12 pb-[72px]";

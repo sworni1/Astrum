@@ -7,7 +7,6 @@ export const SHOP_NAME_MAX_LENGTH = 60;
 const WHITESPACE_RUN = /\s+/gu;
 const FORBIDDEN_CHARACTER = /[\p{Cc}\p{Cf}]/u;
 
-/** NFC first, then trim, then collapse every whitespace run to one space (spec 0008, AC-6). */
 export const normalizeShopName = (value: string): string =>
   value.normalize("NFC").trim().replace(WHITESPACE_RUN, " ");
 

@@ -36,10 +36,6 @@ const prismaMock = prisma as unknown as {
   };
 };
 
-/**
- * A tiny stateful client: the counter lives beside the like rows, so a test
- * can prove the two agree after any sequence of presses (AC-4).
- */
 type Store = {
   exists: boolean;
   status: string;

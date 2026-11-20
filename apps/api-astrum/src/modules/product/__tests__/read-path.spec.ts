@@ -54,7 +54,6 @@ const prismaMock = prisma as unknown as {
   wishlistItem: { findMany: Mocked };
 };
 
-/** Every query the service issues, of any model, counts once. */
 const queryCount = (): number =>
   prismaMock.product.findMany.mock.calls.length +
   prismaMock.review.groupBy.mock.calls.length +
@@ -75,10 +74,6 @@ const page = (count: number) =>
     currency: "RUB",
   }));
 
-/**
- * A cursor keeps each test on its own cache key, because the stub store lives
- * for the whole file while the mocks reset per test.
- */
 const CURSOR_MISS = "cursor-miss-then-hit";
 const CURSOR_AGGREGATE = "cursor-aggregate";
 const CURSOR_MARKS = "cursor-marks";
@@ -168,7 +163,7 @@ describe("ProductService.getRecommendations", () => {
     const theirs = await service.getRecommendations(userOwner("user-2"), {}, CURSOR_ACCOUNT);
 
     expect(theirs.nextCursor).toBe(mine.nextCursor);
-    // The second call reads the same stored page: one product query in total.
+
     expect(prismaMock.product.findMany).toHaveBeenCalledTimes(1);
   });
 });

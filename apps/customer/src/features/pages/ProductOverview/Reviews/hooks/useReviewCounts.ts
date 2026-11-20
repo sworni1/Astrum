@@ -16,11 +16,6 @@ export type ReviewCounts = {
   setCommentCount: (reviewId: string, value: number) => void;
 };
 
-/**
- * The number a row prints is the stored one until this customer moves it, then
- * the answered value for the rest of the visit (spec 0014, AC-6, AC-12). One
- * map per number, keyed by review id, so a row from an appended page moves too.
- */
 export const useReviewCounts = (): ReviewCounts => {
   const [counts, setCounts] = useState<CountMaps>(NO_COUNTS);
 

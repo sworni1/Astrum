@@ -11,7 +11,6 @@ export type ActivePickupPoint = Prisma.PickupPointGetPayload<{
   select: typeof PICKUP_POINT_SELECT;
 }>;
 
-/** The collection points a customer may pick: active rows only, by name (AC-3). */
 export class PickupService {
   async getActivePoints(): Promise<ActivePickupPoint[]> {
     return prisma.pickupPoint.findMany({

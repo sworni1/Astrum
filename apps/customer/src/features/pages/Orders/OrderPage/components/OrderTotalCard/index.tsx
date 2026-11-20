@@ -12,12 +12,6 @@ type Props = {
   order: Order;
 };
 
-/**
- * The right column of the mockup: the paid total with its honest label, the one
- * note under it, the goods and delivery breakdown, and the receiving block below
- * a separator. No discount row and no savings line, because no order row can back
- * one (spec 0027, AC-5, AC-10).
- */
 const OrderTotalCard = ({ order }: Props) => {
   const t = useTranslations("orders");
   const locale = useLocale();

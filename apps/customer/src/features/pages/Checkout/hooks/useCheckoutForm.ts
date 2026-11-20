@@ -21,11 +21,6 @@ import { useCheckout } from "@/hooks/order/useCheckout";
 import { usePickupPoints } from "@/hooks/pickup/usePickupPoints";
 import { useShippingMethods } from "@/hooks/shipping/useShippingMethods";
 
-/**
- * The form, the two lists and the submit in one place (spec 0024, AC-8, AC-14,
- * AC-15). The pickup kind is derived from the chosen method, never held in state,
- * so a reload cannot pair a pickup method with a leftover address.
- */
 export const useCheckoutForm = (lines: ProductCartProps[]) => {
   const { handleCheckout } = useCheckout();
   const shipping = useShippingMethods();
@@ -34,8 +29,6 @@ export const useCheckoutForm = (lines: ProductCartProps[]) => {
   const t = useTranslations("cart");
   const validation = useTranslations("validation");
 
-  // The schema needs the delivery kind, which is only known from the chosen
-  // method after the form exists, so the resolver reads the latest value (AC-8).
   const isPickupRef = useRef(false);
 
   const form = useForm<CheckoutFormData>({

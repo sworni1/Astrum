@@ -1,8 +1,3 @@
-/**
- * The one shape a review takes on the wire, shared by the `201` of the write
- * route and by every row of the list, so the screen reads the same fields from
- * both (spec 0012, AC-11, AC-12).
- */
 export const reviewRowSelect = {
   id: true,
   rating: true,
@@ -45,16 +40,10 @@ export type PublicReview = {
   createdAt: Date;
 };
 
-/** Every rating key is present, zero filled, in the answer (AC-12). */
 export const RATING_KEYS = ["1", "2", "3", "4", "5"] as const;
 
 export type RatingDistribution = Record<string, number>;
 
-/**
- * No `userId`, no `orderItemId`, no `status` and no `updatedAt`: the screen uses
- * none of them and another customer's id is not the shop's to publish (AC-12).
- * The server never sends localized copy, so an empty nickname answers `null`.
- */
 export const serializeReview = (row: ReviewRow): PublicReview => {
   const authorName = row.User?.nickName?.trim();
 
@@ -73,11 +62,6 @@ export const serializeReview = (row: ReviewRow): PublicReview => {
   };
 };
 
-/**
- * One row of a comment thread. `userId` is read to decide `mine` and never
- * published, and a deleted row answers no text and no author at all
- * (spec 0014, AC-7, AC-10).
- */
 export const reviewCommentSelect = {
   id: true,
   body: true,
@@ -142,6 +126,5 @@ export const buildDistribution = (
   return distribution;
 };
 
-/** Two decimals, which is what the summary and the header print (AC-12). */
 export const roundAverageRating = (average: number | null): number =>
   Math.round(Number(average ?? 0) * 100) / 100;

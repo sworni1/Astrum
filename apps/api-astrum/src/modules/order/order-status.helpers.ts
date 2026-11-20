@@ -94,7 +94,6 @@ export const recomputeOrderStatus = async (
   return status;
 };
 
-/** The statuses whose units come back to the shelf when an order closes (AC-8). */
 export const STOCK_RETURN_STATUSES: readonly OrderItemStatus[] = [
   "PENDING",
   "CONFIRMED",
@@ -102,13 +101,6 @@ export const STOCK_RETURN_STATUSES: readonly OrderItemStatus[] = [
 
 export type OrderWithLines = Order & { OrderItem: OrderItem[] };
 
-/**
- * The customer cancellation, callable by any caller that already holds an open
- * transaction and the loaded order: its PENDING or CONFIRMED lines become
- * CANCELLED, the stock comes back exactly once, and the order status is
- * recomputed to CANCELED. The payment status is left to the caller, because the
- * expiry close and the customer cancel record it differently (AC-8, AC-11).
- */
 export const closeOrder = async (
   tx: Prisma.TransactionClient,
   order: OrderWithLines,

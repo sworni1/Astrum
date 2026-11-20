@@ -20,12 +20,6 @@ import PointOrderCard from "./PointOrderCard";
 
 type Props = { isActive: boolean };
 
-/**
- * The parcels waiting at this point: the heading with its refresh control, one
- * card per order, `Show more`, and the four states of the read. A successful
- * move drops every accumulated page, re-reads the first one and moves the focus
- * to the heading, so a closed row can never linger (spec 0018, AC-10 to AC-12).
- */
 const PointQueue = ({ isActive }: Props) => {
   const t = useTranslations("staff");
   const {
@@ -42,9 +36,6 @@ const PointQueue = ({ isActive }: Props) => {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [announcement, setAnnouncement] = useState({ text: "", seq: 0 });
 
-  // The dialog hands focus back to its trigger, which the closed row takes with
-  // it, so the heading is focused after the commit that removes the row. The
-  // sequence number makes a repeated message focus the heading again.
   useEffect(() => {
     if (announcement.seq > 0) {
       headingRef.current?.focus();

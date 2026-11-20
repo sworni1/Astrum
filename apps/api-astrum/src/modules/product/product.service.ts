@@ -29,10 +29,6 @@ import type { CreateProductDto } from "./dto/create-product.dto";
 
 type ProductRating = { averageRating: number; reviewCount: number };
 
-/**
- * The rating of every product on one page, from the reviews a customer may read.
- * One grouped query for the whole page, never one per card (spec 0021, AC-3).
- */
 const readPageRatings = async (
   productIds: Product["id"][],
 ): Promise<Map<Product["id"], ProductRating>> => {
@@ -59,12 +55,6 @@ const readPageRatings = async (
 };
 
 export class ProductService {
-  /**
-   * The shared row comes from Redis, the caller's own marks and review state
-   * stay live, so two readers share one cached product and each sees its own
-   * wishlist, cart and review state (spec 0022, AC-2, AC-3). A visitor with no
-   * identity owns no mark, so the shared row is all it reads (spec 0028, AC-6).
-   */
   async getProduct(owner: Owner | null, productId: Product["id"]) {
     const version = await readVersion(cacheKeys.productVersion(productId));
 
@@ -120,7 +110,6 @@ export class ProductService {
       load: async () => await this.loadCataloguePage(filters, cursor, limit),
     });
 
-    // Two queries for the page, merged after the cached payload is read (AC-4).
     const marks = await readPageMarks(
       owner,
       page.products.map((product) => product.id),
@@ -157,13 +146,11 @@ export class ProductService {
       data: { ...dto, businessId: business.id },
     });
 
-    // A new row can appear on any list, so every list key goes cold (AC-7 e).
     await invalidateLists();
 
     return product;
   }
 
-  /** Only a fetched row reaches the cache: a missing product writes no key (AC-2). */
   private async loadPublicProduct(productId: Product["id"]) {
     const product = await prisma.product.findUnique({
       where: {
@@ -186,7 +173,6 @@ export class ProductService {
     return product;
   }
 
-  /** The shared half of a catalogue page: two queries for the whole page (AC-4). */
   private async loadCataloguePage(
     filters?: { category?: ProductCategory; search_query?: string },
     cursor?: string,

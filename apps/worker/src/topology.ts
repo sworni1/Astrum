@@ -5,7 +5,6 @@ export const CONFIRMATION_ROUTING_KEY = "account.confirmation.requested";
 export const CONFIRMATION_QUEUE = "mail.confirmation";
 export const DEAD_LETTER_QUEUE = "mail.confirmation.dead";
 
-/** 60, 300 and 900 seconds, the three delays the spec fixes. */
 export const RETRY_DELAYS_MS = [60_000, 300_000, 900_000] as const;
 
 export const MAX_ATTEMPTS = RETRY_DELAYS_MS.length + 1;
@@ -15,12 +14,6 @@ export const ATTEMPT_HEADER = "x-attempt";
 export const retryQueueName = (attempt: number): string =>
   `mail.confirmation.wait.${attempt}`;
 
-/**
- * The event exchange and the main queue are declared by both sides (auth
- * publishes, the worker consumes), so either can start first. A waiting queue
- * carries no consumer: its message returns to the main queue once the ttl
- * expires.
- */
 export const declareTopology = async (channel: Channel): Promise<void> => {
   await channel.assertExchange(EVENTS_EXCHANGE, "direct", { durable: true });
 
