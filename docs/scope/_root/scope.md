@@ -35,6 +35,7 @@ _These are recommendations to keep the build orderly, not requirements. Skip any
 | 22  | Real rating on the product card          | Slice 4  | in-progress |
 | 23  | Guest cart, wishlist and recommendations | Slice 11 | done        |
 | 24  | One database client from the package     | Slice 12 | in-progress |
+| 25  | Issue the order after delivery           | Slice 13 | done        |
 
 ## Slice 1: the order thread
 
@@ -446,6 +447,29 @@ The repository keeps one Prisma schema and its generated client in four copies, 
 - [ ] Verify it: `/check verify one database client from the package`
 - [ ] Test it: `/test one database client from the package`
 spec [0030](../../specs/_root/0030-one-database-client-from-the-package/index.md)
+
+## Slice 13: issuing after delivery
+
+The last state today is `DELIVERED`, and the single control that writes it belongs to the point worker or the courier. The buyer never appears in the machine: nothing records that the parcel left the counter, so an order reads finished before anyone has taken it. This slice gives delivery a timer of its own and makes issuing the only human end of the flow. The delivery date the buyer picks no longer decides anything, because this project pretends the parcel is on its way after the same wait a confirmed order already takes to become sent.
+
+### 25. Issue the order after delivery · done · GA
+
+`OrderStatus` holds no state after `DELIVERED`, while `DELIVERED` is written by the point control and the courier control, so the parcel is marked finished the moment staff hand it over, and the review gate already treats that as the buyer's own purchase. Delivery has to happen by itself first, after the same wait the shipping pass already uses for `CONFIRMED` to `SHIPPED`, and only then may staff issue the order, so `ISSUED` («выдано») becomes the real end of the flow and the review gate moves onto it.
+**Done when:** `ISSUED` exists in `OrderStatus` and `OrderItemStatus` in the one schema (spec 0030 left a single copy) with its migration, so an order ranks after `DELIVERED` and reads `ISSUED` only when every active line is issued; the shipping pass moves a `SHIPPED` order to `DELIVERED` after the same `ORDER_SHIPPING_DELAY_MS` wait it already uses for `CONFIRMED` to `SHIPPED` and reads no delivery date at all, so no human writes `DELIVERED` any more; the point control and the courier control are refused with the same `409` while the order is not `DELIVERED`, then write `ISSUED` with one server time, and `ALREADY_HANDED_OVER` still answers an order already issued; the review write and the product screen dialog require `ISSUED` instead of `DELIVERED`; the counter may cancel a parcel that has arrived (`DELIVERED`) and `ISSUED` blocks a cancel and returns no stock; and both catalogs name the state («Выдано» and Issued), the order screen rail carries five steps, the orders tabs count an issued order under delivered, and the seller and staff screens print it wherever they print a status today.
+- [x] Design it (spec): `/architect issue the order after delivery` — 2026-11-20: spec 0031, 13 acceptance criteria
+- [x] Build it: `/develop issue the order after delivery` — 2026-11-20
+   - [x] Schema and ranking: the two enum values, `Order.shippedAt`, the history backfill and the priority table (AC-1, AC-2, AC-12)
+   - [x] The automatic arrival: the second stage of the shipping pass writes `DELIVERED` from `shippedAt` (AC-2, AC-13)
+   - [x] The counter: handover writes `ISSUED`, both queues read arrived parcels, the cancel accepts `DELIVERED`, the refusal code is renamed (AC-3, AC-4, AC-5, AC-11)
+   - [x] Reads and money: the delivered bucket, the spent tile, the seller counts and revenue, the review gate (AC-6, AC-8, AC-9)
+   - [x] Storefront: both catalogues, the five step rail and its tones, the line date, the receiving block (AC-7, AC-10)
+- [x] Verify it: `/check verify issue the order after delivery` — 2026-11-20, PASS on the live stack: all 13 AC proved
+   (the pass walked five orders from `CONFIRMED` to `DELIVERED` with no press, the counter issued one, the refusals `ORDER_NOT_DELIVERED` and `ALREADY_HANDED_OVER` answered, the review gate moved to `ISSUED`, the delivered tab and the seller revenue folded both states, the rail and the three receiving moments read on the storefront, and a second gateway proved the replica race); the arrival and issue counts in the step read differently from the spec text because two orders were issued after the migration, and the point toast has no reachable state because the queue lists arrived parcels only (`docs/specs/_root/0031-issue-the-order-after-delivery/verify.md`, Verdict, Premise corrections and Run notes)
+- [x] Test it: the dedicated `/test` pass was waived when the owner closed the feature; the coverage that exists is counted on 2026-11-20: 147 tests in the 8 gateway suites the feature touched (`order-shipping`, `order-status.helpers`, `order.service`, `order-list-query`, `seller-order-query`, `point-order.service`, `courier-order.service`, `reviews.service` and `review-state`), 471 storefront tests across 88 files including the rail, the receiving block, the line date, the item status helper and both refusal maps, and the whole `pnpm quality-gate` green (`check-types` 0, `lint` 0 with 13 warnings, api 495 passed and 20 skipped). The 13 criteria themselves were proved live in `/check verify`, `docs/specs/_root/0031-issue-the-order-after-delivery/verify.md`
+- [x] Review it: the fresh model pass was waived when the owner closed the feature; no independent review ran, the self read of the diff found nothing left open, and the two gaps this feature carries are written in the spec's verify.md (Premise corrections, Run notes)
+- [x] Document it: the prose pass was waived when the owner closed the feature; the spec, its rationale and its verify.md carry the decision, the criteria and the evidence, and the working tree is uncommitted, so the commit message is still owed
+spec [0031](../../specs/_root/0031-issue-the-order-after-delivery/index.md)
+  code in `packages/Astrum-db/prisma` (`schema.prisma`, `migrations/20261120120034_issue_the_order_after_delivery`), `apps/api-astrum/src/modules/order` (`order-status.helpers.ts`, `order-shipping.ts`, `order.service.ts`, `order-list-query.ts`, `seller-order.service.ts`, `seller-order-query.ts`), `apps/api-astrum/src/modules/staff` (`staff-order.helpers.ts`, `point-order.service.ts`, `courier-order.service.ts`, `constants/staff.constants.ts`), `apps/api-astrum/src/modules/reviews` (`reviews.service.ts`, `review-state.ts`), `apps/customer/src/features/pages/Orders/`, `apps/customer/src/features/pages/SellerOrders/lib/status.ts`, `apps/customer/src/common/helpers/itemStatus.ts`, `apps/customer/src/common/types/order.types.ts`, `apps/customer/src/features/pages/{PointWorkspace,CourierWorkspace}/lib/refusals.ts`, `apps/customer/messages`
 
 ## Fixed
 
