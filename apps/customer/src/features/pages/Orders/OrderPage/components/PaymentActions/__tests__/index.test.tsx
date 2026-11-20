@@ -55,6 +55,7 @@ const order = (overrides: Partial<Order> = {}): Order => ({
   pickupPointName: null,
   pickupPointAddress: null,
   handedOverAt: null,
+  shippedAt: null,
   paidAt: null,
   deliveryDate: new Date("2026-11-05T12:00:00.000Z"),
   orderItems: [

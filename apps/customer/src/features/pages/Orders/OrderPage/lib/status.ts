@@ -10,6 +10,7 @@ export type StatusLabelKey =
   | "confirmed"
   | "shipped"
   | "delivered"
+  | "issued"
   | "canceled";
 
 /** One status to catalog key table, so a label is written once. */
@@ -18,6 +19,7 @@ export const STATUS_KEYS: Record<OrderStatus, StatusLabelKey> = {
   [OrderStatus.CONFIRMED]: "confirmed",
   [OrderStatus.SHIPPED]: "shipped",
   [OrderStatus.DELIVERED]: "delivered",
+  [OrderStatus.ISSUED]: "issued",
   [OrderStatus.CANCELED]: "canceled",
 };
 
@@ -34,15 +36,17 @@ export const canCancel = (status: OrderStatus): boolean =>
   CANCELLABLE_STATUSES.includes(status);
 
 /**
- * The pill tone of every order status: a delivered parcel reads success, a
- * canceled order reads destructive, the steps in between stay neutral, so no
- * status lands without a tone (spec 0027, AC-8).
+ * The pill tone of every order status: a parcel the buyer holds reads success,
+ * one that only arrived stays neutral, a canceled order reads destructive, and
+ * the steps in between stay neutral too, so no status lands without a tone
+ * (spec 0027, AC-8; spec 0031, AC-7).
  */
 export const STATUS_TONES: Record<OrderStatus, PillTone> = {
   [OrderStatus.PENDING]: "neutral",
   [OrderStatus.CONFIRMED]: "neutral",
   [OrderStatus.SHIPPED]: "neutral",
-  [OrderStatus.DELIVERED]: "success",
+  [OrderStatus.DELIVERED]: "neutral",
+  [OrderStatus.ISSUED]: "success",
   [OrderStatus.CANCELED]: "destructive",
 };
 
@@ -54,44 +58,42 @@ export type DeliveryStep = {
 
 /** The four steps a parcel walks, in order. A cancelled order shows none of them. */
 export const DELIVERY_STEPS: readonly DeliveryStep[] = [
-  { status: OrderStatus.PENDING, key: "pending", icon: Check },
   { status: OrderStatus.CONFIRMED, key: "confirmed", icon: Check },
   { status: OrderStatus.SHIPPED, key: "shipped", icon: Package },
   { status: OrderStatus.DELIVERED, key: "delivered", icon: Truck },
+  { status: OrderStatus.ISSUED, key: "issued", icon: Check },
 ];
 
 export const DELIVERY_PROGRESS: Record<OrderStatus, number> = {
   [OrderStatus.PENDING]: 0,
-  [OrderStatus.CONFIRMED]: 33.33,
-  [OrderStatus.SHIPPED]: 66.67,
-  [OrderStatus.DELIVERED]: 100,
+  [OrderStatus.CONFIRMED]: 25,
+  [OrderStatus.SHIPPED]: 50,
+  [OrderStatus.DELIVERED]: 75,
+  [OrderStatus.ISSUED]: 100,
   [OrderStatus.CANCELED]: 0,
 };
 
 /**
- * How far the parcel got: -1 means no step is reached, which covers a cancelled
- * order and a status this storefront does not know.
+ * How far the parcel got: -1 means no step is reached, which a cancelled order
+ * and a still unconfirmed one carry. The rail starts at the confirmed step, so
+ * the pending status has no label of its own (spec 0031, AC-7).
+ * The table names every member, so a status added later is a type error instead
+ * of a silent -1.
  */
-export const statusStepIndex = (status: OrderStatus): number => {
-  switch (status) {
-    case OrderStatus.PENDING:
-      return 0;
-    case OrderStatus.CONFIRMED:
-      return 1;
-    case OrderStatus.SHIPPED:
-      return 2;
-    case OrderStatus.DELIVERED:
-      return 3;
-    default:
-      return -1;
-  }
+export const statusStepIndex: Record<OrderStatus, number> = {
+  [OrderStatus.PENDING]: -1,
+  [OrderStatus.CONFIRMED]: 0,
+  [OrderStatus.SHIPPED]: 1,
+  [OrderStatus.DELIVERED]: 2,
+  [OrderStatus.ISSUED]: 3,
+  [OrderStatus.CANCELED]: -1,
 };
 
 export type DeliveryStepState = DeliveryStep & { active: boolean };
 
 /** The steps with the reached flag a progress bar reads. */
 export const deliverySteps = (status: OrderStatus): DeliveryStepState[] => {
-  const currentIndex = statusStepIndex(status);
+  const currentIndex = statusStepIndex[status] ?? -1;
 
   return DELIVERY_STEPS.map((step, index) => ({
     ...step,

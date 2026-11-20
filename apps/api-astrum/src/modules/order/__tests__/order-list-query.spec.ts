@@ -88,7 +88,14 @@ describe("orderListWhere", () => {
   it("кладёт статус в один AND, а не рядом с userId (AC-3)", () => {
     expect(orderListWhere("user-1", { status: "DELIVERED" })).toEqual({
       userId: "user-1",
-      AND: [{ status: "DELIVERED" }],
+      AND: [{ status: { in: ["DELIVERED", "ISSUED"] } }],
+    });
+  });
+
+  it("оставляет отменённый фильтр точным значением (AC-3)", () => {
+    expect(orderListWhere("user-1", { status: "CANCELED" })).toEqual({
+      userId: "user-1",
+      AND: [{ status: "CANCELED" }],
     });
   });
 

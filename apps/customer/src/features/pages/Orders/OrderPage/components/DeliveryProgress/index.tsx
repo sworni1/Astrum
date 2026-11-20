@@ -11,8 +11,11 @@ type Props = {
 
 /**
  * The receiving rail: one 6px track, one fill, and the four step labels under
- * it, drawn once for both breakpoints (spec 0027, AC-5). A cancelled order never
- * reaches this component, and a status it does not know fills nothing.
+ * it, drawn once for both breakpoints (spec 0027, AC-5; spec 0031, AC-7). Each
+ * label owns a quarter of the width, so the longest Russian word wraps inside
+ * its own column instead of running into the next one. The pending status has no
+ * label here: its fill stays empty. A cancelled order never reaches this
+ * component, and a status it does not know fills nothing.
  */
 const DeliveryProgress = ({ status }: Props) => {
   const t = useTranslations('orders');
@@ -29,7 +32,7 @@ const DeliveryProgress = ({ status }: Props) => {
           style={{ width: `${DELIVERY_PROGRESS[status] ?? 0}%` }}
         />
       </div>
-      <div className='mt-2.5 flex justify-between text-[12.5px]'>
+      <div className='mt-2.5 grid grid-cols-4 gap-0.5 text-center text-[11px] leading-tight sm:text-xs'>
         {steps.map((step) => (
           <span
             key={step.key}

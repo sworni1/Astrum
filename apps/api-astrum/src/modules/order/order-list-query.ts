@@ -119,7 +119,11 @@ export const orderListWhere = (
 ): Prisma.OrderWhereInput => {
   const clauses: Prisma.OrderWhereInput[] = [];
 
-  if (query.status !== undefined) {
+  if (query.status === "DELIVERED") {
+    // The buyer reads one bucket for an arrived parcel, issued or not (spec
+    // 0031, AC-8).
+    clauses.push({ status: { in: ["DELIVERED", "ISSUED"] } });
+  } else if (query.status !== undefined) {
     clauses.push({ status: query.status });
   }
 

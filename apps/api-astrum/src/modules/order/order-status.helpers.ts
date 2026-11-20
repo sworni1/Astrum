@@ -17,6 +17,7 @@ const ACTIVE_LINE_STATUSES = [
   "CONFIRMED",
   "SHIPPED",
   "DELIVERED",
+  "ISSUED",
 ] as const;
 
 type ActiveLineStatus = (typeof ACTIVE_LINE_STATUSES)[number];
@@ -26,6 +27,7 @@ const ORDER_STATUS_BY_LINE_STATUS: Record<ActiveLineStatus, OrderStatus> = {
   CONFIRMED: "CONFIRMED",
   SHIPPED: "SHIPPED",
   DELIVERED: "DELIVERED",
+  ISSUED: "ISSUED",
 };
 
 const ORDER_STATUS_PRIORITY: Record<OrderStatus, number> = {
@@ -33,7 +35,8 @@ const ORDER_STATUS_PRIORITY: Record<OrderStatus, number> = {
   CONFIRMED: 1,
   SHIPPED: 2,
   DELIVERED: 3,
-  CANCELED: 4,
+  ISSUED: 4,
+  CANCELED: 5,
 };
 
 const isActiveLineStatus = (

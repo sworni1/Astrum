@@ -35,14 +35,14 @@ describe("DeliveryProgress", () => {
   const rail = (): HTMLElement | null =>
     container.querySelector<HTMLElement>("[data-testid='order-progress']");
 
-  it("renders the four step labels once, not one copy per breakpoint", async () => {
+  it("renders the four step labels once, not one copy per breakpoint (AC-7)", async () => {
     await render(OrderStatus.SHIPPED);
 
     expect(labels()).toEqual([
-      "status.pending",
       "status.confirmed",
       "status.shipped",
       "status.delivered",
+      "status.issued",
     ]);
   });
 
@@ -55,7 +55,19 @@ describe("DeliveryProgress", () => {
       ),
     ].filter((span) => span.className.includes("text-foreground"));
 
-    expect(reached).toHaveLength(2);
+    expect(reached).toHaveLength(1);
+  });
+
+  it("paints no step for a pending order", async () => {
+    await render(OrderStatus.PENDING);
+
+    const reached = [
+      ...container.querySelectorAll<HTMLElement>(
+        "[data-testid='order-progress-step']",
+      ),
+    ].filter((span) => span.className.includes("text-foreground"));
+
+    expect(reached).toHaveLength(0);
   });
 
   it("paints no step for a cancelled order", async () => {
@@ -73,9 +85,10 @@ describe("DeliveryProgress", () => {
 
   it.each([
     [OrderStatus.PENDING, "0%"],
-    [OrderStatus.CONFIRMED, "33.33%"],
-    [OrderStatus.SHIPPED, "66.67%"],
-    [OrderStatus.DELIVERED, "100%"],
+    [OrderStatus.CONFIRMED, "25%"],
+    [OrderStatus.SHIPPED, "50%"],
+    [OrderStatus.DELIVERED, "75%"],
+    [OrderStatus.ISSUED, "100%"],
     [OrderStatus.CANCELED, "0%"],
   ])("shows %s progress", async (status, expectedWidth) => {
     await render(status);

@@ -12,8 +12,9 @@ import {
 } from "@/features/pages/SellerOrders/lib/status";
 
 describe("badgeToneOf", () => {
-  it("reads delivered as good and the two lost sales as canceled (AC-9)", () => {
-    expect(badgeToneOf(OrderItemStatus.DELIVERED)).toBe("success");
+  it("reads an issued line as good and the two lost sales as canceled (AC-9, spec 0031 AC-7)", () => {
+    expect(badgeToneOf(OrderItemStatus.ISSUED)).toBe("success");
+    expect(badgeToneOf(OrderItemStatus.DELIVERED)).toBe("secondary");
     expect(badgeToneOf(OrderItemStatus.CANCELLED)).toBe("destructive");
     expect(badgeToneOf(OrderItemStatus.OUT_OF_STOCK)).toBe("destructive");
   });

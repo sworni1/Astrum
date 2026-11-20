@@ -45,6 +45,7 @@ type OrderSeed = {
   paymentStatus: PaymentStatus;
   paymentMethod: PaymentMethod;
   handedOverAt: Date | null;
+  shippedAt?: Date | null;
   grandTotal: string;
   lines: LineSeed[];
 };
@@ -54,14 +55,15 @@ const orderSeed = (over: Partial<OrderSeed> = {}): OrderSeed => ({
   userId: "buyer-1",
   pickupPointId: "pp-1",
   createdAt: new Date("2026-11-14T08:30:00.000Z"),
-  status: "SHIPPED",
+  status: "DELIVERED",
   paymentStatus: "PENDING",
   paymentMethod: "CASH",
   handedOverAt: null,
+  shippedAt: null,
   grandTotal: "119.98",
   lines: [
-    { id: "line-1", productId: "product-1", status: "SHIPPED", quantity: 2, price: "19.99" },
-    { id: "line-2", productId: "product-2", status: "SHIPPED", quantity: 1, price: "80.00" },
+    { id: "line-1", productId: "product-1", status: "DELIVERED", quantity: 2, price: "19.99" },
+    { id: "line-2", productId: "product-2", status: "DELIVERED", quantity: 1, price: "80.00" },
   ],
   ...over,
 });
@@ -135,13 +137,20 @@ const createTx = (options: { order?: OrderSeed | null; pointActive?: boolean }) 
         },
       ),
       findUniqueOrThrow: jest.fn(async () => row(false)),
-      updateMany: jest.fn(async ({ data }: { data: { handedOverAt?: Date } }) => {
-        if (seed !== null && data.handedOverAt !== undefined) {
-          seed.handedOverAt = data.handedOverAt;
-        }
+      updateMany: jest.fn(
+        async ({
+          data,
+        }: {
+          where?: Record<string, unknown>;
+          data: { handedOverAt?: Date };
+        }) => {
+          if (seed !== null && data.handedOverAt !== undefined) {
+            seed.handedOverAt = data.handedOverAt;
+          }
 
-        return { count: 1 };
-      }),
+          return { count: 1 };
+        },
+      ),
       update: orderUpdate,
     },
     orderItem: {
@@ -211,16 +220,16 @@ describe("PointOrderService", () => {
   });
 
   describe("listPointOrders (AC-1 to AC-3)", () => {
-    it("reads only the caller's point and only shipped orders, oldest first", async () => {
+    it("reads only the caller's point and only arrived orders, oldest first (AC-4)", async () => {
       prismaMock.order.count.mockResolvedValue(1);
 
       await service.listPointOrders("pp-1", undefined, undefined);
 
       expect(prismaMock.order.count).toHaveBeenCalledWith({
-        where: { pickupPointId: "pp-1", status: "SHIPPED" },
+        where: { pickupPointId: "pp-1", status: "DELIVERED" },
       });
       expect(prismaMock.order.findMany).toHaveBeenCalledWith({
-        where: { pickupPointId: "pp-1", status: "SHIPPED" },
+        where: { pickupPointId: "pp-1", status: "DELIVERED" },
         orderBy: [{ createdAt: "asc" }, { id: "asc" }],
         skip: 0,
         take: 20,
@@ -301,7 +310,7 @@ describe("PointOrderService", () => {
   });
 
   describe("handOver (AC-4, AC-5)", () => {
-    it("delivers every shipped line with one timestamp and stamps the order", async () => {
+    it("issues every arrived line and stamps the order once (AC-3)", async () => {
       const seed = orderSeed();
       const tx = createTx({ order: seed });
       wireTransaction(tx);
@@ -309,16 +318,31 @@ describe("PointOrderService", () => {
       const { order } = await service.handOver("order-1", "worker-1", "pp-1");
 
       const update = tx.orderItem.updateMany.mock.calls[0][0];
-      expect(update.data.status).toBe("DELIVERED");
-      expect(update.data.receiptDate).toBeInstanceOf(Date);
+      expect(update.data).toEqual({ status: "ISSUED" });
       expect(update.where.id.in).toEqual(["line-1", "line-2"]);
-      expect(seed.handedOverAt).toBe(update.data.receiptDate);
-      expect(seed.status).toBe("DELIVERED");
-      expect(order.status).toBe("DELIVERED");
+      const stamp = tx.order.updateMany.mock.calls[0][0];
+      expect(stamp.where).toEqual({ id: "order-1", handedOverAt: null });
+      expect(stamp.data.handedOverAt).toBeInstanceOf(Date);
+      expect(seed.handedOverAt).toBe(stamp.data.handedOverAt);
+      expect(seed.status).toBe("ISSUED");
+      expect(order.status).toBe("ISSUED");
       expect(order.orderItems.map((line) => line.status)).toEqual([
-        "DELIVERED",
-        "DELIVERED",
+        "ISSUED",
+        "ISSUED",
       ]);
+    });
+
+    it("keeps the arrival date off the handover, because receiptDate means arrival (AC-3)", async () => {
+      const seed = orderSeed();
+      const tx = createTx({ order: seed });
+      wireTransaction(tx);
+
+      await service.handOver("order-1", "worker-1", "pp-1");
+
+      expect(seed.lines.every((line) => line.status === "ISSUED")).toBe(true);
+      expect(tx.orderItem.updateMany.mock.calls[0][0].data).not.toHaveProperty(
+        "receiptDate",
+      );
     });
 
     it("logs the handover with the count and the code (AC-5)", async () => {
@@ -333,7 +357,7 @@ describe("PointOrderService", () => {
           userId: "worker-1",
           pointId: "pp-1",
           orderId: "order-1",
-          deliveredLineCount: 2,
+          issuedLineCount: 2,
           resultCode: "OK",
         }),
       );
@@ -360,25 +384,32 @@ describe("PointOrderService", () => {
         404,
         "ORDER_NOT_FOUND",
       );
-      expect(gone.status).toBe("SHIPPED");
+      expect(gone.status).toBe("DELIVERED");
       expect(other.orderItem.updateMany).not.toHaveBeenCalled();
     });
 
-    it("refuses an order that is not shipped yet (AC-4)", async () => {
-      const tx = createTx({ order: orderSeed({ status: "CONFIRMED" }) });
+    it("refuses an order that has not arrived yet (AC-4)", async () => {
+      const tx = createTx({
+        order: orderSeed({
+          status: "SHIPPED",
+          lines: [
+            { id: "line-1", productId: "product-1", status: "SHIPPED", quantity: 1, price: "10.00" },
+          ],
+        }),
+      });
       wireTransaction(tx);
 
       await expectAppError(
         service.handOver("order-1", "worker-1", "pp-1"),
         409,
-        "ORDER_NOT_SHIPPED",
+        "ORDER_NOT_DELIVERED",
       );
       expect(tx.orderItem.updateMany).not.toHaveBeenCalled();
     });
 
     it("refuses an order that is already closed (AC-4)", async () => {
       const tx = createTx({
-        order: orderSeed({ status: "DELIVERED", handedOverAt: new Date() }),
+        order: orderSeed({ status: "ISSUED", handedOverAt: new Date() }),
       });
       wireTransaction(tx);
 
@@ -416,18 +447,18 @@ describe("PointOrderService", () => {
         userId: "worker-1",
         pointId: "pp-1",
         orderId: "order-1",
-        resultCode: "ORDER_NOT_SHIPPED",
+        resultCode: "ORDER_NOT_DELIVERED",
       });
-      expect(line).not.toHaveProperty("deliveredLineCount");
+      expect(line).not.toHaveProperty("issuedLineCount");
     });
   });
 
   describe("cancelOrder (AC-6 to AC-9)", () => {
-    it("cancels the active lines, returns their stock once and leaves a delivered line", async () => {
+    it("cancels an arrived line and leaves an issued one alone (AC-5)", async () => {
       const seed = orderSeed({
         lines: [
           { id: "line-1", productId: "product-1", status: "DELIVERED", quantity: 1, price: "10.00" },
-          { id: "line-2", productId: "product-2", status: "SHIPPED", quantity: 3, price: "20.00" },
+          { id: "line-2", productId: "product-2", status: "ISSUED", quantity: 3, price: "20.00" },
         ],
       });
       const tx = createTx({ order: seed });
@@ -436,16 +467,16 @@ describe("PointOrderService", () => {
       const { order } = await service.cancelOrder("order-1", "worker-1", "pp-1");
 
       const update = tx.orderItem.updateMany.mock.calls[0][0];
-      expect(update.where.id.in).toEqual(["line-2"]);
+      expect(update.where.id.in).toEqual(["line-1"]);
       expect(update.data.status).toBe("CANCELLED");
       expect(tx.product.updateMany).toHaveBeenCalledTimes(1);
       expect(tx.product.updateMany).toHaveBeenCalledWith({
-        where: { id: "product-2" },
-        data: { quantity: { increment: 3 }, isOutOfStock: false },
+        where: { id: "product-1" },
+        data: { quantity: { increment: 1 }, isOutOfStock: false },
       });
-      expect(order.status).toBe("DELIVERED");
-      expect(seed.lines[0].status).toBe("DELIVERED");
-      expect(seed.lines[1].status).toBe("CANCELLED");
+      expect(order.status).toBe("ISSUED");
+      expect(seed.lines[0].status).toBe("CANCELLED");
+      expect(seed.lines[1].status).toBe("ISSUED");
     });
 
     it("expires the open provider session before the transaction opens (AC-8)", async () => {
@@ -476,10 +507,10 @@ describe("PointOrderService", () => {
       expect(tx.orderItem.updateMany).not.toHaveBeenCalled();
     });
 
-    it("answers NOTHING_TO_CANCEL for a fully delivered order before the shipping claim (AC-7)", async () => {
+    it("answers NOTHING_TO_CANCEL for an issued order (AC-5)", async () => {
       const tx = createTx({
-        order: orderSeed({ status: "DELIVERED", handedOverAt: new Date(), lines: [
-          { id: "line-1", productId: "product-1", status: "DELIVERED", quantity: 1, price: "10.00" },
+        order: orderSeed({ status: "ISSUED", handedOverAt: new Date(), lines: [
+          { id: "line-1", productId: "product-1", status: "ISSUED", quantity: 1, price: "10.00" },
         ] }),
       });
       wireTransaction(tx);
@@ -491,14 +522,21 @@ describe("PointOrderService", () => {
       );
     });
 
-    it("refuses an order the shipping pass has not marked sent yet (AC-6)", async () => {
-      const tx = createTx({ order: orderSeed({ status: "CONFIRMED" }) });
+    it("refuses an order that has not arrived yet (AC-5)", async () => {
+      const tx = createTx({
+        order: orderSeed({
+          status: "SHIPPED",
+          lines: [
+            { id: "line-1", productId: "product-1", status: "SHIPPED", quantity: 1, price: "10.00" },
+          ],
+        }),
+      });
       wireTransaction(tx);
 
       await expectAppError(
         service.cancelOrder("order-1", "worker-1", "pp-1"),
         409,
-        "ORDER_NOT_SHIPPED",
+        "ORDER_NOT_DELIVERED",
       );
       expect(tx.product.updateMany).not.toHaveBeenCalled();
     });

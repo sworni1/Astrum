@@ -121,19 +121,24 @@ const countOf = (
     .filter((row) => statuses.includes(row.status))
     .reduce((total, row) => total + row.count, 0);
 
+/** A line the buyer took, whether it left the counter or not (spec 0031, AC-9). */
+const SOLD_LINE_STATUSES = ["DELIVERED", "ISSUED"] as const;
+
 /** The counts describe every line of the seller, never the filtered page (AC-4). */
 const toCounts = (rows: SellerAggregateRow[]): SellerLineCounts => ({
   all: rows.reduce((total, row) => total + row.count, 0),
-  delivered: countOf(rows, ["DELIVERED"]),
+  delivered: countOf(rows, SOLD_LINE_STATUSES),
   canceled: countOf(rows, CANCELED_LINE_STATUSES),
 });
 
-/** Revenue and units come from the delivered lines only, per currency (AC-5). */
+/** Revenue and units come from the sold lines only, per currency (AC-5, spec 0031 AC-9). */
 const toStats = (rows: SellerAggregateRow[]): SellerSalesStats => {
-  const delivered = rows.filter((row) => row.status === "DELIVERED");
+  const sold = rows.filter((row) =>
+    SOLD_LINE_STATUSES.some((status) => status === row.status),
+  );
   const byCurrency = new Map<Currency, number>();
 
-  for (const row of delivered) {
+  for (const row of sold) {
     byCurrency.set(
       row.currency,
       (byCurrency.get(row.currency) ?? 0) + Number(row.revenue),
@@ -146,7 +151,7 @@ const toStats = (rows: SellerAggregateRow[]): SellerSalesStats => {
 
   return {
     revenue,
-    units: delivered.reduce((total, row) => total + Number(row.units), 0),
+    units: sold.reduce((total, row) => total + Number(row.units), 0),
   };
 };
 

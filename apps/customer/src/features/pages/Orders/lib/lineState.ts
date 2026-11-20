@@ -13,6 +13,7 @@ export type LineStateLabelKey =
   | "itemStatus.cancelled"
   | "itemStatus.shipped"
   | "itemStatus.delivered"
+  | "itemStatus.issued"
   | "itemStatus.returned"
   | "itemStatus.backordered"
   | "itemStatus.replaced";
@@ -47,6 +48,10 @@ export const LINE_STATES: Record<OrderItemStatus, LineState> = {
   },
   [OrderItemStatus.DELIVERED]: {
     labelKey: "itemStatus.delivered",
+    dot: DOT_RECEIVED,
+  },
+  [OrderItemStatus.ISSUED]: {
+    labelKey: "itemStatus.issued",
     dot: DOT_RECEIVED,
   },
   [OrderItemStatus.RETURNED]: {

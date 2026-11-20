@@ -10,7 +10,7 @@ export type RefusalToast = { key: string; retry: boolean };
 
 const REFUSALS: Record<string, RefusalToast> = {
   ORDER_NOT_FOUND: { key: "orderNotFound", retry: false },
-  ORDER_NOT_SHIPPED: { key: "notShipped", retry: false },
+  ORDER_NOT_DELIVERED: { key: "notDelivered", retry: false },
   ALREADY_HANDED_OVER: { key: "alreadyHandedOver", retry: false },
   NOTHING_TO_CANCEL: { key: "nothingToCancel", retry: false },
   PICKUP_POINT_INACTIVE: { key: "pointInactive", retry: false },

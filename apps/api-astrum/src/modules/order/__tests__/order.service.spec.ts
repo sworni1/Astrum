@@ -737,7 +737,7 @@ describe("OrderService.getOrdersByUserId", () => {
       where: {
         userId: "user-1",
         AND: [
-          { status: "DELIVERED" },
+          { status: { in: ["DELIVERED", "ISSUED"] } },
           {
             OR: [
               { id: { contains: "parker", mode: "insensitive" } },
@@ -787,7 +787,14 @@ describe("OrderService.getOrdersByUserId", () => {
       where: {
         userId: "user-1",
         status: { not: "CANCELED" },
-        AND: [{ OR: [{ paymentStatus: "PAID" }, { status: "DELIVERED" }] }],
+        AND: [
+          {
+            OR: [
+              { paymentStatus: "PAID" },
+              { status: { in: ["DELIVERED", "ISSUED"] } },
+            ],
+          },
+        ],
       },
       _sum: { grandTotal: true },
     });

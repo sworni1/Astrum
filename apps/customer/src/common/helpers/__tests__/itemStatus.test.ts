@@ -3,8 +3,8 @@ import { OrderItemStatus } from "@/common/types/order.types";
 import { ITEM_STATUS_KEYS, itemStatusKey } from "@/common/helpers/itemStatus";
 
 describe("itemStatusKey", () => {
-  it("maps all nine line statuses to one catalog key (AC-4)", () => {
-    expect(Object.values(OrderItemStatus)).toHaveLength(9);
+  it("maps all ten line statuses to one catalog key (AC-4, spec 0031 AC-7)", () => {
+    expect(Object.values(OrderItemStatus)).toHaveLength(10);
 
     for (const status of Object.values(OrderItemStatus)) {
       expect(itemStatusKey(status)).toBe(ITEM_STATUS_KEYS[status]);

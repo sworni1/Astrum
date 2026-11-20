@@ -37,6 +37,7 @@ const order = (status: OrderStatus): Order => ({
   pickupPointName: null,
   pickupPointAddress: null,
   handedOverAt: null,
+  shippedAt: null,
   paidAt: null,
   deliveryDate: new Date("2026-11-10T00:00:00.000Z"),
   orderItems: [

@@ -251,6 +251,7 @@
       "confirmed": "Confirmed",
       "shipped": "Shipped",
       "delivered": "Delivered",
+      "issued": "Issued",
       "canceled": "Cancelled"
     },
     "itemStatus": {
@@ -260,6 +261,7 @@
       "cancelled": "Cancelled",
       "shipped": "Shipped",
       "delivered": "Delivered",
+      "issued": "Issued",
       "returned": "Returned",
       "backordered": "Backordered",
       "replaced": "Replaced"
@@ -282,7 +284,8 @@
       "notPayable": "Only an online card order can be paid from this screen.",
       "alreadyPaid": "This order is already paid.",
       "failed": "The payment did not go through. Try again."
-    }
+    },
+    "deliveredOn": "Delivered {date}"
   },
   "profile": {
     "title": "Profile data",
@@ -670,7 +673,7 @@
         "successCancel": "The order is cancelled and the goods are back in stock.",
         "refusals": {
           "orderNotFound": "This order is not at your pickup point.",
-          "notShipped": "This order is not marked as sent yet.",
+          "notDelivered": "This order is not delivered yet.",
           "alreadyHandedOver": "This order was already handed over.",
           "nothingToCancel": "Nothing is left in this order to cancel.",
           "pointInactive": "This pickup point is switched off.",
@@ -735,7 +738,7 @@
         "successCancel": "The order is cancelled and the goods are back in stock.",
         "refusals": {
           "orderNotFound": "This parcel is not yours any more.",
-          "notShipped": "This order is not marked as sent yet.",
+          "notDelivered": "This order is not delivered yet.",
           "alreadyHandedOver": "This order was already handed over.",
           "alreadyClaimed": "Another courier took this parcel.",
           "nothingToCancel": "Nothing is left in this order to cancel.",

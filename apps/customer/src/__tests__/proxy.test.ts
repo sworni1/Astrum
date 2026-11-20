@@ -75,4 +75,26 @@ describe("the storefront route policy", () => {
     expect(decryptMock).toHaveBeenCalledWith("signed");
     expect(answer.headers.get("location")).toBeNull();
   });
+
+  it("drops a cookie it cannot verify on a guest path", async () => {
+    const answer = await proxy(requestTo("/cart", { __auth: "broken" }));
+
+    expect(answer.cookies.get("__auth")?.value).toBe("");
+    expect(answer.headers.get("location")).toBeNull();
+  });
+
+  it("drops a cookie it cannot verify while sending the visitor to sign in", async () => {
+    const answer = await proxy(requestTo("/checkout", { __auth: "broken" }));
+
+    expect(answer.cookies.get("__auth")?.value).toBe("");
+    expect(answer.headers.get("location")).toContain("/auth/signin");
+  });
+
+  it("keeps the cookie of a signed session", async () => {
+    decryptMock.mockResolvedValue({ userId: "user-1" });
+
+    const answer = await proxy(requestTo("/cart", { __auth: "signed" }));
+
+    expect(answer.cookies.get("__auth")).toBeUndefined();
+  });
 });

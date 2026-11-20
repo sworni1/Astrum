@@ -123,7 +123,9 @@ export const sellerOrderWhere = (
   const clauses: Prisma.OrderItemWhereInput[] = [];
 
   if (query.status === "DELIVERED") {
-    clauses.push({ status: "DELIVERED" });
+    // A sold line is one the buyer took, so the tab folds both states in
+    // (spec 0031, AC-9).
+    clauses.push({ status: { in: ["DELIVERED", "ISSUED"] } });
   }
 
   if (query.status === "CANCELED") {

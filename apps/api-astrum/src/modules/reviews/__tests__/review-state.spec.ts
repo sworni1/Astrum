@@ -17,7 +17,7 @@ const prismaMock = prisma as unknown as {
 describe("readReviewState", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it("answers ELIGIBLE with the line of the newest order that carries no review (AC-7)", async () => {
+  it("answers ELIGIBLE with the line of the newest order that carries no review (AC-7, spec 0031 AC-6)", async () => {
     prismaMock.orderItem.findFirst.mockResolvedValue({ id: "line-newest" });
 
     const state = await readReviewState(userOwner("user-1"), "product-1");
@@ -27,7 +27,7 @@ describe("readReviewState", () => {
       where: {
         userId: "user-1",
         productId: "product-1",
-        status: "DELIVERED",
+        status: "ISSUED",
         review: { is: null },
       },
       orderBy: [{ order: { createdAt: "desc" } }, { id: "asc" }],
@@ -35,7 +35,7 @@ describe("readReviewState", () => {
     });
   });
 
-  it("answers ALREADY_REVIEWED when every delivered line is reviewed (AC-7)", async () => {
+  it("answers ALREADY_REVIEWED when every issued line is reviewed (AC-7)", async () => {
     prismaMock.orderItem.findFirst.mockResolvedValue(null);
     prismaMock.review.findFirst.mockResolvedValue({ id: "review-1" });
 

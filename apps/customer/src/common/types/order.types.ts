@@ -6,6 +6,7 @@ export enum OrderStatus {
   CONFIRMED = "CONFIRMED",
   SHIPPED = "SHIPPED",
   DELIVERED = "DELIVERED",
+  ISSUED = "ISSUED",
   CANCELED = "CANCELED", // Note: CANCELED not CANCELLED to match DB
 }
 
@@ -32,6 +33,7 @@ export enum OrderItemStatus {
   CANCELLED = "CANCELLED", // DB uses CANCELLED (with double L)
   SHIPPED = "SHIPPED",
   DELIVERED = "DELIVERED",
+  ISSUED = "ISSUED",
   RETURNED = "RETURNED",
   BACKORDERED = "BACKORDERED",
   REPLACED = "REPLACED",
@@ -100,6 +102,8 @@ export interface Order {
   pickupPointName: string | null;
   pickupPointAddress: string | null;
   handedOverAt: string | null;
+  /** The moment the parcel started moving, written by the shipping pass (spec 0031). */
+  shippedAt: string | null;
   /** Stamp of the newest PAID attempt, resolved by the detail read (spec 0027). */
   paidAt: string | null;
 }
