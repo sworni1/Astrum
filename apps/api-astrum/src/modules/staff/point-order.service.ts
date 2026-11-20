@@ -22,7 +22,7 @@ import { expireSessionForCancel } from "../payment/payment.cancel";
 import { STAFF_ERROR_CODES } from "./constants/staff.constants";
 import {
   cancelOrderLines,
-  deliverShippedLines,
+  issueDeliveredLines,
   isCancellable,
   logWriteRefusal,
   resolveCancelPayment,
@@ -140,11 +140,11 @@ const alreadyHandedOver = () =>
     "This order was already handed over.",
   );
 
-const orderNotShipped = () =>
+const orderNotDelivered = () =>
   new AppError(
     409,
-    STAFF_ERROR_CODES.orderNotShipped,
-    "This order is not marked as sent yet.",
+    STAFF_ERROR_CODES.orderNotDelivered,
+    "This order is not delivered yet.",
   );
 
 const nothingToCancel = () =>
@@ -160,7 +160,7 @@ const nothingToCancel = () =>
  * transaction under the order lock (spec 0018).
  */
 export class PointOrderService {
-  /** The parcels waiting at one point, oldest first, one page at a time (AC-1 to AC-3). */
+  /** The arrived parcels waiting at one point, oldest first, one page at a time (AC-1 to AC-3, spec 0031 AC-4). */
   async listPointOrders(
     pickupPointId: string,
     pageInput?: unknown,
@@ -171,7 +171,7 @@ export class PointOrderService {
       limitInput,
       invalidPagination,
     );
-    const where = { pickupPointId, status: "SHIPPED" as const };
+    const where = { pickupPointId, status: "DELIVERED" as const };
     const total = await prisma.order.count({ where });
     const orders = await prisma.order.findMany({
       where,
@@ -191,8 +191,8 @@ export class PointOrderService {
   }
 
   /**
-   * One press closes the whole parcel: the shipped lines become delivered with
-   * one server timestamp, and the order is stamped once (AC-4, AC-5).
+   * One press closes the whole parcel: the delivered lines become issued, and the
+   * order is stamped once (AC-4, AC-5; spec 0031, AC-3).
    */
   async handOver(
     orderId: string,
@@ -200,7 +200,7 @@ export class PointOrderService {
     pickupPointId: string,
   ): Promise<{ order: PointOrderJson }> {
     try {
-      const { order, deliveredLineCount } = await prisma.$transaction(
+      const { order, issuedLineCount } = await prisma.$transaction(
         (tx) => this.runHandover(tx, orderId, pickupPointId),
         ORDER_TRANSACTION_OPTIONS,
       );
@@ -210,7 +210,7 @@ export class PointOrderService {
         userId,
         pointId: pickupPointId,
         orderId,
-        deliveredLineCount,
+        issuedLineCount,
         resultCode: "OK",
       });
 
@@ -288,7 +288,7 @@ export class PointOrderService {
     tx: Prisma.TransactionClient,
     orderId: string,
     pickupPointId: string,
-  ): Promise<{ order: PointOrderJson; deliveredLineCount: number }> {
+  ): Promise<{ order: PointOrderJson; issuedLineCount: number }> {
     await lockOrder(tx, orderId);
 
     const order = await tx.order.findFirst({
@@ -308,16 +308,16 @@ export class PointOrderService {
       throw alreadyHandedOver();
     }
 
-    if (order.status !== "SHIPPED") {
-      throw orderNotShipped();
+    if (order.status !== "DELIVERED") {
+      throw orderNotDelivered();
     }
 
     const timestamp = new Date();
-    const count = await deliverShippedLines(tx, order.OrderItem, timestamp);
+    const count = await issueDeliveredLines(tx, order.OrderItem);
 
     const status = await recomputeOrderStatus(tx, orderId);
 
-    if (status === "DELIVERED") {
+    if (status === "ISSUED") {
       await tx.order.updateMany({
         where: { id: orderId, handedOverAt: null },
         data: { handedOverAt: timestamp },
@@ -329,7 +329,7 @@ export class PointOrderService {
       select: POINT_ORDER_SELECT,
     });
 
-    return { order: toPointOrderJson(answered), deliveredLineCount: count };
+    return { order: toPointOrderJson(answered), issuedLineCount: count };
   }
 
   private async runCancel(
@@ -363,8 +363,8 @@ export class PointOrderService {
       throw nothingToCancel();
     }
 
-    if (order.status !== "SHIPPED") {
-      throw orderNotShipped();
+    if (order.status !== "DELIVERED") {
+      throw orderNotDelivered();
     }
 
     await cancelOrderLines(tx, cancellable);

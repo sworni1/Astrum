@@ -22,7 +22,7 @@ import { expireSessionForCancel } from "../payment/payment.cancel";
 import { STAFF_ERROR_CODES } from "./constants/staff.constants";
 import {
   cancelOrderLines,
-  deliverShippedLines,
+  issueDeliveredLines,
   isCancellable,
   logWriteRefusal,
   resolveCancelPayment,
@@ -141,14 +141,16 @@ export type CourierOrdersPage = {
 
 /**
  * Everything one write needs to know about the parcel, in one place, so the four
- * writes cannot drift apart on who may touch what (AC-4 to AC-8).
+ * writes cannot drift apart on who may touch what (AC-4 to AC-8). A parcel reads
+ * `notDelivered` until it has arrived, because only an arrived parcel can be
+ * claimed or issued (spec 0031, AC-4).
  */
 export type CourierVerdict =
   | "notFound"
   | "alreadyHandedOver"
   | "claimedByCaller"
   | "claimedByAnother"
-  | "notShipped"
+  | "notDelivered"
   | "free";
 
 type ClassifiableOrder = {
@@ -173,14 +175,14 @@ const classifyCourierOrder = (
   }
 
   if (order.courierUserId === userId) {
-    return order.status === "SHIPPED" ? "claimedByCaller" : "notShipped";
+    return order.status === "DELIVERED" ? "claimedByCaller" : "notDelivered";
   }
 
   if (order.courierUserId !== null) {
     return "claimedByAnother";
   }
 
-  return order.status === "SHIPPED" ? "free" : "notShipped";
+  return order.status === "DELIVERED" ? "free" : "notDelivered";
 };
 
 const invalidPagination = () =>
@@ -203,11 +205,11 @@ const alreadyClaimed = () =>
     "Another courier took this parcel.",
   );
 
-const orderNotShipped = () =>
+const orderNotDelivered = () =>
   new AppError(
     409,
-    STAFF_ERROR_CODES.orderNotShipped,
-    "This order is not marked as sent yet.",
+    STAFF_ERROR_CODES.orderNotDelivered,
+    "This order is not delivered yet.",
   );
 
 const nothingToCancel = () =>
@@ -241,7 +243,7 @@ export class CourierOrderService {
       invalidPagination,
     );
     const where = {
-      status: "SHIPPED" as const,
+      status: "DELIVERED" as const,
       shippingMethod: { isPickup: false },
       courierUserId: scope === "mine" ? userId : null,
     };
@@ -295,8 +297,8 @@ export class CourierOrderService {
         throw alreadyClaimed();
       }
 
-      if (verdict === "notShipped") {
-        throw orderNotShipped();
+      if (verdict === "notDelivered") {
+        throw orderNotDelivered();
       }
 
       await tx.order.update({
@@ -355,8 +357,8 @@ export class CourierOrderService {
 
       // A release of something the caller does not hold has nothing to say about
       // who holds it (AC-5).
-      if (verdict === "notShipped" && row.courierUserId === userId) {
-        throw orderNotShipped();
+      if (verdict === "notDelivered" && row.courierUserId === userId) {
+        throw orderNotDelivered();
       }
 
       throw orderNotFound();
@@ -372,13 +374,13 @@ export class CourierOrderService {
     return { order };
   }
 
-  /** The parcel is closed at the door: every shipped line is delivered, and the money is recorded (AC-6, AC-7). */
+  /** The parcel is closed at the door: every delivered line is issued, and the money is recorded (AC-6, AC-7; spec 0031, AC-3). */
   async handOver(
     orderId: string,
     userId: string,
   ): Promise<{ order: CourierOrderJson }> {
     try {
-      const { order, deliveredLineCount, collected } =
+      const { order, issuedLineCount, collected } =
         await prisma.$transaction(async (tx) => {
           await lockOrder(tx, orderId);
 
@@ -401,27 +403,23 @@ export class CourierOrderService {
             throw orderNotFound();
           }
 
-          if (row.status !== "SHIPPED") {
-            throw orderNotShipped();
+          if (row.status !== "DELIVERED") {
+            throw orderNotDelivered();
           }
 
           const timestamp = new Date();
-          const delivered = await deliverShippedLines(
-            tx,
-            row.OrderItem,
-            timestamp,
-          );
+          const issued = await issueDeliveredLines(tx, row.OrderItem);
           const paid =
             collectsAtTheDoor(row.paymentMethod) &&
             row.paymentStatus === "PENDING" &&
-            delivered > 0;
+            issued > 0;
           const status = await recomputeOrderStatus(
             tx,
             orderId,
             paid ? "PAID" : undefined,
           );
 
-          if (status === "DELIVERED") {
+          if (status === "ISSUED") {
             await tx.order.updateMany({
               where: { id: orderId, handedOverAt: null },
               data: { handedOverAt: timestamp },
@@ -435,7 +433,7 @@ export class CourierOrderService {
 
           return {
             order: toCourierOrderJson(answered, userId),
-            deliveredLineCount: delivered,
+            issuedLineCount: issued,
             collected: paid
               ? {
                   amount: row.grandTotal.toFixed(2),
@@ -449,7 +447,7 @@ export class CourierOrderService {
         event: "staff.courier.handed_over",
         userId,
         orderId,
-        deliveredLineCount,
+        issuedLineCount,
         resultCode: "OK",
         ...(collected
           ? {
@@ -506,8 +504,8 @@ export class CourierOrderService {
             throw nothingToCancel();
           }
 
-          if (row.status !== "SHIPPED") {
-            throw orderNotShipped();
+          if (row.status !== "DELIVERED") {
+            throw orderNotDelivered();
           }
 
           const amount = sumOfLines(cancellable);

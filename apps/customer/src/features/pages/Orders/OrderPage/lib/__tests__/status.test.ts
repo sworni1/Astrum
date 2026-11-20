@@ -22,8 +22,8 @@ describe("canCancel", () => {
 });
 
 describe("STATUS_KEYS", () => {
-  it("names one catalog key for every order status", () => {
-    expect(Object.values(OrderStatus)).toHaveLength(5);
+  it("names one catalog key for every order status (spec 0031, AC-7)", () => {
+    expect(Object.values(OrderStatus)).toHaveLength(6);
 
     for (const status of Object.values(OrderStatus)) {
       expect(STATUS_KEYS[status]).toBeTypeOf("string");
@@ -32,8 +32,9 @@ describe("STATUS_KEYS", () => {
 });
 
 describe("STATUS_TONES", () => {
-  it("lands every order status on one of the three token sets (AC-8)", () => {
-    expect(STATUS_TONES[OrderStatus.DELIVERED]).toBe("success");
+  it("lands every order status on one of the three token sets (AC-8, spec 0031 AC-7)", () => {
+    expect(STATUS_TONES[OrderStatus.ISSUED]).toBe("success");
+    expect(STATUS_TONES[OrderStatus.DELIVERED]).toBe("neutral");
     expect(STATUS_TONES[OrderStatus.CANCELED]).toBe("destructive");
 
     for (const status of Object.values(OrderStatus)) {
@@ -45,27 +46,30 @@ describe("STATUS_TONES", () => {
 });
 
 describe("deliverySteps", () => {
-  it("keeps the four steps in the order the parcel walks them", () => {
+  it("keeps the four steps in the order the parcel walks them (AC-7)", () => {
     expect(DELIVERY_STEPS.map((step) => step.status)).toEqual([
-      OrderStatus.PENDING,
       OrderStatus.CONFIRMED,
       OrderStatus.SHIPPED,
       OrderStatus.DELIVERED,
+      OrderStatus.ISSUED,
     ]);
   });
 
   it("marks every step up to the current one as reached", () => {
     expect(
       deliverySteps(OrderStatus.PENDING).map((step) => step.active),
-    ).toEqual([true, false, false, false]);
+    ).toEqual([false, false, false, false]);
     expect(
       deliverySteps(OrderStatus.CONFIRMED).map((step) => step.active),
-    ).toEqual([true, true, false, false]);
+    ).toEqual([true, false, false, false]);
     expect(
       deliverySteps(OrderStatus.SHIPPED).map((step) => step.active),
-    ).toEqual([true, true, true, false]);
+    ).toEqual([true, true, false, false]);
     expect(
       deliverySteps(OrderStatus.DELIVERED).map((step) => step.active),
+    ).toEqual([true, true, true, false]);
+    expect(
+      deliverySteps(OrderStatus.ISSUED).map((step) => step.active),
     ).toEqual([true, true, true, true]);
   });
 

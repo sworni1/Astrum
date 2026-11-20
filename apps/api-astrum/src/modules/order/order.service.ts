@@ -116,6 +116,7 @@ export type CreateOrderResult = { order: OrderDetail; replay: boolean };
 const CUSTOMER_CANCELLATION_BLOCKERS: readonly OrderItemStatus[] = [
   "SHIPPED",
   "DELIVERED",
+  "ISSUED",
   "RETURNED",
   "BACKORDERED",
   "REPLACED",
@@ -158,14 +159,18 @@ type CurrencyGroup = {
   _sum: { grandTotal: Prisma.Decimal | null };
 };
 
-/** The counts describe every order of the caller, never the filtered subset. */
+/**
+ * The counts describe every order of the caller, never the filtered subset. An
+ * issued order still counts as delivered, because the buyer reads one bucket for
+ * "the parcel came" (spec 0031, AC-8).
+ */
 const countByStatus = (groups: StatusGroup[]): OrderListCounts => {
   const of = (status: OrderStatus): number =>
     groups.find((group) => group.status === status)?._count._all ?? 0;
 
   return {
     all: groups.reduce((sum, group) => sum + group._count._all, 0),
-    delivered: of("DELIVERED"),
+    delivered: of("DELIVERED") + of("ISSUED"),
     canceled: of("CANCELED"),
   };
 };
@@ -513,7 +518,14 @@ export class OrderService {
           where: {
             userId,
             status: { not: "CANCELED" },
-            AND: [{ OR: [{ paymentStatus: "PAID" }, { status: "DELIVERED" }] }],
+            AND: [
+              {
+                OR: [
+                  { paymentStatus: "PAID" },
+                  { status: { in: ["DELIVERED", "ISSUED"] } },
+                ],
+              },
+            ],
           },
           _sum: { grandTotal: true },
         }),

@@ -7,12 +7,14 @@ import {
 export type BadgeTone = "success" | "destructive" | "secondary";
 
 /**
- * One tone per line status, never a boolean test: delivered reads as good, the
- * two lost sales as canceled, and the rest wait in a neutral badge (spec 0026,
- * AC-9). The `Record` forces a decision for every member added later.
+ * One tone per line status, never a boolean test: a line the buyer took reads as
+ * good, the two lost sales as canceled, and the rest wait in a neutral badge
+ * (spec 0026, AC-9; spec 0031, AC-7). The `Record` forces a decision for every
+ * member added later.
  */
 export const BADGE_TONE: Record<OrderItemStatus, BadgeTone> = {
-  [OrderItemStatus.DELIVERED]: "success",
+  [OrderItemStatus.DELIVERED]: "secondary",
+  [OrderItemStatus.ISSUED]: "success",
   [OrderItemStatus.CANCELLED]: "destructive",
   [OrderItemStatus.OUT_OF_STOCK]: "destructive",
   [OrderItemStatus.PENDING]: "secondary",

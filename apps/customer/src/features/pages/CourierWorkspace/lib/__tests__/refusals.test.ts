@@ -22,8 +22,8 @@ describe("refusalToastFor", () => {
       key: "orderNotFound",
       retry: false,
     });
-    expect(refusalToastFor(refusal(409, "ORDER_NOT_SHIPPED"))).toEqual({
-      key: "notShipped",
+    expect(refusalToastFor(refusal(409, "ORDER_NOT_DELIVERED"))).toEqual({
+      key: "notDelivered",
       retry: false,
     });
     expect(refusalToastFor(refusal(409, "ALREADY_HANDED_OVER"))).toEqual({

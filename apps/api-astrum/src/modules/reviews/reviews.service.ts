@@ -101,11 +101,11 @@ export class ReviewsService {
       );
     }
 
-    if (orderItem.status !== OrderItemStatus.DELIVERED) {
+    if (orderItem.status !== OrderItemStatus.ISSUED) {
       throw new AppError(
         403,
         REVIEW_ERROR_CODES.onlyAfterDelivery,
-        "Review can only be created for delivered purchases",
+        "Review can only be created for purchases the buyer was handed",
       );
     }
 

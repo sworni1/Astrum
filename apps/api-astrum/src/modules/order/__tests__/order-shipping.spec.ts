@@ -11,7 +11,7 @@ jest.mock("../order-status.helpers", () => ({
 
 import { prisma } from "../../../../lib/prisma";
 import { ORDER_SHIPPING_DELAY_MS } from "../constants/order.constants";
-import { runOrderShipping } from "../order-shipping";
+import { deliverArrivedOrders, runOrderShipping } from "../order-shipping";
 import { recomputeOrderStatus } from "../order-status.helpers";
 
 const prismaMock = prisma as unknown as {
@@ -27,11 +27,22 @@ const tx = () => ({
 
 type FakeTx = ReturnType<typeof tx>;
 
-const wire = (orders: unknown[], shippedLines = 2): FakeTx => {
+const wire = ({
+  confirmed = [],
+  shipped = [],
+  movedLines = 2,
+}: {
+  confirmed?: unknown[];
+  shipped?: unknown[];
+  movedLines?: number;
+}): FakeTx => {
   const client = tx();
 
-  client.orderItem.updateMany.mockResolvedValue({ count: shippedLines });
-  prismaMock.order.findMany.mockResolvedValue(orders);
+  client.orderItem.updateMany.mockResolvedValue({ count: movedLines });
+  prismaMock.order.findMany.mockImplementation(
+    (args: { where: { status: string } }) =>
+      Promise.resolve(args.where.status === "SHIPPED" ? shipped : confirmed),
+  );
   prismaMock.$transaction.mockImplementation(
     (work: (inner: FakeTx) => unknown) => work(client),
   );
@@ -48,6 +59,11 @@ const order = (overrides: Record<string, unknown> = {}) => ({
   status: "CONFIRMED",
   createdAt: ago(ORDER_SHIPPING_DELAY_MS + 30_000),
   payments: [] as Array<{ paidAt: Date | null }>,
+  ...overrides,
+});
+
+const arrived = (overrides: Record<string, unknown> = {}) => ({
+  id: "order-2",
   ...overrides,
 });
 
@@ -73,7 +89,7 @@ describe("runOrderShipping", () => {
   });
 
   it("отправляет заказ, принятый больше минуты назад (AC-2)", async () => {
-    const client = wire([order()]);
+    const client = wire({ confirmed: [order()] });
 
     await runOrderShipping(new Date(NOW));
 
@@ -91,10 +107,23 @@ describe("runOrderShipping", () => {
     );
   });
 
+  it("пишет момент отправки на заказ в той же транзакции (AC-2)", async () => {
+    const client = wire({ confirmed: [order()] });
+
+    await runOrderShipping(new Date(NOW));
+
+    expect(client.order.update).toHaveBeenCalledWith({
+      where: { id: "order-1" },
+      data: { shippedAt: new Date(NOW) },
+    });
+  });
+
   it("считает время от оплаты, а не от создания заказа (AC-2)", async () => {
-    const client = wire([
-      order({ createdAt: ago(600_000), payments: [{ paidAt: ago(20_000) }] }),
-    ]);
+    const client = wire({
+      confirmed: [
+        order({ createdAt: ago(600_000), payments: [{ paidAt: ago(20_000) }] }),
+      ],
+    });
 
     await runOrderShipping(new Date(NOW));
 
@@ -103,12 +132,14 @@ describe("runOrderShipping", () => {
   });
 
   it("отправляет заказ, оплаченный больше минуты назад (AC-2)", async () => {
-    const client = wire([
-      order({
-        createdAt: ago(600_000),
-        payments: [{ paidAt: ago(ORDER_SHIPPING_DELAY_MS + 5_000) }],
-      }),
-    ]);
+    const client = wire({
+      confirmed: [
+        order({
+          createdAt: ago(600_000),
+          payments: [{ paidAt: ago(ORDER_SHIPPING_DELAY_MS + 5_000) }],
+        }),
+      ],
+    });
 
     await runOrderShipping(new Date(NOW));
 
@@ -116,7 +147,7 @@ describe("runOrderShipping", () => {
   });
 
   it("ищет только подтверждённые заказы с подтверждёнными строками (AC-2)", async () => {
-    wire([]);
+    wire({});
 
     await runOrderShipping(new Date(NOW));
 
@@ -132,7 +163,7 @@ describe("runOrderShipping", () => {
   });
 
   it("не пишет ничего, когда подтверждённых строк уже нет (AC-2)", async () => {
-    const client = wire([order()], 0);
+    const client = wire({ confirmed: [order()], movedLines: 0 });
 
     await runOrderShipping(new Date(NOW));
 
@@ -140,6 +171,53 @@ describe("runOrderShipping", () => {
     expect(recomputeMock).not.toHaveBeenCalled();
     expect(logged(info).map((entry) => entry.event)).not.toContain(
       "order.lines_shipped",
+    );
+  });
+
+  it("доставляет пришедший заказ одной отметкой времени на все строки (AC-2)", async () => {
+    const client = wire({ shipped: [arrived()] });
+
+    await runOrderShipping(new Date(NOW));
+
+    expect(client.orderItem.updateMany).toHaveBeenCalledWith({
+      where: { orderId: "order-2", status: "SHIPPED" },
+      data: { status: "DELIVERED", receiptDate: new Date(NOW) },
+    });
+    expect(recomputeMock).toHaveBeenCalledWith(client, "order-2");
+    expect(logged(info)).toContainEqual(
+      expect.objectContaining({
+        event: "order.lines_delivered",
+        orderId: "order-2",
+        lineCount: 2,
+      }),
+    );
+  });
+
+  it("ждёт вторую стадию от shippedAt, а не от дня доставки (AC-2)", async () => {
+    wire({});
+
+    await runOrderShipping(new Date(NOW));
+
+    expect(prismaMock.order.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: "SHIPPED",
+          shippedAt: { lte: new Date(NOW - ORDER_SHIPPING_DELAY_MS) },
+          OrderItem: { some: { status: "SHIPPED" } },
+        }),
+      }),
+    );
+  });
+
+  it("вторая реплика не двигает ничего и не пишет строку в лог (AC-13)", async () => {
+    const client = wire({ shipped: [arrived()], movedLines: 0 });
+
+    await deliverArrivedOrders(new Date(NOW));
+
+    expect(client.orderItem.updateMany).toHaveBeenCalledTimes(1);
+    expect(recomputeMock).not.toHaveBeenCalled();
+    expect(logged(info).map((entry) => entry.event)).not.toContain(
+      "order.lines_delivered",
     );
   });
 });

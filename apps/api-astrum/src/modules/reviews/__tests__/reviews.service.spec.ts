@@ -80,7 +80,7 @@ describe("ReviewsService.createReview", () => {
     prismaMock.orderItem.findFirst.mockResolvedValue({
       id: "line-1",
       productId: "product-path",
-      status: "DELIVERED",
+      status: "ISSUED",
     });
     prismaMock.review.create.mockResolvedValue(rowFor());
 
@@ -111,7 +111,7 @@ describe("ReviewsService.createReview", () => {
     prismaMock.orderItem.findFirst.mockResolvedValue({
       id: "line-1",
       productId: "product-path",
-      status: "DELIVERED",
+      status: "ISSUED",
     });
     prismaMock.review.create.mockResolvedValue(rowFor({ User: null }));
 
@@ -157,7 +157,7 @@ describe("ReviewsService.createReview", () => {
     prismaMock.orderItem.findFirst.mockResolvedValue({
       id: "line-1",
       productId: "product-other",
-      status: "DELIVERED",
+      status: "ISSUED",
     });
 
     const error = await expectRefusal(
@@ -170,11 +170,11 @@ describe("ReviewsService.createReview", () => {
     });
   });
 
-  it("answers 403 REVIEW_ONLY_AFTER_DELIVERY for a line that is not delivered (AC-11)", async () => {
+  it("answers 403 REVIEW_ONLY_AFTER_DELIVERY for an arrived line nobody issued (AC-11, spec 0031 AC-6)", async () => {
     prismaMock.orderItem.findFirst.mockResolvedValue({
       id: "line-1",
       productId: "product-path",
-      status: "SHIPPED",
+      status: "DELIVERED",
     });
 
     const error = await expectRefusal(
@@ -191,7 +191,7 @@ describe("ReviewsService.createReview", () => {
     prismaMock.orderItem.findFirst.mockResolvedValue({
       id: "line-1",
       productId: "product-path",
-      status: "DELIVERED",
+      status: "ISSUED",
     });
     prismaMock.review.create.mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {

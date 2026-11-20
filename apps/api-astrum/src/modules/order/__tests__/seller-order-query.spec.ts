@@ -73,10 +73,10 @@ describe("sellerOrderWhere", () => {
     });
   });
 
-  it("filters DELIVERED on the line status alone (AC-2)", () => {
+  it("filters DELIVERED on the line status pair delivered and issued (AC-2)", () => {
     expect(sellerOrderWhere("seller-1", { status: "DELIVERED" })).toEqual({
       business: { is: { ownerUserId: "seller-1" } },
-      AND: [{ status: "DELIVERED" }],
+      AND: [{ status: { in: ["DELIVERED", "ISSUED"] } }],
     });
   });
 
@@ -86,7 +86,7 @@ describe("sellerOrderWhere", () => {
     ).toEqual({
       business: { is: { ownerUserId: "seller-1" } },
       AND: [
-        { status: "DELIVERED" },
+        { status: { in: ["DELIVERED", "ISSUED"] } },
         {
           OR: [
             { name: { contains: "drill", mode: "insensitive" } },

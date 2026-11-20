@@ -18,6 +18,7 @@ export const CANCELLABLE_STATUSES: readonly OrderItemStatus[] = [
   "PENDING",
   "CONFIRMED",
   "SHIPPED",
+  "DELIVERED",
 ];
 
 export type CancelLine = Pick<
@@ -61,24 +62,25 @@ export const cancelOrderLines = async (
 };
 
 /**
- * Delivers every shipped line of one order with one server timestamp, and leaves
- * every other line untouched. The count it answers is the number of lines that
- * moved (spec 0018, AC-5; spec 0019, AC-6).
+ * Issues every delivered line of one order and leaves every other line
+ * untouched, so a second press finds nothing left to move. The count it answers
+ * is the number of lines that moved; the moment of the handover belongs to the
+ * order, not to the lines, and the arrival date already sits in `receiptDate`
+ * (spec 0031, AC-3).
  */
-export const deliverShippedLines = async (
+export const issueDeliveredLines = async (
   tx: Prisma.TransactionClient,
   lines: readonly DeliverableLine[],
-  timestamp: Date,
 ): Promise<number> => {
-  const shipped = lines.filter((line) => line.status === "SHIPPED");
+  const delivered = lines.filter((line) => line.status === "DELIVERED");
 
-  if (shipped.length === 0) {
+  if (delivered.length === 0) {
     return 0;
   }
 
   const { count } = await tx.orderItem.updateMany({
-    where: { id: { in: shipped.map((line) => line.id) } },
-    data: { status: "DELIVERED", receiptDate: timestamp },
+    where: { id: { in: delivered.map((line) => line.id) } },
+    data: { status: "ISSUED" },
   });
 
   return count;

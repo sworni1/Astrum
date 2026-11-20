@@ -6,7 +6,7 @@ export const STAFF_ERROR_CODES = {
   roleUnavailable: "STAFF_ROLE_UNAVAILABLE",
   unknownPickupPoint: "UNKNOWN_PICKUP_POINT",
   pickupPointInactive: "PICKUP_POINT_INACTIVE",
-  orderNotShipped: "ORDER_NOT_SHIPPED",
+  orderNotDelivered: "ORDER_NOT_DELIVERED",
   alreadyHandedOver: "ALREADY_HANDED_OVER",
   alreadyClaimed: "ALREADY_CLAIMED",
   nothingToCancel: "NOTHING_TO_CANCEL",

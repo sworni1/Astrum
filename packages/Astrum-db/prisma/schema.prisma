@@ -151,6 +151,7 @@ model Order {
   pickupPoint        PickupPoint? @relation(fields: [pickupPointId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   pickupPointName    String?
   pickupPointAddress String?
+  shippedAt          DateTime?
   handedOverAt       DateTime?
   courierUserId      String?
 
@@ -262,6 +263,7 @@ enum OrderItemStatus {
   CANCELLED
   SHIPPED
   DELIVERED
+  ISSUED
   RETURNED
   BACKORDERED
   REPLACED
@@ -272,6 +274,7 @@ enum OrderStatus {
   CONFIRMED
   SHIPPED
   DELIVERED
+  ISSUED
   CANCELED
 }
 
