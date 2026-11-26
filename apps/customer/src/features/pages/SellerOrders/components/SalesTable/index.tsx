@@ -2,9 +2,12 @@
 
 import { useTranslations } from "next-intl";
 import type { SellerLineRow } from "@/common/types/order.types";
-import { SALES_COLUMNS } from "@/features/pages/SellerOrders/lib/columns";
-import { HEAD_CELL, TABLE_CARD } from "@/features/pages/SellerOrders/lib/styles";
 import SalesRow from "@/features/pages/SellerOrders/components/SalesRow";
+import { SALES_COLUMNS } from "@/features/pages/SellerOrders/lib/columns";
+import {
+  HEAD_CELL,
+  TABLE_CARD,
+} from "@/features/pages/SellerOrders/lib/styles";
 
 type Props = {
   items: readonly SellerLineRow[];

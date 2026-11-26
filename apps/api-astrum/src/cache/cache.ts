@@ -1,67 +1,27 @@
 import { logger } from "../common/helpers/logger";
-import { describeError } from "../events/describe-error";
-import { cacheKeys } from "./cacheKeys";
-import { type CacheStore, getCacheStore } from "./cacheStore";
+import { getCacheStore } from "./cacheStore";
+import {
+  parsePayload,
+  readPayload,
+  writePayload,
+} from "./helpers/cache-payload.helpers";
 
-export const DEFAULT_LIST_TTL_SECONDS = 30;
+export {
+  DEFAULT_LIST_TTL_SECONDS,
+  DEFAULT_PRODUCT_TTL_SECONDS,
+} from "./constants/cache.constants";
 
-export const DEFAULT_PRODUCT_TTL_SECONDS = 60;
+export {
+  invalidateLists,
+  invalidateProducts,
+  invalidateReviews,
+  invalidateShipping,
+} from "./helpers/cache-invalidation.helpers";
 
-const LIST_TTL_JITTER_SECONDS = 4;
-const PRODUCT_TTL_JITTER_SECONDS = 7;
-
-const readSeconds = (raw: string | undefined, fallback: number): number => {
-  const value = Number(raw);
-
-  return Number.isFinite(value) && value > 0 ? value : fallback;
-};
-
-export const listTtlSeconds = (): number =>
-  readSeconds(process.env.CACHE_LIST_TTL_SECONDS, DEFAULT_LIST_TTL_SECONDS) +
-  Math.floor(Math.random() * LIST_TTL_JITTER_SECONDS);
-
-export const productTtlSeconds = (): number =>
-  readSeconds(
-    process.env.CACHE_PRODUCT_TTL_SECONDS,
-    DEFAULT_PRODUCT_TTL_SECONDS,
-  ) + Math.floor(Math.random() * PRODUCT_TTL_JITTER_SECONDS);
-
-const warnCacheError = (key: string, error: unknown): void => {
-  logger.warn({ event: "cache.error", key, reason: describeError(error) });
-};
-
-const readPayload = async (
-  store: CacheStore,
-  key: string,
-): Promise<string | null> => {
-  try {
-    return await store.get(key);
-  } catch (error) {
-    warnCacheError(key, error);
-    return null;
-  }
-};
-
-const writePayload = async (
-  store: CacheStore,
-  key: string,
-  payload: string,
-  ttlSeconds: number,
-): Promise<void> => {
-  try {
-    await store.setWithTtl(key, payload, ttlSeconds);
-  } catch (error) {
-    warnCacheError(key, error);
-  }
-};
-
-const parsePayload = <T>(payload: string): T | null => {
-  try {
-    return JSON.parse(payload) as T;
-  } catch {
-    return null;
-  }
-};
+export {
+  listTtlSeconds,
+  productTtlSeconds,
+} from "./helpers/cache-ttl.helpers";
 
 export type GetOrSetOptions<T> = {
   key: string;
@@ -123,61 +83,4 @@ export const readVersion = async (counterKey: string): Promise<number> => {
   const version = Number(raw);
 
   return Number.isInteger(version) && version > 0 ? version : 0;
-};
-
-const invalidate = async (keys: readonly string[]): Promise<void> => {
-  const store = getCacheStore();
-
-  if (store === null || keys.length === 0) {
-    return;
-  }
-
-  try {
-    await store.incrementAll(keys);
-  } catch (error) {
-    logger.warn({
-      event: "cache.invalidate.error",
-      keys,
-      reason: describeError(error),
-    });
-  }
-};
-
-const unique = (values: readonly string[]): string[] => [...new Set(values)];
-
-export const invalidateLists = async (): Promise<void> => {
-  await invalidate([cacheKeys.listsEpoch()]);
-};
-
-export const invalidateReviews = async (productId: string): Promise<void> => {
-  await invalidate([cacheKeys.reviewsVersion(productId)]);
-};
-
-export const invalidateProducts = async (
-  productIds: readonly string[],
-): Promise<void> => {
-  await invalidate([
-    cacheKeys.listsEpoch(),
-    ...unique(productIds).map(cacheKeys.productVersion),
-  ]);
-};
-
-export const invalidateShipping = async (): Promise<void> => {
-  const store = getCacheStore();
-
-  if (store === null) {
-    return;
-  }
-
-  const key = cacheKeys.shipping();
-
-  try {
-    await store.remove(key);
-  } catch (error) {
-    logger.warn({
-      event: "cache.invalidate.error",
-      keys: [key],
-      reason: describeError(error),
-    });
-  }
 };

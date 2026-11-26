@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
-import { FIELD, FIELD_HINT, FIELD_LABEL } from "@/features/pages/Profile/lib/styles";
+import {
+  FIELD,
+  FIELD_HINT,
+  FIELD_LABEL,
+} from "@/features/pages/Profile/lib/styles";
 
 type Props = {
   label: string;

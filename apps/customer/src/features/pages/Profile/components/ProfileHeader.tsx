@@ -3,6 +3,10 @@
 import { useTranslations } from "next-intl";
 import type { UserData } from "@/common/types/user.types";
 import {
+  avatarInitial,
+  roleBadgeKey,
+} from "@/features/pages/Profile/lib/roleBadge";
+import {
   HEADER_AVATAR,
   HEADER_AVATAR_GRADIENT,
   HEADER_EMAIL,
@@ -12,7 +16,6 @@ import {
   HEADER_ROW,
   ROLE_BADGE,
 } from "@/features/pages/Profile/lib/styles";
-import { avatarInitial, roleBadgeKey } from "@/features/pages/Profile/lib/roleBadge";
 
 type Props = {
   profileData: UserData;

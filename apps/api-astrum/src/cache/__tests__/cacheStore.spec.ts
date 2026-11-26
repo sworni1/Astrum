@@ -1,9 +1,6 @@
-import {
-  CACHE_CLIENT_OPTIONS,
-  type CacheClientSurface,
-  createCacheStore,
-  isCacheEnabled,
-} from "../cacheStore";
+import { createCacheStore, isCacheEnabled } from "../cacheStore";
+import { CACHE_CLIENT_OPTIONS } from "../constants/cacheStore.constants";
+import type { CacheClientSurface } from "../types/cache.types";
 
 type Pipeline = {
   incr: jest.Mock;
@@ -61,13 +58,18 @@ describe("createCacheStore", () => {
 
     createCacheStore("redis://cache:6379", factory);
 
-    expect(factory).toHaveBeenCalledWith("redis://cache:6379", CACHE_CLIENT_OPTIONS);
+    expect(factory).toHaveBeenCalledWith(
+      "redis://cache:6379",
+      CACHE_CLIENT_OPTIONS,
+    );
     expect(client.on).toHaveBeenCalledWith("error", expect.any(Function));
   });
 
   it("writes one warn line when the connection reports an error (AC-1)", () => {
     const { client } = fakeClient();
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    const warn = jest
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined);
 
     storeOf(client);
     const listener = client.on.mock.calls[0][1] as (error: Error) => void;
@@ -88,13 +90,24 @@ describe("createCacheStore", () => {
     const store = storeOf(client);
 
     await store.setWithTtl("cache:v1:shipping", "{}", 31);
-    await store.incrementAll(["cache:meta:epoch:lists", "cache:meta:ver:product:p1"]);
+    await store.incrementAll([
+      "cache:meta:epoch:lists",
+      "cache:meta:ver:product:p1",
+    ]);
     await store.get("cache:v1:shipping");
     await store.remove("cache:v1:shipping");
 
-    expect(client.set).toHaveBeenCalledWith("cache:v1:shipping", "{}", "EX", 31);
+    expect(client.set).toHaveBeenCalledWith(
+      "cache:v1:shipping",
+      "{}",
+      "EX",
+      31,
+    );
     expect(pipeline.incr).toHaveBeenNthCalledWith(1, "cache:meta:epoch:lists");
-    expect(pipeline.incr).toHaveBeenNthCalledWith(2, "cache:meta:ver:product:p1");
+    expect(pipeline.incr).toHaveBeenNthCalledWith(
+      2,
+      "cache:meta:ver:product:p1",
+    );
     expect(pipeline.exec).toHaveBeenCalledTimes(1);
     expect(client.get).toHaveBeenCalledWith("cache:v1:shipping");
     expect(client.del).toHaveBeenCalledWith("cache:v1:shipping");
@@ -114,20 +127,30 @@ describe("createCacheStore", () => {
     const { client, pipeline } = fakeClient();
     pipeline.exec.mockResolvedValue([
       [null, 1],
-      [new Error("READONLY You can't write against a read only replica."), null],
+      [
+        new Error("READONLY You can't write against a read only replica."),
+        null,
+      ],
     ]);
     const store = storeOf(client);
 
     await expect(
-      store.incrementAll(["cache:meta:epoch:lists", "cache:meta:ver:product:p1"]),
+      store.incrementAll([
+        "cache:meta:epoch:lists",
+        "cache:meta:ver:product:p1",
+      ]),
     ).rejects.toThrow("READONLY");
   });
 });
 
 describe("isCacheEnabled", () => {
   it("turns the cache off only for the exact false (AC-1)", () => {
-    expect(isCacheEnabled({ CACHE_ENABLED: "false" } as NodeJS.ProcessEnv)).toBe(false);
-    expect(isCacheEnabled({ CACHE_ENABLED: "true" } as NodeJS.ProcessEnv)).toBe(true);
+    expect(
+      isCacheEnabled({ CACHE_ENABLED: "false" } as NodeJS.ProcessEnv),
+    ).toBe(false);
+    expect(isCacheEnabled({ CACHE_ENABLED: "true" } as NodeJS.ProcessEnv)).toBe(
+      true,
+    );
     expect(isCacheEnabled({} as NodeJS.ProcessEnv)).toBe(true);
   });
 });

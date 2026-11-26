@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
 import { TAB_ITEM, TAB_TRACK } from "@/features/general/lib/screenStyles";
+import { cn } from "@/lib/utils";
 
 export type FilterTabItem = {
   id: string;
@@ -18,11 +18,7 @@ type Props = {
 };
 
 const FilterTabs = ({ items, currentId, onChange, label }: Props) => (
-  <div
-    className={TAB_TRACK}
-    role="tablist"
-    aria-label={label}
-  >
+  <div className={TAB_TRACK} role="tablist" aria-label={label}>
     {items.map((item) => {
       const active = item.id === currentId;
 

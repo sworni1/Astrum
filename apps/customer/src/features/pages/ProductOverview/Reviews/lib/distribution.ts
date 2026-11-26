@@ -17,4 +17,5 @@ export const distributionRows = (
     return { star, count, share: ratingShare(count, total) };
   });
 
-export const formatAverageRating = (average: number): string => average.toFixed(1);
+export const formatAverageRating = (average: number): string =>
+  average.toFixed(1);

@@ -11,68 +11,38 @@ import {
 import { cacheKeys } from "../../cache/cacheKeys";
 import { AppError } from "../../common/helpers/appError";
 import type { Owner } from "../../common/types/owner";
-import type { CreateReviewCommentDto } from "./dto/create-review-comment.dto";
-import type { CreateReviewDto } from "./dto/create-review.dto";
 import {
-  REVIEW_COMMENT_PAGE_DEFAULT_LIMIT,
-  REVIEW_COMMENT_RATE_LIMIT,
-  REVIEW_COMMENT_RATE_WINDOW_MS,
   REVIEW_ERROR_CODES,
   REVIEW_PAGE_DEFAULT_LIMIT,
-  REVIEW_PAGE_MAX_LIMIT,
 } from "./constants/reviews.constants";
+import type { CreateReviewDto } from "./dto/create-review.dto";
+import type { CreateReviewCommentDto } from "./dto/create-review-comment.dto";
+import { parseLimit, reviewNotFound } from "./helpers/reviews.helpers";
 import {
-  buildDistribution,
-  reviewCommentSelect,
-  reviewRowSelect,
-  roundAverageRating,
-  serializeReview,
-  serializeReviewComment,
-  type PublicReviewComment,
-  type ReviewCommentRow,
+  applyCommentCreate,
+  applyCommentDelete,
+  readCommentPage,
+} from "./review.comments";
+import { applyLike, applyUnlike, readLikedReviewIds } from "./review.likes";
+import { loadReviewPage } from "./review.list";
+import {
   type ReviewRow,
+  reviewRowSelect,
+  serializeReview,
 } from "./review.serializer";
+import type {
+  CommentPage,
+  CommentWriteAnswer,
+  LikeAnswer,
+  ReviewPageQuery,
+} from "./types/reviews.types";
 
-export type ReviewPageQuery = {
-  after?: unknown;
-  limit?: unknown;
-};
-
-export type LikeAnswer = {
-  liked: boolean;
-  likeCount: number;
-};
-
-export type CommentPage = {
-  comments: PublicReviewComment[];
-  nextCursor: string | null;
-  hasNextPage: boolean;
-};
-
-export type CommentWriteAnswer = {
-  comment: PublicReviewComment;
-  commentCount: number;
-};
-
-type Tx = Prisma.TransactionClient;
-
-const parseLimit = (raw: unknown, fallback: number): number => {
-  if (raw === undefined) {
-    return fallback;
-  }
-
-  const value = typeof raw === "number" ? raw : Number(raw);
-
-  if (!Number.isInteger(value)) {
-    throw new AppError(
-      400,
-      REVIEW_ERROR_CODES.invalidPagination,
-      "limit must be an integer",
-    );
-  }
-
-  return Math.min(Math.max(value, 1), REVIEW_PAGE_MAX_LIMIT);
-};
+export type {
+  CommentPage,
+  CommentWriteAnswer,
+  LikeAnswer,
+  ReviewPageQuery,
+} from "./types/reviews.types";
 
 export class ReviewsService {
   async createReview(userId: string, productId: string, dto: CreateReviewDto) {
@@ -150,69 +120,8 @@ export class ReviewsService {
     return await getOrSet({
       key: cacheKeys.reviews(productId, revision, limit, after),
       ttlSeconds: productTtlSeconds(),
-      load: async () => await this.loadReviewPage(productId, limit, after),
+      load: async () => await loadReviewPage(productId, limit, after),
     });
-  }
-
-  private async loadReviewPage(
-    productId: string,
-    limit: number,
-    after: string | undefined,
-  ) {
-    if (after !== undefined) {
-      const cursorRow = await prisma.review.findFirst({
-        where: { id: after, productId, status: ReviewStatus.APPROVED },
-        select: { id: true },
-      });
-
-      if (!cursorRow) {
-        throw new AppError(
-          400,
-          REVIEW_ERROR_CODES.invalidCursor,
-          "after must be a review of this product",
-        );
-      }
-    }
-
-    const where = { productId, status: ReviewStatus.APPROVED };
-
-    const [rows, total, average, ratingGroups] = await Promise.all([
-      prisma.review.findMany({
-        where,
-        take: limit + 1,
-        ...(after ? { cursor: { id: after }, skip: 1 } : {}),
-
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-        select: reviewRowSelect,
-      }),
-      prisma.review.count({ where }),
-      prisma.review.aggregate({ where, _avg: { rating: true } }),
-      prisma.review.groupBy({
-        by: ["rating"],
-        where,
-        _count: { _all: true },
-      }),
-    ]);
-
-    const hasNextPage = rows.length > limit;
-    const page = hasNextPage ? rows.slice(0, limit) : rows;
-    const nextCursor = hasNextPage ? page[page.length - 1].id : null;
-
-    return {
-      reviews: page.map((row) => serializeReview(row as ReviewRow)),
-      nextCursor,
-      hasNextPage,
-      aggregate: {
-        total,
-        averageRating: roundAverageRating(average._avg.rating as number | null),
-        distribution: buildDistribution(
-          ratingGroups.map((group) => ({
-            rating: group.rating,
-            count: group._count._all,
-          })),
-        ),
-      },
-    };
   }
 
   async getReviewById(reviewId: string) {
@@ -221,7 +130,7 @@ export class ReviewsService {
     });
 
     if (!review) {
-      throw new AppError(404, REVIEW_ERROR_CODES.notFound, "Review not found");
+      throw reviewNotFound();
     }
 
     return review;
@@ -231,54 +140,11 @@ export class ReviewsService {
     owner: Owner | null,
     productId: string,
   ): Promise<{ reviewIds: string[] }> {
-    if (!owner || owner.kind !== "user") {
-      return { reviewIds: [] };
-    }
-
-    const rows = await prisma.reviewLike.findMany({
-      where: {
-        userId: owner.userId,
-        Review: { productId, status: ReviewStatus.APPROVED },
-      },
-      select: { reviewId: true },
-      orderBy: { createdAt: "asc" },
-    });
-
-    return { reviewIds: rows.map((row) => row.reviewId) };
+    return await readLikedReviewIds(owner, productId);
   }
 
   async likeReview(userId: string, reviewId: string): Promise<LikeAnswer> {
-    const { answer, productId } = await prisma.$transaction(async (tx) => {
-      const review = await this.requireApprovedReview(tx, reviewId);
-
-      const created = await tx.reviewLike.createMany({
-        data: [{ reviewId, userId }],
-        skipDuplicates: true,
-      });
-
-      if (created.count === 1) {
-        const updated = await tx.review.update({
-          where: { id: reviewId },
-          data: { likeCount: { increment: 1 } },
-          select: { likeCount: true },
-        });
-
-        return {
-          answer: { liked: true, likeCount: updated.likeCount },
-          productId: review.productId,
-        };
-      }
-
-      const current = await tx.review.findUnique({
-        where: { id: reviewId },
-        select: { likeCount: true },
-      });
-
-      return {
-        answer: { liked: true, likeCount: current?.likeCount ?? 0 },
-        productId: review.productId,
-      };
-    });
+    const { answer, productId } = await applyLike(userId, reviewId);
 
     await invalidateReviews(productId);
 
@@ -286,30 +152,7 @@ export class ReviewsService {
   }
 
   async unlikeReview(userId: string, reviewId: string): Promise<LikeAnswer> {
-    const { answer, productId } = await prisma.$transaction(async (tx) => {
-      const review = await this.requireReview(tx, reviewId);
-
-      const removed = await tx.reviewLike.deleteMany({
-        where: { reviewId, userId },
-      });
-
-      if (removed.count === 1) {
-        await tx.review.updateMany({
-          where: { id: reviewId, likeCount: { gt: 0 } },
-          data: { likeCount: { decrement: 1 } },
-        });
-      }
-
-      const current = await tx.review.findUnique({
-        where: { id: reviewId },
-        select: { likeCount: true },
-      });
-
-      return {
-        answer: { liked: false, likeCount: current?.likeCount ?? 0 },
-        productId: review.productId,
-      };
-    });
+    const { answer, productId } = await applyUnlike(userId, reviewId);
 
     await invalidateReviews(productId);
 
@@ -321,51 +164,7 @@ export class ReviewsService {
     viewerId: string,
     query: ReviewPageQuery = {},
   ): Promise<CommentPage> {
-    const review = await prisma.review.findFirst({
-      where: { id: reviewId, status: ReviewStatus.APPROVED },
-      select: { id: true },
-    });
-
-    if (!review) {
-      throw new AppError(404, REVIEW_ERROR_CODES.notFound, "Review not found");
-    }
-
-    const limit = parseLimit(query.limit, REVIEW_COMMENT_PAGE_DEFAULT_LIMIT);
-    const after = query.after === undefined ? undefined : String(query.after);
-
-    if (after !== undefined) {
-      const cursorRow = await prisma.reviewComment.findFirst({
-        where: { id: after, reviewId },
-        select: { id: true },
-      });
-
-      if (!cursorRow) {
-        throw new AppError(
-          400,
-          REVIEW_ERROR_CODES.invalidCursor,
-          "after must be a comment of this review",
-        );
-      }
-    }
-
-    const rows = await prisma.reviewComment.findMany({
-      where: { reviewId },
-      take: limit + 1,
-      ...(after ? { cursor: { id: after }, skip: 1 } : {}),
-      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-      select: reviewCommentSelect,
-    });
-
-    const hasNextPage = rows.length > limit;
-    const page = hasNextPage ? rows.slice(0, limit) : rows;
-
-    return {
-      comments: page.map((row) =>
-        serializeReviewComment(row as ReviewCommentRow, viewerId),
-      ),
-      nextCursor: hasNextPage ? page[page.length - 1].id : null,
-      hasNextPage,
-    };
+    return await readCommentPage(reviewId, viewerId, query);
   }
 
   async createReviewComment(
@@ -373,43 +172,11 @@ export class ReviewsService {
     reviewId: string,
     dto: CreateReviewCommentDto,
   ): Promise<CommentWriteAnswer> {
-    const body = dto.body.trim();
-
-    const { answer, productId } = await prisma.$transaction(async (tx) => {
-      const review = await this.requireApprovedReview(tx, reviewId);
-
-      const windowStart = new Date(Date.now() - REVIEW_COMMENT_RATE_WINDOW_MS);
-      const recent = await tx.reviewComment.count({
-        where: { userId, createdAt: { gte: windowStart } },
-      });
-
-      if (recent >= REVIEW_COMMENT_RATE_LIMIT) {
-        throw new AppError(
-          429,
-          REVIEW_ERROR_CODES.commentRateLimited,
-          "Too many comments in the last hour",
-        );
-      }
-
-      const row = await tx.reviewComment.create({
-        data: { reviewId, userId, body },
-        select: reviewCommentSelect,
-      });
-
-      const updated = await tx.review.update({
-        where: { id: reviewId },
-        data: { commentCount: { increment: 1 } },
-        select: { commentCount: true },
-      });
-
-      return {
-        answer: {
-          comment: serializeReviewComment(row as ReviewCommentRow, userId),
-          commentCount: updated.commentCount,
-        },
-        productId: review.productId,
-      };
-    });
+    const { answer, productId } = await applyCommentCreate(
+      userId,
+      reviewId,
+      dto,
+    );
 
     await invalidateReviews(productId);
 
@@ -421,95 +188,15 @@ export class ReviewsService {
     reviewId: string,
     commentId: string,
   ): Promise<CommentWriteAnswer> {
-    const { answer, productId } = await prisma.$transaction(async (tx) => {
-      const review = await this.requireReview(tx, reviewId);
-
-      const existing = await tx.reviewComment.findFirst({
-        where: { id: commentId, reviewId },
-        select: { id: true, userId: true },
-      });
-
-      if (!existing) {
-        throw new AppError(
-          404,
-          REVIEW_ERROR_CODES.commentNotFound,
-          "Comment not found",
-        );
-      }
-
-      if (existing.userId !== userId) {
-        throw new AppError(
-          403,
-          REVIEW_ERROR_CODES.commentForbidden,
-          "Only the author can delete this comment",
-        );
-      }
-
-      const updated = await tx.reviewComment.updateMany({
-        where: { id: commentId, reviewId, userId, deletedAt: null },
-        data: { deletedAt: new Date() },
-      });
-
-      if (updated.count === 1) {
-        await tx.review.updateMany({
-          where: { id: reviewId, commentCount: { gt: 0 } },
-          data: { commentCount: { decrement: 1 } },
-        });
-      }
-
-      const row = await tx.reviewComment.findUnique({
-        where: { id: commentId },
-        select: reviewCommentSelect,
-      });
-      const counter = await tx.review.findUnique({
-        where: { id: reviewId },
-        select: { commentCount: true },
-      });
-
-      return {
-        answer: {
-          comment: serializeReviewComment(row as ReviewCommentRow, userId),
-          commentCount: counter?.commentCount ?? 0,
-        },
-        productId: review.productId,
-      };
-    });
+    const { answer, productId } = await applyCommentDelete(
+      userId,
+      reviewId,
+      commentId,
+    );
 
     await invalidateReviews(productId);
 
     return answer;
-  }
-
-  private async requireApprovedReview(
-    tx: Tx,
-    reviewId: string,
-  ): Promise<{ id: string; productId: string }> {
-    const review = await tx.review.findFirst({
-      where: { id: reviewId, status: ReviewStatus.APPROVED },
-      select: { id: true, productId: true },
-    });
-
-    if (!review) {
-      throw new AppError(404, REVIEW_ERROR_CODES.notFound, "Review not found");
-    }
-
-    return review;
-  }
-
-  private async requireReview(
-    tx: Tx,
-    reviewId: string,
-  ): Promise<{ id: string; productId: string }> {
-    const review = await tx.review.findFirst({
-      where: { id: reviewId },
-      select: { id: true, productId: true },
-    });
-
-    if (!review) {
-      throw new AppError(404, REVIEW_ERROR_CODES.notFound, "Review not found");
-    }
-
-    return review;
   }
 
   async updateProductAggregates(productId: string) {

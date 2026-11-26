@@ -1,11 +1,11 @@
 "use client";
 
+import { ACTIONS_BY_SCOPE } from "@/features/pages/CourierWorkspace/lib/actions";
 import type { CourierOrder } from "@/hooks/staff/courierOrder.types";
 import type {
   CourierOrderActionName,
   PendingCourierOrderAction,
 } from "@/hooks/staff/useCourierOrderAction";
-import { ACTIONS_BY_SCOPE } from "@/features/pages/CourierWorkspace/lib/actions";
 import ActionDialog from "./ActionDialog";
 
 type Props = {

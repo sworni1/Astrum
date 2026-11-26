@@ -7,8 +7,8 @@ import type {
 } from "@/common/types/order.types";
 import { Skeleton } from "@/components/ui/skeleton";
 import FilterTabs, { type FilterTabItem } from "@/features/general/FilterTabs";
-import SearchField from "@/features/general/SearchField";
 import { TOOLBAR } from "@/features/general/lib/screenStyles";
+import SearchField from "@/features/general/SearchField";
 import { SELLER_TABS } from "@/features/pages/SellerOrders/lib/status";
 
 type Props = {

@@ -1,7 +1,10 @@
 "use client";
 
 import { Loader2, Search } from "lucide-react";
-import { SEARCH_FIELD, SEARCH_INPUT } from "@/features/general/lib/screenStyles";
+import {
+  SEARCH_FIELD,
+  SEARCH_INPUT,
+} from "@/features/general/lib/screenStyles";
 
 type Props = {
   value: string;

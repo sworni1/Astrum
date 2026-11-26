@@ -1,5 +1,5 @@
-import type { CourierOrderActionName } from "@/hooks/staff/useCourierOrderAction";
 import type { CourierScope } from "@/hooks/staff/courierOrder.types";
+import type { CourierOrderActionName } from "@/hooks/staff/useCourierOrderAction";
 
 export const ACTIONS_BY_SCOPE: Record<
   CourierScope,

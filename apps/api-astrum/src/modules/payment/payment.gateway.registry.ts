@@ -1,8 +1,5 @@
-import {
-  createStripeGateway,
-  type PaymentGateway,
-} from "./payment.gateway";
 import { paymentProviderConfig } from "./payment.config";
+import { createStripeGateway, type PaymentGateway } from "./payment.gateway";
 
 let override: PaymentGateway | null = null;
 

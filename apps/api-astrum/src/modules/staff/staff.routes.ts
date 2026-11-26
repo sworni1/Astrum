@@ -7,8 +7,8 @@ import {
 } from "../../middlewares/staffRole";
 import { validateDto } from "../../middlewares/validateDto";
 import { STAFF_ERROR_CODES } from "./constants/staff.constants";
-import { CreatePointWorkerDto } from "./dto/create-point-worker.dto";
 import { CourierOrderController } from "./courier-order.controller";
+import { CreatePointWorkerDto } from "./dto/create-point-worker.dto";
 import { PointOrderController } from "./point-order.controller";
 import { StaffController } from "./staff.controller";
 

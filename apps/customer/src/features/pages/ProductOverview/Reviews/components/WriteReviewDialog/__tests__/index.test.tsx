@@ -20,7 +20,9 @@ vi.mock("@/hooks/review/useCreateReview", () => ({
 }));
 
 vi.mock("@/components/ui/dialog", () => {
-  const Pass = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
+  const Pass = ({ children }: { children?: ReactNode }) => (
+    <div>{children}</div>
+  );
 
   return {
     Dialog: Pass,
@@ -64,7 +66,9 @@ describe("WriteReviewDialog", () => {
     root = createRoot(container);
 
     await act(async () => {
-      root.render(<WriteReviewDialog productId="product-1" orderItemId="line-1" />);
+      root.render(
+        <WriteReviewDialog productId="product-1" orderItemId="line-1" />,
+      );
     });
 
     return {
@@ -74,7 +78,9 @@ describe("WriteReviewDialog", () => {
         (button) => button.type === "submit",
       ) as HTMLButtonElement,
       stars: Array.from(
-        container.querySelectorAll<HTMLInputElement>('input[type="radio"][value="5"]'),
+        container.querySelectorAll<HTMLInputElement>(
+          'input[type="radio"][value="5"]',
+        ),
       ),
     };
   };

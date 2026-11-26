@@ -1,9 +1,12 @@
 jest.mock("../payment.gateway.registry", () => ({ paymentGateway: jest.fn() }));
 
-jest.mock("../payment.webhook.service", () => ({ handleWebhookEvent: jest.fn() }));
+jest.mock("../payment.webhook.service", () => ({
+  handleWebhookEvent: jest.fn(),
+}));
 
 import type { Request, Response } from "express";
-import { InvalidSignatureError, type PaymentGateway } from "../payment.gateway";
+import { InvalidSignatureError } from "../helpers/payment.errors";
+import type { PaymentGateway } from "../payment.gateway";
 import { paymentGateway } from "../payment.gateway.registry";
 import { handleStripeWebhook } from "../payment.webhook.controller";
 import { handleWebhookEvent } from "../payment.webhook.service";

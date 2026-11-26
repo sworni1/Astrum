@@ -9,10 +9,16 @@ import type {
   SellerSalesPage,
   SellerSalesStats,
 } from "@/common/types/order.types";
-import { type SellerErrorKind, sellerErrorKind } from "@/hooks/seller/sellerError";
-import { useSellerOrders } from "@/hooks/seller/useSellerOrders";
-import { type SalesEmptyState, salesEmptyState } from "@/features/pages/SellerOrders/lib/emptyState";
+import {
+  type SalesEmptyState,
+  salesEmptyState,
+} from "@/features/pages/SellerOrders/lib/emptyState";
 import { countForStatus } from "@/features/pages/SellerOrders/lib/status";
+import {
+  type SellerErrorKind,
+  sellerErrorKind,
+} from "@/hooks/seller/sellerError";
+import { useSellerOrders } from "@/hooks/seller/useSellerOrders";
 
 export const SELLER_SEARCH_DEBOUNCE_MS = 300;
 

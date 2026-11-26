@@ -1,4 +1,4 @@
-import type { LetterCopy } from "../letter";
+import type { LetterCopy } from "../types/worker.types";
 
 export const enCopy: LetterCopy = {
   subject: "Confirm your email address for Astrum",

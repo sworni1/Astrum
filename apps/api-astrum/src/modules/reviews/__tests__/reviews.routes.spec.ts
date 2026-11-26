@@ -83,7 +83,10 @@ describe("productReviewsRouter params", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ reviewIds: ["review-1"] });
-    expect(likedSet).toHaveBeenCalledWith(userOwner("user-1"), "product-from-path");
+    expect(likedSet).toHaveBeenCalledWith(
+      userOwner("user-1"),
+      "product-from-path",
+    );
   });
 
   it("never reads the product from the request body (AC-11)", async () => {

@@ -1,19 +1,19 @@
 import type { Payment } from "@astrum/db/client";
 import { prisma } from "../../../lib/prisma";
-import type { OrderWithLines } from "./payment.apply";
-import type { ProviderEvent } from "./payment.gateway";
+import type { OrderWithLines } from "../order/order-status";
+import {
+  ATTEMPT_OPEN_STATUSES,
+  ATTEMPT_WITH_ORDER_INCLUDE,
+} from "./constants/payment.constants";
+import type { ProviderEvent } from "./types/payment.types";
 
-export type AttemptWithOrder = Payment & { order: OrderWithLines };
-
-const ATTEMPT_WITH_ORDER = {
-  order: { include: { OrderItem: true } },
-} as const;
+type AttemptWithOrder = Payment & { order: OrderWithLines };
 
 export const newestOpenAttempt = async (
   orderId: string,
 ): Promise<Payment | null> =>
   await prisma.payment.findFirst({
-    where: { orderId, status: { in: ["PENDING", "FAILED"] } },
+    where: { orderId, status: { in: [...ATTEMPT_OPEN_STATUSES] } },
     orderBy: { createdAt: "desc" },
   });
 
@@ -24,7 +24,7 @@ export const reusableAttempt = async (
   await prisma.payment.findFirst({
     where: {
       orderId,
-      status: { in: ["PENDING", "FAILED"] },
+      status: { in: [...ATTEMPT_OPEN_STATUSES] },
       checkoutUrl: { not: null },
       expiresAt: { gt: now },
     },
@@ -34,7 +34,7 @@ export const reusableAttempt = async (
 const bySession = async (sessionId: string): Promise<AttemptWithOrder | null> =>
   await prisma.payment.findUnique({
     where: { providerSessionId: sessionId },
-    include: ATTEMPT_WITH_ORDER,
+    include: ATTEMPT_WITH_ORDER_INCLUDE,
   });
 
 const byIntent = async (
@@ -42,7 +42,7 @@ const byIntent = async (
 ): Promise<AttemptWithOrder | null> =>
   await prisma.payment.findFirst({
     where: { providerPaymentIntentId: paymentIntentId },
-    include: ATTEMPT_WITH_ORDER,
+    include: ATTEMPT_WITH_ORDER_INCLUDE,
   });
 
 const pendingOfOrder = async (
@@ -51,7 +51,7 @@ const pendingOfOrder = async (
   await prisma.payment.findFirst({
     where: { orderId, status: "PENDING", providerSessionId: null },
     orderBy: { createdAt: "desc" },
-    include: ATTEMPT_WITH_ORDER,
+    include: ATTEMPT_WITH_ORDER_INCLUDE,
   });
 
 const adoptSession = async (

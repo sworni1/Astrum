@@ -59,7 +59,8 @@ describe("ProfileHeader", () => {
     await render(<ProfileHeader profileData={profile({})} />);
 
     expect(
-      container.querySelector("[data-testid='profile-role-badge']")?.textContent,
+      container.querySelector("[data-testid='profile-role-badge']")
+        ?.textContent,
     ).toBe("profile.roleBuyer");
   });
 
@@ -67,7 +68,8 @@ describe("ProfileHeader", () => {
     await render(<ProfileHeader profileData={profile({ isSeller: true })} />);
 
     expect(
-      container.querySelector("[data-testid='profile-role-badge']")?.textContent,
+      container.querySelector("[data-testid='profile-role-badge']")
+        ?.textContent,
     ).toBe("profile.roleSeller");
 
     await act(async () => root.unmount());
@@ -78,7 +80,8 @@ describe("ProfileHeader", () => {
     );
 
     expect(
-      container.querySelector("[data-testid='profile-role-badge']")?.textContent,
+      container.querySelector("[data-testid='profile-role-badge']")
+        ?.textContent,
     ).toBe("profile.roleStaff");
   });
 

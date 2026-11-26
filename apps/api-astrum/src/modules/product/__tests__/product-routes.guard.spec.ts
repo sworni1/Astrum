@@ -3,8 +3,8 @@ jest.mock("../../../../lib/prisma", () => ({
 }));
 
 import type { Request, Response } from "express";
-import productRoutes from "../product.routes";
 import { requireSession } from "../../../middlewares/resolveOwner";
+import productRoutes from "../product.routes";
 
 type Layer = {
   name: string;
@@ -22,7 +22,8 @@ const layersOf = (router: unknown): Layer[] =>
 const collectRoutes = (
   router: unknown,
 ): Array<{ path: string; methods: string[]; handlers: string[] }> => {
-  const found: Array<{ path: string; methods: string[]; handlers: string[] }> = [];
+  const found: Array<{ path: string; methods: string[]; handlers: string[] }> =
+    [];
 
   for (const layer of layersOf(router)) {
     if (layer.route) {

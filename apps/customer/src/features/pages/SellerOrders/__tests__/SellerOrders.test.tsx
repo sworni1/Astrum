@@ -14,9 +14,13 @@ vi.mock("next-intl", () => ({
 }));
 
 vi.mock("next/link", () => ({
-  default: ({ href, children }: { href: string; children: React.ReactNode }) => (
-    <a href={href}>{children}</a>
-  ),
+  default: ({
+    href,
+    children,
+  }: {
+    href: string;
+    children: React.ReactNode;
+  }) => <a href={href}>{children}</a>,
 }));
 
 vi.mock("@/features/pages/SellerOrders/hooks/useSalesFilters", () => ({
@@ -150,7 +154,9 @@ describe("SellerOrders states", () => {
     expect(text()).toContain("states.failureText");
     expect(text()).not.toContain("states.emptyTitle");
 
-    const button = container.querySelector("button:not([role])") as HTMLButtonElement;
+    const button = container.querySelector(
+      "button:not([role])",
+    ) as HTMLButtonElement;
 
     await act(async () => button.click());
     await flush();

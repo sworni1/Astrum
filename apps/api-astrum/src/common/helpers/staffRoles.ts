@@ -1,4 +1,5 @@
-import { STAFF_ROLE_ORDER, type StaffRole } from "../types/staff.types";
+import { STAFF_ROLE_ORDER } from "../constants/staff.constants";
+import type { StaffRole } from "../types/staff.types";
 
 type RoleRow = { pointWorker: object | null; courier: object | null };
 

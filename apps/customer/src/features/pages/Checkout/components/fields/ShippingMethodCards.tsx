@@ -101,7 +101,8 @@ const ShippingMethodCards = ({
                       <span className={RADIO_PRICE}>
                         {formatMoney(
                           method.price,
-                          toCurrency(method.currency), locale,
+                          toCurrency(method.currency),
+                          locale,
                         )}
                       </span>
                     </label>

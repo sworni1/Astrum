@@ -53,9 +53,16 @@ describe("guest identity", () => {
     const valid = token({ guestId: "guest-1", typ: "guest" });
     const [head, payload, signature] = valid.split(".");
     const modified = `${head}.${payload}.${signature.slice(0, -1)}A`;
-    const foreign = token({ guestId: "guest-1", typ: "guest" }, "another-secret");
+    const foreign = token(
+      { guestId: "guest-1", typ: "guest" },
+      "another-secret",
+    );
     const expired = token(
-      { guestId: "guest-1", typ: "guest", exp: Math.floor(Date.now() / 1000) - 60 },
+      {
+        guestId: "guest-1",
+        typ: "guest",
+        exp: Math.floor(Date.now() / 1000) - 60,
+      },
       SECRET,
     );
 

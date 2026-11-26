@@ -42,11 +42,16 @@ export const useProductReviews = (productId: string) => {
     setLoadMoreFailed(false);
 
     try {
-      const page = (await getData(reviewsPageKey(productId, cursor))) as ReviewPage;
+      const page = (await getData(
+        reviewsPageKey(productId, cursor),
+      )) as ReviewPage;
 
       setExtra((current) => ({
         productId,
-        pages: [...(current.productId === productId ? current.pages : []), page],
+        pages: [
+          ...(current.productId === productId ? current.pages : []),
+          page,
+        ],
       }));
     } catch {
       setLoadMoreFailed(true);

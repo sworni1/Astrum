@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useFetcher } from "@/hooks/useFetcher";
-import { STAFF_PAGE_SIZE } from "./staffPage";
 import type { PointOrder, PointOrdersPage } from "./pointOrder.types";
+import { STAFF_PAGE_SIZE } from "./staffPage";
 
 export interface UsePointOrdersReturn {
   orders: PointOrder[];

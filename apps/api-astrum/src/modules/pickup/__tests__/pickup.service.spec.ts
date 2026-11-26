@@ -5,9 +5,8 @@ jest.mock("../../../../lib/prisma", () => ({
 import { prisma } from "../../../../lib/prisma";
 import { PickupService } from "../pickup.service";
 
-const findMany = (
-  prisma as unknown as { pickupPoint: { findMany: jest.Mock } }
-).pickupPoint.findMany;
+const findMany = (prisma as unknown as { pickupPoint: { findMany: jest.Mock } })
+  .pickupPoint.findMany;
 
 describe("PickupService.getActivePoints", () => {
   beforeEach(() => {

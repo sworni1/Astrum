@@ -6,7 +6,9 @@ const describeWithDatabase =
   process.env.ORDER_DB_TESTS === "1" ? describe : describe.skip;
 
 const describeError = (error: unknown): string =>
-  error instanceof Error ? `${(error as { code?: string }).code ?? ""}` : String(error);
+  error instanceof Error
+    ? `${(error as { code?: string }).code ?? ""}`
+    : String(error);
 
 describeWithDatabase("Point counter against Postgres", () => {
   const suffix = `point-${Date.now()}`;
@@ -149,7 +151,9 @@ describeWithDatabase("Point counter against Postgres", () => {
       where: { id: { in: [pickupPointId, otherPointId] } },
     });
     await prisma.shippingMethod.deleteMany({ where: { id: shippingMethodId } });
-    await prisma.user.deleteMany({ where: { id: { in: [buyerId, workerId] } } });
+    await prisma.user.deleteMany({
+      where: { id: { in: [buyerId, workerId] } },
+    });
   });
 
   it("lists only this point's shipped orders (AC-1)", async () => {
@@ -171,9 +175,9 @@ describeWithDatabase("Point counter against Postgres", () => {
     expect(ids).not.toContain(confirmed);
     expect(ids).not.toContain(foreign);
     expect(answer.total).toBeGreaterThanOrEqual(1);
-    expect(
-      answer.orders.every((order) => order.status === "SHIPPED"),
-    ).toBe(true);
+    expect(answer.orders.every((order) => order.status === "SHIPPED")).toBe(
+      true,
+    );
   });
 
   it("serialises two workers pressing the handover at the same moment (AC-5)", async () => {
@@ -196,7 +200,11 @@ describeWithDatabase("Point counter against Postgres", () => {
 
     const order = await prisma.order.findUniqueOrThrow({
       where: { id: orderId },
-      select: { handedOverAt: true, status: true, OrderItem: { select: { receiptDate: true, status: true } } },
+      select: {
+        handedOverAt: true,
+        status: true,
+        OrderItem: { select: { receiptDate: true, status: true } },
+      },
     });
 
     expect(order.status).toBe("DELIVERED");

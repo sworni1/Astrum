@@ -139,7 +139,11 @@ describe("SellerOnboarding", () => {
   });
 
   it("shows the form for an active account that does not sell (AC-3, AC-4)", async () => {
-    mocks.user.profileData = { isSeller: false, status: "ACTIVE", staffRoles: [] };
+    mocks.user.profileData = {
+      isSeller: false,
+      status: "ACTIVE",
+      staffRoles: [],
+    };
     await renderPage();
 
     expect(container.querySelector("form")).not.toBeNull();
@@ -149,7 +153,11 @@ describe("SellerOnboarding", () => {
   });
 
   it("disables the submit of a PENDING account and explains why (AC-3)", async () => {
-    mocks.user.profileData = { isSeller: false, status: "PENDING", staffRoles: [] };
+    mocks.user.profileData = {
+      isSeller: false,
+      status: "PENDING",
+      staffRoles: [],
+    };
     await renderPage();
 
     expect(text()).toContain("seller.onboarding.pendingNotice");
@@ -157,7 +165,11 @@ describe("SellerOnboarding", () => {
   });
 
   it("shows the already sells state with the panel link (AC-3)", async () => {
-    mocks.user.profileData = { isSeller: true, status: "ACTIVE", staffRoles: [] };
+    mocks.user.profileData = {
+      isSeller: true,
+      status: "ACTIVE",
+      staffRoles: [],
+    };
     await renderPage();
 
     const link = container.querySelector("a[href='/seller/orders']");
@@ -167,7 +179,11 @@ describe("SellerOnboarding", () => {
   });
 
   it("shows the already sells state for a seller whose address is PENDING (AC-3)", async () => {
-    mocks.user.profileData = { isSeller: true, status: "PENDING", staffRoles: [] };
+    mocks.user.profileData = {
+      isSeller: true,
+      status: "PENDING",
+      staffRoles: [],
+    };
     await renderPage();
 
     expect(text()).toContain("seller.onboarding.alreadyTitle");
@@ -176,9 +192,17 @@ describe("SellerOnboarding", () => {
   });
 
   it("shows the success card after the call, over the already sells state (AC-3, AC-9)", async () => {
-    mocks.user.profileData = { isSeller: false, status: "ACTIVE", staffRoles: [] };
+    mocks.user.profileData = {
+      isSeller: false,
+      status: "ACTIVE",
+      staffRoles: [],
+    };
     mocks.becomeSeller.mockImplementation(async () => {
-      mocks.user.profileData = { isSeller: true, status: "ACTIVE", staffRoles: [] };
+      mocks.user.profileData = {
+        isSeller: true,
+        status: "ACTIVE",
+        staffRoles: [],
+      };
       return { isSeller: true, businessName: "My Shop" };
     });
     await renderPage();

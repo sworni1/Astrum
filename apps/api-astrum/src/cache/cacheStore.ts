@@ -1,77 +1,21 @@
 import Redis, { type RedisOptions } from "ioredis";
 
+import { describeError } from "../common/helpers/describeError";
 import { logger } from "../common/helpers/logger";
-import { describeError } from "../events/describe-error";
-
-export const CACHE_COMMAND_TIMEOUT_MS = 100;
-
-export const CACHE_CONNECT_TIMEOUT_MS = 100;
-
-export const CACHE_RETRY_CAP_MS = 2_000;
-
-export type CacheStore = {
-  get(key: string): Promise<string | null>;
-  setWithTtl(key: string, value: string, ttlSeconds: number): Promise<unknown>;
-  incrementAll(keys: readonly string[]): Promise<unknown>;
-  remove(key: string): Promise<unknown>;
-  quit(): Promise<unknown>;
-};
-
-export const CACHE_CLIENT_OPTIONS: RedisOptions = {
-  commandTimeout: CACHE_COMMAND_TIMEOUT_MS,
-  connectTimeout: CACHE_CONNECT_TIMEOUT_MS,
-  enableOfflineQueue: false,
-  maxRetriesPerRequest: 1,
-  lazyConnect: true,
-  retryStrategy: (attempt: number): number =>
-    Math.min(attempt * 200, CACHE_RETRY_CAP_MS),
-};
-
-type CacheClient = Pick<Redis, "get" | "set" | "del" | "pipeline" | "on" | "quit">;
-
-export type CacheClientSurface = CacheClient;
-
-const withBudget = async <T>(work: Promise<T>): Promise<T> => {
-  let timer: NodeJS.Timeout | undefined;
-
-  const budget = new Promise<never>((_resolve, reject) => {
-    timer = setTimeout(
-      () => reject(new Error("cache command over budget")),
-      CACHE_COMMAND_TIMEOUT_MS,
-    );
-  });
-
-  try {
-    return await Promise.race([work, budget]);
-  } finally {
-    clearTimeout(timer);
-  }
-};
-
-const failedCommand = (results: unknown): Error | null => {
-  if (!Array.isArray(results)) {
-    return new Error("cache pipeline answered nothing");
-  }
-
-  for (const entry of results) {
-    if (!Array.isArray(entry)) {
-      continue;
-    }
-
-    const [error] = entry as [unknown, unknown];
-
-    if (error !== null && error !== undefined) {
-      return error instanceof Error ? error : new Error(String(error));
-    }
-  }
-
-  return null;
-};
+import { withTimeout } from "../common/helpers/timeout";
+import {
+  CACHE_CLIENT_OPTIONS,
+  CACHE_COMMAND_TIMEOUT_MS,
+} from "./constants/cacheStore.constants";
+import { failedCommand } from "./helpers/cache-pipeline.helpers";
+import type { CacheClientSurface, CacheStore } from "./types/cache.types";
 
 export const createCacheStore = (
   url: string,
-  factory: (url: string, options: RedisOptions) => CacheClient = (target, options) =>
-    new Redis(target, options),
+  factory: (url: string, options: RedisOptions) => CacheClientSurface = (
+    target,
+    options,
+  ) => new Redis(target, options),
 ): CacheStore => {
   const client = factory(url, CACHE_CLIENT_OPTIONS);
 
@@ -80,9 +24,18 @@ export const createCacheStore = (
   });
 
   return {
-    get: async (key) => await withBudget(client.get(key)),
+    get: async (key) =>
+      await withTimeout(
+        client.get(key),
+        CACHE_COMMAND_TIMEOUT_MS,
+        "cache command over budget",
+      ),
     setWithTtl: async (key, value, ttlSeconds) =>
-      await withBudget(client.set(key, value, "EX", ttlSeconds)),
+      await withTimeout(
+        client.set(key, value, "EX", ttlSeconds),
+        CACHE_COMMAND_TIMEOUT_MS,
+        "cache command over budget",
+      ),
     incrementAll: async (keys) => {
       const pipeline = client.pipeline();
 
@@ -90,7 +43,11 @@ export const createCacheStore = (
         pipeline.incr(key);
       }
 
-      const results = await withBudget(pipeline.exec());
+      const results = await withTimeout(
+        pipeline.exec(),
+        CACHE_COMMAND_TIMEOUT_MS,
+        "cache command over budget",
+      );
       const failure = failedCommand(results);
 
       if (failure !== null) {
@@ -99,7 +56,12 @@ export const createCacheStore = (
 
       return results;
     },
-    remove: async (key) => await withBudget(client.del(key)),
+    remove: async (key) =>
+      await withTimeout(
+        client.del(key),
+        CACHE_COMMAND_TIMEOUT_MS,
+        "cache command over budget",
+      ),
     quit: async () => await client.quit(),
   };
 };

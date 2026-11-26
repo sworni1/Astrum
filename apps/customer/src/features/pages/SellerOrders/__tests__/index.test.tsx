@@ -111,7 +111,9 @@ const text = (): string => container.textContent ?? "";
 
 const cells = (): HTMLElement[] =>
   Array.from(
-    (container.querySelector("tbody tr") as HTMLTableRowElement).querySelectorAll("td"),
+    (
+      container.querySelector("tbody tr") as HTMLTableRowElement
+    ).querySelectorAll("td"),
   );
 
 const typeQuery = async (value: string): Promise<void> => {
@@ -169,7 +171,9 @@ describe("SellerOrders table", () => {
   it("prints the four tiles from the counts and the money (AC-6)", async () => {
     await renderPage();
 
-    const labels = Array.from(container.querySelectorAll(".text-sm.text-muted-foreground"))
+    const labels = Array.from(
+      container.querySelectorAll(".text-sm.text-muted-foreground"),
+    )
       .map((node) => node.textContent)
       .filter((value) => value?.startsWith("stats."));
     const values = Array.from(container.querySelectorAll("span.text-2xl")).map(
@@ -190,9 +194,9 @@ describe("SellerOrders table", () => {
 
     const tabs = Array.from(container.querySelectorAll('[role="tab"]'));
 
-    expect(container.querySelector('[role="tablist"]')?.getAttribute("aria-label")).toBe(
-      "tabs.label",
-    );
+    expect(
+      container.querySelector('[role="tablist"]')?.getAttribute("aria-label"),
+    ).toBe("tabs.label");
     expect(tabs.map((tab) => tab.textContent)).toEqual([
       'tabs.all {"count":25}',
       'tabs.delivered {"count":21}',
@@ -241,7 +245,9 @@ describe("SellerOrders table", () => {
 
     await flush();
 
-    expect(getData).toHaveBeenCalledWith("/seller/orders?q=drill&page=1&limit=20");
+    expect(getData).toHaveBeenCalledWith(
+      "/seller/orders?q=drill&page=1&limit=20",
+    );
   });
 
   it("prints one row per line with the six mockup cells (AC-9)", async () => {
@@ -251,9 +257,9 @@ describe("SellerOrders table", () => {
 
     expect(order.textContent).toContain("12345678");
     expect(order.querySelector(".font-mono")).not.toBeNull();
-    expect(
-      order.querySelector(".font-mono")?.getAttribute("aria-label"),
-    ).toBe('orderNumber {"number":"12345678"}');
+    expect(order.querySelector(".font-mono")?.getAttribute("aria-label")).toBe(
+      'orderNumber {"number":"12345678"}',
+    );
     expect(product.textContent).toContain("Kettle");
     expect(product.textContent).toContain('quantity {"count":3}');
     expect(
@@ -351,7 +357,13 @@ describe("SellerOrders table", () => {
       (button) => button.getAttribute("role") ?? button.textContent,
     );
 
-    expect(buttons).toEqual(["tab", "tab", "tab", "pagination.back", "pagination.next"]);
+    expect(buttons).toEqual([
+      "tab",
+      "tab",
+      "tab",
+      "pagination.back",
+      "pagination.next",
+    ]);
     expect(container.querySelector('[role="dialog"]')).toBeNull();
   });
 

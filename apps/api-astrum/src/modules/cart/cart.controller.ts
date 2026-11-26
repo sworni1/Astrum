@@ -2,13 +2,13 @@ import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { handleErrors } from "../../common/helpers/errorHandler";
 import type { AuthenticatedUserRequest } from "../../common/types/jwt.payload";
-import { GuestMergeService } from "../guest/guest-merge.service";
 import {
   clearGuestCookie,
   ownerForRead,
   ownerForWrite,
   readGuestId,
 } from "../guest/guest.identity";
+import { GuestMergeService } from "../guest/guest-merge.service";
 import { CartService } from "./cart.service";
 
 const cartService = new CartService();

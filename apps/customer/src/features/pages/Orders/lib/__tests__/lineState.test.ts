@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { OrderItemStatus } from "@/common/types/order.types";
-import { LINE_STATES, lineStateOf } from "@/features/pages/Orders/lib/lineState";
+import {
+  LINE_STATES,
+  lineStateOf,
+} from "@/features/pages/Orders/lib/lineState";
 
 describe("lineStateOf", () => {
   it("знает все девять статусов позиции (AC-11)", () => {
@@ -12,7 +15,9 @@ describe("lineStateOf", () => {
 
   it("красит полученную позицию зелёным, отменённую красным, остальные серым (AC-11)", () => {
     expect(lineStateOf(OrderItemStatus.DELIVERED).dot).toBe("bg-success");
-    expect(lineStateOf(OrderItemStatus.CANCELLED).dot).toBe("bg-destructive-soft");
+    expect(lineStateOf(OrderItemStatus.CANCELLED).dot).toBe(
+      "bg-destructive-soft",
+    );
 
     for (const status of [
       OrderItemStatus.PENDING,

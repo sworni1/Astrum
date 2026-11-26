@@ -8,8 +8,8 @@ import { useForm } from "react-hook-form";
 import { showToast } from "@/common/helpers/showToast";
 import type { CreateReviewDto } from "@/common/types/review.types";
 import {
-  createReviewFormSchema,
   type CreateReviewFormValues,
+  createReviewFormSchema,
 } from "@/common/zodSchemes/create-review.scheme";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +31,10 @@ import {
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import StarRadioGroup from "@/features/pages/ProductOverview/Reviews/components/StarRadioGroup";
-import { classifyReviewRefusal, fieldErrorsOf } from "@/features/pages/ProductOverview/Reviews/lib/refusal";
+import {
+  classifyReviewRefusal,
+  fieldErrorsOf,
+} from "@/features/pages/ProductOverview/Reviews/lib/refusal";
 import { useCreateReview } from "@/hooks/review/useCreateReview";
 
 const RATING_FIELDS = [

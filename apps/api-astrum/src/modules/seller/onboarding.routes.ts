@@ -2,9 +2,9 @@ import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import { requireActiveAccount } from "../../middlewares/requireActiveAccount";
 import { validateDto } from "../../middlewares/validateDto";
+import { SELLER_ERROR_CODES } from "./constants/seller.constants";
 import { CreateOnboardingDto } from "./dto/create-onboarding.dto";
 import { SellerOnboardingController } from "./onboarding.controller";
-import { SELLER_ERROR_CODES } from "./constants/seller.constants";
 
 const onboardingController = new SellerOnboardingController();
 const sellerOnboardingRoutes: Router = Router();

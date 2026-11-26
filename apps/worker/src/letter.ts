@@ -1,36 +1,6 @@
-import { enCopy } from "./letters/en";
-import { ruCopy } from "./letters/ru";
-
-export type Letter = {
-  subject: string;
-  text: string;
-  html: string;
-};
-
-export type LetterLocale = "en" | "ru";
-
-export type LetterCopy = {
-  subject: string;
-  greeting: string;
-  intro: string;
-  action: string;
-  hint: string;
-};
-
-const CATALOG: Record<LetterLocale, LetterCopy> = {
-  en: enCopy,
-  ru: ruCopy,
-};
-
-export const resolveLetterLocale = (value: unknown): LetterLocale =>
-  value === "ru" ? "ru" : "en";
-
-const escapeHtml = (value: string): string =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+import { CATALOG } from "./constants/letter.constants";
+import { escapeHtml } from "./helpers/letter.helpers";
+import type { Letter, LetterLocale } from "./types/worker.types";
 
 export const buildConfirmationLetter = (
   link: string,

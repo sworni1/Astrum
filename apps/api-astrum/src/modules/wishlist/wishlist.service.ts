@@ -8,7 +8,18 @@ import {
 } from "../../common/helpers/getWishlistAndCart";
 import { productPreviewPublicSelect } from "../../common/prisma-selects/product.select";
 import type { Owner } from "../../common/types/owner";
+import { PUBLIC_PRODUCT_WHERE } from "../product/constants/product.constants";
+import { WISHLIST_ITEM_SELECT } from "./constants/wishlist.constants";
 import type { AddProductToWishlistDto } from "./dto/add-product.dto";
+import {
+  wishlistAddFailed,
+  wishlistDeleteFailed,
+  wishlistReadFailed,
+} from "./helpers/wishlist.errors";
+import {
+  toWishlistMutationJson,
+  toWishlistProductJson,
+} from "./helpers/wishlist.helpers";
 
 export class WishlistService {
   async getWishlist(owner: Owner | null) {
@@ -22,9 +33,7 @@ export class WishlistService {
       const wishlist = await prisma.product.findMany({
         where: {
           id: { in: wishlistProductIds },
-          isDeleted: false,
-          visibility: "Public",
-          status: "Published",
+          ...PUBLIC_PRODUCT_WHERE,
         },
         select: productPreviewPublicSelect,
       });
@@ -33,17 +42,13 @@ export class WishlistService {
         wishlist.map(async (product) => {
           const cartItem = await getCartItem(owner, product.id);
 
-          return {
-            ...product,
-            isWishlisted: true,
-            quantityInCart: cartItem ? cartItem.quantity : 0,
-          };
+          return toWishlistProductJson(product, cartItem);
         }),
       );
 
       return wishlistWithData;
     } catch {
-      throw new Error(`getWishlist error`);
+      throw wishlistReadFailed();
     }
   }
 
@@ -55,16 +60,12 @@ export class WishlistService {
         where: ownerUniqueKey(owner, dto.productId),
         create: { ...ownerColumns(owner), productId: dto.productId },
         update: {},
-        select: { id: true, productId: true, createdAt: true },
+        select: WISHLIST_ITEM_SELECT,
       });
 
-      return {
-        ...wishlistItem,
-        isWishlisted: true,
-        quantityInCart: cartItem ? cartItem.quantity : 0,
-      };
+      return toWishlistMutationJson(wishlistItem, cartItem);
     } catch {
-      throw new Error(`addProductToWishlist error`);
+      throw wishlistAddFailed();
     }
   }
 
@@ -81,7 +82,7 @@ export class WishlistService {
         quantityInCart: cartItem ? cartItem.quantity : 0,
       };
     } catch {
-      throw new Error(`deleteProductFromWishlist error`);
+      throw wishlistDeleteFailed();
     }
   }
 }

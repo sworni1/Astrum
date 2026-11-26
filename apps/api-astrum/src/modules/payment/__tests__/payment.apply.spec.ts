@@ -1,9 +1,9 @@
+import { amountMatchesOrder } from "../helpers/payment.helpers";
 import {
   applyAsyncFailedEvent,
   applyDeclinedEvent,
   applyExpiredEvent,
   applyPaidEvent,
-  amountMatchesOrder,
 } from "../payment.apply";
 import { asTx, createFakeTx, loggedEvents } from "../payment.test-helpers";
 

@@ -13,6 +13,8 @@ export const amountListText = (
 
   return [...entries]
     .sort((left, right) => left.currency.localeCompare(right.currency))
-    .map((entry) => formatMoney(entry.amount, toCurrency(entry.currency), locale))
+    .map((entry) =>
+      formatMoney(entry.amount, toCurrency(entry.currency), locale),
+    )
     .join(JOINER);
 };

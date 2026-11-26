@@ -13,18 +13,28 @@ Background service that consumes `account.confirmation.requested` from RabbitMQ 
 
 ## Key files
 
-| File                | Owns                                                                                                     |
-| ------------------- | -------------------------------------------------------------------------------------------------------- |
-| `src/main.ts`       | prisma, rabbit connection with retries, consumer, health server, SIGTERM drain                           |
-| `src/config.ts`     | env parsing: `RABBITMQ_URL`, `SMTP_URL`, `WORKER_PORT`, `MAIL_OUTBOX_DIR`, `STOREFRONT_URL`, `MAIL_FROM` |
-| `src/topology.ts`   | exchange, queue and retry queue names, retry delays, max attempts                                        |
-| `src/consumer.ts`   | the message handler: mint, store, build, send, ack or move to the retry queue                            |
-| `src/token.ts`      | raw token, sha256 hash, 24 hour expiry and the confirmation link                                         |
-| `src/tokenStore.ts` | writes the `EmailToken` row through Prisma                                                               |
-| `src/letter.ts`     | subject and body of the confirmation letter                                                              |
-| `src/mailer.ts`     | SMTP transport, the file outbox fallback and the send timeout                                            |
-| `src/health.ts`     | `GET /health`, answering rabbit and smtp readiness                                                       |
-| `src/logger.ts`     | one structured JSON line per event, plus `describeError`                                                 |
+| File                                | Owns                                                                                                     |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `src/main.ts`                       | composition root: prisma, health server, consumer, reconnect loop, SIGTERM drain                         |
+| `src/config.ts`                     | env parsing: `RABBITMQ_URL`, `SMTP_URL`, `WORKER_PORT`, `MAIL_OUTBOX_DIR`, `STOREFRONT_URL`, `MAIL_FROM` |
+| `src/topology.ts`                   | exchange, queue and retry queue names, retry delays, max attempts                                        |
+| `src/consumer.ts`                   | the message handler: mint, store, build, send, ack or move to the retry queue                            |
+| `src/token.ts`                      | raw token, sha256 hash, 24 hour expiry and the confirmation link                                         |
+| `src/tokenStore.ts`                 | writes the `EmailToken` row through Prisma                                                               |
+| `src/letter.ts`                     | subject and body of the confirmation letter                                                              |
+| `src/mailer.ts`                     | SMTP transport and the file outbox fallback                                                              |
+| `src/health.ts`                     | `GET /health`, answering rabbit and smtp readiness                                                       |
+| `src/logger.ts`                     | one structured JSON line per event                                                                       |
+| `src/constants/worker.constants.ts` | connect retry, reconnect and drain timings                                                               |
+| `src/constants/mailer.constants.ts` | send timeout and the outbox filename patterns                                                            |
+| `src/constants/letter.constants.ts` | the locale-to-copy catalog                                                                               |
+| `src/types/worker.types.ts`         | shared `Letter`, `LetterLocale`, `LetterCopy` and `Mailer` types                                         |
+| `src/helpers/async.helpers.ts`      | `sleep` and the promise timeout                                                                          |
+| `src/helpers/connection.helpers.ts` | the rabbit connection retry loop                                                                         |
+| `src/helpers/consumer.helpers.ts`   | the confirmation event parser and its payload type                                                       |
+| `src/helpers/error.helpers.ts`      | `describeError`                                                                                          |
+| `src/helpers/letter.helpers.ts`     | locale resolution and the HTML escaper                                                                   |
+| `src/helpers/mailer.helpers.ts`     | the outbox file name                                                                                     |
 
 ## Commands
 
@@ -36,7 +46,7 @@ pnpm --filter @astrum/worker check-types
 
 ## Conventions
 
-- Sources stay flat in `src/`, the suites live in `src/__tests__/`; the `tsx --test` glob covers both.
+- Sources live in `src/`, shared constants, helpers and types under `src/constants/`, `src/helpers/` and `src/types/`; the suites live in `src/__tests__/`, and the `tsx --test` glob covers all of them.
 - Only the sha256 hash reaches the database; the raw token exists in the letter and nowhere else.
 - A delivery failure is republished to `retryQueueName(attempt)` with the `x-attempt` header; after the last delay the message goes to `mail.confirmation.dead` with the last error in `x-last-error`.
 - A message is acked only after the send succeeded, so a crash mid delivery repeats the message instead of dropping it.

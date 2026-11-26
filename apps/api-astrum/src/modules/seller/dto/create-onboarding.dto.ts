@@ -6,11 +6,13 @@ import {
   type ValidatorConstraintInterface,
 } from "class-validator";
 import {
-  normalizeShopName,
   SHOP_NAME_MAX_LENGTH,
   SHOP_NAME_MIN_LENGTH,
+} from "../constants/shop-name.constants";
+import {
+  normalizeShopName,
   shopNameProblem,
-} from "../shop-name";
+} from "../helpers/shop-name.helpers";
 
 @ValidatorConstraint({ name: "shopName", async: false })
 class ShopNameConstraint implements ValidatorConstraintInterface {

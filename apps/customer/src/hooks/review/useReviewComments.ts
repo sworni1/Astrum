@@ -8,7 +8,11 @@ import type {
 } from "@/common/types/review.types";
 import { useFetcher } from "@/hooks/useFetcher";
 import { mergeCommentPages } from "./commentPages";
-import { NO_PAGES, reviewCommentsKey, reviewCommentsPageKey } from "./reviewsKeys";
+import {
+  NO_PAGES,
+  reviewCommentsKey,
+  reviewCommentsPageKey,
+} from "./reviewsKeys";
 
 type ExtraPages = { reviewId: string; pages: ReviewCommentPage[] };
 

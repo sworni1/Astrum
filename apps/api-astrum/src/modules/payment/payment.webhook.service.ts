@@ -1,10 +1,11 @@
 import { prisma } from "../../../lib/prisma";
 import { logger } from "../../common/helpers/logger";
-import { amountMatchesOrder } from "./payment.apply";
+import { hasUniqueViolationCode } from "../../common/helpers/prismaErrors";
+import { PAYMENT_PROVIDER } from "./constants/payment.constants";
+import { amountMatchesOrder, toMinorUnits } from "./helpers/payment.helpers";
 import { findAttemptForEvent } from "./payment.attempts";
 import { applyProviderEvent } from "./payment.dispatch";
-import type { ProviderEvent } from "./payment.gateway";
-import { toMinorUnits } from "./payment.money";
+import type { ProviderEvent } from "./types/payment.types";
 
 export type WebhookOutcome =
   | "applied"
@@ -13,16 +14,11 @@ export type WebhookOutcome =
   | "mismatch"
   | "ignored";
 
-const isUniqueViolation = (error: unknown): boolean =>
-  typeof error === "object" &&
-  error !== null &&
-  (error as { code?: unknown }).code === "P2002";
-
 const recordDelivery = async (event: ProviderEvent) => {
   try {
     return await prisma.paymentEvent.create({
       data: {
-        provider: "STRIPE",
+        provider: PAYMENT_PROVIDER,
         eventId: event.id,
         type: event.type,
         orderId: event.orderId,
@@ -34,7 +30,7 @@ const recordDelivery = async (event: ProviderEvent) => {
       },
     });
   } catch (error) {
-    if (isUniqueViolation(error)) {
+    if (hasUniqueViolationCode(error)) {
       return null;
     }
 
@@ -66,9 +62,7 @@ export const handleWebhookEvent = async (
     return "unmatched";
   }
 
-  if (
-    !amountMatchesOrder(attempt.order, event.amount, event.currency)
-  ) {
+  if (!amountMatchesOrder(attempt.order, event.amount, event.currency)) {
     logger.warn({
       event: "payment.webhook.amount_mismatch",
       eventId: event.id,

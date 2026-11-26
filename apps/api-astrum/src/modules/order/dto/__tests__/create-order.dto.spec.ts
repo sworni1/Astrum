@@ -25,9 +25,9 @@ describe("CreateOrderDto", () => {
   });
 
   it("пропускает тело без адреса, когда названа точка (AC-7)", async () => {
-    expect(
-      await failingProperties(bodyOf({ pickupPointId: "pp-1" })),
-    ).toEqual([]);
+    expect(await failingProperties(bodyOf({ pickupPointId: "pp-1" }))).toEqual(
+      [],
+    );
   });
 
   it("пропускает тело с адресом и без точки (AC-7)", async () => {
@@ -37,9 +37,9 @@ describe("CreateOrderDto", () => {
   });
 
   it("отказывает пустой строке в pickupPointId (AC-7)", async () => {
-    expect(
-      await failingProperties(bodyOf({ pickupPointId: "" })),
-    ).toContain("pickupPointId");
+    expect(await failingProperties(bodyOf({ pickupPointId: "" }))).toContain(
+      "pickupPointId",
+    );
   });
 
   it("срезает поля снимка, которые прислал клиент (AC-7)", () => {

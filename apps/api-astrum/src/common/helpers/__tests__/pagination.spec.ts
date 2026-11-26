@@ -1,9 +1,6 @@
+import { MAX_PAGE_SIZE } from "../../constants/pagination.constants";
 import { AppError } from "../appError";
-import {
-  MAX_PAGE_SIZE,
-  parsePagination,
-  parsePaginationValue,
-} from "../pagination";
+import { parsePagination, parsePaginationValue } from "../pagination";
 
 const invalid = () => new AppError(422, "VALIDATION", "Invalid pagination.");
 
@@ -34,7 +31,9 @@ describe("parsePagination", () => {
       ["9007199254740992", undefined],
     ] as Array<[string | undefined, string | undefined]>) {
       expect(() => parsePagination(page, limit, invalid)).toThrow(AppError);
-      expect(() => parsePagination(page, limit, invalid)).toThrow("Invalid pagination.");
+      expect(() => parsePagination(page, limit, invalid)).toThrow(
+        "Invalid pagination.",
+      );
     }
   });
 
@@ -42,7 +41,10 @@ describe("parsePagination", () => {
     const refused = () => new AppError(422, "OTHER_CODE", "Other wording.");
 
     expect(() => parsePaginationValue("x", 1, refused)).toThrow(
-      expect.objectContaining({ code: "OTHER_CODE", message: "Other wording." }),
+      expect.objectContaining({
+        code: "OTHER_CODE",
+        message: "Other wording.",
+      }),
     );
   });
 });

@@ -25,13 +25,11 @@ export const useCheckoutRoute = (): CheckoutRoute => {
   const leaving = useRef(false);
 
   const reconciled = useMemo(
-    () =>
-      handedIds === null ? null : reconcileLines(cart ?? [], handedIds),
+    () => (handedIds === null ? null : reconcileLines(cart ?? [], handedIds)),
     [cart, handedIds],
   );
 
-  const answered =
-    reconciled !== null && !cartError && !cartIsLoading;
+  const answered = reconciled !== null && !cartError && !cartIsLoading;
   const nothingSelected =
     reconciled !== null && reconciled.lines.length === 0 && answered;
 

@@ -1,38 +1,22 @@
-import type { Order, OrderItem } from "@astrum/db/client";
 import { Prisma } from "@astrum/db/client";
 import type { PaymentStatus } from "@astrum/db/enums";
 import { logger } from "../../common/helpers/logger";
 import {
   closeOrder,
   lockOrder,
+  type OrderWithLines,
   recomputeOrderStatus,
-} from "../order/order-status.helpers";
-import { toMinorUnits } from "./payment.money";
-
-export type OrderWithLines = Order & { OrderItem: OrderItem[] };
-
-export type ExpiryOutcome = "closed" | "seller" | "unchanged";
-
-export type ApplyResult = "applied" | "ignored";
-
-const UNKNOWN_ERROR_CODE = "unknown";
-
-const ERROR_MESSAGE_LIMIT = 255;
-
-export const amountMatchesOrder = (
-  order: Order,
-  amount: number | null,
-  currency: string | null,
-): boolean => {
-  if (amount === null || currency === null) {
-    return false;
-  }
-
-  return (
-    amount === toMinorUnits(order.grandTotal) &&
-    currency.toLowerCase() === order.currency.toLowerCase()
-  );
-};
+} from "../order/order-status";
+import {
+  ATTEMPT_OPEN_STATUSES,
+  ORDER_WITH_LINES_INCLUDE,
+  PAYMENT_ERROR_MESSAGE_LIMIT,
+  PAYMENT_FAILED_FROM_STATUSES,
+  PAYMENT_PAID_FROM_STATUSES,
+  PAYMENT_PENDING_STATUSES,
+  PAYMENT_UNKNOWN_ERROR_CODE,
+} from "./constants/payment.constants";
+import type { ApplyResult, ExpiryOutcome } from "./types/payment.types";
 
 const loadLockedOrder = async (
   tx: Prisma.TransactionClient,
@@ -42,7 +26,7 @@ const loadLockedOrder = async (
 
   return await tx.order.findFirstOrThrow({
     where: { id: orderId },
-    include: { OrderItem: true },
+    include: ORDER_WITH_LINES_INCLUDE,
   });
 };
 
@@ -91,12 +75,7 @@ export const applyPaidEvent = async (
     },
   });
 
-  await setPaymentStatus(
-    tx,
-    order.id,
-    ["PENDING", "FAILED", "CANCELLED"],
-    "PAID",
-  );
+  await setPaymentStatus(tx, order.id, PAYMENT_PAID_FROM_STATUSES, "PAID");
 
   const { count: lineCount } = await tx.orderItem.updateMany({
     where: { orderId: order.id, status: "PENDING" },
@@ -135,7 +114,7 @@ export const applyExpiredEvent = async (
   attemptId: string,
 ): Promise<ExpiryOutcome> => {
   const { count } = await tx.payment.updateMany({
-    where: { id: attemptId, status: { in: ["PENDING", "FAILED"] } },
+    where: { id: attemptId, status: { in: [...ATTEMPT_OPEN_STATUSES] } },
     data: { status: "EXPIRED" },
   });
 
@@ -145,7 +124,12 @@ export const applyExpiredEvent = async (
 
   const order = await loadLockedOrder(tx, orderId);
 
-  await setPaymentStatus(tx, order.id, ["PENDING", "FAILED"], "CANCELLED");
+  await setPaymentStatus(
+    tx,
+    order.id,
+    PAYMENT_FAILED_FROM_STATUSES,
+    "CANCELLED",
+  );
 
   if (order.status !== "PENDING") {
     logger.warn({
@@ -180,12 +164,18 @@ export const applyDeclinedEvent = async (
   await tx.payment.update({
     where: { id: attempt.id },
     data: {
-      lastErrorCode: decline.code ?? UNKNOWN_ERROR_CODE,
-      lastErrorMessage: decline.message?.slice(0, ERROR_MESSAGE_LIMIT) ?? null,
+      lastErrorCode: decline.code ?? PAYMENT_UNKNOWN_ERROR_CODE,
+      lastErrorMessage:
+        decline.message?.slice(0, PAYMENT_ERROR_MESSAGE_LIMIT) ?? null,
     },
   });
 
-  const changed = await setPaymentStatus(tx, orderId, ["PENDING"], "FAILED");
+  const changed = await setPaymentStatus(
+    tx,
+    orderId,
+    PAYMENT_PENDING_STATUSES,
+    "FAILED",
+  );
 
   return changed > 0 ? "applied" : "ignored";
 };
@@ -204,7 +194,7 @@ export const applyAsyncFailedEvent = async (
     return "ignored";
   }
 
-  await setPaymentStatus(tx, orderId, ["PENDING"], "FAILED");
+  await setPaymentStatus(tx, orderId, PAYMENT_PENDING_STATUSES, "FAILED");
 
   return "applied";
 };

@@ -72,7 +72,9 @@ describeWithDatabase("Pickup snapshot against Postgres", () => {
     await prisma.cartItem.deleteMany({ where: { userId: customerId } });
     await prisma.product.deleteMany({ where: { id: { in: productIds } } });
     await prisma.business.deleteMany({ where: { id: businessId } });
-    await prisma.user.deleteMany({ where: { id: { in: [customerId, sellerId] } } });
+    await prisma.user.deleteMany({
+      where: { id: { in: [customerId, sellerId] } },
+    });
     await prisma.pickupPoint.deleteMany({ where: { id: pickupPointId } });
     await prisma.shippingMethod.deleteMany({ where: { id: shippingMethodId } });
     await prisma.$disconnect();

@@ -42,7 +42,9 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("@/common/helpers/showToast", () => ({ showToast: vi.fn() }));
-vi.mock("@/features/layout/Navbar/Searchbar", () => ({ default: () => <span data-searchbar="" /> }));
+vi.mock("@/features/layout/Navbar/Searchbar", () => ({
+  default: () => <span data-searchbar="" />,
+}));
 vi.mock("@/components/LocaleSwitcher", () => ({
   default: () => <span data-locale="" />,
 }));

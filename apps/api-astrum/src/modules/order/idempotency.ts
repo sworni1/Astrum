@@ -2,19 +2,17 @@ import { createHash } from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
 import { AppError } from "../../common/helpers/appError";
 import { handleErrors } from "../../common/helpers/errorHandler";
-import type { CreateOrderDto } from "./dto/create-order.dto";
 import {
+  IDEMPOTENCY_HEADER,
   IDEMPOTENCY_KEY_MAX_LENGTH,
   IDEMPOTENCY_KEY_MIN_LENGTH,
   IDEMPOTENCY_KEY_PATTERN,
   ORDER_ERROR_CODES,
 } from "./constants/order.constants";
+import type { CreateOrderDto } from "./dto/create-order.dto";
+import type { Idempotency, OrderLine } from "./types/order.types";
 
-export type Idempotency = { key: string; hash: string };
-
-type LineForFingerprint = { productId: string; quantity: number };
-
-export const IDEMPOTENCY_HEADER = "Idempotency-Key";
+export type { Idempotency } from "./types/order.types";
 
 const invalidKeyError = (constraint: string) =>
   new AppError(
@@ -71,7 +69,7 @@ export const attachIdempotencyKey = (
 
 export const canonicalOrderBody = (
   dto: CreateOrderDto,
-  lines: LineForFingerprint[],
+  lines: OrderLine[],
 ): string =>
   JSON.stringify({
     deliveryAddress: dto.pickupPointId ? null : dto.deliveryAddress,
@@ -99,7 +97,7 @@ export const hashOrderBody = (body: string): string =>
 export const idempotencyOf = (
   key: string,
   dto: CreateOrderDto,
-  lines: LineForFingerprint[],
+  lines: OrderLine[],
 ): Idempotency => ({
   key,
   hash: hashOrderBody(canonicalOrderBody(dto, lines)),

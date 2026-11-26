@@ -4,6 +4,11 @@ import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { showToast } from "@/common/helpers/showToast";
 import { Button } from "@/components/ui/button";
+import { SUCCESS_KEY } from "@/features/pages/CourierWorkspace/lib/actions";
+import {
+  showRefusalToast,
+  type Translate,
+} from "@/features/pages/CourierWorkspace/lib/refusals";
 import FailureScreen from "@/features/staff/FailureScreen";
 import PageSkeleton from "@/features/staff/PageSkeleton";
 import type {
@@ -15,11 +20,6 @@ import {
   useCourierOrderAction,
 } from "@/hooks/staff/useCourierOrderAction";
 import type { UseCourierOrdersReturn } from "@/hooks/staff/useCourierOrders";
-import { SUCCESS_KEY } from "@/features/pages/CourierWorkspace/lib/actions";
-import {
-  showRefusalToast,
-  type Translate,
-} from "@/features/pages/CourierWorkspace/lib/refusals";
 import CourierOrderCard from "./CourierOrderCard";
 
 type Props = {
@@ -31,8 +31,16 @@ type Props = {
 
 const CourierSection = ({ scope, data, onRefreshAll }: Props) => {
   const t = useTranslations("staff.courier.queue");
-  const { orders, page, totalPages, isLoading, isValidating, error, showMore, mutate } =
-    data;
+  const {
+    orders,
+    page,
+    totalPages,
+    isLoading,
+    isValidating,
+    error,
+    showMore,
+    mutate,
+  } = data;
   const { run, pending } = useCourierOrderAction();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [announcement, setAnnouncement] = useState({ text: "", seq: 0 });

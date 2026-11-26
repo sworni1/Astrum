@@ -162,11 +162,9 @@ describe("staff routes", () => {
   });
 
   it("mounts both counter writes behind the account gate, then the role guard (spec 0018, AC-4, AC-6)", () => {
-    expect(handlersOf("/staff/point/orders/:orderId/handover", "patch")).toEqual([
-      requireActiveAccount,
-      requirePointWorker,
-      expect.any(Function),
-    ]);
+    expect(
+      handlersOf("/staff/point/orders/:orderId/handover", "patch"),
+    ).toEqual([requireActiveAccount, requirePointWorker, expect.any(Function)]);
     expect(handlersOf("/staff/point/orders/:orderId/cancel", "patch")).toEqual([
       requireActiveAccount,
       requirePointWorker,

@@ -1,30 +1,10 @@
 import Redis from "ioredis";
 
 import { logger } from "../common/helpers/logger";
+import { SESSION_CLIENT_OPTIONS } from "./constants/session.constants";
+import type { SessionStore } from "./types/session.types";
 
-export const SESSION_TTL_SECONDS = 86_400;
-
-const SESSION_KEY_PREFIX = "session:";
-const LOGGED_SID_LENGTH = 8;
-
-export type SessionRecord = {
-  userId: string;
-  createdAt: string;
-  userAgent: string | null;
-};
-
-export type SessionStore = {
-  get(key: string): Promise<string | null>;
-  set(key: string, value: string, ttlSeconds: number): Promise<unknown>;
-  del(key: string): Promise<number>;
-  ping(): Promise<string>;
-};
-
-export const sessionKey = (sid: string): string =>
-  `${SESSION_KEY_PREFIX}${sid}`;
-
-export const loggedSid = (sid: string): string =>
-  sid.slice(0, LOGGED_SID_LENGTH);
+export type { SessionRecord, SessionStore } from "./types/session.types";
 
 export const createSessionStore = (url: string | undefined): SessionStore => {
   if (!url) {
@@ -33,11 +13,7 @@ export const createSessionStore = (url: string | undefined): SessionStore => {
     );
   }
 
-  const client = new Redis(url, {
-    commandTimeout: 1000,
-    enableOfflineQueue: false,
-    maxRetriesPerRequest: 1,
-  });
+  const client = new Redis(url, SESSION_CLIENT_OPTIONS);
 
   client.on("error", (error: Error) => {
     logger.error({ event: "session.store.connection", reason: error.message });

@@ -59,7 +59,10 @@ const addPoint = async (nameInput?: string, addressInput?: string) => {
   });
 };
 
-const switchPoint = async (nameInput: string | undefined, isActive: boolean) => {
+const switchPoint = async (
+  nameInput: string | undefined,
+  isActive: boolean,
+) => {
   const name = readName(nameInput);
 
   return prisma.$transaction(async (tx) => {

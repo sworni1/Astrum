@@ -49,8 +49,12 @@ export default function SellerOrders() {
               <h1 className={HEADING}>{t("title")}</h1>
               <p className={HEADING_MUTED}>{t("subtitle")}</p>
             </div>
-            {page === undefined || screen.failed || screen.empty !== "none" ? null : (
-              <p className={HEADING_MUTED}>{t("found", { count: page.total })}</p>
+            {page === undefined ||
+            screen.failed ||
+            screen.empty !== "none" ? null : (
+              <p className={HEADING_MUTED}>
+                {t("found", { count: page.total })}
+              </p>
             )}
           </div>
 

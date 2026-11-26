@@ -1,8 +1,9 @@
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  PAGE_VALUE_PATTERN,
+} from "../constants/pagination.constants";
 import type { AppError } from "./appError";
-
-export const DEFAULT_PAGE_SIZE = 20;
-
-export const MAX_PAGE_SIZE = 50;
 
 export type InvalidPagination = () => AppError;
 
@@ -15,7 +16,7 @@ export const parsePaginationValue = (
     return fallback;
   }
 
-  if (typeof value !== "string" || !/^[0-9]+$/.test(value)) {
+  if (typeof value !== "string" || !PAGE_VALUE_PATTERN.test(value)) {
     throw invalid();
   }
 

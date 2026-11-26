@@ -28,7 +28,9 @@ export type CheckoutHintState = {
   pointsUnavailable: boolean;
 };
 
-export const checkoutHint = (state: CheckoutHintState): CheckoutHintKey | null => {
+export const checkoutHint = (
+  state: CheckoutHintState,
+): CheckoutHintKey | null => {
   if (state.methodsLoading) {
     return CHECKOUT_BLOCK_HINTS.methodsLoading;
   }

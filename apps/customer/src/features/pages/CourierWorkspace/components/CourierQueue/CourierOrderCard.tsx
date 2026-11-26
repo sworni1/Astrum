@@ -50,7 +50,6 @@ const CourierOrderCard = ({
       </header>
 
       <p className="mt-1 text-sm text-muted-foreground">
-
         {t("deliveryDate", {
           date: format.dateTime(deliveryAt, {
             dateStyle: "long",
@@ -93,7 +92,9 @@ const CourierOrderCard = ({
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm" data-testid="courier-order-total">
           <span className="text-muted-foreground">{t("totalLabel")}</span>{" "}
-          <strong>{formatMoney(order.grandTotal, order.currency, locale)}</strong>
+          <strong>
+            {formatMoney(order.grandTotal, order.currency, locale)}
+          </strong>
         </p>
 
         <OrderActions

@@ -306,7 +306,6 @@ const OptimizedImage = React.memo<OptimizedImageProps>(function OptimizedImage({
         containerClassName,
       )}
     >
-
       {renderLoadingState()}
 
       {renderErrorState()}

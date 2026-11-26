@@ -5,7 +5,9 @@ type UseCopyOrderNumberReturn = {
   copyNumber: () => Promise<void>;
 };
 
-export const useCopyOrderNumber = (orderId: string): UseCopyOrderNumberReturn => {
+export const useCopyOrderNumber = (
+  orderId: string,
+): UseCopyOrderNumberReturn => {
   const t = useTranslations("orders");
 
   const copyNumber = async (): Promise<void> => {

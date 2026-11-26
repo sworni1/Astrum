@@ -1,21 +1,8 @@
 import { prisma } from "../../../lib/prisma";
+import { LIVE_PRODUCT_SELECT } from "./constants/guest.constants";
+import { isLive } from "./helpers/guest.helpers";
 
-export type MergeCounts = { cartLines: number; wishlistLines: number };
-
-const LIVE_PRODUCT_SELECT = {
-  isDeleted: true,
-  visibility: true,
-  status: true,
-} as const;
-
-const isLive = (product: {
-  isDeleted: boolean;
-  visibility: string;
-  status: string;
-}): boolean =>
-  !product.isDeleted &&
-  product.visibility === "Public" &&
-  product.status === "Published";
+type MergeCounts = { cartLines: number; wishlistLines: number };
 
 export class GuestMergeService {
   async merge(userId: string, guestId: string | null): Promise<MergeCounts> {

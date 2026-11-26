@@ -19,26 +19,22 @@ export const useCreateReview = (productId: string) => {
   const productDetailKey = productKey(productId);
 
   const revalidateReviewData = useCallback(async (): Promise<void> => {
-    await Promise.allSettled([
-      mutate(reviewListKey),
-      mutate(productDetailKey),
-    ]);
+    await Promise.allSettled([mutate(reviewListKey), mutate(productDetailKey)]);
   }, [mutate, productDetailKey, reviewListKey]);
 
   const {
     trigger: createReviewTrigger,
     isMutating: isCreatingReview,
     error: rawError,
-  } = useSWRMutation<
-    ProductReview,
-    ReviewCreateError,
-    string,
-    CreateReviewDto
-  >(`${reviewListKey}#create`, postItem, {
-    onSuccess: async () => {
-      await revalidateReviewData();
+  } = useSWRMutation<ProductReview, ReviewCreateError, string, CreateReviewDto>(
+    `${reviewListKey}#create`,
+    postItem,
+    {
+      onSuccess: async () => {
+        await revalidateReviewData();
+      },
     },
-  });
+  );
 
   return {
     createReviewTrigger,

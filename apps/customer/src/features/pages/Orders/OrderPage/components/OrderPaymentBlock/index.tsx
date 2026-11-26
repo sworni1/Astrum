@@ -63,7 +63,9 @@ const OrderPaymentBlock = ({ order, paymentBranch }: Props) => {
       </div>
       <div className="mt-3 space-y-1 text-sm">
         <p>{t(`payment.${PAYMENT_KEYS[order.paymentMethod]}`)}</p>
-        {second ? <p className="text-[13px] text-muted-foreground">{second}</p> : null}
+        {second ? (
+          <p className="text-[13px] text-muted-foreground">{second}</p>
+        ) : null}
       </div>
       <div className="mt-3">
         <PaymentActions order={order} branch={paymentBranch} />

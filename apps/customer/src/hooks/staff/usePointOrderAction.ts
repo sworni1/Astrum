@@ -2,8 +2,8 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useFetcher } from "@/hooks/useFetcher";
-import { NO_BODY } from "./staffPage";
 import type { PointOrder } from "./pointOrder.types";
+import { NO_BODY } from "./staffPage";
 
 export type PointOrderActionName = "handover" | "cancel";
 

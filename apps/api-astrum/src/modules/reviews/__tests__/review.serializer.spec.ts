@@ -1,10 +1,10 @@
 import {
   buildDistribution,
+  type ReviewCommentRow,
+  type ReviewRow,
   roundAverageRating,
   serializeReview,
   serializeReviewComment,
-  type ReviewCommentRow,
-  type ReviewRow,
 } from "../review.serializer";
 
 const rowFor = (overrides: Partial<ReviewRow> = {}): ReviewRow => ({

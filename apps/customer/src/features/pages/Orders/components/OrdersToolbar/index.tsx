@@ -1,11 +1,14 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import type { OrderListPage, OrderListStatus } from "@/common/types/order.types";
+import type {
+  OrderListPage,
+  OrderListStatus,
+} from "@/common/types/order.types";
 import { Skeleton } from "@/components/ui/skeleton";
 import FilterTabs, { type FilterTabItem } from "@/features/general/FilterTabs";
-import SearchField from "@/features/general/SearchField";
 import { TOOLBAR } from "@/features/general/lib/screenStyles";
+import SearchField from "@/features/general/SearchField";
 import { ORDER_TABS } from "@/features/pages/Orders/lib/tabs";
 
 type Props = {

@@ -2,8 +2,8 @@ import { Router } from "express";
 import { requireActiveAccount } from "../../middlewares/requireActiveAccount";
 import { requireSession } from "../../middlewares/resolveOwner";
 import { validateDto } from "../../middlewares/validateDto";
-import { CreateReviewCommentDto } from "./dto/create-review-comment.dto";
 import { CreateReviewDto } from "./dto/create-review.dto";
+import { CreateReviewCommentDto } from "./dto/create-review-comment.dto";
 import { ReviewsController } from "./reviews.controller";
 
 const reviewsController = new ReviewsController();

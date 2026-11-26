@@ -3,14 +3,16 @@ export const SCREEN_WRAPPER =
 
 export const HEADING_ROW = "flex flex-wrap items-end justify-between gap-2";
 
-export const HEADING = "text-[28px] font-bold tracking-[-.02em] max-sm:text-2xl";
+export const HEADING =
+  "text-[28px] font-bold tracking-[-.02em] max-sm:text-2xl";
 
 export const HEADING_MUTED = "text-sm text-muted-foreground";
 
 export const STAT_GRID =
   "grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]";
 
-export const STAT_TILE = "rounded-stat border border-border bg-card px-[18px] py-4";
+export const STAT_TILE =
+  "rounded-stat border border-border bg-card px-[18px] py-4";
 
 export const STAT_LABEL = "text-sm text-muted-foreground";
 

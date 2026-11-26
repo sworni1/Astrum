@@ -34,10 +34,7 @@ const DeleteAccountForm = () => {
   };
 
   return (
-    <ProfileCard
-      className={DESTRUCTIVE_CARD}
-      testId="delete-account-card"
-    >
+    <ProfileCard className={DESTRUCTIVE_CARD} testId="delete-account-card">
       <div className={ROW}>
         <div>
           <h2 className={DESTRUCTIVE_TITLE}>{t("deleteTitle")}</h2>

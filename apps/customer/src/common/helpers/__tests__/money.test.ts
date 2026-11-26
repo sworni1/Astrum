@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { Currency } from "@/common/types/product.types";
 import { formatMoney, toCurrency } from "@/common/helpers/money";
+import { Currency } from "@/common/types/product.types";
 
 const NBSP = "\u00A0";
 

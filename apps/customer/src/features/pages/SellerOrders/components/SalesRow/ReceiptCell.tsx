@@ -42,12 +42,17 @@ const ReceiptCell = ({ line }: Props) => {
     return (
       <div className="min-w-0">
         <span className="text-muted-foreground">{t("receipt.courier")}</span>
-        <span>{" · "}{line.deliveryAddress}</span>
+        <span>
+          {" · "}
+          {line.deliveryAddress}
+        </span>
       </div>
     );
   }
 
-  return <span className="text-muted-foreground">{t("receipt.noAddress")}</span>;
+  return (
+    <span className="text-muted-foreground">{t("receipt.noAddress")}</span>
+  );
 };
 
 export default ReceiptCell;

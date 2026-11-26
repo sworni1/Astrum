@@ -63,7 +63,8 @@ describe("A failed orders read", () => {
 
     expect(showToast).toHaveBeenCalledTimes(1);
 
-    const tab = container.querySelectorAll<HTMLButtonElement>('[role="tab"]')[2];
+    const tab =
+      container.querySelectorAll<HTMLButtonElement>('[role="tab"]')[2];
 
     await act(async () => {
       tab.dispatchEvent(new MouseEvent("click", { bubbles: true }));

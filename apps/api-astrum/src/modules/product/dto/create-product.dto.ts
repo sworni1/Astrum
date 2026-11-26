@@ -1,3 +1,9 @@
+import {
+  Currency,
+  ProductCategory,
+  ProductVisibility,
+  PropertyLabel,
+} from "@astrum/db/enums";
 import { Expose } from "class-transformer";
 import {
   IsArray,
@@ -12,12 +18,6 @@ import {
   MaxLength,
   MinLength,
 } from "class-validator";
-import {
-  Currency,
-  ProductCategory,
-  ProductVisibility,
-  PropertyLabel,
-} from "@astrum/db/enums";
 
 export class CreateProductDto {
   @Expose()

@@ -1,23 +1,13 @@
-import type { PaymentAttemptStatus } from "@astrum/db/enums";
 import { prisma } from "../../../lib/prisma";
+import { describeError } from "../../common/helpers/describeError";
 import { logger } from "../../common/helpers/logger";
 import {
   ORDER_SHIPPING_BATCH,
   ORDER_SHIPPING_DELAY_MS,
   ORDER_SHIPPING_INTERVAL_MS,
+  SHIPPING_INCLUDE,
 } from "./constants/order.constants";
-import { recomputeOrderStatus } from "./order-status.helpers";
-
-const SHIPPING_INCLUDE = {
-  payments: {
-    where: { status: "PAID" as PaymentAttemptStatus },
-    orderBy: { paidAt: "desc" as const },
-    take: 1,
-  },
-} as const;
-
-const describe = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
+import { recomputeOrderStatus } from "./order-status";
 
 const acceptedAt = (order: {
   createdAt: Date;
@@ -43,7 +33,10 @@ const shipOrder = async (orderId: string, shippedAt: Date): Promise<void> => {
   });
 };
 
-const deliverOrder = async (orderId: string, arrivedAt: Date): Promise<void> => {
+const deliverOrder = async (
+  orderId: string,
+  arrivedAt: Date,
+): Promise<void> => {
   await prisma.$transaction(async (tx) => {
     const { count } = await tx.orderItem.updateMany({
       where: { orderId, status: "SHIPPED" },
@@ -104,7 +97,9 @@ export const deliverArrivedOrders = async (
   }
 };
 
-export const runOrderShipping = async (now: Date = new Date()): Promise<void> => {
+export const runOrderShipping = async (
+  now: Date = new Date(),
+): Promise<void> => {
   await shipAcceptedOrders(now);
   await deliverArrivedOrders(now);
 };
@@ -114,7 +109,7 @@ export const startOrderShipping = (): NodeJS.Timeout => {
     void runOrderShipping().catch((error: unknown) => {
       logger.error({
         event: "order.shipping.crashed",
-        reason: describe(error),
+        reason: describeError(error),
       });
     });
   }, ORDER_SHIPPING_INTERVAL_MS);

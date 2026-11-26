@@ -3,7 +3,6 @@
 import { useFormatter, useTranslations } from "next-intl";
 import type { OrderLineRow as OrderLineRowData } from "@/common/types/order.types";
 import { OrderItemStatus } from "@/common/types/order.types";
-import { browserTimeZone } from "@/features/pages/SellerOrders/lib/format";
 import { lineStateOf } from "@/features/pages/Orders/lib/lineState";
 import {
   LINE_DOT,
@@ -14,6 +13,7 @@ import {
   LINE_TEXT,
   LINE_TITLE,
 } from "@/features/pages/Orders/lib/styles";
+import { browserTimeZone } from "@/features/pages/SellerOrders/lib/format";
 import LineImageTile from "./LineImageTile";
 
 type Props = {

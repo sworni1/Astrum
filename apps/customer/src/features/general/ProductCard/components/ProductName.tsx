@@ -1,17 +1,17 @@
-import Link from 'next/link';
-import { memo } from 'react';
-import { CardDescription } from '@/components/ui/card';
+import Link from "next/link";
+import { memo } from "react";
+import { CardDescription } from "@/components/ui/card";
 
 const ProductName = memo(
   ({ name, productId }: { name: string; productId: string }) => (
     <Link href={`/products/${productId}`}>
       <CardDescription
-        className='text-lg font-[500] line-clamp-2 mb-[-15px] h-[55px] text-gray-900 dark:text-white'
+        className="text-lg font-[500] line-clamp-2 mb-[-15px] h-[55px] text-gray-900 dark:text-white"
         style={{
-          display: '-webkit-box',
+          display: "-webkit-box",
           WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
         }}
       >
         {name}
@@ -19,5 +19,5 @@ const ProductName = memo(
     </Link>
   ),
 );
-ProductName.displayName = 'ProductName';
+ProductName.displayName = "ProductName";
 export default ProductName;

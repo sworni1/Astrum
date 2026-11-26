@@ -10,3 +10,15 @@ export const STAFF_ERROR_CODES = {
   alreadyClaimed: "ALREADY_CLAIMED",
   nothingToCancel: "NOTHING_TO_CANCEL",
 } as const;
+
+export const POINT_SELECT = {
+  id: true,
+  name: true,
+  address: true,
+  isActive: true,
+} as const;
+
+export const ROLE_SELECT = {
+  pointWorker: { select: { pickupPointId: true } },
+  courier: { select: { id: true } },
+} as const;

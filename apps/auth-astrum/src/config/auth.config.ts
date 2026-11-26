@@ -1,26 +1,12 @@
+import {
+  readRequired,
+  withoutTrailingSlash,
+} from "./helpers/auth-config.helpers";
+
 export type AuthConfig = {
   rabbitUrl: string;
   storefrontUrl: string;
 };
-
-export type ConfirmOutcome = "ok" | "expired" | "used" | "invalid";
-
-const readRequired = (
-  env: NodeJS.ProcessEnv,
-  name: string,
-  hint: string,
-): string => {
-  const value = env[name]?.trim();
-
-  if (!value) {
-    throw new Error(`${name} is required: ${hint}`);
-  }
-
-  return value;
-};
-
-const withoutTrailingSlash = (value: string): string =>
-  value.replace(/\/+$/, "");
 
 export const loadAuthConfig = (
   env: NodeJS.ProcessEnv = process.env,
@@ -38,8 +24,3 @@ export const loadAuthConfig = (
     ),
   ),
 });
-
-export const confirmRedirectUrl = (
-  storefrontUrl: string,
-  outcome: ConfirmOutcome,
-): string => `${storefrontUrl}/auth/confirm-email?status=${outcome}`;

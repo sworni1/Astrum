@@ -1,9 +1,9 @@
 import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import { ProductCategory } from "@astrum/db/enums";
 import { handleErrors } from "../../common/helpers/errorHandler";
 import type { AuthenticatedUserRequest } from "../../common/types/jwt.payload";
 import { ownerForRead } from "../guest/guest.identity";
+import { resolveProductCategory } from "./helpers/product-category.helpers";
 import { ProductService } from "./product.service";
 
 const productService = new ProductService();
@@ -46,11 +46,7 @@ export class ProductController {
 
       const { cursor, search_query } = req.query;
 
-      const segment = category.toLowerCase();
-
-      const productCategory = (
-        Object.values(ProductCategory) as ProductCategory[]
-      ).find((value) => value.toLowerCase() === segment);
+      const productCategory = resolveProductCategory(category);
 
       const filters = {
         category: productCategory,

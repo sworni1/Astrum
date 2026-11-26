@@ -8,9 +8,11 @@ import { StatusCodes } from "http-status-codes";
 jest.mock("../../../../lib/prisma", () => ({
   prisma: {
     pickupPoint: {
-      findMany: jest.fn().mockResolvedValue([
-        { id: "pp-1", name: "Central Pickup", address: "Tverskaya 12" },
-      ]),
+      findMany: jest
+        .fn()
+        .mockResolvedValue([
+          { id: "pp-1", name: "Central Pickup", address: "Tverskaya 12" },
+        ]),
     },
   },
 }));

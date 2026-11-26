@@ -11,7 +11,12 @@ export type FakeOrder = {
   id?: string;
   status?: string;
   paymentStatus?: string;
-  OrderItem?: Array<{ id: string; productId: string; quantity: number; status: string }>;
+  OrderItem?: Array<{
+    id: string;
+    productId: string;
+    quantity: number;
+    status: string;
+  }>;
 };
 
 type FakeTxOptions = {

@@ -42,7 +42,8 @@ export const refusalReaction = (
     error.code === "SHIPPING_METHOD_INACTIVE" ||
     error.code === "PICKUP_POINT_NOT_ALLOWED";
   const resetPoint =
-    error.code === "UNKNOWN_PICKUP_POINT" || error.code === "PICKUP_POINT_INACTIVE";
+    error.code === "UNKNOWN_PICKUP_POINT" ||
+    error.code === "PICKUP_POINT_INACTIVE";
 
   return {
     key: CHECKOUT_ERROR_KEYS[error.code],

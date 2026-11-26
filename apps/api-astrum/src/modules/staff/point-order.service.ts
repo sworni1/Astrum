@@ -1,107 +1,19 @@
-import type { OrderItem } from "@astrum/db/client";
-import { Prisma } from "@astrum/db/client";
-import type {
-  Currency,
-  OrderStatus,
-  PaymentMethod,
-  PaymentStatus,
-} from "@astrum/db/enums";
 import { prisma } from "../../../lib/prisma";
-import { AppError } from "../../common/helpers/appError";
 import { logger } from "../../common/helpers/logger";
-import { toMoney } from "../../common/helpers/money";
 import { parsePagination } from "../../common/helpers/pagination";
-import { ORDER_ERROR_CODES } from "../order/constants/order.constants";
 import { invalidateStockOfProducts } from "../order/order-cache";
-import {
-  lockOrder,
-  ORDER_TRANSACTION_OPTIONS,
-  recomputeOrderStatus,
-} from "../order/order-status.helpers";
+import { ORDER_TRANSACTION_OPTIONS } from "../order/order-status";
 import { expireSessionForCancel } from "../payment/payment.cancel";
-import { STAFF_ERROR_CODES } from "./constants/staff.constants";
+import { POINT_ORDER_SELECT } from "./constants/point-order.constants";
+import { toPointOrderJson } from "./helpers/point-order.helpers";
+import { logWriteRefusal } from "./helpers/staff-order.helpers";
 import {
-  cancelOrderLines,
-  issueDeliveredLines,
-  isCancellable,
-  logWriteRefusal,
-  resolveCancelPayment,
-  sumOfLines,
-} from "./staff-order.helpers";
-
-type PointOrderLine = Pick<
-  OrderItem,
-  | "id"
-  | "name"
-  | "previewImage"
-  | "quantity"
-  | "price"
-  | "currency"
-  | "status"
->;
-
-type PointOrderRow = {
-  id: string;
-  createdAt: Date;
-  status: OrderStatus;
-  paymentStatus: PaymentStatus;
-  paymentMethod: PaymentMethod;
-  handedOverAt: Date | null;
-  grandTotal: Prisma.Decimal;
-  currency: Currency;
-  OrderItem: PointOrderLine[];
-};
-
-const POINT_ORDER_LINE_SELECT = {
-  id: true,
-  name: true,
-  previewImage: true,
-  quantity: true,
-  price: true,
-  currency: true,
-  status: true,
-} as const;
-
-const POINT_ORDER_SELECT = {
-  id: true,
-  createdAt: true,
-  status: true,
-  paymentStatus: true,
-  paymentMethod: true,
-  handedOverAt: true,
-  grandTotal: true,
-  currency: true,
-  OrderItem: {
-    orderBy: { id: "asc" },
-    select: POINT_ORDER_LINE_SELECT,
-  },
-} as const;
-
-const CANCEL_ORDER_SELECT = {
-  ...POINT_ORDER_SELECT,
-  userId: true,
-  OrderItem: {
-    orderBy: { id: "asc" },
-    select: { ...POINT_ORDER_LINE_SELECT, productId: true },
-  },
-} as const;
-
-export const toPointOrderJson = (row: PointOrderRow) => ({
-  id: row.id,
-  createdAt: row.createdAt,
-  status: row.status,
-  paymentStatus: row.paymentStatus,
-  paymentMethod: row.paymentMethod,
-  handedOverAt: row.handedOverAt,
-  grandTotal: toMoney(row.grandTotal),
-  currency: row.currency,
-  orderItems: row.OrderItem.map((line) => ({
-    ...line,
-    price: toMoney(line.price),
-  })),
-});
-
-export type PointOrderJson = ReturnType<typeof toPointOrderJson>;
+  invalidPagination,
+  pointOrderNotFound,
+} from "./helpers/staff-order-errors.helpers";
+import { cancelPointOrder } from "./point-order.cancel";
+import { handOverPointOrder } from "./point-order.handover";
+import type { PointOrderJson } from "./types/staff-order.types";
 
 export type PointOrdersPage = {
   orders: PointOrderJson[];
@@ -110,44 +22,6 @@ export type PointOrdersPage = {
   total: number;
   totalPages: number;
 };
-
-const invalidPagination = () =>
-  new AppError(422, STAFF_ERROR_CODES.validation, "Invalid pagination.");
-
-const orderNotFound = () =>
-  new AppError(
-    404,
-    ORDER_ERROR_CODES.notFound,
-    "Order not found at this pickup point.",
-  );
-
-const pickupPointInactive = () =>
-  new AppError(
-    409,
-    STAFF_ERROR_CODES.pickupPointInactive,
-    "This pickup point is switched off.",
-  );
-
-const alreadyHandedOver = () =>
-  new AppError(
-    409,
-    STAFF_ERROR_CODES.alreadyHandedOver,
-    "This order was already handed over.",
-  );
-
-const orderNotDelivered = () =>
-  new AppError(
-    409,
-    STAFF_ERROR_CODES.orderNotDelivered,
-    "This order is not delivered yet.",
-  );
-
-const nothingToCancel = () =>
-  new AppError(
-    409,
-    STAFF_ERROR_CODES.nothingToCancel,
-    "No line of this order can be cancelled.",
-  );
 
 export class PointOrderService {
   async listPointOrders(
@@ -186,7 +60,7 @@ export class PointOrderService {
   ): Promise<{ order: PointOrderJson }> {
     try {
       const { order, issuedLineCount } = await prisma.$transaction(
-        (tx) => this.runHandover(tx, orderId, pickupPointId),
+        (tx) => handOverPointOrder(tx, orderId, pickupPointId),
         ORDER_TRANSACTION_OPTIONS,
       );
 
@@ -221,7 +95,7 @@ export class PointOrderService {
 
       const { order, cancelledLineCount, cancelledProductIds } =
         await prisma.$transaction(
-          (tx) => this.runCancel(tx, orderId, userId, pickupPointId),
+          (tx) => cancelPointOrder(tx, orderId, userId, pickupPointId),
           ORDER_TRANSACTION_OPTIONS,
         );
 
@@ -257,128 +131,7 @@ export class PointOrderService {
     });
 
     if (owned === null) {
-      throw orderNotFound();
-    }
-  }
-
-  private async runHandover(
-    tx: Prisma.TransactionClient,
-    orderId: string,
-    pickupPointId: string,
-  ): Promise<{ order: PointOrderJson; issuedLineCount: number }> {
-    await lockOrder(tx, orderId);
-
-    const order = await tx.order.findFirst({
-      where: { id: orderId, pickupPointId },
-      select: POINT_ORDER_SELECT,
-    });
-
-    if (!order) {
-      throw orderNotFound();
-    }
-
-    await this.requireActivePoint(tx, pickupPointId);
-
-    if (order.handedOverAt !== null) {
-      throw alreadyHandedOver();
-    }
-
-    if (order.status !== "DELIVERED") {
-      throw orderNotDelivered();
-    }
-
-    const timestamp = new Date();
-    const count = await issueDeliveredLines(tx, order.OrderItem);
-
-    const status = await recomputeOrderStatus(tx, orderId);
-
-    if (status === "ISSUED") {
-      await tx.order.updateMany({
-        where: { id: orderId, handedOverAt: null },
-        data: { handedOverAt: timestamp },
-      });
-    }
-
-    const answered = await tx.order.findUniqueOrThrow({
-      where: { id: orderId },
-      select: POINT_ORDER_SELECT,
-    });
-
-    return { order: toPointOrderJson(answered), issuedLineCount: count };
-  }
-
-  private async runCancel(
-    tx: Prisma.TransactionClient,
-    orderId: string,
-    userId: string,
-    pickupPointId: string,
-  ): Promise<{
-    order: PointOrderJson;
-    cancelledLineCount: number;
-    cancelledProductIds: string[];
-  }> {
-    await lockOrder(tx, orderId);
-
-    const order = await tx.order.findFirst({
-      where: { id: orderId, pickupPointId },
-      select: CANCEL_ORDER_SELECT,
-    });
-
-    if (!order) {
-      throw orderNotFound();
-    }
-
-    await this.requireActivePoint(tx, pickupPointId);
-
-    const cancellable = order.OrderItem.filter(isCancellable);
-
-    if (cancellable.length === 0) {
-      throw nothingToCancel();
-    }
-
-    if (order.status !== "DELIVERED") {
-      throw orderNotDelivered();
-    }
-
-    await cancelOrderLines(tx, cancellable);
-    await recomputeOrderStatus(tx, orderId);
-
-    await resolveCancelPayment({
-      tx,
-      orderId,
-      paymentStatus: order.paymentStatus,
-      reason: "point_cancel",
-      actorUserId: userId,
-      buyerUserId: order.userId,
-      pointId: pickupPointId,
-      amount: sumOfLines(cancellable),
-      currency: order.currency,
-      cancelledLineCount: cancellable.length,
-    });
-
-    const answered = await tx.order.findUniqueOrThrow({
-      where: { id: orderId },
-      select: POINT_ORDER_SELECT,
-    });
-
-    return {
-      order: toPointOrderJson(answered),
-      cancelledLineCount: cancellable.length,
-      cancelledProductIds: cancellable.map((line) => line.productId),
-    };
-  }
-
-  private async requireActivePoint(
-    tx: Prisma.TransactionClient,
-    pickupPointId: string,
-  ): Promise<void> {
-    const point = await tx.pickupPoint.findUnique({
-      where: { id: pickupPointId },
-      select: { isActive: true },
-    });
-
-    if (!point?.isActive) {
-      throw pickupPointInactive();
+      throw pointOrderNotFound();
     }
   }
 }

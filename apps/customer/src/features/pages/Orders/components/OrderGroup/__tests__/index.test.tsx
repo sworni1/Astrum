@@ -2,8 +2,8 @@ import { act, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  type OrderListRow,
   OrderItemStatus,
+  type OrderListRow,
   OrderStatus,
 } from "@/common/types/order.types";
 import { Currency } from "@/common/types/product.types";
@@ -32,8 +32,7 @@ const state = vi.hoisted(() => ({ calls: [] as Intl.DateTimeFormatOptions[] }));
 vi.mock("next-intl", () => ({
   useLocale: () => "ru",
   useTranslations:
-    () =>
-    (key: string, values?: { count?: number; number?: string }) => {
+    () => (key: string, values?: { count?: number; number?: string }) => {
       if (key === "quantity") {
         return `${values?.count} pcs`;
       }

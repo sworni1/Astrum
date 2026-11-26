@@ -7,7 +7,10 @@ vi.mock("@/common/helpers/session", () => ({ decrypt: vi.fn() }));
 
 const decryptMock = vi.mocked(decrypt);
 
-const requestTo = (path: string, cookies: Record<string, string> = {}): NextRequest => {
+const requestTo = (
+  path: string,
+  cookies: Record<string, string> = {},
+): NextRequest => {
   const request = new NextRequest(new URL(path, "http://localhost:3000"));
 
   for (const [name, value] of Object.entries(cookies)) {
@@ -61,7 +64,10 @@ describe("the storefront route policy", () => {
   it("sends a guest to sign in and carries the path it wanted (AC-13)", async () => {
     const answer = await proxy(requestTo("/checkout"));
 
-    const location = new URL(answer.headers.get("location") ?? "", "http://localhost:3000");
+    const location = new URL(
+      answer.headers.get("location") ?? "",
+      "http://localhost:3000",
+    );
 
     expect(location.pathname).toBe("/auth/signin");
     expect(location.searchParams.get("next")).toBe("/checkout");

@@ -1,5 +1,6 @@
 import { IsDateString, validate } from "class-validator";
-import { MIN_AGE_YEARS, MinAge } from "./min-age.validator";
+import { MIN_AGE_YEARS } from "../constants/auth.constants";
+import { MinAge } from "./min-age.validator";
 
 class Probe {
   @IsDateString()

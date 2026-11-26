@@ -1,36 +1,6 @@
 import { logger } from "../../common/helpers/logger";
-
-export const STRIPE_SECRET_KEY_VARIABLE = "STRIPE_SECRET_KEY";
-export const STRIPE_WEBHOOK_SECRET_VARIABLE = "STRIPE_WEBHOOK_SECRET";
-
-export type ProviderConfig = {
-  secretKey: string | null;
-  webhookSecret: string | null;
-  missing: string[];
-  configured: boolean;
-};
-
-const readVariable = (value: string | undefined): string | null => {
-  const trimmed = value?.trim();
-
-  return trimmed === undefined || trimmed === "" ? null : trimmed;
-};
-
-export const readProviderConfig = (env: NodeJS.ProcessEnv): ProviderConfig => {
-  const secretKey = readVariable(env[STRIPE_SECRET_KEY_VARIABLE]);
-  const webhookSecret = readVariable(env[STRIPE_WEBHOOK_SECRET_VARIABLE]);
-  const missing = [
-    ...(secretKey === null ? [STRIPE_SECRET_KEY_VARIABLE] : []),
-    ...(webhookSecret === null ? [STRIPE_WEBHOOK_SECRET_VARIABLE] : []),
-  ];
-
-  return {
-    secretKey,
-    webhookSecret,
-    missing,
-    configured: missing.length === 0,
-  };
-};
+import { DEFAULT_STOREFRONT_URL } from "./constants/payment.constants";
+import { readProviderConfig } from "./helpers/payment.config.helpers";
 
 export const paymentProviderConfig = readProviderConfig(process.env);
 
@@ -42,5 +12,5 @@ if (!paymentProviderConfig.configured) {
 }
 
 export const storefrontUrl = (
-  process.env.STOREFRONT_URL ?? "http://localhost:3000"
+  process.env.STOREFRONT_URL ?? DEFAULT_STOREFRONT_URL
 ).replace(/\/+$/, "");

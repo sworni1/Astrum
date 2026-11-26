@@ -1,7 +1,4 @@
-import {
-  OrderItemStatus,
-  PaymentStatus,
-} from "@/common/types/order.types";
+import { OrderItemStatus, PaymentStatus } from "@/common/types/order.types";
 import type { PillTone } from "@/features/pages/Orders/OrderPage/lib/status";
 
 export const PILL_CLASS =

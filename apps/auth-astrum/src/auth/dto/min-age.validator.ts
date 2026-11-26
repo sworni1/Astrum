@@ -3,33 +3,12 @@ import {
   type ValidationArguments,
   type ValidationOptions,
 } from "class-validator";
-
-export const MIN_AGE_YEARS = 14;
-
-const FUTURE_MESSAGE = "Date of birth cannot be in the future";
-function toDate(value: unknown): Date | undefined {
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? undefined : value;
-  }
-
-  if (typeof value !== "string" || value.trim() === "") {
-    return undefined;
-  }
-
-  const parsed = new Date(value);
-
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
-}
-
-function completeYearsSince(dateOfBirth: Date, now: Date): number {
-  const years = now.getUTCFullYear() - dateOfBirth.getUTCFullYear();
-  const beforeBirthdayThisYear =
-    now.getUTCMonth() < dateOfBirth.getUTCMonth() ||
-    (now.getUTCMonth() === dateOfBirth.getUTCMonth() &&
-      now.getUTCDate() < dateOfBirth.getUTCDate());
-
-  return beforeBirthdayThisYear ? years - 1 : years;
-}
+import { FUTURE_BIRTH_DATE_MESSAGE } from "../constants/auth.constants";
+import {
+  completeYearsSince,
+  minAgeMessage,
+  toDate,
+} from "../helpers/min-age.helpers";
 
 export function MinAge(years: number, validationOptions?: ValidationOptions) {
   return (object: object, propertyName: string): void => {
@@ -61,12 +40,12 @@ export function MinAge(years: number, validationOptions?: ValidationOptions) {
           const dateOfBirth = toDate(args.value);
 
           if (dateOfBirth && dateOfBirth.getTime() > Date.now()) {
-            return FUTURE_MESSAGE;
+            return FUTURE_BIRTH_DATE_MESSAGE;
           }
 
           const [minYears] = args.constraints as [number];
 
-          return `You must be at least ${minYears} years old`;
+          return minAgeMessage(minYears);
         },
       },
     });

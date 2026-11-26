@@ -2,15 +2,8 @@ import type { Prisma } from "@astrum/db/client";
 import { prisma } from "../../../lib/prisma";
 import { getOrSet, listTtlSeconds } from "../../cache/cache";
 import { cacheKeys } from "../../cache/cacheKeys";
+import { SHIPPING_METHOD_SELECT } from "./constants/shipping.constants";
 import { toShippingMethodListJson } from "./shipping.mapper";
-
-const SHIPPING_METHOD_SELECT = {
-  id: true,
-  name: true,
-  price: true,
-  currency: true,
-  isPickup: true,
-} as const;
 
 export type ActiveShippingMethod = Prisma.ShippingMethodGetPayload<{
   select: typeof SHIPPING_METHOD_SELECT;

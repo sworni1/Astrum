@@ -1,8 +1,7 @@
+import { describeError } from "../common/helpers/describeError";
 import { logger } from "../common/helpers/logger";
-import { loggedSid, type SessionStore, sessionKey } from "./sessionStore";
-
-const describeError = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
+import { loggedSid, sessionKey } from "./helpers/session.helpers";
+import type { SessionStore } from "./types/session.types";
 
 export const revokeSession = async (
   store: SessionStore,

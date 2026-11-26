@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
 import {
   CARD,
   CARD_BODY,
@@ -9,6 +8,7 @@ import {
   CARD_TEXT,
   CARD_TITLE,
 } from "@/features/pages/Profile/lib/styles";
+import { cn } from "@/lib/utils";
 
 type Props = {
   title?: string;

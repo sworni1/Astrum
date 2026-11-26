@@ -1,22 +1,13 @@
 import type { Request, Response } from "express";
 import { Router } from "express";
-import { StatusCodes } from "http-status-codes";
-import { AppError } from "../../common/helpers/appError";
 import { handleErrors } from "../../common/helpers/errorHandler";
 import { logger } from "../../common/helpers/logger";
 import type { AuthenticatedUserRequest } from "../../common/types/jwt.payload";
-import { ORDER_ERROR_CODES } from "./constants/order.constants";
+import { sellerPanelReadOnly } from "./helpers/order-errors.helpers";
 import { OrderController } from "./order.controller";
 
 const orderController = new OrderController();
 const sellerOrderRoutes: Router = Router();
-
-const sellerPanelReadOnly = () =>
-  new AppError(
-    StatusCodes.NOT_FOUND,
-    ORDER_ERROR_CODES.sellerPanelReadOnly,
-    "Seller writes were removed; the panel is read only.",
-  );
 
 export const refuseSellerWrite = (req: Request, res: Response): void => {
   const { orderId, orderItemId } = req.params;

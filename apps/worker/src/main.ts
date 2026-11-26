@@ -1,45 +1,18 @@
-import {
-  type ChannelModel,
-  type ConfirmChannel,
-  type ConsumeMessage,
-  connect,
-} from "amqplib";
+import type { ChannelModel, ConfirmChannel, ConsumeMessage } from "amqplib";
 import { prisma } from "../lib/prisma";
 import { loadConfig } from "./config";
+import {
+  DRAIN_TIMEOUT_MS,
+  RECONNECT_DELAY_MS,
+} from "./constants/worker.constants";
 import { createConfirmationHandler } from "./consumer";
 import { createHealthServer } from "./health";
-import { describeError, logger } from "./logger";
+import { sleep } from "./helpers/async.helpers";
+import { openConnection } from "./helpers/connection.helpers";
+import { describeError } from "./helpers/error.helpers";
+import { logger } from "./logger";
 import { createMailer } from "./mailer";
-import { CONFIRMATION_QUEUE, declareTopology } from "./topology";
-
-const CONNECT_RETRY_MS = 2_000;
-const RECONNECT_DELAY_MS = 5_000;
-const DRAIN_TIMEOUT_MS = 10_000;
-
-const sleep = async (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
-
-const openConnection = async (
-  rabbitUrl: string,
-): Promise<{ connection: ChannelModel; channel: ConfirmChannel }> => {
-  for (;;) {
-    try {
-      const connection = await connect(rabbitUrl);
-      const channel = await connection.createConfirmChannel();
-
-      await declareTopology(channel);
-
-      return { connection, channel };
-    } catch (error) {
-      logger.error({
-        event: "rabbit.connect.failed",
-        reason: describeError(error),
-        retryInMs: CONNECT_RETRY_MS,
-      });
-      await sleep(CONNECT_RETRY_MS);
-    }
-  }
-};
+import { CONFIRMATION_QUEUE } from "./topology";
 
 const main = async (): Promise<void> => {
   const config = loadConfig();

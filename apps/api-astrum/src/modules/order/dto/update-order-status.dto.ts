@@ -1,6 +1,6 @@
+import { OrderStatus } from "@astrum/db/enums";
 import { Expose } from "class-transformer";
 import { IsEnum } from "class-validator";
-import { OrderStatus } from "@astrum/db/enums";
 
 export class UpdateOrderStatusDto {
   @Expose()

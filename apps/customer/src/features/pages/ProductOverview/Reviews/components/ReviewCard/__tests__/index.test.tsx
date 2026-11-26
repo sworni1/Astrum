@@ -1,11 +1,11 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ProductReview } from "@/common/types/review.types";
 import { showToast } from "@/common/helpers/showToast";
-import { useReviewLikes } from "@/hooks/review/useReviewLikes";
+import type { ProductReview } from "@/common/types/review.types";
 import ReviewCard from "@/features/pages/ProductOverview/Reviews/components/ReviewCard";
 import { useReviewCounts } from "@/features/pages/ProductOverview/Reviews/hooks/useReviewCounts";
+import { useReviewLikes } from "@/hooks/review/useReviewLikes";
 
 const mocks = vi.hoisted(() => ({
   getData: vi.fn(),

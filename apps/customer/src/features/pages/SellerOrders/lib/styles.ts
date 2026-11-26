@@ -1,4 +1,5 @@
-export const TABLE_CARD = "overflow-hidden rounded-xl border border-border bg-card";
+export const TABLE_CARD =
+  "overflow-hidden rounded-xl border border-border bg-card";
 
 export const HEAD_CELL =
   "border-b border-border px-4 py-3 text-[13px] font-medium text-muted-foreground";

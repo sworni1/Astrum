@@ -27,7 +27,10 @@ const SummaryCard = ({ state }: Props) => {
   const blocked = state.hint !== null || state.isSubmitting;
 
   return (
-    <CheckoutCard title={t("checkoutSummaryTitle")} bodyClassName={CARD_BODY_SUMMARY}>
+    <CheckoutCard
+      title={t("checkoutSummaryTitle")}
+      bodyClassName={CARD_BODY_SUMMARY}
+    >
       <div className={SUMMARY_ROW}>
         <span className={SUMMARY_LABEL}>{t("subtotal")}</span>
         <span className={SUMMARY_VALUE}>

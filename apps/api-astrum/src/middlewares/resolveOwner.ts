@@ -1,50 +1,42 @@
 import type { NextFunction, Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import { verify } from "jsonwebtoken";
 
+import { describeError } from "../common/helpers/describeError";
 import { logger } from "../common/helpers/logger";
 import type {
   AuthenticatedRequest,
   JwtData,
 } from "../common/types/jwt.payload";
 import type { OwnerRequest } from "../common/types/owner";
-import { loggedSid, sessionKey, type SessionStore } from "../session/sessionStore";
-
-const describeError = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
-
-const sessionOwner = (raw: string): string | undefined => {
-  try {
-    const parsed: unknown = JSON.parse(raw);
-
-    if (typeof parsed !== "object" || parsed === null) {
-      return undefined;
-    }
-
-    const { userId } = parsed as { userId?: unknown };
-
-    return typeof userId === "string" ? userId : undefined;
-  } catch {
-    return undefined;
-  }
-};
+import {
+  loggedSid,
+  sessionKey,
+  sessionOwner,
+} from "../session/helpers/session.helpers";
+import type { SessionStore } from "../session/types/session.types";
+import {
+  SESSION_REFUSAL_CODES,
+  SESSION_REFUSAL_MESSAGES,
+} from "./constants/session.constants";
+import { refuse, routeOf } from "./helpers/http.helpers";
+import { authCookie, verifySessionToken } from "./helpers/token.helpers";
 
 export const createOptionalAuth =
   (store: SessionStore) =>
   async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
-    const token = (req.cookies as { __auth?: string } | undefined)?.__auth;
+    const token = authCookie(req);
 
     if (!token) {
       next();
       return;
     }
 
-    const route = { method: req.method, path: `${req.baseUrl}${req.path}` };
+    const route = routeOf(req);
 
     let decoded: JwtData;
 
     try {
-      decoded = verify(token, process.env.JWT_SECRET as string) as JwtData;
+      decoded = verifySessionToken(token);
     } catch (error) {
       logger.warn({
         event: "session.optional.refused",
@@ -58,7 +50,11 @@ export const createOptionalAuth =
     const sid = decoded.sid;
 
     if (!sid) {
-      logger.warn({ event: "session.optional.refused", ...route, reason: "no_sid" });
+      logger.warn({
+        event: "session.optional.refused",
+        ...route,
+        reason: "no_sid",
+      });
       next();
       return;
     }
@@ -117,10 +113,12 @@ export const requireSession = (
   const { userId } = req as Partial<AuthenticatedRequest>;
 
   if (!userId) {
-    res.status(StatusCodes.UNAUTHORIZED).json({
-      code: "SESSION_MISSING",
-      message: "The session cookie is missing",
-    });
+    refuse(
+      res,
+      StatusCodes.UNAUTHORIZED,
+      SESSION_REFUSAL_CODES.missing,
+      SESSION_REFUSAL_MESSAGES.missing,
+    );
     return;
   }
 

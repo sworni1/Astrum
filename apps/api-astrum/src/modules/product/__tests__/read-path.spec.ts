@@ -42,8 +42,8 @@ jest.mock("../../../cache/cache", () => {
 });
 
 import { prisma } from "../../../../lib/prisma";
-import { ProductService } from "../product.service";
 import { userOwner } from "../../../common/types/owner";
+import { ProductService } from "../product.service";
 
 type Mocked = jest.Mock;
 
@@ -145,13 +145,33 @@ describe("ProductService.getRecommendations", () => {
     );
     const service = new ProductService();
 
-    const mine = await service.getRecommendations(userOwner("user-1"), {}, CURSOR_MARKS);
-    const theirs = await service.getRecommendations(userOwner("user-2"), {}, CURSOR_MARKS);
+    const mine = await service.getRecommendations(
+      userOwner("user-1"),
+      {},
+      CURSOR_MARKS,
+    );
+    const theirs = await service.getRecommendations(
+      userOwner("user-2"),
+      {},
+      CURSOR_MARKS,
+    );
 
-    expect(mine.products[0]).toMatchObject({ isWishlisted: false, quantityInCart: 2 });
-    expect(mine.products[1]).toMatchObject({ isWishlisted: true, quantityInCart: 0 });
-    expect(theirs.products[0]).toMatchObject({ isWishlisted: false, quantityInCart: 0 });
-    expect(theirs.products[1]).toMatchObject({ isWishlisted: false, quantityInCart: 0 });
+    expect(mine.products[0]).toMatchObject({
+      isWishlisted: false,
+      quantityInCart: 2,
+    });
+    expect(mine.products[1]).toMatchObject({
+      isWishlisted: true,
+      quantityInCart: 0,
+    });
+    expect(theirs.products[0]).toMatchObject({
+      isWishlisted: false,
+      quantityInCart: 0,
+    });
+    expect(theirs.products[1]).toMatchObject({
+      isWishlisted: false,
+      quantityInCart: 0,
+    });
     expect(theirs.nextCursor).toBe(mine.nextCursor);
     expect(theirs.products).toHaveLength(8);
   });
@@ -159,8 +179,16 @@ describe("ProductService.getRecommendations", () => {
   it("keeps the cache key free of any account (AC-3)", async () => {
     const service = new ProductService();
 
-    const mine = await service.getRecommendations(userOwner("user-1"), {}, CURSOR_ACCOUNT);
-    const theirs = await service.getRecommendations(userOwner("user-2"), {}, CURSOR_ACCOUNT);
+    const mine = await service.getRecommendations(
+      userOwner("user-1"),
+      {},
+      CURSOR_ACCOUNT,
+    );
+    const theirs = await service.getRecommendations(
+      userOwner("user-2"),
+      {},
+      CURSOR_ACCOUNT,
+    );
 
     expect(theirs.nextCursor).toBe(mine.nextCursor);
 

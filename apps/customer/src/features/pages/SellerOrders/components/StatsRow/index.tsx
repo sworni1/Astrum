@@ -5,9 +5,9 @@ import type {
   SellerLineCounts,
   SellerSalesStats,
 } from "@/common/types/order.types";
-import StatTile from "@/features/general/StatTile";
-import { STAT_GRID } from "@/features/general/lib/screenStyles";
 import { amountListText } from "@/features/general/lib/moneyText";
+import { STAT_GRID } from "@/features/general/lib/screenStyles";
+import StatTile from "@/features/general/StatTile";
 
 type Props = {
   counts?: SellerLineCounts;
@@ -25,10 +25,17 @@ const StatsRow = ({ counts, stats }: Props) => {
     <div className={STAT_GRID}>
       <StatTile
         label={t("stats.revenue")}
-        value={stats === undefined ? undefined : amountListText(stats.revenue, locale)}
+        value={
+          stats === undefined
+            ? undefined
+            : amountListText(stats.revenue, locale)
+        }
       />
       <StatTile label={t("stats.units")} value={countOf(stats?.units)} />
-      <StatTile label={t("stats.delivered")} value={countOf(counts?.delivered)} />
+      <StatTile
+        label={t("stats.delivered")}
+        value={countOf(counts?.delivered)}
+      />
       <StatTile label={t("stats.canceled")} value={countOf(counts?.canceled)} />
     </div>
   );

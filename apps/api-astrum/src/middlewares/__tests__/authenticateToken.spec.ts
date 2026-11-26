@@ -12,12 +12,11 @@ jest.mock("jsonwebtoken", () => ({
 process.env.JWT_SECRET = "test-secret";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { createAuthenticateToken } =
-  require("../authenticateToken") as {
-    createAuthenticateToken: (
-      store: SessionStore,
-    ) => (req: Request, res: Response, next: NextFunction) => Promise<void>;
-  };
+const { createAuthenticateToken } = require("../authenticateToken") as {
+  createAuthenticateToken: (
+    store: SessionStore,
+  ) => (req: Request, res: Response, next: NextFunction) => Promise<void>;
+};
 
 const createStore = (): SessionStore & {
   get: jest.Mock;

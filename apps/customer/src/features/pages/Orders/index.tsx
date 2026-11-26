@@ -9,9 +9,9 @@ import {
   SCREEN_WRAPPER,
 } from "@/features/general/lib/screenStyles";
 import OrderGroup from "./components/OrderGroup";
-import OrdersToolbar from "./components/OrdersToolbar";
 import OrdersEmpty from "./components/OrdersStates/OrdersEmpty";
 import OrdersSkeleton from "./components/OrdersStates/OrdersSkeleton";
+import OrdersToolbar from "./components/OrdersToolbar";
 import StatsRow from "./components/StatsRow";
 import { useOrdersScreen } from "./hooks/useOrdersScreen";
 

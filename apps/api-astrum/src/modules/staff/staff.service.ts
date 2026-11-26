@@ -1,32 +1,20 @@
 import { StatusCodes } from "http-status-codes";
-import { Prisma } from "@astrum/db/client";
 import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
 import { logger } from "../../common/helpers/logger";
+import { isUniqueViolation } from "../../common/helpers/prismaErrors";
 import { staffRolesOf } from "../../common/helpers/staffRoles";
 import type { StaffPointView, StaffRole } from "../../common/types/staff.types";
-import { STAFF_ERROR_CODES } from "./constants/staff.constants";
+import {
+  POINT_SELECT,
+  ROLE_SELECT,
+  STAFF_ERROR_CODES,
+} from "./constants/staff.constants";
 
 export type StaffAnswer = {
   staffRoles: StaffRole[];
   point: StaffPointView | null;
 };
-
-const POINT_SELECT = {
-  id: true,
-  name: true,
-  address: true,
-  isActive: true,
-} as const;
-
-const ROLE_SELECT = {
-  pointWorker: { select: { pickupPointId: true } },
-  courier: { select: { id: true } },
-} as const;
-
-const isUniqueViolation = (error: unknown): boolean =>
-  error instanceof Prisma.PrismaClientKnownRequestError &&
-  error.code === "P2002";
 
 export class StaffService {
   private async staffRoles(userId: string): Promise<StaffRole[]> {

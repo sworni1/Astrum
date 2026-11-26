@@ -1,31 +1,26 @@
 import { Prisma } from "@astrum/db/client";
-import type { PaymentAttemptStatus } from "@astrum/db/enums";
+import { PaymentMethod } from "@astrum/db/enums";
 import { prisma } from "../../../lib/prisma";
 import { logger } from "../../common/helpers/logger";
 import { SWEEP_TRANSACTION_OPTIONS } from "../../common/helpers/sweepTransaction";
+import { describeError } from "../../events/describe-error";
 import { invalidateStockOfOrder } from "../order/order-cache";
-import { applyExpiredEvent, applyPaidEvent } from "./payment.apply";
 import {
+  PAYMENT_FAILED_FROM_STATUSES,
   PAYMENT_SWEEP_BATCH,
+  PAYMENT_SWEEP_INCLUDE,
   PAYMENT_SWEEP_INTERVAL_MS,
   PAYMENT_SWEEP_LOCK_KEY,
+  PAYMENT_SWEEP_ORDER_STATUSES,
 } from "./constants/payment.constants";
+import { sessionOutcomeOf } from "./helpers/payment.helpers";
+import { applyExpiredEvent, applyPaidEvent } from "./payment.apply";
 import type { PaymentGateway } from "./payment.gateway";
 import { paymentGateway } from "./payment.gateway.registry";
-import { sessionOutcomeOf } from "./payment.money";
 
-const SWEEP_INCLUDE = {
-  payments: {
-    where: { status: { in: ["PENDING", "FAILED"] as PaymentAttemptStatus[] } },
-    orderBy: { createdAt: "desc" as const },
-    take: 1,
-  },
-};
-
-type SweepOrder = Prisma.OrderGetPayload<{ include: typeof SWEEP_INCLUDE }>;
-
-const describe = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
+type SweepOrder = Prisma.OrderGetPayload<{
+  include: typeof PAYMENT_SWEEP_INCLUDE;
+}>;
 
 const logClosed = (orderId: string, paymentId: string): void => {
   logger.info({ event: "payment.sweep.closed", orderId, paymentId });
@@ -91,7 +86,7 @@ const sweepWithSession = async (
       event: "payment.sweep.failed",
       orderId: order.id,
       paymentId: attemptId,
-      reason: describe(error),
+      reason: describeError(error),
     });
   }
 };
@@ -125,14 +120,14 @@ const selectOverdueOrders = async (
 ): Promise<SweepOrder[]> =>
   await tx.order.findMany({
     where: {
-      paymentMethod: "ONLINE_CARD",
-      paymentStatus: { in: ["PENDING", "FAILED"] },
+      paymentMethod: PaymentMethod.ONLINE_CARD,
+      paymentStatus: { in: [...PAYMENT_FAILED_FROM_STATUSES] },
       paymentExpiresAt: { lt: new Date() },
-      status: { in: ["PENDING", "CONFIRMED"] },
+      status: { in: [...PAYMENT_SWEEP_ORDER_STATUSES] },
     },
     orderBy: { paymentExpiresAt: "asc" },
     take: PAYMENT_SWEEP_BATCH,
-    include: SWEEP_INCLUDE,
+    include: PAYMENT_SWEEP_INCLUDE,
   });
 
 export const runPaymentSweep = async (
@@ -166,7 +161,7 @@ export const startPaymentSweep = (): NodeJS.Timeout => {
     void runPaymentSweep().catch((error: unknown) => {
       logger.error({
         event: "payment.sweep.crashed",
-        reason: describe(error),
+        reason: describeError(error),
       });
     });
   }, PAYMENT_SWEEP_INTERVAL_MS);

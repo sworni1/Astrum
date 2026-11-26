@@ -8,18 +8,9 @@ import {
   GUEST_COOKIE_NAME,
   GUEST_TOKEN_TYPE,
 } from "./constants/guest.constants";
+import { cookieBase, describeError } from "./helpers/guest.helpers";
 
 type GuestToken = { guestId: string; typ: string };
-
-const describeError = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
-
-const cookieBase = {
-  httpOnly: true,
-  sameSite: "lax" as const,
-  path: "/",
-  secure: process.env.NODE_ENV === "production",
-};
 
 const route = (req: Request) => ({
   method: req.method,

@@ -14,10 +14,10 @@ jest.mock("../../../../lib/prisma", () => ({
 }));
 
 import type { AddressInfo } from "node:net";
+import { Prisma } from "@astrum/db/client";
 import cookieParser from "cookie-parser";
 import express, { type Express } from "express";
 import { sign } from "jsonwebtoken";
-import { Prisma } from "@astrum/db/client";
 import { prisma } from "../../../../lib/prisma";
 import { logger } from "../../../common/helpers/logger";
 import { createAuthenticateToken } from "../../../middlewares/authenticateToken";
@@ -103,7 +103,9 @@ const sellerAggregateRow = {
 const routeWithPath = (path: string) =>
   (
     sellerOrderRoutes as unknown as {
-      stack: Array<{ route?: { path: string; stack: Array<{ handle: unknown }> } }>;
+      stack: Array<{
+        route?: { path: string; stack: Array<{ handle: unknown }> };
+      }>;
     }
   ).stack.find((layer) => layer.route?.path === path);
 
@@ -268,7 +270,10 @@ describe("Seller panel refusals", () => {
       const body = (await response.json()) as {
         items: Array<Record<string, unknown>>;
         counts: Record<string, number>;
-        stats: { revenue: Array<{ currency: string; amount: number }>; units: number };
+        stats: {
+          revenue: Array<{ currency: string; amount: number }>;
+          units: number;
+        };
         total: number;
         page: number;
         limit: number;

@@ -15,9 +15,7 @@ import {
   REVIEW_COMMENT_MAX_LENGTH,
   REVIEW_COMMENT_MIN_LENGTH,
 } from "../constants/reviews.constants";
-
-const trim = ({ value }: { value: unknown }): unknown =>
-  typeof value === "string" ? value.trim() : value;
+import { trim } from "../helpers/review-input.helpers";
 
 export class CreateReviewDto {
   @Expose() @IsString() @IsNotEmpty() orderItemId!: string;

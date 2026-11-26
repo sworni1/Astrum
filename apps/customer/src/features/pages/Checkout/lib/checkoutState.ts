@@ -1,5 +1,5 @@
-import type { Currency } from "@/common/types/product.types";
 import type { PickupPoint, ShippingMethod } from "@/common/types/order.types";
+import type { Currency } from "@/common/types/product.types";
 import type { CheckoutHintKey } from "./hints";
 
 export type CheckoutFormState = {

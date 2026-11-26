@@ -139,7 +139,12 @@ describeWithDatabase("Courier parcels against Postgres", () => {
     const free = await createOrder({});
     const service = new CourierOrderService();
 
-    const mine = await service.listCourierOrders(firstCourierId, "mine", "1", "50");
+    const mine = await service.listCourierOrders(
+      firstCourierId,
+      "mine",
+      "1",
+      "50",
+    );
     const pool = await service.listCourierOrders(
       secondCourierId,
       "available",

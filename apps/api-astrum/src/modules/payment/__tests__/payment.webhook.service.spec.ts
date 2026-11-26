@@ -12,8 +12,8 @@ jest.mock("../payment.dispatch", () => ({
 
 import { prisma } from "../../../../lib/prisma";
 import { applyProviderEvent } from "../payment.dispatch";
-import type { ProviderEvent } from "../payment.gateway";
 import { handleWebhookEvent } from "../payment.webhook.service";
+import type { ProviderEvent } from "../types/payment.types";
 
 const prismaMock = prisma as unknown as {
   paymentEvent: { create: jest.Mock; update: jest.Mock };
@@ -61,7 +61,9 @@ const paidEvent = (overrides: Partial<ProviderEvent> = {}): ProviderEvent => ({
 beforeEach(() => {
   jest.spyOn(console, "info").mockImplementation(() => undefined);
   jest.spyOn(console, "warn").mockImplementation(() => undefined);
-  prismaMock.paymentEvent.create.mockReset().mockResolvedValue({ id: "event-1" });
+  prismaMock.paymentEvent.create
+    .mockReset()
+    .mockResolvedValue({ id: "event-1" });
   prismaMock.paymentEvent.update.mockReset().mockResolvedValue({});
   prismaMock.payment.findUnique.mockReset().mockResolvedValue(attempt);
   prismaMock.payment.findFirst.mockReset().mockResolvedValue(null);

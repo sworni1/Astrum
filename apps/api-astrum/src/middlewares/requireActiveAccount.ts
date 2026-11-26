@@ -2,20 +2,19 @@ import type { NextFunction, Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 
 import { prisma } from "../../lib/prisma";
+import { describeError } from "../common/helpers/describeError";
 import { logger } from "../common/helpers/logger";
 import type { AuthenticatedRequest } from "../common/types/jwt.payload";
-
-const describeError = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
-
-const refuse = (
-  res: Response,
-  status: number,
-  code: string,
-  message: string,
-) => {
-  res.status(status).json({ code, message });
-};
+import {
+  ACCOUNT_ERROR_CODES,
+  ACCOUNT_MESSAGES,
+  ACCOUNT_STATUS_ACTIVE,
+} from "./constants/account.constants";
+import {
+  SESSION_REFUSAL_CODES,
+  SESSION_REFUSAL_MESSAGES,
+} from "./constants/session.constants";
+import { refuse, routeOf } from "./helpers/http.helpers";
 
 export const requireActiveAccount = async (
   req: Request,
@@ -23,7 +22,7 @@ export const requireActiveAccount = async (
   next: NextFunction,
 ): Promise<void> => {
   const { userId } = req as AuthenticatedRequest;
-  const route = { method: req.method, path: `${req.baseUrl}${req.path}` };
+  const route = routeOf(req);
 
   let status: string;
 
@@ -38,8 +37,8 @@ export const requireActiveAccount = async (
       refuse(
         res,
         StatusCodes.UNAUTHORIZED,
-        "SESSION_REVOKED",
-        "The session is no longer valid",
+        SESSION_REFUSAL_CODES.revoked,
+        SESSION_REFUSAL_MESSAGES.revoked,
       );
       return;
     }
@@ -55,19 +54,19 @@ export const requireActiveAccount = async (
     refuse(
       res,
       StatusCodes.SERVICE_UNAVAILABLE,
-      "ACCOUNT_STATUS_UNAVAILABLE",
-      "The account status could not be read",
+      ACCOUNT_ERROR_CODES.statusUnavailable,
+      ACCOUNT_MESSAGES.statusUnavailable,
     );
     return;
   }
 
-  if (status !== "ACTIVE") {
+  if (status !== ACCOUNT_STATUS_ACTIVE) {
     logger.warn({ event: "account.not_confirmed", ...route, userId });
     refuse(
       res,
       StatusCodes.FORBIDDEN,
-      "EMAIL_NOT_CONFIRMED",
-      "Confirm the email address to continue",
+      ACCOUNT_ERROR_CODES.emailNotConfirmed,
+      ACCOUNT_MESSAGES.emailNotConfirmed,
     );
     return;
   }

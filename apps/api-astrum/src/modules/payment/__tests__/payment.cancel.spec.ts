@@ -68,7 +68,9 @@ describe("expireSessionForCancel", () => {
   });
 
   it("ошибка гашения логируется и не блокирует отмену (AC-11)", async () => {
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    const warn = jest
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined);
     const provider = gateway();
 
     provider.expireSession = jest.fn().mockRejectedValue(new Error("gone"));

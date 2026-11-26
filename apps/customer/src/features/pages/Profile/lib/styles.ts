@@ -1,11 +1,12 @@
-
-export const PROFILE_WRAPPER = "mx-auto w-full max-w-[880px] px-6 pt-14 pb-[72px]";
+export const PROFILE_WRAPPER =
+  "mx-auto w-full max-w-[880px] px-6 pt-14 pb-[72px]";
 export const PROFILE_STACK = "flex flex-col gap-7";
 
 export const HEADER_ROW = "flex items-center gap-5";
 export const HEADER_AVATAR =
   "flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full border border-border text-[28px] font-semibold";
-export const HEADER_AVATAR_GRADIENT = "linear-gradient(135deg, #3f3f46, #18181b)";
+export const HEADER_AVATAR_GRADIENT =
+  "linear-gradient(135deg, #3f3f46, #18181b)";
 export const HEADER_NAME_BLOCK = "flex min-w-0 flex-col gap-1.5";
 export const HEADER_NAME = "truncate text-[28px] font-bold tracking-[-0.02em]";
 export const HEADER_META = "flex flex-wrap items-center gap-2";
@@ -28,7 +29,8 @@ export const FIELD_HINT = "text-[13px] text-muted-foreground";
 export const FIELD_GRID =
   "grid gap-5 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]";
 export const INPUT = "h-10 rounded-md bg-background px-3 text-sm";
-export const INPUT_READONLY = "cursor-not-allowed bg-secondary text-muted-foreground";
+export const INPUT_READONLY =
+  "cursor-not-allowed bg-secondary text-muted-foreground";
 
 export const ROLE_GRID =
   "grid gap-5 [grid-template-columns:repeat(auto-fit,minmax(320px,1fr))]";
@@ -44,4 +46,5 @@ export const ACTION_SIZE = "h-10 rounded-md px-4 text-sm font-medium";
 export const ACTION_ICON = "size-4";
 
 export const DESTRUCTIVE_CARD = "border-destructive-line";
-export const DESTRUCTIVE_TITLE = "text-[18px] font-semibold tracking-[-0.01em] text-destructive-soft";
+export const DESTRUCTIVE_TITLE =
+  "text-[18px] font-semibold tracking-[-0.01em] text-destructive-soft";

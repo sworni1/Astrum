@@ -12,9 +12,17 @@ import {
   cartPublicSelect,
 } from "../../common/prisma-selects/product.select";
 import type { Owner } from "../../common/types/owner";
+import { PUBLIC_PRODUCT_WHERE } from "../product/constants/product.constants";
 import { ProductService } from "../product/product.service";
 import type { AddProductToCartDto } from "./dto/add-product.dto";
 import type { ChangeQuantityDto } from "./dto/change-quantity.dto";
+import {
+  cartDeleteFailed,
+  cartReadFailed,
+  changeQuantityFailed,
+  quantityLimit,
+} from "./helpers/cart.errors";
+import { toCartLineJson, toCartProductJson } from "./helpers/cart.helpers";
 
 export class CartService {
   private productService = new ProductService();
@@ -25,7 +33,7 @@ export class CartService {
     const product = await this.productService.getProduct(owner, productId);
 
     if (product.quantity <= 0) {
-      throw new Error("Product quantity limit");
+      throw quantityLimit();
     }
 
     const wishlistItem = await getWishlistItem(owner, productId);
@@ -48,11 +56,7 @@ export class CartService {
       });
     });
 
-    return {
-      ...cartItem,
-      isWishlisted: !!wishlistItem,
-      quantityInCart: cartItem.quantity,
-    };
+    return toCartLineJson(cartItem, wishlistItem);
   }
 
   async changeProductCartQuantity(
@@ -73,19 +77,15 @@ export class CartService {
             select: cartActionsPublicSelect,
           });
 
-          return {
-            ...cartItem,
-            isWishlisted: !!wishlistItem,
-            quantityInCart: cartItem.quantity,
-          };
+          return toCartLineJson(cartItem, wishlistItem);
         } else {
-          throw new Error(`Product quantity limit`);
+          throw quantityLimit();
         }
       } else {
         return this.deleteProductFromCart(owner, productId);
       }
     } catch (_error) {
-      throw new Error(`changeProductCartQuantity error`);
+      throw changeQuantityFailed();
     }
   }
 
@@ -100,9 +100,7 @@ export class CartService {
       const cart = await prisma.product.findMany({
         where: {
           id: { in: cartProductIds },
-          isDeleted: false,
-          visibility: "Public",
-          status: "Published",
+          ...PUBLIC_PRODUCT_WHERE,
         },
         select: cartPublicSelect,
       });
@@ -114,17 +112,13 @@ export class CartService {
             product.id,
           );
 
-          return {
-            ...product,
-            isWishlisted: !!wishlistItem,
-            quantityInCart: cartItem ? cartItem.quantity : 0,
-          };
+          return toCartProductJson(product, wishlistItem, cartItem);
         }),
       );
 
       return cartWithData;
     } catch (_error) {
-      throw new Error(`getWishlist error`);
+      throw cartReadFailed();
     }
   }
 
@@ -141,7 +135,7 @@ export class CartService {
         quantityInCart: 0,
       };
     } catch (_error) {
-      throw new Error(`deleteProductFromCart error`);
+      throw cartDeleteFailed();
     }
   }
 }

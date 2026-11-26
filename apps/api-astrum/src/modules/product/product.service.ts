@@ -1,8 +1,4 @@
-import type {
-  Product,
-  ProductCategory,
-} from "@astrum/db/client";
-import { ReviewStatus } from "@astrum/db/enums";
+import type { Product, ProductCategory } from "@astrum/db/client";
 import { prisma } from "../../../lib/prisma";
 import {
   getOrSet,
@@ -12,7 +8,6 @@ import {
   readVersion,
 } from "../../cache/cache";
 import { cacheKeys } from "../../cache/cacheKeys";
-import { AppError } from "../../common/helpers/appError";
 import {
   getWishlistAndCartItem,
   readPageMarks,
@@ -21,38 +16,15 @@ import {
   productPreviewPublicSelect,
   productPublicSelect,
 } from "../../common/prisma-selects/product.select";
-import { roundAverageRating } from "../reviews/review.serializer";
-import { readReviewState } from "../reviews/review-state";
 import type { Owner } from "../../common/types/owner";
-import { PRODUCT_ERROR_CODES } from "./constants/product.constants";
+import { readReviewState } from "../reviews/review-state";
+import {
+  PRODUCT_DEFAULT_PAGE_SIZE,
+  PUBLIC_PRODUCT_WHERE,
+} from "./constants/product.constants";
 import type { CreateProductDto } from "./dto/create-product.dto";
-
-type ProductRating = { averageRating: number; reviewCount: number };
-
-const readPageRatings = async (
-  productIds: Product["id"][],
-): Promise<Map<Product["id"], ProductRating>> => {
-  if (productIds.length === 0) {
-    return new Map();
-  }
-
-  const rows = await prisma.review.groupBy({
-    by: ["productId"],
-    where: { productId: { in: productIds }, status: ReviewStatus.APPROVED },
-    _count: { _all: true },
-    _avg: { rating: true },
-  });
-
-  return new Map(
-    rows.map((row) => [
-      row.productId,
-      {
-        averageRating: roundAverageRating(row._avg.rating),
-        reviewCount: row._count._all,
-      },
-    ]),
-  );
-};
+import { productNotFound, sellerNotAssigned } from "./helpers/product.errors";
+import { readPageRatings } from "./helpers/product-rating.helpers";
 
 export class ProductService {
   async getProduct(owner: Owner | null, productId: Product["id"]) {
@@ -91,7 +63,7 @@ export class ProductService {
       search_query?: string;
     },
     cursor?: string,
-    limit: number = 8,
+    limit: number = PRODUCT_DEFAULT_PAGE_SIZE,
   ) {
     const epoch = await readVersion(cacheKeys.listsEpoch());
     const key = filters?.category
@@ -135,11 +107,7 @@ export class ProductService {
     });
 
     if (!business) {
-      throw new AppError(
-        403,
-        "SELLER_NOT_ASSIGNED",
-        "No business is assigned to this seller.",
-      );
+      throw sellerNotAssigned();
     }
 
     const product = await prisma.product.create({
@@ -155,19 +123,13 @@ export class ProductService {
     const product = await prisma.product.findUnique({
       where: {
         id: productId,
-        isDeleted: false,
-        visibility: "Public",
-        status: "Published",
+        ...PUBLIC_PRODUCT_WHERE,
       },
       select: productPublicSelect,
     });
 
     if (!product) {
-      throw new AppError(
-        404,
-        PRODUCT_ERROR_CODES.notFound,
-        "Product not found",
-      );
+      throw productNotFound();
     }
 
     return product;
@@ -176,13 +138,11 @@ export class ProductService {
   private async loadCataloguePage(
     filters?: { category?: ProductCategory; search_query?: string },
     cursor?: string,
-    limit: number = 8,
+    limit: number = PRODUCT_DEFAULT_PAGE_SIZE,
   ) {
     const products = await prisma.product.findMany({
       where: {
-        isDeleted: false,
-        visibility: "Public",
-        status: "Published",
+        ...PUBLIC_PRODUCT_WHERE,
         ...(filters?.category ? { category: filters.category } : {}),
         ...(filters?.search_query
           ? {

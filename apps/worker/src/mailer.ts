@@ -1,46 +1,11 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createTransport } from "nodemailer";
-import type { Letter } from "./letter";
+import { SEND_TIMEOUT_MS } from "./constants/mailer.constants";
+import { withTimeout } from "./helpers/async.helpers";
+import { outboxFileName } from "./helpers/mailer.helpers";
 import { logger } from "./logger";
-
-export const SEND_TIMEOUT_MS = 10_000;
-
-export type Mailer = {
-  kind: "smtp" | "outbox";
-  send(to: string, letter: Letter): Promise<void>;
-};
-
-const withTimeout = async <T>(
-  work: Promise<T>,
-  timeoutMs: number,
-): Promise<T> => {
-  let timer: NodeJS.Timeout | undefined;
-
-  try {
-    return await Promise.race([
-      work,
-      new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(
-          () =>
-            reject(new Error(`send did not resolve within ${timeoutMs} ms`)),
-          timeoutMs,
-        );
-      }),
-    ]);
-  } finally {
-    if (timer) {
-      clearTimeout(timer);
-    }
-  }
-};
-
-const outboxFileName = (to: string, now: Date): string => {
-  const stamp = now.toISOString().replace(/[:.]/g, "-");
-  const safeTo = to.replace(/[^a-zA-Z0-9@._-]/g, "_");
-
-  return `${stamp}-${safeTo}.eml`;
-};
+import type { Mailer } from "./types/worker.types";
 
 const createOutboxMailer = (mailFrom: string, outboxDir: string): Mailer => ({
   kind: "outbox",

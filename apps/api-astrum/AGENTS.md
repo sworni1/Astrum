@@ -40,7 +40,9 @@ pnpm --filter @astrum/api check-types
 ## Conventions
 
 - One folder per module holding `*.controller.ts`, `*.routes.ts`, `*.service.ts` and `dto/`; the router is registered in `src/app.ts`.
-- A module keeps its suites in `__tests__/` (`dto/__tests__/` for DTO suites) and its literals in `constants/*.constants.ts`; nothing else lives in those folders, because jest treats every file under `__tests__/` as a suite.
+- Module root is the runtime layer: the entry points (`*.routes.ts`, `*.controller.ts`, `*.service.ts`, where the service is the only public seam), the use-case flows under their own names (`order-create.ts`, `order-read.ts`, `order-cancel.ts`) and the transaction steps they compose (`order-stock.ts`, `order-cart.ts`, `order-delivery.ts`, `order-status.ts`).
+- `helpers/*.helpers.ts` holds pure functions only: no Prisma, no I/O. Anything that reads or writes the database lives at module root.
+- A module keeps its suites in `__tests__/` (`dto/__tests__/` for DTO suites), its literals in `constants/*.constants.ts` and its shared types in `types/*.types.ts`; nothing else lives in those folders, because jest treats every file under `__tests__/` as a suite.
 - Nested resources keep their router in the parent module, for example reviews mounted inside `product.routes.ts`.
 - Controllers return through `handleErrors` with `http-status-codes`; DTO classes carry the validation rules.
 - `POST /api/orders` takes an optional `Idempotency-Key` of 8 to 128 characters from `[A-Za-z0-9_-]`, stores its sha256 body fingerprint on the order and answers the first order with `200` and `Idempotent-Replay: true` on a repeat.

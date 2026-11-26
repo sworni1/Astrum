@@ -2,7 +2,10 @@ import en from "@messages/en.json";
 import ru from "@messages/ru.json";
 import { subYears } from "date-fns";
 import { describe, expect, it } from "vitest";
-import { createRegisterFormSchema, MIN_AGE_YEARS } from "@/common/zodSchemes/auth.scheme";
+import {
+  createRegisterFormSchema,
+  MIN_AGE_YEARS,
+} from "@/common/zodSchemes/auth.scheme";
 import type { ValidationTranslator } from "@/common/zodSchemes/translator";
 
 const translatorFor = (catalog: typeof en.validation) => {

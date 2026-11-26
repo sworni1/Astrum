@@ -140,9 +140,15 @@ describe("OrderPage", () => {
 
     expect(text).toContain("Kettle");
     expect(text).toContain("Parker");
-    expect(container.querySelector('[data-testid="order-grid"]')).not.toBeNull();
-    expect(container.querySelector('[data-testid="order-line"]')).not.toBeNull();
-    expect(container.querySelector('[data-testid="order-copy"]')).not.toBeNull();
+    expect(
+      container.querySelector('[data-testid="order-grid"]'),
+    ).not.toBeNull();
+    expect(
+      container.querySelector('[data-testid="order-line"]'),
+    ).not.toBeNull();
+    expect(
+      container.querySelector('[data-testid="order-copy"]'),
+    ).not.toBeNull();
     expect(
       container.querySelector('[data-testid="order-right-column"]'),
     ).not.toBeNull();

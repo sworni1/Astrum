@@ -6,7 +6,7 @@ import type {
   ReviewCommentWriteAnswer,
 } from "@/common/types/review.types";
 import { useFetcher } from "@/hooks/useFetcher";
-import { reviewCommentsKey, reviewCommentCreateKey } from "./reviewsKeys";
+import { reviewCommentCreateKey, reviewCommentsKey } from "./reviewsKeys";
 
 export const useCreateReviewComment = (reviewId: string) => {
   const { postItem } = useFetcher();

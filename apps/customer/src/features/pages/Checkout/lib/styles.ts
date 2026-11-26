@@ -1,4 +1,3 @@
-
 export const CHECKOUT_WRAPPER =
   "mx-auto w-full max-w-[1080px] px-6 pt-12 pb-[72px]";
 export const CHECKOUT_STACK = "flex flex-col gap-7";
@@ -56,9 +55,7 @@ export const SUMMARY_LABEL = "text-muted-foreground";
 export const SUMMARY_VALUE = "text-foreground";
 export const SUMMARY_TOTAL_ROW = "flex items-baseline justify-between gap-4";
 export const SUMMARY_TOTAL_LABEL = "text-base font-semibold";
-export const SUMMARY_TOTAL_VALUE =
-  "text-2xl font-bold tracking-[-0.02em]";
-export const SUBMIT =
-  "mt-1.5 h-11 w-full rounded-md text-[15px] font-semibold";
+export const SUMMARY_TOTAL_VALUE = "text-2xl font-bold tracking-[-0.02em]";
+export const SUBMIT = "mt-1.5 h-11 w-full rounded-md text-[15px] font-semibold";
 export const SUBMIT_HINT =
   "flex items-center justify-center gap-1.5 text-[13px] text-muted-foreground";

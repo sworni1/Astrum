@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import AddToCartWithQuantity from '@/features/general/AddToCartWithQuantity';
-import ToggleWishlistItemButton from '@/features/general/ProductCard/actions/ToggleWishlistItemButton';
+import AddToCartWithQuantity from "@/features/general/AddToCartWithQuantity";
+import ToggleWishlistItemButton from "@/features/general/ProductCard/actions/ToggleWishlistItemButton";
 
 type Props = {
   id: string;
@@ -18,13 +18,13 @@ const CartCardFooter = ({
   quantityInCart,
   isOutOfStock,
 }: Props) => (
-  <div className='mt-4 flex items-center justify-between'>
+  <div className="mt-4 flex items-center justify-between">
     <ToggleWishlistItemButton productId={id} isWishlisted={isWishlisted} />
     <AddToCartWithQuantity
       isOutOfStock={isOutOfStock}
       productId={id}
       quantity={quantity}
-      size='sm'
+      size="sm"
       quantityInCart={quantityInCart}
       allowAdd={false}
     />

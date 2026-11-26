@@ -4,15 +4,15 @@ import Link from "next/link";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { formatMoney, toCurrency } from "@/common/helpers/money";
 import type { OrderListRow } from "@/common/types/order.types";
-import { browserTimeZone } from "@/features/pages/SellerOrders/lib/format";
+import OrderLineRow from "@/features/pages/Orders/components/OrderLineRow";
 import {
   GROUP_CARD,
   GROUP_FIELD,
-  GROUP_FIELDS,
   GROUP_FIELD_VALUE,
+  GROUP_FIELDS,
   GROUP_HEADER,
 } from "@/features/pages/Orders/lib/styles";
-import OrderLineRow from "@/features/pages/Orders/components/OrderLineRow";
+import { browserTimeZone } from "@/features/pages/SellerOrders/lib/format";
 
 const NUMBER_LENGTH = 8;
 
@@ -50,7 +50,11 @@ const OrderGroup = ({ order }: Props) => {
           <div className={GROUP_FIELD}>
             <span>{t("fields.amount")}</span>
             <span className={GROUP_FIELD_VALUE}>
-              {formatMoney(order.grandTotal, toCurrency(order.currency), locale)}
+              {formatMoney(
+                order.grandTotal,
+                toCurrency(order.currency),
+                locale,
+              )}
             </span>
           </div>
         </div>

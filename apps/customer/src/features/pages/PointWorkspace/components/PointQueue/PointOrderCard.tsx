@@ -67,7 +67,9 @@ const PointOrderCard = ({ order, actionsDisabled, pending, onRun }: Props) => {
           <span className="text-muted-foreground">
             {t("point.queue.totalLabel")}
           </span>{" "}
-          <strong>{formatMoney(order.grandTotal, order.currency, locale)}</strong>
+          <strong>
+            {formatMoney(order.grandTotal, order.currency, locale)}
+          </strong>
         </p>
 
         <OrderActions

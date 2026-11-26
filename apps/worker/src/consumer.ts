@@ -1,8 +1,9 @@
-import type { ConfirmChannel, ConsumeMessage } from "amqplib";
 import type { PrismaClient } from "@astrum/db/client";
-import { buildConfirmationLetter, resolveLetterLocale } from "./letter";
-import { describeError, logger } from "./logger";
-import type { Mailer } from "./mailer";
+import type { ConfirmChannel, ConsumeMessage } from "amqplib";
+import { parseEvent } from "./helpers/consumer.helpers";
+import { describeError } from "./helpers/error.helpers";
+import { buildConfirmationLetter } from "./letter";
+import { logger } from "./logger";
 import { confirmationLink } from "./token";
 import { mintConfirmationToken } from "./tokenStore";
 import {
@@ -12,45 +13,13 @@ import {
   MAX_ATTEMPTS,
   retryQueueName,
 } from "./topology";
-
-export type ConfirmationEvent = {
-  userId: string;
-  email: string;
-  requestedAt?: string;
-  locale: "en" | "ru";
-};
+import type { Mailer } from "./types/worker.types";
 
 export type ConsumerDeps = {
   channel: ConfirmChannel;
   prisma: PrismaClient;
   mailer: Mailer;
   storefrontUrl: string;
-};
-
-const parseEvent = (message: ConsumeMessage): ConfirmationEvent | undefined => {
-  try {
-    const parsed = JSON.parse(message.content.toString("utf8")) as Partial<
-      Record<keyof ConfirmationEvent, unknown>
-    >;
-
-    if (typeof parsed.userId !== "string" || !parsed.userId) {
-      return undefined;
-    }
-
-    if (typeof parsed.email !== "string" || !parsed.email) {
-      return undefined;
-    }
-
-    return {
-      userId: parsed.userId,
-      email: parsed.email,
-      requestedAt:
-        typeof parsed.requestedAt === "string" ? parsed.requestedAt : undefined,
-      locale: resolveLetterLocale(parsed.locale),
-    };
-  } catch {
-    return undefined;
-  }
 };
 
 export type ConfirmationHandler = (

@@ -1,110 +1,17 @@
-import { type ChannelModel, type ConfirmChannel, connect } from "amqplib";
+import { describeError } from "../common/helpers/describeError";
 import { logger } from "../common/helpers/logger";
-import { describeError } from "./describe-error";
+import { withTimeout } from "../common/helpers/timeout";
 import {
   CONFIRMATION_ROUTING_KEY,
   EVENTS_EXCHANGE,
+  PERSISTENT_JSON_PUBLISH_OPTIONS,
   PUBLISH_TIMEOUT_MS,
 } from "./constants/events.constants";
+import {
+  channelOrOpen,
+  resetConnection,
+} from "./helpers/rabbit-connection.helpers";
 import { DEFAULT_LETTER_LOCALE, type LetterLocale } from "./locale";
-
-let connection: ChannelModel | undefined;
-let channel: ConfirmChannel | undefined;
-let opening: Promise<ConfirmChannel> | undefined;
-
-const withTimeout = async <T>(
-  work: Promise<T>,
-  timeoutMs: number,
-): Promise<T> => {
-  let timer: NodeJS.Timeout | undefined;
-
-  try {
-    return await Promise.race([
-      work,
-      new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(
-          () =>
-            reject(
-              new Error(`the broker did not answer within ${timeoutMs} ms`),
-            ),
-          timeoutMs,
-        );
-      }),
-    ]);
-  } finally {
-    if (timer) {
-      clearTimeout(timer);
-    }
-  }
-};
-
-const open = async (): Promise<ConfirmChannel> => {
-  const url = process.env.RABBITMQ_URL;
-
-  if (!url) {
-    throw new Error("RABBITMQ_URL is required to publish events");
-  }
-
-  const opened = await connect(url);
-  const confirmed = await opened.createConfirmChannel();
-
-  opened.on("error", (error: Error) => {
-    logger.error({
-      event: "rabbit.connection.error",
-      reason: describeError(error),
-    });
-  });
-
-  opened.on("close", () => {
-    connection = undefined;
-    channel = undefined;
-  });
-
-  await confirmed.assertExchange(EVENTS_EXCHANGE, "direct", { durable: true });
-
-  connection = opened;
-  channel = confirmed;
-
-  return confirmed;
-};
-
-const channelOrOpen = async (): Promise<ConfirmChannel> => {
-  if (channel) {
-    return channel;
-  }
-
-  opening ??= open().finally(() => {
-    opening = undefined;
-  });
-
-  return await opening;
-};
-
-const reset = async (): Promise<void> => {
-  const confirmed = channel;
-  const opened = connection;
-
-  channel = undefined;
-  connection = undefined;
-
-  try {
-    await confirmed?.close();
-  } catch (error) {
-    logger.warn({
-      event: "rabbit.channel.close.failed",
-      reason: describeError(error),
-    });
-  }
-
-  try {
-    await opened?.close();
-  } catch (error) {
-    logger.warn({
-      event: "rabbit.connection.close.failed",
-      reason: describeError(error),
-    });
-  }
-};
 
 export const publishConfirmationRequested = async ({
   userId,
@@ -131,15 +38,16 @@ export const publishConfirmationRequested = async ({
               locale,
             }),
           ),
-          { persistent: true, contentType: "application/json" },
+          PERSISTENT_JSON_PUBLISH_OPTIONS,
         );
 
         await confirmed.waitForConfirms();
       })(),
       PUBLISH_TIMEOUT_MS,
+      `the broker did not answer within ${PUBLISH_TIMEOUT_MS} ms`,
     );
   } catch (error) {
-    await reset();
+    await resetConnection();
     logger.error({
       event: "email.publish.failed",
       userId,

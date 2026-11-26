@@ -5,10 +5,7 @@ export const REVIEW_COMMENT_MIN_LENGTH = 5;
 export const REVIEW_COMMENT_MAX_LENGTH = 2000;
 
 const ratingField = (t: ValidationTranslator) =>
-  z
-    .number()
-    .min(1, t("ratingRequired"))
-    .max(5, t("ratingRequired"));
+  z.number().min(1, t("ratingRequired")).max(5, t("ratingRequired"));
 
 export const createReviewFormSchema = (t: ValidationTranslator) =>
   z.object({

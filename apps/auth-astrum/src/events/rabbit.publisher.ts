@@ -1,34 +1,16 @@
 import { Injectable, Logger, type OnModuleDestroy } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { type ChannelModel, type ConfirmChannel, connect } from "amqplib";
+import {
+  DURABLE_EXCHANGE_OPTIONS,
+  EVENTS_EXCHANGE,
+  EXCHANGE_TYPE_DIRECT,
+  PERSISTENT_JSON_PUBLISH_OPTIONS,
+  PUBLISH_TIMEOUT_MS,
+  RABBITMQ_URL_VARIABLE,
+} from "./constants/events.constants";
 import { describeError } from "./describe-error";
-import { EVENTS_EXCHANGE, PUBLISH_TIMEOUT_MS } from "./events.constants";
-
-const withTimeout = async <T>(
-  work: Promise<T>,
-  timeoutMs: number,
-): Promise<T> => {
-  let timer: NodeJS.Timeout | undefined;
-
-  try {
-    return await Promise.race([
-      work,
-      new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(
-          () =>
-            reject(
-              new Error(`the broker did not answer within ${timeoutMs} ms`),
-            ),
-          timeoutMs,
-        );
-      }),
-    ]);
-  } finally {
-    if (timer) {
-      clearTimeout(timer);
-    }
-  }
-};
+import { withTimeout } from "./helpers/rabbit.helpers";
 
 @Injectable()
 export class RabbitPublisher implements OnModuleDestroy {
@@ -56,10 +38,12 @@ export class RabbitPublisher implements OnModuleDestroy {
     const channel = await this.channelOrOpen();
     const body = Buffer.from(JSON.stringify(payload));
 
-    channel.publish(EVENTS_EXCHANGE, routingKey, body, {
-      persistent: true,
-      contentType: "application/json",
-    });
+    channel.publish(
+      EVENTS_EXCHANGE,
+      routingKey,
+      body,
+      PERSISTENT_JSON_PUBLISH_OPTIONS,
+    );
 
     await channel.waitForConfirms();
   }
@@ -77,7 +61,7 @@ export class RabbitPublisher implements OnModuleDestroy {
   }
 
   private async open(): Promise<ConfirmChannel> {
-    const url = this.config.get<string>("RABBITMQ_URL");
+    const url = this.config.get<string>(RABBITMQ_URL_VARIABLE);
 
     if (!url) {
       throw new Error("RABBITMQ_URL is required to publish events");
@@ -100,7 +84,11 @@ export class RabbitPublisher implements OnModuleDestroy {
       this.channel = undefined;
     });
 
-    await channel.assertExchange(EVENTS_EXCHANGE, "direct", { durable: true });
+    await channel.assertExchange(
+      EVENTS_EXCHANGE,
+      EXCHANGE_TYPE_DIRECT,
+      DURABLE_EXCHANGE_OPTIONS,
+    );
 
     this.connection = connection;
     this.channel = channel;

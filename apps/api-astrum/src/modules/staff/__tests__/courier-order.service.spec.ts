@@ -189,7 +189,9 @@ const createTx = (seed: OrderSeed | null) => {
       updateMany: orderUpdateMany,
     },
     orderItem: {
-      findMany: jest.fn(async () => lines().map((line) => ({ status: line.status }))),
+      findMany: jest.fn(async () =>
+        lines().map((line) => ({ status: line.status })),
+      ),
       updateMany: lineUpdate,
     },
     product: { updateMany: stockUpdate },
@@ -209,7 +211,14 @@ const createTx = (seed: OrderSeed | null) => {
         },
   );
 
-  return { tx, orderUpdate, orderUpdateMany, lineUpdate, stockUpdate, paymentUpdate };
+  return {
+    tx,
+    orderUpdate,
+    orderUpdateMany,
+    lineUpdate,
+    stockUpdate,
+    paymentUpdate,
+  };
 };
 
 const runWithSeed = async (seed: OrderSeed | null) => {
@@ -290,9 +299,9 @@ describe("CourierOrderService", () => {
 
       const answer = await service.listCourierOrders(courier, "mine");
 
-      expect(prismaMock.order.findMany.mock.calls[0][0].where.courierUserId).toBe(
-        courier,
-      );
+      expect(
+        prismaMock.order.findMany.mock.calls[0][0].where.courierUserId,
+      ).toBe(courier);
       expect(answer.orders[0].deliveryAddress).toBe("Tverskaya 12");
       expect(expireMock).not.toHaveBeenCalled();
     });
@@ -363,7 +372,9 @@ describe("CourierOrderService", () => {
     it("writes the caller on a free parcel and answers it with its address (AC-4)", async () => {
       const seed = orderSeed();
       await runWithSeed(seed);
-      const info = jest.spyOn(logger, "info").mockImplementation(() => undefined);
+      const info = jest
+        .spyOn(logger, "info")
+        .mockImplementation(() => undefined);
 
       const answer = await service.claim(seed.id, courier);
 
@@ -382,7 +393,9 @@ describe("CourierOrderService", () => {
     it("answers the same row on a second press without writing or logging (AC-4)", async () => {
       const seed = orderSeed({ courierUserId: courier });
       const { orderUpdate } = await runWithSeed(seed);
-      const info = jest.spyOn(logger, "info").mockImplementation(() => undefined);
+      const info = jest
+        .spyOn(logger, "info")
+        .mockImplementation(() => undefined);
 
       const answer = await service.claim(seed.id, courier);
 
@@ -397,24 +410,27 @@ describe("CourierOrderService", () => {
 
       createTx(pickup);
 
-      await expect(
-        service.claim(pickup.id, courier),
-      ).rejects.toMatchObject({ status: 404, code: "ORDER_NOT_FOUND" });
+      await expect(service.claim(pickup.id, courier)).rejects.toMatchObject({
+        status: 404,
+        code: "ORDER_NOT_FOUND",
+      });
 
       createTx(null);
 
-      await expect(
-        service.claim("missing", courier),
-      ).rejects.toMatchObject({ status: 404, code: "ORDER_NOT_FOUND" });
+      await expect(service.claim("missing", courier)).rejects.toMatchObject({
+        status: 404,
+        code: "ORDER_NOT_FOUND",
+      });
     });
 
     it("refuses a parcel another courier took (AC-4)", async () => {
       const seed = orderSeed({ courierUserId: "courier-2" });
       createTx(seed);
 
-      await expect(
-        service.claim(seed.id, courier),
-      ).rejects.toMatchObject({ status: 409, code: "ALREADY_CLAIMED" });
+      await expect(service.claim(seed.id, courier)).rejects.toMatchObject({
+        status: 409,
+        code: "ALREADY_CLAIMED",
+      });
       expect(seed.courierUserId).toBe("courier-2");
     });
 
@@ -426,18 +442,20 @@ describe("CourierOrderService", () => {
       });
       createTx(seed);
 
-      await expect(
-        service.claim(seed.id, courier),
-      ).rejects.toMatchObject({ status: 409, code: "ALREADY_HANDED_OVER" });
+      await expect(service.claim(seed.id, courier)).rejects.toMatchObject({
+        status: 409,
+        code: "ALREADY_HANDED_OVER",
+      });
     });
 
     it("refuses a parcel that has not arrived yet (AC-4)", async () => {
       const seed = orderSeed({ status: "SHIPPED" });
       createTx(seed);
 
-      await expect(
-        service.claim(seed.id, courier),
-      ).rejects.toMatchObject({ status: 409, code: "ORDER_NOT_DELIVERED" });
+      await expect(service.claim(seed.id, courier)).rejects.toMatchObject({
+        status: 409,
+        code: "ORDER_NOT_DELIVERED",
+      });
     });
   });
 
@@ -456,18 +474,20 @@ describe("CourierOrderService", () => {
       const seed = orderSeed();
       createTx(seed);
 
-      await expect(
-        service.release(seed.id, courier),
-      ).rejects.toMatchObject({ status: 404, code: "ORDER_NOT_FOUND" });
+      await expect(service.release(seed.id, courier)).rejects.toMatchObject({
+        status: 404,
+        code: "ORDER_NOT_FOUND",
+      });
     });
 
     it("answers not found on a parcel another courier holds (AC-5)", async () => {
       const seed = orderSeed({ courierUserId: "courier-2" });
       createTx(seed);
 
-      await expect(
-        service.release(seed.id, courier),
-      ).rejects.toMatchObject({ status: 404, code: "ORDER_NOT_FOUND" });
+      await expect(service.release(seed.id, courier)).rejects.toMatchObject({
+        status: 404,
+        code: "ORDER_NOT_FOUND",
+      });
       expect(seed.courierUserId).toBe("courier-2");
     });
 
@@ -479,9 +499,10 @@ describe("CourierOrderService", () => {
       });
       createTx(seed);
 
-      await expect(
-        service.release(seed.id, courier),
-      ).rejects.toMatchObject({ status: 409, code: "ALREADY_HANDED_OVER" });
+      await expect(service.release(seed.id, courier)).rejects.toMatchObject({
+        status: 409,
+        code: "ALREADY_HANDED_OVER",
+      });
     });
   });
 
@@ -583,24 +604,28 @@ describe("CourierOrderService", () => {
 
     it("refuses a missing order, a counter parcel, a free one and a foreign one with not found (AC-6)", async () => {
       createTx(null);
-      await expect(
-        service.handOver("missing", courier),
-      ).rejects.toMatchObject({ status: 404, code: "ORDER_NOT_FOUND" });
+      await expect(service.handOver("missing", courier)).rejects.toMatchObject({
+        status: 404,
+        code: "ORDER_NOT_FOUND",
+      });
 
       createTx(orderSeed({ isPickup: true }));
-      await expect(
-        service.handOver("order-1", courier),
-      ).rejects.toMatchObject({ status: 404, code: "ORDER_NOT_FOUND" });
+      await expect(service.handOver("order-1", courier)).rejects.toMatchObject({
+        status: 404,
+        code: "ORDER_NOT_FOUND",
+      });
 
       createTx(orderSeed());
-      await expect(
-        service.handOver("order-1", courier),
-      ).rejects.toMatchObject({ status: 404, code: "ORDER_NOT_FOUND" });
+      await expect(service.handOver("order-1", courier)).rejects.toMatchObject({
+        status: 404,
+        code: "ORDER_NOT_FOUND",
+      });
 
       createTx(orderSeed({ courierUserId: "courier-2" }));
-      await expect(
-        service.handOver("order-1", courier),
-      ).rejects.toMatchObject({ status: 404, code: "ORDER_NOT_FOUND" });
+      await expect(service.handOver("order-1", courier)).rejects.toMatchObject({
+        status: 404,
+        code: "ORDER_NOT_FOUND",
+      });
     });
 
     it("refuses a second press and a parcel that has not arrived (AC-6, AC-13)", async () => {
@@ -611,14 +636,16 @@ describe("CourierOrderService", () => {
           status: "ISSUED",
         }),
       );
-      await expect(
-        service.handOver("order-1", courier),
-      ).rejects.toMatchObject({ status: 409, code: "ALREADY_HANDED_OVER" });
+      await expect(service.handOver("order-1", courier)).rejects.toMatchObject({
+        status: 409,
+        code: "ALREADY_HANDED_OVER",
+      });
 
       createTx(orderSeed({ courierUserId: courier, status: "SHIPPED" }));
-      await expect(
-        service.handOver("order-1", courier),
-      ).rejects.toMatchObject({ status: 409, code: "ORDER_NOT_DELIVERED" });
+      await expect(service.handOver("order-1", courier)).rejects.toMatchObject({
+        status: 409,
+        code: "ORDER_NOT_DELIVERED",
+      });
     });
 
     it("writes the refusal line with its code (AC-6)", async () => {
@@ -705,9 +732,9 @@ describe("CourierOrderService", () => {
       });
       createTx(seed);
 
-      await expect(
-        service.cancelOrder(seed.id, courier),
-      ).rejects.toMatchObject({ status: 409, code: "NOTHING_TO_CANCEL" });
+      await expect(service.cancelOrder(seed.id, courier)).rejects.toMatchObject(
+        { status: 409, code: "NOTHING_TO_CANCEL" },
+      );
     });
 
     it("keeps a paid order paid and leaves one refund warning naming the actor and the buyer (AC-8)", async () => {

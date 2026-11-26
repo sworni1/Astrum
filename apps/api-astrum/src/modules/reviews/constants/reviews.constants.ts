@@ -1,3 +1,5 @@
+import type { Prisma } from "@astrum/db/client";
+
 export const REVIEW_ERROR_CODES = {
   notFound: "REVIEW_NOT_FOUND",
   orderItemNotFound: "REVIEW_ORDER_ITEM_NOT_FOUND",
@@ -21,3 +23,11 @@ export const REVIEW_COMMENT_MAX_LENGTH = 2000;
 
 export const REVIEW_COMMENT_RATE_LIMIT = 10;
 export const REVIEW_COMMENT_RATE_WINDOW_MS = 60 * 60 * 1000;
+
+export const REVIEW_LIST_ORDER_BY: Prisma.ReviewOrderByWithRelationInput[] = [
+  { createdAt: "desc" },
+  { id: "desc" },
+];
+
+export const REVIEW_COMMENT_ORDER_BY: Prisma.ReviewCommentOrderByWithRelationInput[] =
+  [{ createdAt: "asc" }, { id: "asc" }];

@@ -1,8 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { CONFIRMATION_ROUTING_KEY } from "./constants/events.constants";
+import { DEFAULT_LETTER_LOCALE } from "./constants/locale.constants";
 import { describeError } from "./describe-error";
-import { CONFIRMATION_ROUTING_KEY } from "./events.constants";
-import { DEFAULT_LETTER_LOCALE, type LetterLocale } from "./locale";
 import { RabbitPublisher } from "./rabbit.publisher";
+import type { LetterLocale } from "./types/events.types";
 
 @Injectable()
 export class EventsService {

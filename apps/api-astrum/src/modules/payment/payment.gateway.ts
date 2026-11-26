@@ -1,4 +1,14 @@
 import Stripe from "stripe";
+import {
+  IdempotencyKeyReusedError,
+  InvalidSignatureError,
+} from "./helpers/payment.errors";
+import {
+  isIdempotencyRefusal,
+  toProviderEvent,
+  toProviderSession,
+} from "./helpers/payment.gateway.helpers";
+import type { ProviderEvent, ProviderSession } from "./types/payment.types";
 
 export type CreateSessionInput = {
   attemptId: string;
@@ -13,116 +23,12 @@ export type CreateSessionInput = {
 
 export type CreatedSession = { sessionId: string; url: string };
 
-export type ProviderSession = {
-  id: string;
-  status: string | null;
-  paymentStatus: string | null;
-  amountTotal: number | null;
-  currency: string | null;
-  paymentIntentId: string | null;
-  orderId: string | null;
-};
-
-export type ProviderEvent = {
-  id: string;
-  type: string;
-  sessionId: string | null;
-  paymentIntentId: string | null;
-  orderId: string | null;
-  amount: number | null;
-  currency: string | null;
-  sessionStatus: string | null;
-  paymentStatus: string | null;
-  declineCode: string | null;
-  errorMessage: string | null;
-};
-
 export interface PaymentGateway {
   createSession(input: CreateSessionInput): Promise<CreatedSession>;
   retrieveSession(sessionId: string): Promise<ProviderSession>;
   expireSession(sessionId: string): Promise<void>;
   constructEvent(payload: Buffer, signature: string): ProviderEvent;
 }
-
-export class InvalidSignatureError extends Error {
-  constructor() {
-    super("The signature of this callback is not valid.");
-    this.name = "InvalidSignatureError";
-  }
-}
-
-export class IdempotencyKeyReusedError extends Error {
-  constructor(key: string) {
-    super(`The provider refused the idempotency key ${key} for another payload.`);
-    this.name = "IdempotencyKeyReusedError";
-  }
-}
-
-const isIdempotencyRefusal = (error: unknown): boolean =>
-  error instanceof Stripe.errors.StripeIdempotencyError ||
-  (typeof error === "object" &&
-    error !== null &&
-    (error as { type?: unknown }).type === "StripeIdempotencyError");
-
-const asRecord = (value: unknown): Record<string, unknown> =>
-  typeof value === "object" && value !== null
-    ? (value as Record<string, unknown>)
-    : {};
-
-const asText = (value: unknown): string | null =>
-  typeof value === "string" && value !== "" ? value : null;
-
-const asNumber = (value: unknown): number | null =>
-  typeof value === "number" ? value : null;
-
-const readOrderId = (record: Record<string, unknown>): string | null =>
-  asText(asRecord(record.metadata).order_id);
-
-const toPaymentIntentId = (value: unknown): string | null => {
-  if (typeof value === "string") {
-    return asText(value);
-  }
-
-  return asText(asRecord(value).id);
-};
-
-const toProviderSession = (value: unknown): ProviderSession => {
-  const record = asRecord(value);
-
-  return {
-    id: String(record.id ?? ""),
-    status: asText(record.status),
-    paymentStatus: asText(record.payment_status),
-    amountTotal: asNumber(record.amount_total),
-    currency: asText(record.currency),
-    paymentIntentId: toPaymentIntentId(record.payment_intent),
-    orderId: readOrderId(record),
-  };
-};
-
-const toProviderEvent = (value: unknown): ProviderEvent => {
-  const event = asRecord(value);
-  const object = asRecord(event.data && asRecord(event.data).object);
-  const isSession = String(event.type ?? "").startsWith("checkout.session.");
-
-  return {
-    id: String(event.id ?? ""),
-    type: String(event.type ?? ""),
-    sessionId: isSession ? asText(object.id) : asText(object.checkout_session),
-    paymentIntentId: isSession
-      ? toPaymentIntentId(object.payment_intent)
-      : asText(object.id),
-    orderId: readOrderId(object),
-    amount: isSession ? asNumber(object.amount_total) : asNumber(object.amount),
-    currency: asText(object.currency),
-    sessionStatus: isSession ? asText(object.status) : null,
-    paymentStatus: isSession ? asText(object.payment_status) : asText(object.status),
-    declineCode: asText(
-      asRecord(object.last_payment_error).decline_code,
-    ) ?? asText(asRecord(object.last_payment_error).code),
-    errorMessage: asText(asRecord(object.last_payment_error).message),
-  };
-};
 
 export const createStripeGateway = (
   secretKey: string,
@@ -167,7 +73,9 @@ export const createStripeGateway = (
       }
 
       if (session.url === null) {
-        throw new Error("The provider answered a session with no checkout URL.");
+        throw new Error(
+          "The provider answered a session with no checkout URL.",
+        );
       }
 
       return { sessionId: session.id, url: session.url };

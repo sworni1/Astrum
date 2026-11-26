@@ -1,7 +1,11 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { STAT_LABEL, STAT_TILE, STAT_VALUE } from "@/features/general/lib/screenStyles";
+import {
+  STAT_LABEL,
+  STAT_TILE,
+  STAT_VALUE,
+} from "@/features/general/lib/screenStyles";
 
 type Props = {
   label: string;

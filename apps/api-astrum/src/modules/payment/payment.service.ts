@@ -1,77 +1,32 @@
-import type { Payment } from "@astrum/db/client";
+import { PaymentMethod, PaymentStatus } from "@astrum/db/enums";
 import { prisma } from "../../../lib/prisma";
-import { AppError } from "../../common/helpers/appError";
 import { logger } from "../../common/helpers/logger";
-import { ORDER_ERROR_CODES } from "../order/constants/order.constants";
-import { closeOrder, lockOrder } from "../order/order-status.helpers";
-import { invalidateStockOfOrder } from "../order/order-cache";
-import { type OrderWithLines, applyExpiredEvent } from "./payment.apply";
+import { describeError } from "../../events/describe-error";
+import type { OrderWithLines } from "../order/order-status";
+import {
+  ORDER_WITH_LINES_INCLUDE,
+  PAYMENT_STATUS_SELECT,
+} from "./constants/payment.constants";
+import {
+  alreadyPaid,
+  notPayable,
+  orderNotFound,
+  providerUnavailable,
+  windowExpired,
+} from "./helpers/payment.errors";
 import { newestOpenAttempt, reusableAttempt } from "./payment.attempts";
-import { PAYMENT_ERROR_CODES, PAYMENT_WINDOW_MINUTES } from "./constants/payment.constants";
-import { storefrontUrl } from "./payment.config";
-import { applySession, inTransaction } from "./payment.dispatch";
+import { applySession } from "./payment.dispatch";
+import { closeExpiredWindow } from "./payment.expiry";
 import type { PaymentGateway } from "./payment.gateway";
-import { IdempotencyKeyReusedError } from "./payment.gateway";
 import { paymentGateway } from "./payment.gateway.registry";
-import { toMinorUnits } from "./payment.money";
+import { openSession } from "./payment.session";
+import type { StartPaymentResult } from "./types/payment.types";
 
-export type StartPaymentResult = {
-  url: string;
-  expiresAt: Date;
-  created: boolean;
-};
-
-export type SyncPaymentResult = {
+type SyncPaymentResult = {
   paymentStatus: string;
   status: string;
   paymentExpiresAt: Date | null;
 };
-
-const addMinutes = (from: Date, minutes: number): Date =>
-  new Date(from.getTime() + minutes * 60_000);
-
-const isUniqueViolation = (error: unknown): boolean =>
-  typeof error === "object" &&
-  error !== null &&
-  (error as { code?: unknown }).code === "P2002";
-
-const orderNotFound = () =>
-  new AppError(
-    404,
-    ORDER_ERROR_CODES.notFound,
-    "Order not found for this customer.",
-  );
-
-const notPayable = () =>
-  new AppError(
-    409,
-    PAYMENT_ERROR_CODES.notPayable,
-    "Only an online card order can be paid from this screen.",
-  );
-
-const alreadyPaid = () =>
-  new AppError(
-    409,
-    PAYMENT_ERROR_CODES.alreadyPaid,
-    "This order is already paid.",
-  );
-
-const windowExpired = () =>
-  new AppError(
-    409,
-    PAYMENT_ERROR_CODES.windowExpired,
-    "The payment window of this order has closed.",
-  );
-
-const providerUnavailable = () =>
-  new AppError(
-    502,
-    PAYMENT_ERROR_CODES.providerUnavailable,
-    "The payment provider is not reachable right now.",
-  );
-
-const describe = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
 
 export class PaymentService {
   constructor(
@@ -84,11 +39,11 @@ export class PaymentService {
   ): Promise<StartPaymentResult> {
     const order = await this.loadOwnOrder(orderId, userId);
 
-    if (order.paymentMethod !== "ONLINE_CARD") {
+    if (order.paymentMethod !== PaymentMethod.ONLINE_CARD) {
       throw notPayable();
     }
 
-    if (order.paymentStatus === "PAID") {
+    if (order.paymentStatus === PaymentStatus.PAID) {
       throw alreadyPaid();
     }
 
@@ -98,7 +53,7 @@ export class PaymentService {
       order.paymentExpiresAt === null ||
       order.paymentExpiresAt.getTime() <= now.getTime()
     ) {
-      await this.closeExpiredWindow(order.id);
+      await closeExpiredWindow(order.id);
       throw windowExpired();
     }
 
@@ -112,7 +67,7 @@ export class PaymentService {
       };
     }
 
-    return await this.openSession(this.gatewayOrRefuse(), order, now);
+    return await openSession(this.gatewayOrRefuse(), order, now);
   }
 
   async syncPayment(
@@ -121,7 +76,7 @@ export class PaymentService {
   ): Promise<SyncPaymentResult> {
     const order = await this.loadOwnOrder(orderId, userId);
 
-    if (order.paymentMethod !== "ONLINE_CARD") {
+    if (order.paymentMethod !== PaymentMethod.ONLINE_CARD) {
       throw notPayable();
     }
 
@@ -151,7 +106,7 @@ export class PaymentService {
   ): Promise<OrderWithLines> {
     const order = await prisma.order.findFirst({
       where: { id: orderId, userId },
-      include: { OrderItem: true },
+      include: ORDER_WITH_LINES_INCLUDE,
     });
 
     if (order === null) {
@@ -183,187 +138,19 @@ export class PaymentService {
         event: "payment.sync.failed",
         orderId,
         sessionId,
-        reason: describe(error),
+        reason: describeError(error),
       });
 
       throw providerUnavailable();
     }
   }
 
-  private async openSession(
-    gateway: PaymentGateway,
+  private async currentStatus(
     order: OrderWithLines,
-    now: Date,
-  ): Promise<StartPaymentResult> {
-    const expiresAt = addMinutes(now, PAYMENT_WINDOW_MINUTES);
-    let attempt = await this.claimAttempt(order, expiresAt);
-
-    for (let round = 0; ; round += 1) {
-      try {
-        const session = await gateway.createSession({
-          attemptId: attempt.id,
-          orderId: order.id,
-          amountMinor: toMinorUnits(order.grandTotal),
-          currency: order.currency,
-          productName: `Astrum order ${order.id}`,
-          expiresAt,
-          successUrl: `${storefrontUrl}/orders/${order.id}?payment=return`,
-          cancelUrl: `${storefrontUrl}/orders/${order.id}?payment=cancelled`,
-        });
-
-        await prisma.payment.update({
-          where: { id: attempt.id },
-          data: {
-            providerSessionId: session.sessionId,
-            checkoutUrl: session.url,
-          },
-        });
-
-        return { url: session.url, expiresAt, created: true };
-      } catch (error) {
-        if (error instanceof IdempotencyKeyReusedError && round === 0) {
-          logger.warn({
-            event: "payment.attempt.retired",
-            orderId: order.id,
-            attemptId: attempt.id,
-            reason: describe(error),
-          });
-
-          attempt = await this.retireAndClaim(order, expiresAt, attempt.id);
-
-          continue;
-        }
-
-        logger.error({
-          event: "payment.session.failed",
-          orderId: order.id,
-          attemptId: attempt.id,
-          reason: describe(error),
-        });
-
-        throw providerUnavailable();
-      }
-    }
-  }
-
-  private async retireAndClaim(
-    order: OrderWithLines,
-    expiresAt: Date,
-    attemptId: string,
-  ): Promise<Payment> {
-    await prisma.payment.updateMany({
-      where: { id: attemptId, status: "PENDING" },
-      data: { status: "CANCELLED" },
-    });
-
-    return this.claimAttempt(order, expiresAt);
-  }
-
-  private async claimAttempt(
-    order: OrderWithLines,
-    expiresAt: Date,
-  ): Promise<Payment> {
-    const pending = await prisma.payment.findFirst({
-      where: { orderId: order.id, status: "PENDING" },
-      orderBy: { createdAt: "desc" },
-    });
-    const attempt = pending ?? (await this.createAttempt(order, expiresAt));
-
-    await inTransaction(async (tx) => {
-      await tx.payment.update({
-        where: { id: attempt.id },
-        data: { expiresAt },
-      });
-      await tx.order.update({
-        where: { id: order.id },
-        data: { paymentExpiresAt: expiresAt },
-      });
-    });
-
-    return { ...attempt, expiresAt };
-  }
-
-  private async createAttempt(
-    order: OrderWithLines,
-    expiresAt: Date,
-  ): Promise<Payment> {
-    try {
-      return await prisma.payment.create({
-        data: {
-          orderId: order.id,
-          provider: "STRIPE",
-          amount: order.grandTotal,
-          currency: order.currency,
-          status: "PENDING",
-          expiresAt,
-        },
-      });
-    } catch (error) {
-      if (!isUniqueViolation(error)) {
-        throw error;
-      }
-
-      const raced = await prisma.payment.findFirst({
-        where: { orderId: order.id, status: "PENDING" },
-      });
-
-      if (raced === null) {
-        throw error;
-      }
-
-      return raced;
-    }
-  }
-
-  private async closeExpiredWindow(orderId: string): Promise<void> {
-    const attempt = await newestOpenAttempt(orderId);
-
-    if (attempt !== null) {
-      const outcome = await inTransaction((tx) =>
-        applyExpiredEvent(tx, orderId, attempt.id),
-      );
-
-      if (outcome === "closed") {
-        await invalidateStockOfOrder(orderId);
-      }
-
-      return;
-    }
-
-    const closed = await inTransaction(async (tx) => {
-      await lockOrder(tx, orderId);
-
-      const order = await tx.order.findFirstOrThrow({
-        where: { id: orderId },
-        include: { OrderItem: true },
-      });
-
-      if (order.status !== "PENDING") {
-        return false;
-      }
-
-      await closeOrder(tx, order);
-      await tx.order.update({
-        where: { id: order.id },
-        data: { paymentStatus: "CANCELLED" },
-      });
-
-      return true;
-    });
-
-    if (closed) {
-      await invalidateStockOfOrder(orderId);
-    }
-  }
-
-  private async currentStatus(order: OrderWithLines): Promise<SyncPaymentResult> {
+  ): Promise<SyncPaymentResult> {
     const fresh = await prisma.order.findFirstOrThrow({
       where: { id: order.id },
-      select: {
-        paymentStatus: true,
-        status: true,
-        paymentExpiresAt: true,
-      },
+      select: PAYMENT_STATUS_SELECT,
     });
 
     return fresh;

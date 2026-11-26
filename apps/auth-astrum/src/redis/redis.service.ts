@@ -1,18 +1,10 @@
 import { Injectable, Logger, type OnModuleDestroy } from "@nestjs/common";
 import Redis from "ioredis";
-
-export const SESSION_TTL_SECONDS = 86_400;
-
-const SESSION_KEY_PREFIX = "session:";
-
-const INCREMENT_WITH_TTL_SCRIPT = `
-local count = redis.call("INCR", KEYS[1])
-if count == 1 then
-  redis.call("EXPIRE", KEYS[1], ARGV[1])
-end
-return count
-`;
-const LOGGED_SID_LENGTH = 8;
+import {
+  INCREMENT_WITH_TTL_SCRIPT,
+  REDIS_CLIENT_OPTIONS,
+  REDIS_URL_VARIABLE,
+} from "./constants/redis.constants";
 
 export type SessionStore = {
   get(key: string): Promise<string | null>;
@@ -21,19 +13,13 @@ export type SessionStore = {
   ping(): Promise<string>;
 };
 
-export const sessionKey = (sid: string): string =>
-  `${SESSION_KEY_PREFIX}${sid}`;
-
-export const loggedSid = (sid: string): string =>
-  sid.slice(0, LOGGED_SID_LENGTH);
-
 @Injectable()
 export class RedisService implements SessionStore, OnModuleDestroy {
   private readonly client: Redis;
   private readonly logger = new Logger(RedisService.name);
 
   constructor() {
-    const url = process.env.REDIS_URL;
+    const url = process.env[REDIS_URL_VARIABLE];
 
     if (!url) {
       throw new Error(
@@ -41,11 +27,7 @@ export class RedisService implements SessionStore, OnModuleDestroy {
       );
     }
 
-    this.client = new Redis(url, {
-      commandTimeout: 1000,
-      enableOfflineQueue: false,
-      maxRetriesPerRequest: 1,
-    });
+    this.client = new Redis(url, REDIS_CLIENT_OPTIONS);
 
     this.client.on("error", (error: Error) => {
       this.logger.error(

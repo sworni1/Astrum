@@ -2,10 +2,14 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useFetcher } from "@/hooks/useFetcher";
-import { NO_BODY } from "./staffPage";
 import type { CourierOrder } from "./courierOrder.types";
+import { NO_BODY } from "./staffPage";
 
-export type CourierOrderActionName = "claim" | "release" | "handover" | "cancel";
+export type CourierOrderActionName =
+  | "claim"
+  | "release"
+  | "handover"
+  | "cancel";
 
 export type PendingCourierOrderAction = {
   orderId: string;
@@ -22,7 +26,9 @@ export interface UseCourierOrderActionReturn {
 
 export const useCourierOrderAction = (): UseCourierOrderActionReturn => {
   const { postItem, deleteItem, patchItem } = useFetcher();
-  const [pending, setPending] = useState<PendingCourierOrderAction | null>(null);
+  const [pending, setPending] = useState<PendingCourierOrderAction | null>(
+    null,
+  );
   const inFlight = useRef(false);
 
   const run = useCallback(

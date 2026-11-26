@@ -3,6 +3,11 @@ import type { Server } from "node:http";
 import { prisma } from "../lib/prisma";
 import app from "./app";
 import { closeCacheStore } from "./cache/cacheStore";
+import {
+  API_PORT_DEFAULT,
+  SHUTDOWN_SIGNALS,
+  SHUTDOWN_TIMEOUT_MS,
+} from "./common/constants/server.constants";
 import { startGuestSweep } from "./modules/guest/guest.sweep";
 import { startOrderShipping } from "./modules/order/order-shipping";
 import { startPaymentSweep } from "./modules/payment/payment.sweep";
@@ -13,8 +18,7 @@ if (!process.env.RABBITMQ_URL) {
   );
 }
 
-const PORT = Number(process.env.API_PORT ?? 3580);
-const SHUTDOWN_TIMEOUT_MS = 10_000;
+const PORT = Number(process.env.API_PORT ?? API_PORT_DEFAULT);
 
 const server: Server = app.listen(PORT, () => {
   console.log(`API Gateway running at http://localhost:${PORT}/api`);
@@ -44,5 +48,6 @@ const shutdown = (signal: NodeJS.Signals): void => {
   setTimeout(() => process.exit(1), SHUTDOWN_TIMEOUT_MS).unref();
 };
 
-process.on("SIGTERM", shutdown);
-process.on("SIGINT", shutdown);
+for (const signal of SHUTDOWN_SIGNALS) {
+  process.on(signal, shutdown);
+}
