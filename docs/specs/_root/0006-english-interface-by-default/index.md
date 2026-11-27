@@ -1,7 +1,7 @@
 # 0006. English interface by default, with Russian as a second language
 
 **Date**: 2026-11-06
-**Status**: In Progress
+**Status**: Paused
 
 ## Summary
 
