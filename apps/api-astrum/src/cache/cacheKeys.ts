@@ -22,7 +22,9 @@ export const cacheKeys = {
     limit: number,
     after: string | undefined,
   ): string =>
-    `${PAYLOAD_PREFIX}reviews:${productId}:v${version}:${limit}:${after}`,
+    `${PAYLOAD_PREFIX}reviews:${productId}:v${version}:${limit}:${
+      after ?? "-"
+    }`,
 
   reviewsVersion: (productId: string): string =>
     `${COUNTER_PREFIX}ver:reviews:${productId}`,
@@ -32,13 +34,13 @@ export const cacheKeys = {
   recommendations: (epoch: number, cursor: string | undefined): string =>
     `${PAYLOAD_PREFIX}lists:${epoch}:recs:${digest(cursor ?? "")}`,
 
-  category: (
+  catalogue: (
     epoch: number,
-    category: string | undefined,
+    category: string,
     searchQuery: string | undefined,
     cursor: string | undefined,
   ): string =>
-    `${PAYLOAD_PREFIX}lists:${epoch}:cat:${String(category)}:${digest(
+    `${PAYLOAD_PREFIX}lists:${epoch}:cat:${category}:${digest(
       `${searchQuery ?? ""}\u0000${cursor ?? ""}`,
     )}`,
 

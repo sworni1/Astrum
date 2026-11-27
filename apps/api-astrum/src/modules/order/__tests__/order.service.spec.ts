@@ -8,6 +8,7 @@ jest.mock("../../../../lib/prisma", () => ({
       findFirst: jest.fn(),
       findMany: jest.fn(),
       groupBy: jest.fn(),
+      count: jest.fn(),
     },
   },
 }));
@@ -39,7 +40,12 @@ const prismaMock = prisma as unknown as {
   product: { findMany: jest.Mock };
   business: { findMany: jest.Mock };
   payment: { findFirst: jest.Mock };
-  order: { findFirst: jest.Mock; findMany: jest.Mock; groupBy: jest.Mock };
+  order: {
+    findFirst: jest.Mock;
+    findMany: jest.Mock;
+    groupBy: jest.Mock;
+    count: jest.Mock;
+  };
 };
 
 const line = (overrides: Record<string, unknown> = {}) => ({
@@ -703,6 +709,7 @@ describe("OrderService.getOrdersByUserId", () => {
     currencyGroups: unknown[],
   ) => {
     prismaMock.order.findMany.mockResolvedValue(rows);
+    prismaMock.order.count.mockResolvedValue(rows.length);
     prismaMock.order.groupBy
       .mockReset()
       .mockResolvedValueOnce(statusGroups)
@@ -769,7 +776,9 @@ describe("OrderService.getOrdersByUserId", () => {
           },
         ],
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: 0,
+      take: 20,
       select: {
         id: true,
         status: true,

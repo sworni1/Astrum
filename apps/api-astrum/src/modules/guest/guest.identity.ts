@@ -1,8 +1,13 @@
 import { randomUUID } from "node:crypto";
 import type { Request, Response } from "express";
 import { sign, verify } from "jsonwebtoken";
+import { AppError } from "../../common/helpers/appError";
 import { logger } from "../../common/helpers/logger";
 import type { Owner, OwnerRequest } from "../../common/types/owner";
+import {
+  SESSION_REFUSAL_CODES,
+  SESSION_REFUSAL_MESSAGES,
+} from "../../middlewares/constants/session.constants";
 import {
   GUEST_COOKIE_MAX_AGE_DAYS,
   GUEST_COOKIE_NAME,
@@ -27,7 +32,9 @@ export const readGuestId = (req: Request): string | null => {
   let decoded: Partial<GuestToken>;
 
   try {
-    decoded = verify(token, process.env.JWT_SECRET as string) as GuestToken;
+    decoded = verify(token, process.env.JWT_SECRET as string, {
+      algorithms: ["HS256"],
+    }) as GuestToken;
   } catch (error) {
     logger.warn({
       event: "guest.token.refused",
@@ -55,7 +62,7 @@ export const setGuestCookie = (res: Response, guestId: string): void => {
   const token = sign(
     { guestId, typ: GUEST_TOKEN_TYPE },
     process.env.JWT_SECRET as string,
-    { expiresIn: `${GUEST_COOKIE_MAX_AGE_DAYS}d` },
+    { expiresIn: `${GUEST_COOKIE_MAX_AGE_DAYS}d`, algorithm: "HS256" },
   );
 
   res.cookie(GUEST_COOKIE_NAME, token, {
@@ -69,10 +76,19 @@ export const clearGuestCookie = (res: Response): void => {
 };
 
 export const ownerForWrite = (req: Request, res: Response): Owner => {
-  const resolved = (req as OwnerRequest).owner;
+  const ownerRequest = req as OwnerRequest;
+  const resolved = ownerRequest.owner;
 
   if (resolved) {
     return resolved;
+  }
+
+  if (ownerRequest.sessionStoreUnavailable) {
+    throw new AppError(
+      503,
+      SESSION_REFUSAL_CODES.storeUnavailable,
+      SESSION_REFUSAL_MESSAGES.storeUnavailable,
+    );
   }
 
   const existing = readGuestId(req);

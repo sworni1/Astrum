@@ -68,7 +68,13 @@ export const spentByCurrency = (groups: CurrencyGroup[]): OrderSpentRow[] =>
     .sort((left, right) => left.currency.localeCompare(right.currency));
 
 const toLineJson = (item: OrderDetailLine) => {
-  const { businessId: _businessId, brandName, kind, ...visible } = item;
+  const {
+    businessId: _businessId,
+    userId: _userId,
+    brandName,
+    kind,
+    ...visible
+  } = item;
 
   const resolved =
     brandName === undefined
@@ -93,7 +99,7 @@ const withoutIdempotency = <T extends OrderRow>(
 };
 
 export const toOrderJson = (order: OrderDetail) => {
-  const visible = withoutIdempotency(order);
+  const { userId: _userId, ...visible } = withoutIdempotency(order);
 
   return {
     ...visible,
@@ -114,4 +120,8 @@ export const toOrderListJson = (page: OrderListPage) => ({
     currency: entry.currency,
     amount: toMoney(entry.amount),
   })),
+  page: page.page,
+  limit: page.limit,
+  total: page.total,
+  totalPages: page.totalPages,
 });

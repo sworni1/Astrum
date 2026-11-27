@@ -73,6 +73,49 @@ afterEach(() => {
 });
 
 describe("runPaymentSweep", () => {
+  it("закрывает заказ, у которого нет ни одной попытки оплаты (AC-9)", async () => {
+    const client = {
+      $queryRaw: jest.fn().mockResolvedValue([{ locked: true }]),
+      order: {
+        findMany: jest.fn().mockResolvedValue([order({}, [])]),
+        findFirst: jest.fn().mockResolvedValue({
+          ...order({}, []),
+          OrderItem: [
+            {
+              id: "line-1",
+              productId: "p-1",
+              quantity: 2,
+              status: "PENDING",
+              price: "10.00",
+            },
+          ],
+        }),
+        update: jest.fn(),
+      },
+      orderItem: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findMany: jest.fn().mockResolvedValue([{ status: "CANCELLED" }]),
+      },
+      product: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    };
+    prismaMock.$transaction.mockImplementation(
+      (work: (inner: typeof client) => unknown) => work(client),
+    );
+
+    await runPaymentSweep(gateway());
+
+    expect(client.order.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "order-1", status: "PENDING" },
+      }),
+    );
+    expect(client.order.update).toHaveBeenCalledWith({
+      where: { id: "order-1" },
+      data: { paymentStatus: "CANCELLED" },
+    });
+    expect(expiredMock).not.toHaveBeenCalled();
+  });
+
   it("пропускает такт, пока блокировку держит другая реплика (AC-9)", async () => {
     const client = wire([order()], false);
 

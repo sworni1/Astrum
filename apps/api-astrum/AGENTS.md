@@ -47,7 +47,7 @@ pnpm --filter @astrum/api check-types
 - Controllers return through `handleErrors` with `http-status-codes`; DTO classes carry the validation rules.
 - `POST /api/orders` takes an optional `Idempotency-Key` of 8 to 128 characters from `[A-Za-z0-9_-]`, stores its sha256 body fingerprint on the order and answers the first order with `200` and `Idempotent-Replay: true` on a repeat.
 - The order transaction also clears the ordered cart lines; a line the customer did not select stays in the cart.
-- Events are published after the commit, and a failed publish is logged instead of failing the request.
+- Events are published after the commit and retried three times before the failure is logged; the request never fails on a broker error.
 - This package has no ESLint: `lint`, `format` and `format:check` are echo stubs that exit 0.
 - `DB_POOL_SIZE` bounds the pg pool of one replica (default 10). The compose budget keeps replicas x pool well under the Postgres limit.
 
@@ -56,7 +56,9 @@ pnpm --filter @astrum/api check-types
 - The port comes from `API_PORT` (default 3580). `src/app.ts` also sets `trust proxy` and stamps `X-Instance` from `HOSTNAME`, which is how a replica is identified behind the balancer.
 - Express 5 uses path-to-regexp v8: a bare `*` route throws at boot. Wildcards are written `/{*splat}`.
 - `AUTH_SERVICE_URL` must end with `/api/auth`: `http-proxy-middleware` strips the mount path and prepends the target path, so a bare `http://localhost:4580` sends `/signin` and the auth service answers 404. Inside compose the value is `http://auth:4580/api/auth`.
-- Every mounted router except the auth proxy sits behind `authenticateToken`, so a new public endpoint is an explicit decision.
+- Every mounted router except the auth proxy, the product catalogue, cart, wishlist and review reads sits behind `authenticateToken`; those four mount `optionalAuth` so guests keep their `__guest` cart, and every write on them still carries `requireSession`. A new public endpoint is an explicit decision.
+- `helmet` runs with its full default set minus CSP, and a JSON error middleware closes the stack so a malformed or oversized body answers the same envelope instead of an HTML page.
+- A per-process in-memory rate limit guards the gateway (600 requests a minute per address, 30 on the auth proxy); `RATE_LIMIT_ENABLED=false` turns it off. It is not shared between replicas.
 - The reviews module exports two routers: `reviewsRouter` for `/api/reviews` and `productReviewsRouter` mounted under `/:productId/reviews`.
 - The access log skip rule reads `(req.originalUrl || req.url)`, not `req.path`: inside a mounted router `req.path` is relative to the mount point, so a path comparison silently stops matching and the confirm token lands in the log.
 - `requireActiveAccount` answers `503` when the account status cannot be read, and `403 EMAIL_NOT_CONFIRMED` for a `PENDING` account.

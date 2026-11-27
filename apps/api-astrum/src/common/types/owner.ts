@@ -4,7 +4,10 @@ export type Owner =
   | { kind: "user"; userId: string }
   | { kind: "guest"; guestId: string };
 
-export type OwnerRequest = Request & { owner?: Owner };
+export type OwnerRequest = Request & {
+  owner?: Owner;
+  sessionStoreUnavailable?: boolean;
+};
 
 export const userOwner = (userId: string): Owner => ({ kind: "user", userId });
 

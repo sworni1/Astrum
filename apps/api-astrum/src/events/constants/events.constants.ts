@@ -4,6 +4,10 @@ export const CONFIRMATION_ROUTING_KEY = "account.confirmation.requested";
 
 export const PUBLISH_TIMEOUT_MS = 2_000;
 
+export const PUBLISH_ATTEMPTS = 3;
+
+export const PUBLISH_RETRY_DELAY_MS = 200;
+
 export const EVENTS_EXCHANGE_TYPE = "direct";
 
 export const EVENTS_EXCHANGE_OPTIONS = { durable: true };

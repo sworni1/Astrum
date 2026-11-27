@@ -94,13 +94,18 @@ export class ReviewsController {
   async getReviewComments(req: Request, res: Response) {
     try {
       const reviewId = req.params.reviewId as string;
-      const { userId } = req as AuthenticatedUserRequest;
+      const owner = ownerForRead(req);
+      const viewerId = owner?.kind === "user" ? owner.userId : null;
       const { after, limit } = req.query;
 
-      const result = await reviewsService.getReviewComments(reviewId, userId, {
-        after,
-        limit,
-      });
+      const result = await reviewsService.getReviewComments(
+        reviewId,
+        viewerId,
+        {
+          after,
+          limit,
+        },
+      );
 
       res.status(StatusCodes.OK).json(result);
     } catch (err) {

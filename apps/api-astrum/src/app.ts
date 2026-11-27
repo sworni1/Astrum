@@ -11,14 +11,22 @@ import {
   HEALTH_UNAVAILABLE,
   INSTANCE_HEADER,
   JSON_BODY_LIMIT,
+  PRODUCTION_ACCESS_LOG_FORMAT,
   ROOT_MESSAGE,
+  ROUTE_NOT_FOUND_CODE,
+  ROUTE_NOT_FOUND_MESSAGE,
   TRUST_PROXY_HOPS,
   URLENCODED_BODY_LIMIT,
   URLENCODED_PARAMETER_LIMIT,
 } from "./common/constants/app.constants";
 import { isConfirmRequest } from "./common/helpers/accessLog";
+import { expressErrorHandler } from "./common/helpers/expressErrorHandler";
 import { instanceName } from "./common/helpers/instance";
 import proxyOptions from "./common/helpers/proxyOptions";
+import {
+  rateLimitAuth,
+  rateLimitGlobal,
+} from "./middlewares/rateLimit";
 import { createAuthenticateToken } from "./middlewares/authenticateToken";
 import { corsOptions } from "./middlewares/constants/cors.constants";
 import { createOptionalAuth } from "./middlewares/resolveOwner";
@@ -51,9 +59,21 @@ if (!authServiceUrl) {
 app.set("trust proxy", TRUST_PROXY_HOPS);
 app.disable("x-powered-by");
 
-app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  }),
+);
 
-app.use(morgan(ACCESS_LOG_FORMAT, { skip: isConfirmRequest }));
+app.use(
+  morgan(
+    process.env.NODE_ENV === "production"
+      ? PRODUCTION_ACCESS_LOG_FORMAT
+      : ACCESS_LOG_FORMAT,
+    { skip: isConfirmRequest },
+  ),
+);
 app.use(cors(corsOptions));
 app.options("/{*splat}", cors(corsOptions));
 
@@ -62,9 +82,11 @@ app.use((_req, res, next) => {
   next();
 });
 
-app.use("/api/auth", proxyOptions(authServiceUrl));
+app.use("/api/auth", rateLimitAuth, proxyOptions(authServiceUrl));
 
 app.use(STRIPE_WEBHOOK_PATH, paymentWebhookRoutes);
+
+app.use(rateLimitGlobal);
 
 app.use(express.json({ limit: JSON_BODY_LIMIT }));
 app.use(
@@ -106,10 +128,19 @@ app.use(
   pickupRoutes,
   staffRoutes,
 );
-app.use("/api/reviews", authenticateToken, reviewsRouter);
+app.use("/api/reviews", optionalAuth, reviewsRouter);
 
 app.get("/", (_req, res) => {
   res.send(ROOT_MESSAGE);
 });
+
+app.use((_req, res) => {
+  res.status(StatusCodes.NOT_FOUND).json({
+    code: ROUTE_NOT_FOUND_CODE,
+    message: ROUTE_NOT_FOUND_MESSAGE,
+  });
+});
+
+app.use(expressErrorHandler);
 
 export default app;

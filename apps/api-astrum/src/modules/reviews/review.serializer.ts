@@ -91,7 +91,7 @@ export type PublicReviewComment = {
 
 export const serializeReviewComment = (
   row: ReviewCommentRow,
-  viewerId: string,
+  viewerId: string | null,
 ): PublicReviewComment => {
   const isDeleted = row.deletedAt !== null;
   const authorName = row.User?.nickName?.trim();
@@ -102,7 +102,7 @@ export const serializeReviewComment = (
     body: isDeleted ? null : row.body,
     createdAt: row.createdAt,
     deletedAt: row.deletedAt,
-    mine: row.userId === viewerId,
+    mine: viewerId !== null && row.userId === viewerId,
   };
 };
 

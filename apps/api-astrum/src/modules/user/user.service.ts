@@ -2,7 +2,11 @@ import type { User } from "@astrum/db/client";
 import { UserStatus } from "@astrum/db/enums";
 import { hash, verify } from "argon2";
 import { prisma } from "../../../lib/prisma";
-import { isUniqueViolation } from "../../common/helpers/prismaErrors";
+import {
+  hasForeignKeyViolationCode,
+  hasNotFoundCode,
+  isUniqueViolation,
+} from "../../common/helpers/prismaErrors";
 import { staffRolesOf } from "../../common/helpers/staffRoles";
 import { DEFAULT_LETTER_LOCALE, type LetterLocale } from "../../events/locale";
 import { publishConfirmationRequested } from "../../events/publisher";
@@ -14,9 +18,11 @@ import type {
   updateUserPasswordDto,
 } from "./dto/update-user.dto";
 import {
+  deleteRestricted,
   emailNotConfirmed,
   emailTaken,
   emailUnchanged,
+  invalidOldPassword,
   userNotFound,
 } from "./helpers/user.errors";
 
@@ -128,12 +134,10 @@ export class UserService {
     const pwMatches = await verify(user.passwordhash, dto.oldPassword);
 
     if (!pwMatches) {
-      throw new Error("The old password is incorrect");
+      throw invalidOldPassword();
     }
 
     const newHashedPassword = await hash(dto.newPassword);
-
-    await revokeSession(this.sessions, sid);
 
     const updatedUser = await prisma.user.update({
       where: {
@@ -144,20 +148,30 @@ export class UserService {
       },
     });
 
+    await revokeSession(this.sessions, sid);
+
     return this.userInfo(updatedUser.id);
   }
 
   async deleteUser(userId: User["id"], sid: string | undefined) {
-    await revokeSession(this.sessions, sid);
-
     try {
       await prisma.user.delete({
         where: {
           id: userId,
         },
       });
-    } catch {
-      throw userNotFound();
+    } catch (error) {
+      if (hasNotFoundCode(error)) {
+        throw userNotFound();
+      }
+
+      if (hasForeignKeyViolationCode(error)) {
+        throw deleteRestricted();
+      }
+
+      throw error;
     }
+
+    await revokeSession(this.sessions, sid);
   }
 }

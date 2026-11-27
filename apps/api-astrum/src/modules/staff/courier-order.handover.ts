@@ -38,12 +38,12 @@ export const handOverCourierOrder = async (
     throw orderNotFound();
   }
 
-  if (verdict === "alreadyHandedOver") {
-    throw alreadyHandedOver();
-  }
-
   if (row.courierUserId !== userId) {
     throw orderNotFound();
+  }
+
+  if (verdict === "alreadyHandedOver") {
+    throw alreadyHandedOver();
   }
 
   if (row.status !== "DELIVERED") {

@@ -152,6 +152,10 @@ describe("OrderController", () => {
         ],
         counts: { all: 3, delivered: 2, canceled: 1 },
         spent: [{ currency: "RUB", amount: new Prisma.Decimal("309.00") }],
+        page: 1,
+        limit: 20,
+        total: 1,
+        totalPages: 1,
       } as never);
     const res = createMockResponse();
 
@@ -160,10 +164,15 @@ describe("OrderController", () => {
       res,
     );
 
-    expect(getOrders).toHaveBeenCalledWith("user-1", {
-      status: "DELIVERED",
-      q: "parker",
-    });
+    expect(getOrders).toHaveBeenCalledWith(
+      "user-1",
+      {
+        status: "DELIVERED",
+        q: "parker",
+      },
+      1,
+      20,
+    );
     expect(res.status).toHaveBeenCalledWith(StatusCodes.OK);
     expect(res.json).toHaveBeenCalledWith({
       items: [
@@ -187,6 +196,10 @@ describe("OrderController", () => {
       ],
       counts: { all: 3, delivered: 2, canceled: 1 },
       spent: [{ currency: "RUB", amount: 309 }],
+      page: 1,
+      limit: 20,
+      total: 1,
+      totalPages: 1,
     });
   });
 

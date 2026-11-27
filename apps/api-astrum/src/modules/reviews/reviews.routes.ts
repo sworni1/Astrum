@@ -26,11 +26,13 @@ reviewsRouter.get("/:reviewId", reviewsController.getReviewById);
 
 reviewsRouter.put(
   "/:reviewId/like",
+  requireSession,
   requireActiveAccount,
   reviewsController.likeReview,
 );
 reviewsRouter.delete(
   "/:reviewId/like",
+  requireSession,
   requireActiveAccount,
   reviewsController.unlikeReview,
 );
@@ -38,12 +40,14 @@ reviewsRouter.delete(
 reviewsRouter.get("/:reviewId/comments", reviewsController.getReviewComments);
 reviewsRouter.post(
   "/:reviewId/comments",
+  requireSession,
   requireActiveAccount,
   validateDto(CreateReviewCommentDto),
   reviewsController.createReviewComment,
 );
 reviewsRouter.delete(
   "/:reviewId/comments/:commentId",
+  requireSession,
   requireActiveAccount,
   reviewsController.deleteReviewComment,
 );

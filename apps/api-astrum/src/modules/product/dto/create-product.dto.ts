@@ -4,23 +4,31 @@ import {
   ProductVisibility,
   PropertyLabel,
 } from "@astrum/db/enums";
-import { Expose } from "class-transformer";
+import { Expose, Transform } from "class-transformer";
 import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsPositive,
   IsString,
   IsUrl,
+  Max,
   MaxLength,
+  Min,
   MinLength,
 } from "class-validator";
+import { MAX_PRODUCT_QUANTITY } from "../constants/product.constants";
+
+const trim = ({ value }: { value: unknown }): unknown =>
+  typeof value === "string" ? value.trim() : value;
 
 export class CreateProductDto {
   @Expose()
+  @Transform(trim)
   @IsString()
   @IsNotEmpty()
   @MinLength(3)
@@ -28,6 +36,7 @@ export class CreateProductDto {
   name!: string;
 
   @Expose()
+  @Transform(trim)
   @IsString()
   @IsNotEmpty()
   @MinLength(10)
@@ -35,8 +44,9 @@ export class CreateProductDto {
   description!: string;
 
   @Expose()
-  @IsNumber()
-  @IsPositive()
+  @IsInt()
+  @Min(1)
+  @Max(MAX_PRODUCT_QUANTITY)
   quantity!: number;
 
   @Expose()
@@ -46,6 +56,7 @@ export class CreateProductDto {
 
   @Expose()
   @IsNumber()
+  @Min(0)
   @IsOptional()
   discount?: number;
 

@@ -24,12 +24,12 @@ describeWithDatabase("Point counter against Postgres", () => {
 
   const createOrder = async (options: {
     pickupPointId?: string;
-    status?: "SHIPPED" | "CONFIRMED";
-    lineStatus?: "SHIPPED" | "CONFIRMED";
+    status?: "DELIVERED" | "CONFIRMED";
+    lineStatus?: "DELIVERED" | "CONFIRMED";
     paymentStatus?: "PENDING" | "PAID";
   }) => {
     const point = options.pickupPointId ?? pickupPointId;
-    const lineStatus = options.lineStatus ?? "SHIPPED";
+    const lineStatus = options.lineStatus ?? "DELIVERED";
 
     const order = await prisma.order.create({
       data: {
@@ -38,7 +38,7 @@ describeWithDatabase("Point counter against Postgres", () => {
         currency: "RUB",
         paymentMethod: "CASH",
         paymentStatus: options.paymentStatus ?? "PENDING",
-        status: options.status ?? "SHIPPED",
+        status: options.status ?? "DELIVERED",
         deliveryDate: new Date("2026-12-05T09:00:00.000Z"),
         shippingMethodId,
         shippingMethodName: `${suffix} pickup`,
@@ -156,7 +156,7 @@ describeWithDatabase("Point counter against Postgres", () => {
     });
   });
 
-  it("lists only this point's shipped orders (AC-1)", async () => {
+  it("lists only this point's delivered orders (AC-1)", async () => {
     const listed = await createOrder({});
     const confirmed = await createOrder({
       status: "CONFIRMED",
@@ -175,7 +175,7 @@ describeWithDatabase("Point counter against Postgres", () => {
     expect(ids).not.toContain(confirmed);
     expect(ids).not.toContain(foreign);
     expect(answer.total).toBeGreaterThanOrEqual(1);
-    expect(answer.orders.every((order) => order.status === "SHIPPED")).toBe(
+    expect(answer.orders.every((order) => order.status === "DELIVERED")).toBe(
       true,
     );
   });
@@ -207,15 +207,11 @@ describeWithDatabase("Point counter against Postgres", () => {
       },
     });
 
-    expect(order.status).toBe("DELIVERED");
+    expect(order.status).toBe("ISSUED");
     expect(order.handedOverAt).not.toBeNull();
-    expect(
-      order.OrderItem.every(
-        (line) =>
-          line.status === "DELIVERED" &&
-          line.receiptDate?.getTime() === order.handedOverAt?.getTime(),
-      ),
-    ).toBe(true);
+    expect(order.OrderItem.every((line) => line.status === "ISSUED")).toBe(
+      true,
+    );
   });
 
   it("returns the stock of a cancelled order once (AC-6, AC-7)", async () => {

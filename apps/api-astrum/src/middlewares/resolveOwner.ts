@@ -69,6 +69,7 @@ export const createOptionalAuth =
         ...route,
         reason: describeError(error),
       });
+      (req as OwnerRequest).sessionStoreUnavailable = true;
       next();
       return;
     }

@@ -20,10 +20,15 @@ import type { Owner } from "../../common/types/owner";
 import { readReviewState } from "../reviews/review-state";
 import {
   PRODUCT_DEFAULT_PAGE_SIZE,
+  PRODUCT_LIST_ORDER_BY,
   PUBLIC_PRODUCT_WHERE,
 } from "./constants/product.constants";
 import type { CreateProductDto } from "./dto/create-product.dto";
-import { productNotFound, sellerNotAssigned } from "./helpers/product.errors";
+import {
+  invalidCursor,
+  productNotFound,
+  sellerNotAssigned,
+} from "./helpers/product.errors";
 import { readPageRatings } from "./helpers/product-rating.helpers";
 
 export class ProductService {
@@ -58,7 +63,24 @@ export class ProductService {
 
   async getRecommendations(
     owner: Owner | null,
-    filters?: {
+    cursor?: string,
+    limit: number = PRODUCT_DEFAULT_PAGE_SIZE,
+  ) {
+    const epoch = await readVersion(cacheKeys.listsEpoch());
+
+    const page = await getOrSet({
+      key: cacheKeys.recommendations(epoch, cursor),
+      ttlSeconds: listTtlSeconds(),
+      epochKey: cacheKeys.listsEpoch(),
+      load: async () => await this.loadCataloguePage({}, cursor, limit),
+    });
+
+    return await this.withMarks(owner, page);
+  }
+
+  async getCategoryProducts(
+    owner: Owner | null,
+    filters: {
       category?: ProductCategory;
       search_query?: string;
     },
@@ -66,22 +88,30 @@ export class ProductService {
     limit: number = PRODUCT_DEFAULT_PAGE_SIZE,
   ) {
     const epoch = await readVersion(cacheKeys.listsEpoch());
-    const key = filters?.category
-      ? cacheKeys.category(
-          epoch,
-          filters.category,
-          filters.search_query,
-          cursor,
-        )
-      : cacheKeys.recommendations(epoch, cursor);
 
     const page = await getOrSet({
-      key,
+      key: cacheKeys.catalogue(
+        epoch,
+        filters.category ?? "all",
+        filters.search_query,
+        cursor,
+      ),
       ttlSeconds: listTtlSeconds(),
       epochKey: cacheKeys.listsEpoch(),
       load: async () => await this.loadCataloguePage(filters, cursor, limit),
     });
 
+    return await this.withMarks(owner, page);
+  }
+
+  private async withMarks<T extends { id: string }>(
+    owner: Owner | null,
+    page: {
+      products: T[];
+      nextCursor: string | null;
+      hasNextPage: boolean;
+    },
+  ) {
     const marks = await readPageMarks(
       owner,
       page.products.map((product) => product.id),
@@ -97,8 +127,6 @@ export class ProductService {
       hasNextPage: page.hasNextPage,
     };
   }
-
-  getCategoryProducts = this.getRecommendations;
 
   async createProduct(userId: string, dto: CreateProductDto) {
     const business = await prisma.business.findUnique({
@@ -136,22 +164,34 @@ export class ProductService {
   }
 
   private async loadCataloguePage(
-    filters?: { category?: ProductCategory; search_query?: string },
+    filters: { category?: ProductCategory; search_query?: string },
     cursor?: string,
     limit: number = PRODUCT_DEFAULT_PAGE_SIZE,
   ) {
-    const products = await prisma.product.findMany({
+    if (cursor !== undefined) {
+      const anchor = await prisma.product.findFirst({
+        where: { id: cursor, ...PUBLIC_PRODUCT_WHERE },
+        select: { id: true },
+      });
+
+      if (anchor === null) {
+        throw invalidCursor();
+      }
+    }
+
+    const rows = await prisma.product.findMany({
       where: {
         ...PUBLIC_PRODUCT_WHERE,
-        ...(filters?.category ? { category: filters.category } : {}),
-        ...(filters?.search_query
+        ...(filters.category ? { category: filters.category } : {}),
+        ...(filters.search_query
           ? {
               name: { contains: filters.search_query, mode: "insensitive" },
             }
           : {}),
       },
       select: productPreviewPublicSelect,
-      take: limit,
+      orderBy: PRODUCT_LIST_ORDER_BY,
+      take: limit + 1,
       skip: cursor ? 1 : 0,
       cursor: cursor
         ? {
@@ -160,11 +200,11 @@ export class ProductService {
         : undefined,
     });
 
-    let nextCursor = null;
-
-    if (products.length === limit) {
-      nextCursor = products[products.length - 1].id;
-    }
+    const hasNextPage = rows.length > limit;
+    const products = hasNextPage ? rows.slice(0, limit) : rows;
+    const nextCursor = hasNextPage
+      ? (products[products.length - 1]?.id ?? null)
+      : null;
 
     const ratings = await readPageRatings(
       products.map((product) => product.id),
@@ -181,7 +221,7 @@ export class ProductService {
         };
       }),
       nextCursor,
-      hasNextPage: !!nextCursor,
+      hasNextPage,
     };
   }
 }

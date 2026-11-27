@@ -5,6 +5,7 @@ import { logger } from "../../common/helpers/logger";
 import { SWEEP_TRANSACTION_OPTIONS } from "../../common/helpers/sweepTransaction";
 import { describeError } from "../../events/describe-error";
 import { invalidateStockOfOrder } from "../order/order-cache";
+import { closeOrder, lockOrder } from "../order/order-status";
 import {
   PAYMENT_FAILED_FROM_STATUSES,
   PAYMENT_SWEEP_BATCH,
@@ -26,6 +27,36 @@ const logClosed = (orderId: string, paymentId: string): void => {
   logger.info({ event: "payment.sweep.closed", orderId, paymentId });
 };
 
+const closeWithoutAttempt = async (
+  tx: Prisma.TransactionClient,
+  order: SweepOrder,
+  closedOrderIds: string[],
+): Promise<void> => {
+  await lockOrder(tx, order.id);
+
+  const fresh = await tx.order.findFirst({
+    where: { id: order.id, status: "PENDING" },
+    include: { OrderItem: true },
+  });
+
+  if (fresh === null) {
+    return;
+  }
+
+  await closeOrder(tx, fresh);
+  await tx.order.update({
+    where: { id: fresh.id },
+    data: { paymentStatus: "CANCELLED" },
+  });
+
+  closedOrderIds.push(order.id);
+
+  logger.warn({
+    event: "payment.sweep.no_attempt.closed",
+    orderId: order.id,
+  });
+};
+
 const closeWithoutSession = async (
   tx: Prisma.TransactionClient,
   order: SweepOrder,
@@ -33,11 +64,7 @@ const closeWithoutSession = async (
   closedOrderIds: string[],
 ): Promise<void> => {
   if (attemptId === null) {
-    logger.warn({
-      event: "payment.sweep.no_attempt",
-      orderId: order.id,
-    });
-
+    await closeWithoutAttempt(tx, order, closedOrderIds);
     return;
   }
 

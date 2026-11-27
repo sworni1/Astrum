@@ -140,7 +140,6 @@ export class CourierOrderService {
   ): Promise<{ order: CourierOrderJson }> {
     try {
       await assertHeldCourierOrder(orderId, userId);
-      await expireSessionForCancel(orderId);
 
       const { order, cancelledLineCount, cancelledProductIds } =
         await prisma.$transaction(
@@ -148,6 +147,7 @@ export class CourierOrderService {
           ORDER_TRANSACTION_OPTIONS,
         );
 
+      await expireSessionForCancel(orderId);
       await invalidateStockOfProducts(cancelledProductIds);
 
       logger.info({

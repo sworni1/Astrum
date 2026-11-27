@@ -34,12 +34,13 @@ export const updateOrderStatus = async (
   }
 
   await assertOwnOrder(orderId, userId);
-  await expireSessionForCancel(orderId);
 
   const order = await prisma.$transaction(
     (tx) => cancelOrder(tx, orderId, userId),
     ORDER_TRANSACTION_OPTIONS,
   );
+
+  await expireSessionForCancel(orderId);
 
   logger.info({
     event: "order.cancelled",

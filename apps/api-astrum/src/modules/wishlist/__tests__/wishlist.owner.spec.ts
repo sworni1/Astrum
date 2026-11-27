@@ -1,12 +1,12 @@
 jest.mock("../../../../lib/prisma", () => ({
   prisma: {
-    product: { findMany: jest.fn() },
+    product: { findMany: jest.fn(), findFirst: jest.fn() },
     cartItem: { findUnique: jest.fn(), findMany: jest.fn() },
     wishlistItem: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
       upsert: jest.fn(),
-      delete: jest.fn(),
+      deleteMany: jest.fn(),
     },
   },
 }));
@@ -49,13 +49,13 @@ const ownerOf = (
 ) => Object.values(where)[0];
 
 const mock = prisma as unknown as {
-  product: { findMany: jest.Mock };
+  product: { findMany: jest.Mock; findFirst: jest.Mock };
   cartItem: { findUnique: jest.Mock; findMany: jest.Mock };
   wishlistItem: {
     findUnique: jest.Mock;
     findMany: jest.Mock;
     upsert: jest.Mock;
-    delete: jest.Mock;
+    deleteMany: jest.Mock;
   };
 };
 
@@ -72,7 +72,9 @@ beforeEach(() => {
         price: 10,
       })),
   );
+  mock.product.findFirst.mockResolvedValue({ id: "p1" });
   mock.cartItem.findUnique.mockResolvedValue(null);
+  mock.cartItem.findMany.mockResolvedValue([]);
   mock.wishlistItem.findMany.mockImplementation(
     async ({ where }: { where: Record<string, unknown> }) =>
       rows
@@ -119,20 +121,23 @@ beforeEach(() => {
       return { id: "row", productId, createdAt: new Date(0) };
     },
   );
-  mock.wishlistItem.delete.mockImplementation(
-    async ({ where }: { where: Record<string, { productId: string }> }) => {
-      const ownerWhere = Object.values(where)[0];
-      const index = rows.findIndex(
-        (row) =>
-          row.productId === ownerWhere.productId &&
-          ofOwner(row, ownerOnly(ownerWhere)),
-      );
+  mock.wishlistItem.deleteMany.mockImplementation(
+    async ({
+      where,
+    }: {
+      where: { productId: string; userId?: string; guestId?: string };
+    }) => {
+      const before = rows.length;
 
-      if (index < 0) {
-        throw new Error("not found");
+      for (let index = rows.length - 1; index >= 0; index -= 1) {
+        const row = rows[index];
+
+        if (row.productId === where.productId && ofOwner(row, where)) {
+          rows.splice(index, 1);
+        }
       }
 
-      return rows.splice(index, 1)[0];
+      return { count: before - rows.length };
     },
   );
 });
@@ -174,14 +179,16 @@ describe("WishlistService with two kinds of owner", () => {
     );
 
     expect(rows).toEqual([{ productId: "p1", userId: "user-1" }]);
-    expect(mock.wishlistItem.delete).toHaveBeenCalledWith({
-      where: { guestId_productId: { guestId: "guest-1", productId: "p1" } },
+    expect(mock.wishlistItem.deleteMany).toHaveBeenCalledWith({
+      where: { guestId: "guest-1", productId: "p1" },
     });
   });
 
   it("reads the guest lines with their cart marks (AC-8)", async () => {
     rows.push({ productId: "p1", guestId: "guest-1" });
-    mock.cartItem.findUnique.mockResolvedValue({ quantity: 2 });
+    mock.cartItem.findMany.mockResolvedValue([
+      { productId: "p1", quantity: 2 },
+    ]);
 
     const wishlist = await new WishlistService().getWishlist(
       guestOwner("guest-1"),

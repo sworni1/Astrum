@@ -8,4 +8,6 @@ export const authCookie = (req: Request): string | undefined =>
   (req.cookies as { __auth?: string } | undefined)?.[AUTH_COOKIE_NAME];
 
 export const verifySessionToken = (token: string): JwtData =>
-  verify(token, process.env.JWT_SECRET as string) as JwtData;
+  verify(token, process.env.JWT_SECRET as string, {
+    algorithms: ["HS256"],
+  }) as JwtData;

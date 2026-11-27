@@ -6,6 +6,7 @@ jest.mock("../../../../lib/prisma", () => ({
       findMany: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      deleteMany: jest.fn(),
       upsert: jest.fn(),
     },
     wishlistItem: { findUnique: jest.fn(), findMany: jest.fn() },
@@ -63,6 +64,7 @@ const mock = prisma as unknown as {
     findMany: jest.Mock;
     update: jest.Mock;
     delete: jest.Mock;
+    deleteMany: jest.Mock;
     upsert: jest.Mock;
   };
   wishlistItem: { findUnique: jest.Mock; findMany: jest.Mock };
@@ -98,7 +100,32 @@ beforeEach(() => {
     async ({ where }: { where: Record<string, unknown> }) =>
       cartRows
         .filter((row) => ofOwner(row, where))
+        .map((row) => ({ productId: row.productId, quantity: row.quantity })),
+  );
+  mock.wishlistItem.findMany.mockImplementation(
+    async ({ where }: { where: Record<string, unknown> }) =>
+      wishRows
+        .filter((row) => ofOwner(row, where))
         .map((row) => ({ productId: row.productId })),
+  );
+  mock.cartItem.deleteMany.mockImplementation(
+    async ({
+      where,
+    }: {
+      where: { productId: string; userId?: string; guestId?: string };
+    }) => {
+      const before = cartRows.length;
+
+      for (let index = cartRows.length - 1; index >= 0; index -= 1) {
+        const row = cartRows[index];
+
+        if (row.productId === where.productId && ofOwner(row, where)) {
+          cartRows.splice(index, 1);
+        }
+      }
+
+      return { count: before - cartRows.length };
+    },
   );
   mock.cartItem.findUnique.mockImplementation(
     async ({ where }: { where: Record<string, { productId: string }> }) => {
@@ -235,7 +262,7 @@ describe("CartService with two kinds of owner", () => {
     expect(cart[0].quantityInCart).toBe(1);
     expect(mock.cartItem.findMany).toHaveBeenCalledWith({
       where: { guestId: "guest-1" },
-      select: { productId: true },
+      select: { productId: true, quantity: true },
     });
   });
 

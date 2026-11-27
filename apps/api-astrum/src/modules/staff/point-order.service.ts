@@ -91,7 +91,6 @@ export class PointOrderService {
   ): Promise<{ order: PointOrderJson }> {
     try {
       await this.assertOwnOrder(orderId, pickupPointId);
-      await expireSessionForCancel(orderId);
 
       const { order, cancelledLineCount, cancelledProductIds } =
         await prisma.$transaction(
@@ -99,6 +98,7 @@ export class PointOrderService {
           ORDER_TRANSACTION_OPTIONS,
         );
 
+      await expireSessionForCancel(orderId);
       await invalidateStockOfProducts(cancelledProductIds);
 
       logger.info({

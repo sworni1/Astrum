@@ -7,7 +7,7 @@ import {
   ORDER_SHIPPING_INTERVAL_MS,
   SHIPPING_INCLUDE,
 } from "./constants/order.constants";
-import { recomputeOrderStatus } from "./order-status";
+import { lockOrder, recomputeOrderStatus } from "./order-status";
 
 const acceptedAt = (order: {
   createdAt: Date;
@@ -16,6 +16,8 @@ const acceptedAt = (order: {
 
 const shipOrder = async (orderId: string, shippedAt: Date): Promise<void> => {
   await prisma.$transaction(async (tx) => {
+    await lockOrder(tx, orderId);
+
     const { count } = await tx.orderItem.updateMany({
       where: { orderId, status: "CONFIRMED" },
       data: { status: "SHIPPED" },
@@ -38,6 +40,8 @@ const deliverOrder = async (
   arrivedAt: Date,
 ): Promise<void> => {
   await prisma.$transaction(async (tx) => {
+    await lockOrder(tx, orderId);
+
     const { count } = await tx.orderItem.updateMany({
       where: { orderId, status: "SHIPPED" },
       data: { status: "DELIVERED", receiptDate: arrivedAt },

@@ -131,6 +131,20 @@ describe("guest identity", () => {
     expect(ownerForRead(request())).toBeNull();
   });
 
+  it("refuses a write while the session store is unavailable instead of minting a guest", () => {
+    const req = request() as Request & { sessionStoreUnavailable?: boolean };
+    req.sessionStoreUnavailable = true;
+    const { res, cookie } = response();
+
+    expect(() => ownerForWrite(req, res)).toThrow(
+      expect.objectContaining({
+        status: 503,
+        code: "SESSION_STORE_UNAVAILABLE",
+      }),
+    );
+    expect(cookie).not.toHaveBeenCalled();
+  });
+
   it("sets and clears the cookie with the same attributes", () => {
     const { res, cookie, clear } = response();
 

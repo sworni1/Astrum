@@ -5,12 +5,19 @@ import app from "./app";
 import { closeCacheStore } from "./cache/cacheStore";
 import {
   API_PORT_DEFAULT,
+  REQUIRED_ENV,
   SHUTDOWN_SIGNALS,
   SHUTDOWN_TIMEOUT_MS,
 } from "./common/constants/server.constants";
 import { startGuestSweep } from "./modules/guest/guest.sweep";
 import { startOrderShipping } from "./modules/order/order-shipping";
 import { startPaymentSweep } from "./modules/payment/payment.sweep";
+
+for (const name of REQUIRED_ENV) {
+  if (!process.env[name]?.trim()) {
+    throw new Error(`${name} is required: the gateway cannot start without it`);
+  }
+}
 
 if (!process.env.RABBITMQ_URL) {
   throw new Error(

@@ -21,45 +21,29 @@ export const getWishlistAndCartItem = async (
   owner: Owner,
   productId: Product["id"],
 ) => {
-  try {
-    const [cartItem, wishlistItem] = await Promise.all([
-      prisma.cartItem.findUnique({ where: ownerUniqueKey(owner, productId) }),
-      prisma.wishlistItem.findUnique({
-        where: ownerUniqueKey(owner, productId),
-      }),
-    ]);
+  const [cartItem, wishlistItem] = await Promise.all([
+    prisma.cartItem.findUnique({ where: ownerUniqueKey(owner, productId) }),
+    prisma.wishlistItem.findUnique({ where: ownerUniqueKey(owner, productId) }),
+  ]);
 
-    return {
-      cartItem,
-      wishlistItem,
-    };
-  } catch (_error) {
-    throw new Error("getWishlistAndCartItem error");
-  }
+  return {
+    cartItem,
+    wishlistItem,
+  };
 };
 
 export const getWishlistItem = async (
   owner: Owner,
   productId: Product["id"],
-) => {
-  try {
-    return await prisma.wishlistItem.findUnique({
-      where: ownerUniqueKey(owner, productId),
-    });
-  } catch (_error) {
-    throw new Error(`getWishlistItem error`);
-  }
-};
+) =>
+  await prisma.wishlistItem.findUnique({
+    where: ownerUniqueKey(owner, productId),
+  });
 
-export const getCartItem = async (owner: Owner, productId: Product["id"]) => {
-  try {
-    return await prisma.cartItem.findUnique({
-      where: ownerUniqueKey(owner, productId),
-    });
-  } catch (_error) {
-    throw new Error(`getCartItem error`);
-  }
-};
+export const getCartItem = async (owner: Owner, productId: Product["id"]) =>
+  await prisma.cartItem.findUnique({
+    where: ownerUniqueKey(owner, productId),
+  });
 
 export type PageMarks = {
   wishlisted: Set<string>;
@@ -89,34 +73,4 @@ export const readPageMarks = async (
     wishlisted: new Set(wishlistItems.map((item) => item.productId)),
     cart: new Map(cartItems.map((item) => [item.productId, item.quantity])),
   };
-};
-
-export const getWishlistProductIds = async (owner: Owner) => {
-  try {
-    const wishlistItems = await prisma.wishlistItem.findMany({
-      where: ownerColumns(owner),
-      select: {
-        productId: true,
-      },
-    });
-
-    return wishlistItems.map((item) => item.productId);
-  } catch (_error) {
-    throw new Error(`getWishlistProductIds error`);
-  }
-};
-
-export const getCartProductIds = async (owner: Owner) => {
-  try {
-    const cartItems = await prisma.cartItem.findMany({
-      where: ownerColumns(owner),
-      select: {
-        productId: true,
-      },
-    });
-
-    return cartItems.map((item) => item.productId);
-  } catch (_error) {
-    throw new Error(`getCartProductIds error`);
-  }
 };

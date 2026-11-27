@@ -18,10 +18,10 @@ export const toCartLineJson = (
 
 export const toCartProductJson = (
   product: CartProductRow,
-  wishlistItem: WishlistItem | null,
-  cartItem: CartItem | null,
+  isWishlisted: boolean,
+  quantityInCart: number,
 ) => ({
   ...product,
-  isWishlisted: !!wishlistItem,
-  quantityInCart: cartItem ? cartItem.quantity : 0,
+  isWishlisted,
+  quantityInCart,
 });

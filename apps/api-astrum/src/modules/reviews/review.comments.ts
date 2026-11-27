@@ -28,7 +28,7 @@ import type {
 
 export const readCommentPage = async (
   reviewId: string,
-  viewerId: string,
+  viewerId: string | null,
   query: ReviewPageQuery,
 ): Promise<CommentPage> => {
   const review = await prisma.review.findFirst({

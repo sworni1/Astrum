@@ -74,6 +74,10 @@ export const releaseCourierOrder = async (
     throw orderNotFound();
   }
 
+  if (row.courierUserId !== userId) {
+    throw orderNotFound();
+  }
+
   if (verdict === "alreadyHandedOver") {
     throw alreadyHandedOver();
   }

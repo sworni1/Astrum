@@ -33,7 +33,7 @@ describeWithDatabase("Courier parcels against Postgres", () => {
         currency: "RUB",
         paymentMethod: "CASH",
         paymentStatus: options.paymentStatus ?? "PENDING",
-        status: "SHIPPED",
+        status: "DELIVERED",
         deliveryAddress: options.address ?? "Tverskaya 12",
         deliveryDate: new Date("2026-12-05T09:00:00.000Z"),
         shippingMethodId,
@@ -49,7 +49,7 @@ describeWithDatabase("Courier parcels against Postgres", () => {
             quantity: 2,
             price: new Prisma.Decimal("50.00"),
             currency: "RUB" as const,
-            status: options.lineStatus ?? "SHIPPED",
+            status: options.lineStatus ?? "DELIVERED",
             userId: buyerId,
             businessId,
           })),
@@ -215,16 +215,12 @@ describeWithDatabase("Courier parcels against Postgres", () => {
       },
     });
 
-    expect(order.status).toBe("DELIVERED");
+    expect(order.status).toBe("ISSUED");
     expect(order.paymentStatus).toBe("PAID");
     expect(order.courierUserId).toBe(firstCourierId);
     expect(order.handedOverAt).not.toBeNull();
     expect(
-      order.OrderItem.every(
-        (line) =>
-          line.status === "DELIVERED" &&
-          line.receiptDate?.getTime() === order.handedOverAt?.getTime(),
-      ),
+      order.OrderItem.every((line) => line.status === "ISSUED"),
     ).toBe(true);
   });
 
@@ -280,6 +276,6 @@ describeWithDatabase("Courier parcels against Postgres", () => {
     });
 
     expect(stored.courierUserId).toBe(firstCourierId);
-    expect(stored.status).toBe("SHIPPED");
+    expect(stored.status).toBe("DELIVERED");
   });
 });

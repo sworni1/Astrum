@@ -3,7 +3,10 @@ import { StatusCodes } from "http-status-codes";
 import { handleErrors } from "../../common/helpers/errorHandler";
 import type { AuthenticatedUserRequest } from "../../common/types/jwt.payload";
 import { ownerForRead } from "../guest/guest.identity";
-import { resolveProductCategory } from "./helpers/product-category.helpers";
+import {
+  readQueryString,
+  resolveCatalogueCategory,
+} from "./helpers/product-query.helpers";
 import { ProductService } from "./product.service";
 
 const productService = new ProductService();
@@ -26,12 +29,9 @@ export class ProductController {
 
   async getRecommendations(req: Request, res: Response) {
     try {
-      const { cursor } = req.query;
-
       const products = await productService.getRecommendations(
         ownerForRead(req),
-        {},
-        cursor as string,
+        readQueryString(req.query.cursor, "cursor"),
       );
 
       res.status(StatusCodes.OK).json(products);
@@ -42,21 +42,19 @@ export class ProductController {
 
   async getCategoryProducts(req: Request, res: Response) {
     try {
-      const category = req.params.category as string;
-
-      const { cursor, search_query } = req.query;
-
-      const productCategory = resolveProductCategory(category);
+      const category = resolveCatalogueCategory(
+        req.params.category as string,
+      );
 
       const filters = {
-        category: productCategory,
-        search_query: search_query as string,
+        category,
+        search_query: readQueryString(req.query.search_query, "search_query"),
       };
 
       const products = await productService.getCategoryProducts(
         ownerForRead(req),
         filters,
-        cursor as string,
+        readQueryString(req.query.cursor, "cursor"),
       );
 
       res.status(StatusCodes.OK).json(products);

@@ -6,6 +6,7 @@ jest.mock("../../../../lib/prisma", () => ({
 }));
 
 jest.mock("../order-status", () => ({
+  lockOrder: jest.fn(),
   recomputeOrderStatus: jest.fn(),
 }));
 

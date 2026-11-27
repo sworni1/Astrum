@@ -66,6 +66,10 @@ export type OrderListPage = {
   items: OrderListRow[];
   counts: OrderListCounts;
   spent: OrderSpentRow[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
 };
 
 export type CreateOrderResult = { order: OrderDetail; replay: boolean };

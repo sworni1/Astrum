@@ -1,8 +1,7 @@
 import type { Product } from "@astrum/db/client";
 import { prisma } from "../../../lib/prisma";
+import { hasNotFoundCode } from "../../common/helpers/prismaErrors";
 import {
-  getCartProductIds,
-  getWishlistAndCartItem,
   getWishlistItem,
   ownerColumns,
   ownerUniqueKey,
@@ -16,12 +15,7 @@ import { PUBLIC_PRODUCT_WHERE } from "../product/constants/product.constants";
 import { ProductService } from "../product/product.service";
 import type { AddProductToCartDto } from "./dto/add-product.dto";
 import type { ChangeQuantityDto } from "./dto/change-quantity.dto";
-import {
-  cartDeleteFailed,
-  cartReadFailed,
-  changeQuantityFailed,
-  quantityLimit,
-} from "./helpers/cart.errors";
+import { cartItemNotFound, quantityLimit } from "./helpers/cart.errors";
 import { toCartLineJson, toCartProductJson } from "./helpers/cart.helpers";
 
 export class CartService {
@@ -64,78 +58,89 @@ export class CartService {
     productId: string,
     dto: ChangeQuantityDto,
   ) {
+    const product = await this.productService.getProduct(owner, productId);
+
+    if (dto.quantity <= 0) {
+      return await this.deleteProductFromCart(owner, productId);
+    }
+
+    if (product.quantity < dto.quantity) {
+      throw quantityLimit();
+    }
+
+    const wishlistItem = await getWishlistItem(owner, productId);
+
     try {
-      const product = await this.productService.getProduct(owner, productId);
+      const cartItem = await prisma.cartItem.update({
+        where: ownerUniqueKey(owner, productId),
+        data: { quantity: dto.quantity },
+        select: cartActionsPublicSelect,
+      });
 
-      if (dto.quantity > 0) {
-        if (product.quantity >= dto.quantity) {
-          const wishlistItem = await getWishlistItem(owner, productId);
-
-          const cartItem = await prisma.cartItem.update({
-            where: ownerUniqueKey(owner, productId),
-            data: { quantity: dto.quantity },
-            select: cartActionsPublicSelect,
-          });
-
-          return toCartLineJson(cartItem, wishlistItem);
-        } else {
-          throw quantityLimit();
-        }
-      } else {
-        return this.deleteProductFromCart(owner, productId);
+      return toCartLineJson(cartItem, wishlistItem);
+    } catch (error) {
+      if (hasNotFoundCode(error)) {
+        throw cartItemNotFound();
       }
-    } catch (_error) {
-      throw changeQuantityFailed();
+
+      throw error;
     }
   }
 
   async getCart(owner: Owner | null) {
-    try {
-      if (!owner) {
-        return [];
-      }
+    if (!owner) {
+      return [];
+    }
 
-      const cartProductIds = await getCartProductIds(owner);
+    const cartRows = await prisma.cartItem.findMany({
+      where: ownerColumns(owner),
+      select: { productId: true, quantity: true },
+    });
 
-      const cart = await prisma.product.findMany({
+    if (cartRows.length === 0) {
+      return [];
+    }
+
+    const productIds = cartRows.map((row) => row.productId);
+
+    const [products, wishlistRows] = await Promise.all([
+      prisma.product.findMany({
         where: {
-          id: { in: cartProductIds },
+          id: { in: productIds },
           ...PUBLIC_PRODUCT_WHERE,
         },
         select: cartPublicSelect,
-      });
+      }),
+      prisma.wishlistItem.findMany({
+        where: { ...ownerColumns(owner), productId: { in: productIds } },
+        select: { productId: true },
+      }),
+    ]);
 
-      const cartWithData = await Promise.all(
-        cart.map(async (product) => {
-          const { wishlistItem, cartItem } = await getWishlistAndCartItem(
-            owner,
-            product.id,
-          );
+    const quantities = new Map(
+      cartRows.map((row) => [row.productId, row.quantity]),
+    );
+    const wishlisted = new Set(wishlistRows.map((row) => row.productId));
 
-          return toCartProductJson(product, wishlistItem, cartItem);
-        }),
-      );
-
-      return cartWithData;
-    } catch (_error) {
-      throw cartReadFailed();
-    }
+    return products.map((product) =>
+      toCartProductJson(
+        product,
+        wishlisted.has(product.id),
+        quantities.get(product.id) ?? 0,
+      ),
+    );
   }
 
   async deleteProductFromCart(owner: Owner, productId: Product["id"]) {
-    try {
-      const wishlistItem = await getWishlistItem(owner, productId);
+    const wishlistItem = await getWishlistItem(owner, productId);
 
-      await prisma.cartItem.delete({
-        where: ownerUniqueKey(owner, productId),
-      });
+    await prisma.cartItem.deleteMany({
+      where: { ...ownerColumns(owner), productId },
+    });
 
-      return {
-        isWishlisted: !!wishlistItem,
-        quantityInCart: 0,
-      };
-    } catch (_error) {
-      throw cartDeleteFailed();
-    }
+    return {
+      isWishlisted: !!wishlistItem,
+      quantityInCart: 0,
+    };
   }
 }

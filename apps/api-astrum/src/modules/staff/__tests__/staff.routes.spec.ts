@@ -42,7 +42,10 @@ const routesOf = (staffRoutes as unknown as { stack: Route[] }).stack.filter(
   (layer) => layer.route !== undefined,
 );
 
-const routeOf = (path: string, method: "get" | "post" | "patch"): Route => {
+const routeOf = (
+  path: string,
+  method: "get" | "post" | "patch" | "delete",
+): Route => {
   const found = routesOf.find(
     (layer) => layer.route?.path === path && layer.route.methods[method],
   );
@@ -56,7 +59,7 @@ const routeOf = (path: string, method: "get" | "post" | "patch"): Route => {
 
 const handlersOf = (
   path: string,
-  method: "get" | "post" | "patch",
+  method: "get" | "post" | "patch" | "delete",
 ): unknown[] =>
   routeOf(path, method).route?.stack.map((layer) => layer.handle) ?? [];
 
@@ -170,6 +173,21 @@ describe("staff routes", () => {
       requirePointWorker,
       expect.any(Function),
     ]);
+  });
+
+  it("mounts every courier write behind the account gate, then the role guard (spec 0019, AC-6)", () => {
+    expect(
+      handlersOf("/staff/courier/orders/:orderId/claim", "post"),
+    ).toEqual([requireActiveAccount, requireCourier, expect.any(Function)]);
+    expect(
+      handlersOf("/staff/courier/orders/:orderId/claim", "delete"),
+    ).toEqual([requireActiveAccount, requireCourier, expect.any(Function)]);
+    expect(
+      handlersOf("/staff/courier/orders/:orderId/handover", "patch"),
+    ).toEqual([requireActiveAccount, requireCourier, expect.any(Function)]);
+    expect(
+      handlersOf("/staff/courier/orders/:orderId/cancel", "patch"),
+    ).toEqual([requireActiveAccount, requireCourier, expect.any(Function)]);
   });
 
   it("refuses the counter queue for an account with no point role (spec 0018, AC-1)", async () => {

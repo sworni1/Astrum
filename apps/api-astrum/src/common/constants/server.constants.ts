@@ -6,3 +6,5 @@ export const SHUTDOWN_SIGNALS: readonly NodeJS.Signals[] = [
   "SIGTERM",
   "SIGINT",
 ];
+
+export const REQUIRED_ENV = ["JWT_SECRET", "DATABASE_URL"] as const;

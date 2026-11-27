@@ -1,4 +1,5 @@
 import { prisma } from "../../../lib/prisma";
+import { DEFAULT_PAGE_SIZE } from "../../common/constants/pagination.constants";
 import {
   ORDER_DETAIL_INCLUDE,
   ORDER_LIST_SELECT,
@@ -59,14 +60,21 @@ export const getOrderById = async (
 export const getOrdersByUserId = async (
   userId: string,
   query: OrderListQuery = {},
+  page = 1,
+  limit = DEFAULT_PAGE_SIZE,
 ): Promise<OrderListPage> => {
-  const [rows, statusGroups, currencyGroups] = await prisma.$transaction(
+  const where = orderListWhere(userId, query);
+
+  const [rows, total, statusGroups, currencyGroups] = await prisma.$transaction(
     [
       prisma.order.findMany({
-        where: orderListWhere(userId, query),
-        orderBy: { createdAt: "desc" },
+        where,
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        skip: (page - 1) * limit,
+        take: limit,
         select: ORDER_LIST_SELECT,
       }),
+      prisma.order.count({ where }),
       prisma.order.groupBy({
         by: ["status"],
         where: { userId },
@@ -99,5 +107,9 @@ export const getOrdersByUserId = async (
     })),
     counts: countByStatus(statusGroups),
     spent: spentByCurrency(currencyGroups),
+    page,
+    limit,
+    total,
+    totalPages: Math.ceil(total / limit),
   };
 };

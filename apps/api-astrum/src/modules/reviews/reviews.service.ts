@@ -125,15 +125,16 @@ export class ReviewsService {
   }
 
   async getReviewById(reviewId: string) {
-    const review = await prisma.review.findUnique({
-      where: { id: reviewId },
+    const review = await prisma.review.findFirst({
+      where: { id: reviewId, status: ReviewStatus.APPROVED },
+      select: reviewRowSelect,
     });
 
     if (!review) {
       throw reviewNotFound();
     }
 
-    return review;
+    return serializeReview(review as ReviewRow);
   }
 
   async getLikedReviewIds(
@@ -161,7 +162,7 @@ export class ReviewsService {
 
   async getReviewComments(
     reviewId: string,
-    viewerId: string,
+    viewerId: string | null,
     query: ReviewPageQuery = {},
   ): Promise<CommentPage> {
     return await readCommentPage(reviewId, viewerId, query);
@@ -199,21 +200,4 @@ export class ReviewsService {
     return answer;
   }
 
-  async updateProductAggregates(productId: string) {
-    await prisma.$transaction(async (tx) => {
-      const aggregate = await tx.review.aggregate({
-        where: { productId, status: ReviewStatus.APPROVED },
-        _count: { id: true },
-        _avg: { rating: true },
-      });
-
-      await tx.product.update({
-        where: { id: productId },
-        data: {
-          reviewCount: aggregate._count.id || 0,
-          averageRating: Number(aggregate._avg.rating) || 0,
-        },
-      });
-    });
-  }
 }

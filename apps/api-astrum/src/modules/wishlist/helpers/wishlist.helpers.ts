@@ -9,11 +9,11 @@ type WishlistMutationRow = Pick<WishlistItem, "id" | "productId" | "createdAt">;
 
 export const toWishlistProductJson = (
   product: WishlistProductRow,
-  cartItem: CartItem | null,
+  quantityInCart: number,
 ) => ({
   ...product,
   isWishlisted: true,
-  quantityInCart: cartItem ? cartItem.quantity : 0,
+  quantityInCart,
 });
 
 export const toWishlistMutationJson = (

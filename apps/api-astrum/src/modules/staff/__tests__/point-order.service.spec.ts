@@ -530,14 +530,14 @@ describe("PointOrderService", () => {
       expect(seed.lines[1].status).toBe("ISSUED");
     });
 
-    it("expires the open provider session before the transaction opens (AC-8)", async () => {
+    it("expires the open provider session after the transaction commits (AC-8)", async () => {
       const tx = createTx({ order: orderSeed() });
       wireTransaction(tx);
 
       await service.cancelOrder("order-1", "worker-1", "pp-1");
 
       expect(expireMock).toHaveBeenCalledWith("order-1");
-      expect(expireMock.mock.invocationCallOrder[0]).toBeLessThan(
+      expect(expireMock.mock.invocationCallOrder[0]).toBeGreaterThan(
         prismaMock.$transaction.mock.invocationCallOrder[0],
       );
     });

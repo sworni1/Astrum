@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireActiveAccount } from "../../middlewares/requireActiveAccount";
 import { requireSession } from "../../middlewares/resolveOwner";
 import { validateDto } from "../../middlewares/validateDto";
 import {
@@ -20,6 +21,7 @@ productRoutes.get(
 productRoutes.post(
   "/",
   requireSession,
+  requireActiveAccount,
   validateDto(CreateProductDto),
   productController.createProduct,
 );

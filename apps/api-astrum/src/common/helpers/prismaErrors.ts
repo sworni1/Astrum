@@ -8,3 +8,13 @@ export const hasUniqueViolationCode = (error: unknown): boolean =>
   typeof error === "object" &&
   error !== null &&
   (error as { code?: unknown }).code === "P2002";
+
+export const hasNotFoundCode = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  (error as { code?: unknown }).code === "P2025";
+
+export const hasForeignKeyViolationCode = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  (error as { code?: unknown }).code === "P2003";

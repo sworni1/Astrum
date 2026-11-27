@@ -38,6 +38,18 @@ const recordDelivery = async (event: ProviderEvent) => {
   }
 };
 
+const releaseDelivery = async (id: string): Promise<void> => {
+  try {
+    await prisma.paymentEvent.delete({ where: { id } });
+  } catch (error) {
+    logger.error({
+      event: "payment.webhook.release_failed",
+      paymentEventId: id,
+      reason: error instanceof Error ? error.message : String(error),
+    });
+  }
+};
+
 export const handleWebhookEvent = async (
   event: ProviderEvent,
 ): Promise<WebhookOutcome> => {
@@ -49,6 +61,18 @@ export const handleWebhookEvent = async (
     return "replayed";
   }
 
+  try {
+    return await applyStoredEvent(stored.id, event);
+  } catch (error) {
+    await releaseDelivery(stored.id);
+    throw error;
+  }
+};
+
+const applyStoredEvent = async (
+  storedId: string,
+  event: ProviderEvent,
+): Promise<WebhookOutcome> => {
   const attempt = await findAttemptForEvent(event);
 
   if (attempt === null) {
@@ -85,7 +109,7 @@ export const handleWebhookEvent = async (
   }
 
   await prisma.paymentEvent.update({
-    where: { id: stored.id },
+    where: { id: storedId },
     data: { applied: true, paymentId: attempt.id },
   });
 
