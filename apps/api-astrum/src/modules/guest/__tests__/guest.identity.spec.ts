@@ -52,7 +52,7 @@ describe("guest identity", () => {
   it("treats a modified, foreign and expired token as no cookie (AC-3)", () => {
     const valid = token({ guestId: "guest-1", typ: "guest" });
     const [head, payload, signature] = valid.split(".");
-    const modified = `${head}.${payload}.${signature.slice(0, -1)}A`;
+    const modified = `${head}.${payload}.${signature.startsWith("A") ? "B" : "A"}${signature.slice(1)}`;
     const foreign = token(
       { guestId: "guest-1", typ: "guest" },
       "another-secret",
