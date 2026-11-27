@@ -2,14 +2,13 @@ import { describe, expect, it } from "vitest";
 import { Currency } from "@/common/types/product.types";
 import { amountListText } from "@/features/general/lib/moneyText";
 
-/** `ru` groups thousands and pads the sign with a non break space. */
 const NBSP = "\u00A0";
 
 describe("amountListText", () => {
   it("печатает одну валюту как есть (AC-7)", () => {
-    expect(amountListText([{ currency: Currency.RUB, amount: 1234.5 }], "ru")).toBe(
-      `1${NBSP}234,50${NBSP}₽`,
-    );
+    expect(
+      amountListText([{ currency: Currency.RUB, amount: 1234.5 }], "ru"),
+    ).toBe(`1${NBSP}234,50${NBSP}₽`);
   });
 
   it("печатает ноль рублей, когда платить было не за что (AC-7)", () => {
@@ -29,11 +28,11 @@ describe("amountListText", () => {
   });
 
   it("печатает сумму в локали читателя, с разрядами (AC-14)", () => {
-    expect(amountListText([{ currency: Currency.RUB, amount: 46332 }], "ru")).toBe(
-      `46${NBSP}332,00${NBSP}₽`,
-    );
-    expect(amountListText([{ currency: Currency.RUB, amount: 46332 }], "en")).toBe(
-      "₽46,332.00",
-    );
+    expect(
+      amountListText([{ currency: Currency.RUB, amount: 46332 }], "ru"),
+    ).toBe(`46${NBSP}332,00${NBSP}₽`);
+    expect(
+      amountListText([{ currency: Currency.RUB, amount: 46332 }], "en"),
+    ).toBe("₽46,332.00");
   });
 });

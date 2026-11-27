@@ -8,11 +8,6 @@ type Props = {
   line: SellerLineRow;
 };
 
-/**
- * Where the line is received: a pickup point with its handover day, a courier
- * address, or nothing at all. A line with neither prints the "no address" note
- * instead of an empty cell, because a dash reads as data (spec 0026, AC-9).
- */
 const ReceiptCell = ({ line }: Props) => {
   const t = useTranslations("seller");
   const format = useFormatter();
@@ -47,12 +42,17 @@ const ReceiptCell = ({ line }: Props) => {
     return (
       <div className="min-w-0">
         <span className="text-muted-foreground">{t("receipt.courier")}</span>
-        <span>{" · "}{line.deliveryAddress}</span>
+        <span>
+          {" · "}
+          {line.deliveryAddress}
+        </span>
       </div>
     );
   }
 
-  return <span className="text-muted-foreground">{t("receipt.noAddress")}</span>;
+  return (
+    <span className="text-muted-foreground">{t("receipt.noAddress")}</span>
+  );
 };
 
 export default ReceiptCell;

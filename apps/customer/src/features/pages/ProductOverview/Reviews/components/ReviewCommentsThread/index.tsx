@@ -11,16 +11,10 @@ import { useReviewComments } from "@/hooks/review/useReviewComments";
 
 type Props = {
   reviewId: string;
-  /** The card prints the number, so the thread only reports the answer (AC-12). */
+
   onCountChange: (commentCount: number) => void;
 };
 
-/**
- * The flat thread under one review: oldest first, ten rows a page, a row this
- * customer just wrote held below the loaded pages, and the stub a delete
- * answered. It unmounts when the card closes the thread, so a closed thread
- * sends no request (spec 0014, AC-11, AC-12).
- */
 const ReviewCommentsThread = ({ reviewId, onCountChange }: Props) => {
   const t = useTranslations("reviews");
   const {
@@ -37,8 +31,6 @@ const ReviewCommentsThread = ({ reviewId, onCountChange }: Props) => {
   } = useReviewComments(reviewId);
   const [focusId, setFocusId] = useState<string | null>(null);
 
-  // A failed read is visible and retryable, and its toast is raised from an
-  // effect: never from a render body (AC-11).
   useEffect(() => {
     if (hasFailed) {
       showToast({ title: t("comments.loadFailed"), type: "error" });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { OrderItemStatus } from "@/common/types/order.types";
 import { ITEM_STATUS_KEYS, itemStatusKey } from "@/common/helpers/itemStatus";
+import { OrderItemStatus } from "@/common/types/order.types";
 
 describe("itemStatusKey", () => {
   it("maps all ten line statuses to one catalog key (AC-4, spec 0031 AC-7)", () => {

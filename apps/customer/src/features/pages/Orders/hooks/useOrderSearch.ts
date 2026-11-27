@@ -10,11 +10,6 @@ export interface UseOrderSearchReturn {
   setInputValue: (value: string) => void;
 }
 
-/**
- * The field holds its own state and moves the trimmed query into the request key
- * 300 ms after the last keystroke. Clearing it returns at once, so the customer
- * never waits to see the unfiltered list (spec 0025, AC-9).
- */
 export const useOrderSearch = (): UseOrderSearchReturn => {
   const [inputValue, setInputValue] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -22,8 +17,6 @@ export const useOrderSearch = (): UseOrderSearchReturn => {
   useEffect(() => {
     const trimmed = inputValue.trim();
 
-    // Clearing settles on the next tick, so returning to the unfiltered list
-    // never waits for the typing debounce (spec 0025, AC-9).
     const timer = setTimeout(
       () => {
         setDebouncedQuery(trimmed);

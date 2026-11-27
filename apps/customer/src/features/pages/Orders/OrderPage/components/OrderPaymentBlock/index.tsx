@@ -16,11 +16,6 @@ type Props = {
   paymentBranch: PaymentReturnBranch;
 };
 
-/**
- * How the order pays: the method, the payment status pill and one second line,
- * the paid instant or the deadline still ahead. The pay control keeps its place
- * and its four window states (spec 0027, AC-4).
- */
 const OrderPaymentBlock = ({ order, paymentBranch }: Props) => {
   const t = useTranslations("orders");
   const format = useFormatter();
@@ -68,7 +63,9 @@ const OrderPaymentBlock = ({ order, paymentBranch }: Props) => {
       </div>
       <div className="mt-3 space-y-1 text-sm">
         <p>{t(`payment.${PAYMENT_KEYS[order.paymentMethod]}`)}</p>
-        {second ? <p className="text-[13px] text-muted-foreground">{second}</p> : null}
+        {second ? (
+          <p className="text-[13px] text-muted-foreground">{second}</p>
+        ) : null}
       </div>
       <div className="mt-3">
         <PaymentActions order={order} branch={paymentBranch} />

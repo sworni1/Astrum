@@ -15,10 +15,6 @@ import {
 import { resetSessionEnded, useFetcher } from "@/hooks/useFetcher";
 import { useSessionCacheReset } from "@/hooks/useSessionCacheReset";
 
-/**
- * `next` arrives from the sign in page as a query parameter, so it is accepted
- * only through one helper (spec 0028, AC-15).
- */
 export const useAuth = (next?: string | null) => {
   const { fetcher } = useFetcher();
 
@@ -35,11 +31,6 @@ export const useAuth = (next?: string | null) => {
     [next, router],
   );
 
-  /**
-   * The lines a visitor picked before signing in move into the account in one
-   * call, before any navigation. A failure is logged and never traps the
-   * customer on the form: the account is the point of this step (AC-11).
-   */
   const mergeGuestLines = useCallback(async () => {
     try {
       await fetcher.post("/cart/merge");

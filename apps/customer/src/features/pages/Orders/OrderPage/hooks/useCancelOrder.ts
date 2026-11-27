@@ -9,11 +9,6 @@ type UseCancelOrderReturn = {
   isCancelling: boolean;
 };
 
-/**
- * Cancels the order and reports the result; the toast is raised here, and every
- * refusal re reads the order before returning so the screen stops showing a
- * state the gateway already rejected (spec 0011, AC-6).
- */
 export const useCancelOrder = (orderId: string): UseCancelOrderReturn => {
   const t = useTranslations("orders");
   const {

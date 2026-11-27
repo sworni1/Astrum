@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildConfirmationLetter, resolveLetterLocale } from "../letter";
+import { resolveLetterLocale } from "../helpers/letter.helpers";
+import { buildConfirmationLetter } from "../letter";
 import { enCopy } from "../letters/en";
 import { ruCopy } from "../letters/ru";
 

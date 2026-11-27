@@ -1,24 +1,13 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
-  "globalEnv": [
-    "DATABASE_URL"
-  ],
+  "globalEnv": ["DATABASE_URL"],
   "tasks": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "outputs": [
-        "dist/**",
-        ".next/**",
-        "!.next/cache/**",
-        "generated/**"
-      ]
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "generated/**"]
     },
     "dev": {
-      "dependsOn": [
-        "^build"
-      ],
+      "dependsOn": ["^build"],
       "persistent": true,
       "cache": false
     },
@@ -29,33 +18,20 @@
       "cache": false
     },
     "lint": {
-      "dependsOn": [
-        "^build"
-      ]
+      "dependsOn": ["^build"]
     },
     "check-types": {
-      "dependsOn": [
-        "^build",
-        "^check-types"
-      ]
+      "dependsOn": ["^build", "^check-types"]
     },
     "test": {
-      "dependsOn": [
-        "^build"
-      ]
+      "dependsOn": ["^build"]
     },
     "quality-gate": {
-      "dependsOn": [
-        "check-types",
-        "lint",
-        "test"
-      ],
+      "dependsOn": ["check-types", "lint", "test"],
       "cache": false
     },
     "start": {
-      "dependsOn": [
-        "build"
-      ]
+      "dependsOn": ["build"]
     }
   }
 }

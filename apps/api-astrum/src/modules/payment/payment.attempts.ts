@@ -1,25 +1,22 @@
 import type { Payment } from "@astrum/db/client";
 import { prisma } from "../../../lib/prisma";
-import type { OrderWithLines } from "./payment.apply";
-import type { ProviderEvent } from "./payment.gateway";
+import type { OrderWithLines } from "../order/order-status";
+import {
+  ATTEMPT_OPEN_STATUSES,
+  ATTEMPT_WITH_ORDER_INCLUDE,
+} from "./constants/payment.constants";
+import type { ProviderEvent } from "./types/payment.types";
 
-/** One attempt together with the order it belongs to, loaded in one query. */
-export type AttemptWithOrder = Payment & { order: OrderWithLines };
+type AttemptWithOrder = Payment & { order: OrderWithLines };
 
-const ATTEMPT_WITH_ORDER = {
-  order: { include: { OrderItem: true } },
-} as const;
-
-/** The attempt the order screen and the sweep read: newest first, still payable. */
 export const newestOpenAttempt = async (
   orderId: string,
 ): Promise<Payment | null> =>
   await prisma.payment.findFirst({
-    where: { orderId, status: { in: ["PENDING", "FAILED"] } },
+    where: { orderId, status: { in: [...ATTEMPT_OPEN_STATUSES] } },
     orderBy: { createdAt: "desc" },
   });
 
-/** A stored session with a future deadline is reused instead of a second create. */
 export const reusableAttempt = async (
   orderId: string,
   now: Date,
@@ -27,7 +24,7 @@ export const reusableAttempt = async (
   await prisma.payment.findFirst({
     where: {
       orderId,
-      status: { in: ["PENDING", "FAILED"] },
+      status: { in: [...ATTEMPT_OPEN_STATUSES] },
       checkoutUrl: { not: null },
       expiresAt: { gt: now },
     },
@@ -37,7 +34,7 @@ export const reusableAttempt = async (
 const bySession = async (sessionId: string): Promise<AttemptWithOrder | null> =>
   await prisma.payment.findUnique({
     where: { providerSessionId: sessionId },
-    include: ATTEMPT_WITH_ORDER,
+    include: ATTEMPT_WITH_ORDER_INCLUDE,
   });
 
 const byIntent = async (
@@ -45,7 +42,7 @@ const byIntent = async (
 ): Promise<AttemptWithOrder | null> =>
   await prisma.payment.findFirst({
     where: { providerPaymentIntentId: paymentIntentId },
-    include: ATTEMPT_WITH_ORDER,
+    include: ATTEMPT_WITH_ORDER_INCLUDE,
   });
 
 const pendingOfOrder = async (
@@ -54,15 +51,9 @@ const pendingOfOrder = async (
   await prisma.payment.findFirst({
     where: { orderId, status: "PENDING", providerSessionId: null },
     orderBy: { createdAt: "desc" },
-    include: ATTEMPT_WITH_ORDER,
+    include: ATTEMPT_WITH_ORDER_INCLUDE,
   });
 
-/**
- * A session named by a callback can arrive before the pay route stored its id
- * (the customer paid faster than the answer was written). The order it names
- * still has one PENDING attempt with no session id, so that attempt adopts the
- * id and the next delivery takes the unique index branch (AC-5).
- */
 const adoptSession = async (
   attempt: AttemptWithOrder,
   sessionId: string | null,
@@ -79,10 +70,6 @@ const adoptSession = async (
   return { ...attempt, ...updated };
 };
 
-/**
- * The callback is matched to one attempt: by the session id it carries, then by
- * its payment intent, then by the order id in `metadata.order_id` (AC-5).
- */
 export const findAttemptForEvent = async (
   event: ProviderEvent,
 ): Promise<AttemptWithOrder | null> => {

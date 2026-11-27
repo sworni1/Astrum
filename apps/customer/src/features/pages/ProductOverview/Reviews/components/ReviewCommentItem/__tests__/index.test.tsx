@@ -96,7 +96,7 @@ describe("ReviewCommentItem (spec 0014)", () => {
 
     return {
       row: container.querySelector("li") as HTMLLIElement,
-      // The confirmation renders in a portal, so the whole document is read.
+
       buttons: () =>
         Array.from(document.querySelectorAll<HTMLButtonElement>("button")),
     };

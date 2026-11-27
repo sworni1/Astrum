@@ -20,7 +20,6 @@ const write = (level: string, fields: LogFields): void => {
   console.info(line);
 };
 
-/** One structured line per event, so an order can be traced in the logs. */
 export const logger = {
   info: (fields: LogFields) => write("info", fields),
   warn: (fields: LogFields) => write("warn", fields),

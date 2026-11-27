@@ -20,11 +20,6 @@ export type LineStateLabelKey =
 
 export type LineState = { labelKey: LineStateLabelKey; dot: string };
 
-/**
- * Every member of `OrderItemStatus` is keyed explicitly: a member added later
- * renders its own label instead of falling through a boolean test
- * (spec 0025, AC-11).
- */
 export const LINE_STATES: Record<OrderItemStatus, LineState> = {
   [OrderItemStatus.PENDING]: {
     labelKey: "itemStatus.pending",

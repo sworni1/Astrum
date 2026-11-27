@@ -2,11 +2,6 @@ import { z } from "zod";
 import { CHOOSABLE_PAYMENT_METHODS } from "@/common/helpers/paymentMethods";
 import type { ValidationTranslator } from "./translator";
 
-/**
- * One delivery block with one of two required fields: the address for a courier
- * method, the point for a pickup method. `isPickup` decides which requirement is
- * live, so the other field never blocks a submit.
- */
 export const createCheckoutFormSchema = (
   t: ValidationTranslator,
   isPickup: boolean,

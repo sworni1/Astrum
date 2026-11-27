@@ -40,8 +40,7 @@ vi.mock("@/hooks/order/useGetOrders", () => ({
 
 vi.mock("next-intl", () => ({
   useTranslations:
-    () =>
-    (key: string, values?: { count?: number; number?: string }) =>
+    () => (key: string, values?: { count?: number; number?: string }) =>
       `${key}:${values?.count ?? values?.number ?? ""}`,
   useFormatter: () => ({ dateTime: () => "DATE" }),
   useLocale: () => "ru",

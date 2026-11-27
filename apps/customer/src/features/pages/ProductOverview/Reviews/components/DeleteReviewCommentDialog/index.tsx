@@ -18,15 +18,10 @@ type Props = {
   isDeleting: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onConfirm: () => void;
-  /** Runs on close so focus never falls back to a detached node (AC-11). */
+
   onClosed: () => void;
 };
 
-/**
- * The delete confirmation, on the primitive the cart line and the order cancel
- * already use: initial focus on the keep control, and nothing sent when the
- * customer keeps (spec 0014, AC-11).
- */
 const DeleteReviewCommentDialog = ({
   isOpen,
   isDeleting,

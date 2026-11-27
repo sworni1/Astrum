@@ -5,14 +5,15 @@ jest.mock("../../../../lib/prisma", () => ({
   },
 }));
 
-jest.mock("../order-status.helpers", () => ({
+jest.mock("../order-status", () => ({
+  lockOrder: jest.fn(),
   recomputeOrderStatus: jest.fn(),
 }));
 
 import { prisma } from "../../../../lib/prisma";
 import { ORDER_SHIPPING_DELAY_MS } from "../constants/order.constants";
 import { deliverArrivedOrders, runOrderShipping } from "../order-shipping";
-import { recomputeOrderStatus } from "../order-status.helpers";
+import { recomputeOrderStatus } from "../order-status";
 
 const prismaMock = prisma as unknown as {
   $transaction: jest.Mock;

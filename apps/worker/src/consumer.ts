@@ -1,8 +1,9 @@
-import type { ConfirmChannel, ConsumeMessage } from "amqplib";
 import type { PrismaClient } from "@astrum/db/client";
-import { buildConfirmationLetter, resolveLetterLocale } from "./letter";
-import { describeError, logger } from "./logger";
-import type { Mailer } from "./mailer";
+import type { ConfirmChannel, ConsumeMessage } from "amqplib";
+import { parseEvent } from "./helpers/consumer.helpers";
+import { describeError } from "./helpers/error.helpers";
+import { buildConfirmationLetter } from "./letter";
+import { logger } from "./logger";
 import { confirmationLink } from "./token";
 import { mintConfirmationToken } from "./tokenStore";
 import {
@@ -12,13 +13,7 @@ import {
   MAX_ATTEMPTS,
   retryQueueName,
 } from "./topology";
-
-export type ConfirmationEvent = {
-  userId: string;
-  email: string;
-  requestedAt?: string;
-  locale: "en" | "ru";
-};
+import type { Mailer } from "./types/worker.types";
 
 export type ConsumerDeps = {
   channel: ConfirmChannel;
@@ -27,42 +22,10 @@ export type ConsumerDeps = {
   storefrontUrl: string;
 };
 
-const parseEvent = (message: ConsumeMessage): ConfirmationEvent | undefined => {
-  try {
-    const parsed = JSON.parse(message.content.toString("utf8")) as Partial<
-      Record<keyof ConfirmationEvent, unknown>
-    >;
-
-    if (typeof parsed.userId !== "string" || !parsed.userId) {
-      return undefined;
-    }
-
-    if (typeof parsed.email !== "string" || !parsed.email) {
-      return undefined;
-    }
-
-    return {
-      userId: parsed.userId,
-      email: parsed.email,
-      requestedAt:
-        typeof parsed.requestedAt === "string" ? parsed.requestedAt : undefined,
-      locale: resolveLetterLocale(parsed.locale),
-    };
-  } catch {
-    return undefined;
-  }
-};
-
 export type ConfirmationHandler = (
   message: ConsumeMessage | null,
 ) => Promise<void>;
 
-/**
- * One delivery of one account confirmation event. The letter is minted and
- * sent on every attempt, because the raw token exists only in memory and in
- * the letter: a retry therefore replaces the previous link, which is the cost
- * the spec records for never storing a live secret in a queue.
- */
 export const createConfirmationHandler = (
   deps: ConsumerDeps,
 ): ConfirmationHandler => {
@@ -82,8 +45,6 @@ export const createConfirmationHandler = (
 
     logger.error({ event: "email.send.failed", attempt, reason });
 
-    // The retry names the attempt that comes next, so a redelivery steps one
-    // waiting queue further; the dead letter keeps the number that failed.
     const headers = {
       ...(message.properties.headers ?? {}),
       [ATTEMPT_HEADER]: attempt < MAX_ATTEMPTS ? attempt + 1 : attempt,

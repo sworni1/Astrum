@@ -20,7 +20,7 @@ export interface UseUpdateOrderStatusReturn {
   updateOrderStatusTrigger: UpdateOrderStatusTrigger;
   updateOrderStatusIsMutating: boolean;
   updateOrderStatusError: UpdateOrderStatusError | null;
-  /** Re reads the order and the list, and never rejects on a failed read. */
+
   revalidateOrder: () => Promise<void>;
 }
 
@@ -33,8 +33,6 @@ export const useUpdateOrderStatus = (
   const orderKey = `/orders/${orderId}`;
 
   const revalidateOrder = useCallback(async (): Promise<void> => {
-    // allSettled, not all: a failed re read must not reject out of the caller's
-    // handler, because the toast is the answer the customer needs (AC-6).
     await Promise.allSettled([mutate(orderKey), mutate(isOrderListKey)]);
   }, [mutate, orderKey]);
 
@@ -49,8 +47,6 @@ export const useUpdateOrderStatus = (
     UpdateOrderStatusDto
   >(`${orderKey}/status`, patchItem, {
     onSuccess: async (order) => {
-      // The answer is the new truth: it lands in the cache before the background
-      // read, and the list follows because it shows the same status (AC-5).
       await mutate(orderKey, order, false);
       await revalidateOrder();
     },

@@ -1,16 +1,81 @@
-import type { Order } from "@astrum/db/client";
+import type { Currency, Order, OrderItem, Prisma } from "@astrum/db/client";
+import type { OrderStatus } from "@astrum/db/enums";
 import { toMoney } from "../../common/helpers/money";
+import { SOLD_LINE_STATUSES } from "./constants/order.constants";
 import type {
   OrderDetail,
   OrderDetailLine,
+  OrderListCounts,
   OrderListPage,
-} from "./order.service";
+  OrderSpentRow,
+} from "./types/order.types";
+
+type OrderDetailExtras = {
+  paidAt: Date | null;
+  brandNames: Map<string, string>;
+  kinds: Map<string, string | null>;
+};
+
+export const toOrderDetail = (
+  order: Order & { OrderItem: OrderItem[] },
+  extras?: OrderDetailExtras,
+): OrderDetail => {
+  const { OrderItem: orderItems, ...rest } = order;
+
+  if (!extras) {
+    return { ...rest, orderItems };
+  }
+
+  return {
+    ...rest,
+    paidAt: extras.paidAt,
+    orderItems: orderItems.map((item) => ({
+      ...item,
+      brandName: extras.brandNames.get(item.businessId) ?? "",
+      kind: extras.kinds.get(item.productId) ?? null,
+    })),
+  };
+};
+
+type StatusGroup = {
+  status: OrderStatus;
+  _count: { _all: number };
+};
+
+type CurrencyGroup = {
+  currency: Currency;
+  _sum: { grandTotal: Prisma.Decimal | null };
+};
+
+export const countByStatus = (groups: StatusGroup[]): OrderListCounts => {
+  const of = (status: OrderStatus): number =>
+    groups.find((group) => group.status === status)?._count._all ?? 0;
+
+  return {
+    all: groups.reduce((sum, group) => sum + group._count._all, 0),
+    delivered: SOLD_LINE_STATUSES.reduce((sum, status) => sum + of(status), 0),
+    canceled: of("CANCELED"),
+  };
+};
+
+export const spentByCurrency = (groups: CurrencyGroup[]): OrderSpentRow[] =>
+  groups
+    .flatMap((group) =>
+      group._sum.grandTotal === null
+        ? []
+        : [{ currency: group.currency, amount: group._sum.grandTotal }],
+    )
+    .sort((left, right) => left.currency.localeCompare(right.currency));
 
 const toLineJson = (item: OrderDetailLine) => {
-  const { businessId: _businessId, brandName, kind, ...visible } = item;
+  const {
+    businessId: _businessId,
+    userId: _userId,
+    brandName,
+    kind,
+    ...visible
+  } = item;
 
-  // The shop, the kind and the line amount are the detail read's alone, so an
-  // answer that never resolved them keeps its old shape (spec 0027, AC-1).
   const resolved =
     brandName === undefined
       ? {}
@@ -25,11 +90,6 @@ const toLineJson = (item: OrderDetailLine) => {
 
 type OrderRow = Pick<Order, "idempotencyKey" | "idempotencyHash">;
 
-/**
- * Both idempotency columns stay inside the gateway: a key in an answer is one a
- * client could replay with, and the fingerprint is not the client's business
- * (spec 0003, AC-12).
- */
 const withoutIdempotency = <T extends OrderRow>(
   row: T,
 ): Omit<T, "idempotencyKey" | "idempotencyHash"> => {
@@ -39,7 +99,7 @@ const withoutIdempotency = <T extends OrderRow>(
 };
 
 export const toOrderJson = (order: OrderDetail) => {
-  const visible = withoutIdempotency(order);
+  const { userId: _userId, ...visible } = withoutIdempotency(order);
 
   return {
     ...visible,
@@ -50,11 +110,6 @@ export const toOrderJson = (order: OrderDetail) => {
   };
 };
 
-/**
- * The list answer carries the rows, the three counts and the spent total. The
- * rows arrive already narrowed by the query's `select`, so nothing here strips
- * a column; only the decimals become numbers (spec 0025, AC-1, AC-5, AC-6).
- */
 export const toOrderListJson = (page: OrderListPage) => ({
   items: page.items.map((row) => ({
     ...row,
@@ -65,4 +120,8 @@ export const toOrderListJson = (page: OrderListPage) => ({
     currency: entry.currency,
     amount: toMoney(entry.amount),
   })),
+  page: page.page,
+  limit: page.limit,
+  total: page.total,
+  totalPages: page.totalPages,
 });

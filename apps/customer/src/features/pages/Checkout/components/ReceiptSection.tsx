@@ -14,11 +14,6 @@ type Props = {
   state: CheckoutFormState;
 };
 
-/**
- * The second card: where it goes, how, and when. The pickup branch follows the
- * chosen method, so no leftover address can pair with a pickup method
- * (spec 0024, AC-8, AC-10).
- */
 const ReceiptSection = ({ form, state }: Props) => {
   const t = useTranslations("cart");
 

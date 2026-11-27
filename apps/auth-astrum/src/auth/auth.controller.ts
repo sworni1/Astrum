@@ -13,10 +13,11 @@ import {
 import { ConfigService } from "@nestjs/config";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type { Request, Response } from "express";
-import { confirmRedirectUrl } from "../config/auth.config";
-import { resolveLetterLocale } from "../events/locale";
+import { resolveLetterLocale } from "../events/helpers/locale.helpers";
 import { AuthService } from "./auth.service";
+import { EMAIL_TAKEN } from "./constants/auth.constants";
 import { RegisterUserDto, ResendConfirmationDto, SignInUserDto } from "./dto";
+import { confirmRedirectUrl } from "./helpers/confirm.helpers";
 
 @ApiTags("Auth")
 @Controller("auth")
@@ -32,7 +33,7 @@ export class AuthController {
   @ApiResponse({ status: HttpStatus.OK, description: "Success" })
   @ApiResponse({
     status: HttpStatus.FORBIDDEN,
-    description: "The user already exists",
+    description: EMAIL_TAKEN,
   })
   signup(
     @Body() dto: RegisterUserDto,

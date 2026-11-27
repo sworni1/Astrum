@@ -1,3 +1,4 @@
+import type { PaymentMethod } from "@astrum/db/enums";
 import { Expose, Type } from "class-transformer";
 import {
   ArrayMaxSize,
@@ -13,14 +14,12 @@ import {
   ValidateIf,
   ValidateNested,
 } from "class-validator";
-import type { PaymentMethod } from "@astrum/db/enums";
 import { CHOOSABLE_PAYMENT_METHODS } from "../../payment/constants/payment.constants";
-import { MAX_LINE_QUANTITY, MAX_ORDER_LINES } from "../constants/order.constants";
+import {
+  MAX_LINE_QUANTITY,
+  MAX_ORDER_LINES,
+} from "../constants/order.constants";
 
-/**
- * A line names what to buy and how many. Price, name and image come from the
- * product record on the server, so a body that carries them is stripped here.
- */
 class OrderItemDto {
   @Expose()
   @IsNotEmpty()

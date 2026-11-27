@@ -22,10 +22,6 @@ type Props = {
   onMoved: () => void;
 };
 
-/**
- * The point change of AC-8: one select that starts on the stored point, one
- * button, and every refusal the gateway can answer for it.
- */
 const PointChangeControl = ({ currentPointId, pending, onMoved }: Props) => {
   const t = useTranslations("staff");
   const cart = useTranslations("cart");

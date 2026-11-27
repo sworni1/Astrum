@@ -10,8 +10,6 @@ const reviewsService = new ReviewsService();
 export class ReviewsController {
   async createReview(req: Request, res: Response) {
     try {
-      // The child router carries the parent's params (mergeParams), so the
-      // product always comes from the path and never from the body.
       const productId = req.params.productId as string;
       const { userId } = req as AuthenticatedUserRequest;
       const dto = req.body;
@@ -96,13 +94,18 @@ export class ReviewsController {
   async getReviewComments(req: Request, res: Response) {
     try {
       const reviewId = req.params.reviewId as string;
-      const { userId } = req as AuthenticatedUserRequest;
+      const owner = ownerForRead(req);
+      const viewerId = owner?.kind === "user" ? owner.userId : null;
       const { after, limit } = req.query;
 
-      const result = await reviewsService.getReviewComments(reviewId, userId, {
-        after,
-        limit,
-      });
+      const result = await reviewsService.getReviewComments(
+        reviewId,
+        viewerId,
+        {
+          after,
+          limit,
+        },
+      );
 
       res.status(StatusCodes.OK).json(result);
     } catch (err) {

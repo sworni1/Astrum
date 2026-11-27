@@ -3,8 +3,8 @@ jest.mock("../../../../lib/prisma", () => ({
 }));
 
 import type { Request, Response } from "express";
-import productRoutes from "../product.routes";
 import { requireSession } from "../../../middlewares/resolveOwner";
+import productRoutes from "../product.routes";
 
 type Layer = {
   name: string;
@@ -19,11 +19,11 @@ type Layer = {
 const layersOf = (router: unknown): Layer[] =>
   (router as { stack: Layer[] }).stack;
 
-/** Every router the tree mounts, the nested review routers included. */
 const collectRoutes = (
   router: unknown,
 ): Array<{ path: string; methods: string[]; handlers: string[] }> => {
-  const found: Array<{ path: string; methods: string[]; handlers: string[] }> = [];
+  const found: Array<{ path: string; methods: string[]; handlers: string[] }> =
+    [];
 
   for (const layer of layersOf(router)) {
     if (layer.route) {
@@ -43,11 +43,6 @@ const collectRoutes = (
   return found;
 };
 
-/**
- * The catalogue mount answers visitors, so the session guard moved from the
- * mount to every write route. This suite keeps a route added later from riding
- * the public mount by accident (spec 0028, AC-6).
- */
 describe("productRoutes write guards", () => {
   const routes = collectRoutes(productRoutes);
 

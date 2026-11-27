@@ -5,7 +5,12 @@ jest.mock("../../../../lib/prisma", () => ({
 import { prisma } from "../../../../lib/prisma";
 import { GuestMergeService } from "../guest-merge.service";
 
-type CartRow = { id: string; guestId: string; productId: string; quantity: number };
+type CartRow = {
+  id: string;
+  guestId: string;
+  productId: string;
+  quantity: number;
+};
 type WishRow = { id: string; guestId: string; productId: string };
 type ProductRow = {
   id: string;
@@ -54,36 +59,64 @@ const buildTx = (state: {
 
   return {
     cartItem: {
-      findMany: jest.fn(async () => cart.filter((row) => row.guestId === "guest-1")),
-      findUnique: jest.fn(async ({ where }: { where: { userId_productId: { productId: string } } }) => {
-        const hit = accountCart.find(
-          (row) => row.productId === where.userId_productId.productId,
-        );
+      findMany: jest.fn(async () =>
+        cart.filter((row) => row.guestId === "guest-1"),
+      ),
+      findUnique: jest.fn(
+        async ({
+          where,
+        }: {
+          where: { userId_productId: { productId: string } };
+        }) => {
+          const hit = accountCart.find(
+            (row) => row.productId === where.userId_productId.productId,
+          );
 
-        return hit ? { ...hit } : null;
-      }),
-      upsert: jest.fn(async ({ where, create, update }: {
-        where: { userId_productId: { productId: string } };
-        create: { productId: string; quantity: number };
-        update: { quantity: number };
-      }) => {
-        const productId = where.userId_productId.productId;
-        const existing = accountCart.find((row) => row.productId === productId);
+          return hit ? { ...hit } : null;
+        },
+      ),
+      upsert: jest.fn(
+        async ({
+          where,
+          create,
+          update,
+        }: {
+          where: { userId_productId: { productId: string } };
+          create: { productId: string; quantity: number };
+          update: { quantity: number };
+        }) => {
+          const productId = where.userId_productId.productId;
+          const existing = accountCart.find(
+            (row) => row.productId === productId,
+          );
 
-        if (existing) {
-          existing.quantity = update.quantity;
-          return { ...existing };
-        }
+          if (existing) {
+            existing.quantity = update.quantity;
+            return { ...existing };
+          }
 
-        accountCart.push({ productId: create.productId, quantity: create.quantity });
-        return { ...create };
-      }),
+          accountCart.push({
+            productId: create.productId,
+            quantity: create.quantity,
+          });
+          return { ...create };
+        },
+      ),
       deleteMany: jest.fn(async () => ({ count: cart.length })),
     },
     wishlistItem: {
-      findMany: jest.fn(async () => wishlist.filter((row) => row.guestId === "guest-1")),
-      findUnique: jest.fn(async ({ where }: { where: { userId_productId: { productId: string } } }) =>
-        accountWishlist.has(where.userId_productId.productId) ? { id: "w-1" } : null,
+      findMany: jest.fn(async () =>
+        wishlist.filter((row) => row.guestId === "guest-1"),
+      ),
+      findUnique: jest.fn(
+        async ({
+          where,
+        }: {
+          where: { userId_productId: { productId: string } };
+        }) =>
+          accountWishlist.has(where.userId_productId.productId)
+            ? { id: "w-1" }
+            : null,
       ),
       create: jest.fn(async ({ data }: { data: { productId: string } }) => {
         accountWishlist.add(data.productId);
@@ -92,15 +125,18 @@ const buildTx = (state: {
       deleteMany: jest.fn(async () => ({ count: wishlist.length })),
     },
     product: {
-      findUnique: jest.fn(async ({ where }: { where: { id: string } }) =>
-        state.products.get(where.id) ?? null,
+      findUnique: jest.fn(
+        async ({ where }: { where: { id: string } }) =>
+          state.products.get(where.id) ?? null,
       ),
     },
   };
 };
 
 const wire = (tx: Tx): Tx => {
-  (prisma as unknown as { $transaction: jest.Mock }).$transaction.mockImplementation(
+  (
+    prisma as unknown as { $transaction: jest.Mock }
+  ).$transaction.mockImplementation(
     async (callback: (client: Tx) => Promise<unknown>) => callback(tx),
   );
 
@@ -132,7 +168,6 @@ describe("GuestMergeService", () => {
 
     const counts = await new GuestMergeService().merge("user-1", "guest-1");
 
-    // product-1: min(2 + 3, 4) = 4, product-2: min(0 + 5, 10) = 5
     expect(tx.cartItem.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         create: { userId: "user-1", productId: "product-1", quantity: 4 },
@@ -143,10 +178,13 @@ describe("GuestMergeService", () => {
       expect.objectContaining({ update: { quantity: 5 } }),
     );
 
-    // One wishlist line already exists, so only one is written.
     expect(counts).toEqual({ cartLines: 2, wishlistLines: 1 });
-    expect(tx.cartItem.deleteMany).toHaveBeenCalledWith({ where: { guestId: "guest-1" } });
-    expect(tx.wishlistItem.deleteMany).toHaveBeenCalledWith({ where: { guestId: "guest-1" } });
+    expect(tx.cartItem.deleteMany).toHaveBeenCalledWith({
+      where: { guestId: "guest-1" },
+    });
+    expect(tx.wishlistItem.deleteMany).toHaveBeenCalledWith({
+      where: { guestId: "guest-1" },
+    });
   });
 
   it("drops a gone product and a product with no stock, and still clears the guest rows (AC-9)", async () => {
@@ -183,9 +221,9 @@ describe("GuestMergeService", () => {
   });
 
   it("leaves everything untouched when the transaction throws (AC-11)", async () => {
-    (prisma as unknown as { $transaction: jest.Mock }).$transaction.mockRejectedValue(
-      new Error("deadlock"),
-    );
+    (
+      prisma as unknown as { $transaction: jest.Mock }
+    ).$transaction.mockRejectedValue(new Error("deadlock"));
 
     await expect(
       new GuestMergeService().merge("user-1", "guest-1"),

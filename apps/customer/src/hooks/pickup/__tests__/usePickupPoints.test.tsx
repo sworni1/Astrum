@@ -71,9 +71,7 @@ describe("usePickupPoints", () => {
 
   it("читает точки по своему пути и отдаёт список (AC-5)", async () => {
     getData.mockResolvedValue({
-      points: [
-        { id: "pp-1", name: "Central Pickup", address: "Tverskaya 12" },
-      ],
+      points: [{ id: "pp-1", name: "Central Pickup", address: "Tverskaya 12" }],
     });
 
     await render();

@@ -16,10 +16,6 @@ export interface UseStaffOnboardingReturn {
   accept: AcceptGrant;
 }
 
-/**
- * The card a successful action shows for the rest of the page visit, and the
- * profile revalidation that puts the new role in the navigation (AC-3, AC-12).
- */
 export const useStaffOnboarding = (
   revalidateProfile: () => Promise<unknown>,
 ): UseStaffOnboardingReturn => {

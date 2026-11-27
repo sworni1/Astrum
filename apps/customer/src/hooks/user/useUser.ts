@@ -7,10 +7,8 @@ import type { UserData } from "@/common/types/user.types";
 import { useFetcher } from "@/hooks/useFetcher";
 import { useLogOut } from "@/hooks/useLogOut";
 
-// Optimized SWR configuration for user data
 const USER_SWR_CONFIG = {
   compare: (a: UserData | undefined, b: UserData | undefined) => {
-    // Deep comparison for user data
     return JSON.stringify(a) === JSON.stringify(b);
   },
   keepPreviousData: true,
@@ -24,10 +22,6 @@ const USER_SWR_CONFIG = {
 
 type UseUserOptions = { enabled?: boolean };
 
-/**
- * `enabled: false` mounts no account read: a guest screen asks for nothing it
- * cannot have (spec 0028, AC-13).
- */
 export const useUser = ({ enabled = true }: UseUserOptions = {}) => {
   const { getData, deleteItem, patchItem } = useFetcher();
   const { logOut } = useLogOut();
@@ -57,7 +51,6 @@ export const useUser = ({ enabled = true }: UseUserOptions = {}) => {
       onError: () => logOut(),
     });
 
-  // Memoize derived state
   const derivedState = useMemo(
     () => ({
       isUserLoaded: !!profileData && !profileIsLoading,
@@ -109,5 +102,4 @@ export const useUser = ({ enabled = true }: UseUserOptions = {}) => {
   );
 };
 
-// Export types for better TypeScript support
 export type UseUserReturn = ReturnType<typeof useUser>;

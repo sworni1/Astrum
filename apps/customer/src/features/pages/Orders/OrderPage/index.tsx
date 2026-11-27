@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useGetOrderById } from '@/hooks/order/useGetOrderById';
-import { useSyncOrderPayment } from '@/hooks/order/useSyncOrderPayment';
-import LoadingScreen from './components/LoadingScreen';
-import OrderNotFound from './components/OrderNotFound';
-import OrderScreen from './components/OrderScreen';
-import PaymentChecking from './components/PaymentChecking';
-import { useCancelOrder } from './hooks/useCancelOrder';
-import { useLoadFailureToast } from './hooks/useLoadFailureToast';
+import { useGetOrderById } from "@/hooks/order/useGetOrderById";
+import { useSyncOrderPayment } from "@/hooks/order/useSyncOrderPayment";
+import LoadingScreen from "./components/LoadingScreen";
+import OrderNotFound from "./components/OrderNotFound";
+import OrderScreen from "./components/OrderScreen";
+import PaymentChecking from "./components/PaymentChecking";
+import { useCancelOrder } from "./hooks/useCancelOrder";
+import { useLoadFailureToast } from "./hooks/useLoadFailureToast";
 
 type Props = {
   orderId: string;

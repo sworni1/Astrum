@@ -3,10 +3,6 @@ import type {
   ReviewCommentPage,
 } from "@/common/types/review.types";
 
-/**
- * Appends the loaded pages below the first one without repeating a comment id,
- * so the thread never prints the same row twice (spec 0014, AC-11).
- */
 export const mergeCommentPages = (
   pages: (ReviewCommentPage | undefined)[],
 ): ReviewComment[] => {

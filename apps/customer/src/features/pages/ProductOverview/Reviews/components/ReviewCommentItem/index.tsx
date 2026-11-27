@@ -16,16 +16,11 @@ import { useDeleteReviewComment } from "@/hooks/review/useDeleteReviewComment";
 type Props = {
   reviewId: string;
   comment: ReviewComment;
-  /** True right after a delete, so the stub takes the focus back (AC-11). */
+
   focusOnMount: boolean;
   onDeleted: (answer: ReviewCommentWriteAnswer) => void;
 };
 
-/**
- * One row of the thread. A deleted row prints the stub copy with no author and
- * no control, and only the author's own live row carries the delete control,
- * which opens the project's `AlertDialog` (spec 0014, AC-10, AC-11).
- */
 const ReviewCommentItem = ({
   reviewId,
   comment,
@@ -64,11 +59,6 @@ const ReviewCommentItem = ({
     }
   };
 
-  /**
-   * Radix would hand focus back to the trigger, which the stub replaced. After
-   * a delete the stub takes it through `focusOnMount`; otherwise the control
-   * the customer opened stays focused.
-   */
   const handleClosed = (): void => {
     if (justDeleted.current) {
       justDeleted.current = false;

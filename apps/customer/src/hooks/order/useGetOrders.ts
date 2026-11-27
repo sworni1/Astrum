@@ -18,10 +18,6 @@ export interface UseGetOrdersReturn {
   mutate: KeyedMutator<OrderListPage>;
 }
 
-/**
- * The previous answer stays on screen while a new key loads, so a tab switch or
- * a settled query never blanks the list (spec 0025, AC-8, AC-9).
- */
 const ORDER_LIST_CONFIG = {
   keepPreviousData: true,
   revalidateOnFocus: false,

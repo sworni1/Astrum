@@ -10,11 +10,6 @@ type Props = {
   reviewState: ReviewState | null;
 };
 
-/**
- * The write control exists only for a delivered, unreviewed line; the other two
- * states explain themselves, and a state the client does not know renders
- * nothing rather than a wrong explanation (AC-7).
- */
 const ReviewWriteAction = ({ productId, reviewState }: Props) => {
   const t = useTranslations("reviews");
 

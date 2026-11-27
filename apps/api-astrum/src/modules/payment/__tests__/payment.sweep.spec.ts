@@ -47,10 +47,7 @@ const gateway = (overrides: Partial<PaymentGateway> = {}): PaymentGateway => ({
   ...overrides,
 });
 
-const wire = (
-  orders: unknown[],
-  locked = true,
-): ReturnType<typeof tx> => {
+const wire = (orders: unknown[], locked = true): ReturnType<typeof tx> => {
   const client = tx();
 
   client.$queryRaw.mockResolvedValue([{ locked }]);
@@ -76,6 +73,49 @@ afterEach(() => {
 });
 
 describe("runPaymentSweep", () => {
+  it("закрывает заказ, у которого нет ни одной попытки оплаты (AC-9)", async () => {
+    const client = {
+      $queryRaw: jest.fn().mockResolvedValue([{ locked: true }]),
+      order: {
+        findMany: jest.fn().mockResolvedValue([order({}, [])]),
+        findFirst: jest.fn().mockResolvedValue({
+          ...order({}, []),
+          OrderItem: [
+            {
+              id: "line-1",
+              productId: "p-1",
+              quantity: 2,
+              status: "PENDING",
+              price: "10.00",
+            },
+          ],
+        }),
+        update: jest.fn(),
+      },
+      orderItem: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findMany: jest.fn().mockResolvedValue([{ status: "CANCELLED" }]),
+      },
+      product: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    };
+    prismaMock.$transaction.mockImplementation(
+      (work: (inner: typeof client) => unknown) => work(client),
+    );
+
+    await runPaymentSweep(gateway());
+
+    expect(client.order.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "order-1", status: "PENDING" },
+      }),
+    );
+    expect(client.order.update).toHaveBeenCalledWith({
+      where: { id: "order-1" },
+      data: { paymentStatus: "CANCELLED" },
+    });
+    expect(expiredMock).not.toHaveBeenCalled();
+  });
+
   it("пропускает такт, пока блокировку держит другая реплика (AC-9)", async () => {
     const client = wire([order()], false);
 
@@ -116,18 +156,27 @@ describe("runPaymentSweep", () => {
         orderId: "order-1",
       }),
     });
-    const info = jest.spyOn(console, "info").mockImplementation(() => undefined);
+    const info = jest
+      .spyOn(console, "info")
+      .mockImplementation(() => undefined);
 
     await runPaymentSweep(provider);
 
-    expect(paidMock).toHaveBeenCalledWith(expect.anything(), "order-1", "pay-1", "pi-1");
+    expect(paidMock).toHaveBeenCalledWith(
+      expect.anything(),
+      "order-1",
+      "pay-1",
+      "pi-1",
+    );
     expect(expiredMock).not.toHaveBeenCalled();
     expect(loggedEvents(info)).toContain("payment.sweep.paid");
   });
 
   it("закрывает нетронутый заказ и пишет payment.sweep.closed (AC-9)", async () => {
     wire([
-      order({}, [{ id: "pay-1", providerSessionId: "cs-1", status: "PENDING" }]),
+      order({}, [
+        { id: "pay-1", providerSessionId: "cs-1", status: "PENDING" },
+      ]),
     ]);
     const provider = gateway({
       retrieveSession: jest.fn().mockResolvedValue({
@@ -140,11 +189,17 @@ describe("runPaymentSweep", () => {
         orderId: "order-1",
       }),
     });
-    const info = jest.spyOn(console, "info").mockImplementation(() => undefined);
+    const info = jest
+      .spyOn(console, "info")
+      .mockImplementation(() => undefined);
 
     await runPaymentSweep(provider);
 
-    expect(expiredMock).toHaveBeenCalledWith(expect.anything(), "order-1", "pay-1");
+    expect(expiredMock).toHaveBeenCalledWith(
+      expect.anything(),
+      "order-1",
+      "pay-1",
+    );
     expect(loggedEvents(info)).toContain("payment.sweep.closed");
   });
 
@@ -165,7 +220,11 @@ describe("runPaymentSweep", () => {
     await runPaymentSweep(provider);
 
     expect(provider.expireSession).toHaveBeenCalledWith("cs-1");
-    expect(expiredMock).toHaveBeenCalledWith(expect.anything(), "order-1", "pay-1");
+    expect(expiredMock).toHaveBeenCalledWith(
+      expect.anything(),
+      "order-1",
+      "pay-1",
+    );
   });
 
   it("не отменяет заказ, который продавец уже принял (AC-9)", async () => {
@@ -190,18 +249,26 @@ describe("runPaymentSweep", () => {
   });
 
   it("попытка без session id закрывается сразу, без обращения к провайдеру (AC-9)", async () => {
-    wire([order({}, [{ id: "pay-1", providerSessionId: null, status: "PENDING" }])]);
+    wire([
+      order({}, [{ id: "pay-1", providerSessionId: null, status: "PENDING" }]),
+    ]);
     const provider = gateway();
 
     await runPaymentSweep(provider);
 
     expect(provider.retrieveSession).not.toHaveBeenCalled();
-    expect(expiredMock).toHaveBeenCalledWith(expect.anything(), "order-1", "pay-1");
+    expect(expiredMock).toHaveBeenCalledWith(
+      expect.anything(),
+      "order-1",
+      "pay-1",
+    );
   });
 
   it("ошибка провайдера оставляет заказ следующему такту (AC-9)", async () => {
     wire([order()]);
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    const warn = jest
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined);
     const provider = gateway({
       retrieveSession: jest.fn().mockRejectedValue(new Error("stripe down")),
     });

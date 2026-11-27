@@ -12,12 +12,6 @@ type Props = {
   onToggle: () => void;
 };
 
-/**
- * The like control: one toggle whose accessible name is the action, so a screen
- * reader reads `reviews.like` while unpressed and `reviews.unlike` while
- * pressed. The number sits beside it as `aria-hidden` text, so a count is never
- * glued onto the name (spec 0014, AC-1, AC-6).
- */
 const ReviewLikeButton = ({ liked, count, isPending, onToggle }: Props) => {
   const t = useTranslations("reviews");
 

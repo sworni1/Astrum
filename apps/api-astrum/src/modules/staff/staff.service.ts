@@ -1,38 +1,21 @@
 import { StatusCodes } from "http-status-codes";
-import { Prisma } from "@astrum/db/client";
 import { prisma } from "../../../lib/prisma";
 import { AppError } from "../../common/helpers/appError";
 import { logger } from "../../common/helpers/logger";
+import { isUniqueViolation } from "../../common/helpers/prismaErrors";
 import { staffRolesOf } from "../../common/helpers/staffRoles";
 import type { StaffPointView, StaffRole } from "../../common/types/staff.types";
-import { STAFF_ERROR_CODES } from "./constants/staff.constants";
+import {
+  POINT_SELECT,
+  ROLE_SELECT,
+  STAFF_ERROR_CODES,
+} from "./constants/staff.constants";
 
-/** What every staff endpoint answers: the roles held, and the point where one applies. */
 export type StaffAnswer = {
   staffRoles: StaffRole[];
   point: StaffPointView | null;
 };
 
-const POINT_SELECT = {
-  id: true,
-  name: true,
-  address: true,
-  isActive: true,
-} as const;
-
-const ROLE_SELECT = {
-  pointWorker: { select: { pickupPointId: true } },
-  courier: { select: { id: true } },
-} as const;
-
-const isUniqueViolation = (error: unknown): boolean =>
-  error instanceof Prisma.PrismaClientKnownRequestError &&
-  error.code === "P2002";
-
-/**
- * The staff roles of an account. A grant, a move and both reads answer with
- * this list, read from the two relations of `User` in one query.
- */
 export class StaffService {
   private async staffRoles(userId: string): Promise<StaffRole[]> {
     const row = await prisma.user.findUnique({
@@ -51,7 +34,6 @@ export class StaffService {
     return staffRolesOf(row);
   }
 
-  /** One statement, no refusals: the reads serve a point that was switched off. */
   private async readPointRow(pickupPointId: string): Promise<StaffPointView> {
     const point = await prisma.pickupPoint.findUnique({
       where: { id: pickupPointId },
@@ -65,11 +47,6 @@ export class StaffService {
     return point;
   }
 
-  /**
-   * The point a grant or a move may name. Read before the insert, with no
-   * transaction and no row lock: a point switched off between this read and the
-   * write still leaves a worker attached to it, which the reads handle (AC-5).
-   */
   private async requireActivePoint(
     pickupPointId: string,
   ): Promise<StaffPointView> {
@@ -118,10 +95,6 @@ export class StaffService {
     return row?.pickupPointId ?? null;
   }
 
-  /**
-   * One row per account. A repeat and a lost race both answer with the stored
-   * row, so the unique index on `userId` stays the only guard (AC-6).
-   */
   async grantPointWorker(
     userId: string,
     pickupPointId: string,
@@ -153,7 +126,6 @@ export class StaffService {
     return { staffRoles: await this.staffRoles(userId), point };
   }
 
-  /** The courier row carries no point, so there is nothing to validate (AC-7). */
   async grantCourier(userId: string): Promise<StaffAnswer> {
     const existing = await prisma.courier.findUnique({
       where: { userId },
@@ -174,10 +146,6 @@ export class StaffService {
     return { staffRoles: await this.staffRoles(userId), point: null };
   }
 
-  /**
-   * The point change writes only the caller's own row. A request naming the
-   * stored point answers with it and writes nothing (AC-8).
-   */
   async movePoint(userId: string, pickupPointId: string): Promise<StaffAnswer> {
     const stored = await this.storedPointId(userId);
 
@@ -205,7 +173,6 @@ export class StaffService {
     return { staffRoles: await this.staffRoles(userId), point };
   }
 
-  /** The point read serves a point that was switched off (AC-9). */
   async readPoint(userId: string): Promise<StaffAnswer> {
     const stored = await this.storedPointId(userId);
 

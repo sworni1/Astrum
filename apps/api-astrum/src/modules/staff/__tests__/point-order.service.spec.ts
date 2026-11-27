@@ -62,13 +62,28 @@ const orderSeed = (over: Partial<OrderSeed> = {}): OrderSeed => ({
   shippedAt: null,
   grandTotal: "119.98",
   lines: [
-    { id: "line-1", productId: "product-1", status: "DELIVERED", quantity: 2, price: "19.99" },
-    { id: "line-2", productId: "product-2", status: "DELIVERED", quantity: 1, price: "80.00" },
+    {
+      id: "line-1",
+      productId: "product-1",
+      status: "DELIVERED",
+      quantity: 2,
+      price: "19.99",
+    },
+    {
+      id: "line-2",
+      productId: "product-2",
+      status: "DELIVERED",
+      quantity: 1,
+      price: "80.00",
+    },
   ],
   ...over,
 });
 
-const createTx = (options: { order?: OrderSeed | null; pointActive?: boolean }) => {
+const createTx = (options: {
+  order?: OrderSeed | null;
+  pointActive?: boolean;
+}) => {
   const seed = options.order ?? null;
   const lines = () => seed?.lines ?? [];
 
@@ -162,7 +177,9 @@ const createTx = (options: { order?: OrderSeed | null; pointActive?: boolean }) 
           where: { id: { in: string[] } };
           data: { status: OrderItemStatus; receiptDate?: Date };
         }) => {
-          const touched = lines().filter((line) => where.id.in.includes(line.id));
+          const touched = lines().filter((line) =>
+            where.id.in.includes(line.id),
+          );
 
           for (const line of touched) {
             line.status = data.status;
@@ -171,7 +188,9 @@ const createTx = (options: { order?: OrderSeed | null; pointActive?: boolean }) 
           return { count: touched.length };
         },
       ),
-      findMany: jest.fn(async () => lines().map((line) => ({ status: line.status }))),
+      findMany: jest.fn(async () =>
+        lines().map((line) => ({ status: line.status })),
+      ),
     },
     product: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     payment: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
@@ -181,8 +200,8 @@ const createTx = (options: { order?: OrderSeed | null; pointActive?: boolean }) 
 };
 
 const wireTransaction = (tx: unknown): void => {
-  prismaMock.$transaction.mockImplementation(async (work: (client: unknown) => unknown) =>
-    work(tx),
+  prismaMock.$transaction.mockImplementation(
+    async (work: (client: unknown) => unknown) => work(tx),
   );
 };
 
@@ -198,7 +217,9 @@ const expectAppError = async (
 };
 
 const logLines = (spy: jest.SpyInstance): Array<Record<string, unknown>> =>
-  spy.mock.calls.map((call) => JSON.parse(String(call[0])) as Record<string, unknown>);
+  spy.mock.calls.map(
+    (call) => JSON.parse(String(call[0])) as Record<string, unknown>,
+  );
 
 describe("PointOrderService", () => {
   let infoSpy: jest.SpyInstance;
@@ -246,7 +267,11 @@ describe("PointOrderService", () => {
     });
 
     it("answers an empty page for a point with no parcel (AC-1)", async () => {
-      const answer = await service.listPointOrders("pp-1", undefined, undefined);
+      const answer = await service.listPointOrders(
+        "pp-1",
+        undefined,
+        undefined,
+      );
 
       expect(answer).toEqual({
         orders: [],
@@ -279,11 +304,13 @@ describe("PointOrderService", () => {
     it("answers the card shape with number amounts and no buyer field (AC-2)", async () => {
       prismaMock.order.count.mockResolvedValue(1);
       const tx = createTx({ order: orderSeed() });
-      prismaMock.order.findMany.mockResolvedValue([
-        await tx.order.findFirst(),
-      ]);
+      prismaMock.order.findMany.mockResolvedValue([await tx.order.findFirst()]);
 
-      const answer = await service.listPointOrders("pp-1", undefined, undefined);
+      const answer = await service.listPointOrders(
+        "pp-1",
+        undefined,
+        undefined,
+      );
       const [order] = answer.orders;
 
       expect(Object.keys(order).sort()).toEqual([
@@ -393,7 +420,13 @@ describe("PointOrderService", () => {
         order: orderSeed({
           status: "SHIPPED",
           lines: [
-            { id: "line-1", productId: "product-1", status: "SHIPPED", quantity: 1, price: "10.00" },
+            {
+              id: "line-1",
+              productId: "product-1",
+              status: "SHIPPED",
+              quantity: 1,
+              price: "10.00",
+            },
           ],
         }),
       });
@@ -437,7 +470,9 @@ describe("PointOrderService", () => {
       const tx = createTx({ order: orderSeed({ status: "CONFIRMED" }) });
       wireTransaction(tx);
 
-      await expect(service.handOver("order-1", "worker-1", "pp-1")).rejects.toThrow();
+      await expect(
+        service.handOver("order-1", "worker-1", "pp-1"),
+      ).rejects.toThrow();
 
       const line = logLines(warnSpy).find(
         (entry) => entry.event === "staff.point.handover_refused",
@@ -457,14 +492,30 @@ describe("PointOrderService", () => {
     it("cancels an arrived line and leaves an issued one alone (AC-5)", async () => {
       const seed = orderSeed({
         lines: [
-          { id: "line-1", productId: "product-1", status: "DELIVERED", quantity: 1, price: "10.00" },
-          { id: "line-2", productId: "product-2", status: "ISSUED", quantity: 3, price: "20.00" },
+          {
+            id: "line-1",
+            productId: "product-1",
+            status: "DELIVERED",
+            quantity: 1,
+            price: "10.00",
+          },
+          {
+            id: "line-2",
+            productId: "product-2",
+            status: "ISSUED",
+            quantity: 3,
+            price: "20.00",
+          },
         ],
       });
       const tx = createTx({ order: seed });
       wireTransaction(tx);
 
-      const { order } = await service.cancelOrder("order-1", "worker-1", "pp-1");
+      const { order } = await service.cancelOrder(
+        "order-1",
+        "worker-1",
+        "pp-1",
+      );
 
       const update = tx.orderItem.updateMany.mock.calls[0][0];
       expect(update.where.id.in).toEqual(["line-1"]);
@@ -479,22 +530,31 @@ describe("PointOrderService", () => {
       expect(seed.lines[1].status).toBe("ISSUED");
     });
 
-    it("expires the open provider session before the transaction opens (AC-8)", async () => {
+    it("expires the open provider session after the transaction commits (AC-8)", async () => {
       const tx = createTx({ order: orderSeed() });
       wireTransaction(tx);
 
       await service.cancelOrder("order-1", "worker-1", "pp-1");
 
       expect(expireMock).toHaveBeenCalledWith("order-1");
-      expect(expireMock.mock.invocationCallOrder[0]).toBeLessThan(
+      expect(expireMock.mock.invocationCallOrder[0]).toBeGreaterThan(
         prismaMock.$transaction.mock.invocationCallOrder[0],
       );
     });
 
     it("refuses a second press and returns no stock twice (AC-7)", async () => {
-      const seed = orderSeed({ status: "CANCELED", lines: [
-        { id: "line-1", productId: "product-1", status: "CANCELLED", quantity: 2, price: "19.99" },
-      ] });
+      const seed = orderSeed({
+        status: "CANCELED",
+        lines: [
+          {
+            id: "line-1",
+            productId: "product-1",
+            status: "CANCELLED",
+            quantity: 2,
+            price: "19.99",
+          },
+        ],
+      });
       const tx = createTx({ order: seed });
       wireTransaction(tx);
 
@@ -509,9 +569,19 @@ describe("PointOrderService", () => {
 
     it("answers NOTHING_TO_CANCEL for an issued order (AC-5)", async () => {
       const tx = createTx({
-        order: orderSeed({ status: "ISSUED", handedOverAt: new Date(), lines: [
-          { id: "line-1", productId: "product-1", status: "ISSUED", quantity: 1, price: "10.00" },
-        ] }),
+        order: orderSeed({
+          status: "ISSUED",
+          handedOverAt: new Date(),
+          lines: [
+            {
+              id: "line-1",
+              productId: "product-1",
+              status: "ISSUED",
+              quantity: 1,
+              price: "10.00",
+            },
+          ],
+        }),
       });
       wireTransaction(tx);
 
@@ -527,7 +597,13 @@ describe("PointOrderService", () => {
         order: orderSeed({
           status: "SHIPPED",
           lines: [
-            { id: "line-1", productId: "product-1", status: "SHIPPED", quantity: 1, price: "10.00" },
+            {
+              id: "line-1",
+              productId: "product-1",
+              status: "SHIPPED",
+              quantity: 1,
+              price: "10.00",
+            },
           ],
         }),
       });
@@ -566,7 +642,10 @@ describe("PointOrderService", () => {
     });
 
     it("keeps a paid order PAID and names the money owed back (AC-8)", async () => {
-      const seed = orderSeed({ paymentStatus: "PAID", paymentMethod: "ONLINE_CARD" });
+      const seed = orderSeed({
+        paymentStatus: "PAID",
+        paymentMethod: "ONLINE_CARD",
+      });
       const tx = createTx({ order: seed });
       wireTransaction(tx);
 
@@ -604,7 +683,9 @@ describe("PointOrderService", () => {
 
       expect(seed.paymentStatus).toBe("CANCELLED");
       expect(
-        logLines(warnSpy).some((entry) => entry.event === "payment.refund_owed"),
+        logLines(warnSpy).some(
+          (entry) => entry.event === "payment.refund_owed",
+        ),
       ).toBe(false);
     });
 

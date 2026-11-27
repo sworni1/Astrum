@@ -3,11 +3,6 @@ import { ReasonPhrases, StatusCodes } from "http-status-codes";
 import { AppError } from "./appError";
 import { logger } from "./logger";
 
-/**
- * The single error response shape. An `AppError` carries its own status, code
- * and details; anything else is a server fault and answers 500, so a database
- * timeout never reads as a bad request from the client.
- */
 export const handleErrors = (res: Response, err: unknown): void => {
   if (err instanceof AppError) {
     res.status(err.status).json({

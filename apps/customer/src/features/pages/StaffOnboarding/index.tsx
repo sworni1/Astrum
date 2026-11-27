@@ -2,21 +2,16 @@
 
 import { useTranslations } from "next-intl";
 import { heldRoles } from "@/common/helpers/staffRoles";
-import { useUser } from "@/hooks/user/useUser";
-import { hasRole } from "@/hooks/staff/staff.types";
 import FailureScreen from "@/features/staff/FailureScreen";
 import PageSkeleton from "@/features/staff/PageSkeleton";
+import { hasRole } from "@/hooks/staff/staff.types";
+import { useUser } from "@/hooks/user/useUser";
 import CourierGrantCard from "./components/CourierGrantCard";
 import PointGrantCard from "./components/PointGrantCard";
 import RoleHeldCard from "./components/RoleHeldCard";
 import SuccessCard from "./components/SuccessCard";
 import { useStaffOnboarding } from "./hooks/useStaffOnboarding";
 
-/**
- * The page where a confirmed account takes one of the two jobs: the point
- * grant, the courier grant, and the confirmation line for a role it already
- * holds (spec 0017, AC-3).
- */
 export default function StaffOnboarding() {
   const t = useTranslations("staff");
   const { profileData, profileIsLoading, profileIsError, mutateProfile } =

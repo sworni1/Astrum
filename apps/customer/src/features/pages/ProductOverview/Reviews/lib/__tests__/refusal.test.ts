@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { classifyReviewRefusal, fieldErrorsOf } from "@/features/pages/ProductOverview/Reviews/lib/refusal";
+import {
+  classifyReviewRefusal,
+  fieldErrorsOf,
+} from "@/features/pages/ProductOverview/Reviews/lib/refusal";
 
 const refusal = (status: number, data?: unknown) => ({
   isAxiosError: true,
@@ -25,7 +28,9 @@ describe("classifyReviewRefusal", () => {
     expect(
       classifyReviewRefusal(
         refusal(400, {
-          errors: [{ property: "comment", constraints: { minLength: "short" } }],
+          errors: [
+            { property: "comment", constraints: { minLength: "short" } },
+          ],
         }),
       ),
     ).toBe("invalid");
@@ -36,7 +41,9 @@ describe("classifyReviewRefusal", () => {
       classifyReviewRefusal(refusal(403, { code: "REVIEW_PRODUCT_MISMATCH" })),
     ).toBe("generic");
     expect(
-      classifyReviewRefusal(refusal(404, { code: "REVIEW_ORDER_ITEM_NOT_FOUND" })),
+      classifyReviewRefusal(
+        refusal(404, { code: "REVIEW_ORDER_ITEM_NOT_FOUND" }),
+      ),
     ).toBe("generic");
   });
 

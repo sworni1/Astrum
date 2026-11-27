@@ -3,12 +3,6 @@ import {
   type CheckoutSelection,
 } from "@/common/constants/checkout";
 
-/**
- * The handoff between `/cart` and `/checkout` (spec 0024, AC-2). Every function
- * is silent: a storage that refuses (private mode, a quota error) reads as an
- * empty selection and leaves the click alive, and no call touches the storage
- * during a server render.
- */
 const storage = (): Storage | null => {
   if (typeof window === "undefined") {
     return null;

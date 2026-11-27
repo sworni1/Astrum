@@ -1,8 +1,3 @@
-/**
- * One table of shop name cases runs through the storefront zod schema and the
- * gateway DTO, so the two rules cannot drift (spec 0008, AC-4). This module
- * carries no imports: both test suites can read it from either workspace.
- */
 export type ShopNameCase = {
   label: string;
   input: string;

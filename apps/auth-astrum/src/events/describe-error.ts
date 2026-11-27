@@ -1,8 +1,3 @@
-/**
- * One readable sentence out of whatever a broker client throws. amqplib
- * rejects a refused connection with an AggregateError whose own message is
- * empty, so the useful text lives one level down in `errors`.
- */
 export const describeError = (error: unknown): string => {
   if (error instanceof Error) {
     const nested = (error as { errors?: unknown }).errors;

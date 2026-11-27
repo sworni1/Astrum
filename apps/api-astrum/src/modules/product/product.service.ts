@@ -1,8 +1,4 @@
-import type {
-  Product,
-  ProductCategory,
-} from "@astrum/db/client";
-import { ReviewStatus } from "@astrum/db/enums";
+import type { Product, ProductCategory } from "@astrum/db/client";
 import { prisma } from "../../../lib/prisma";
 import {
   getOrSet,
@@ -12,7 +8,6 @@ import {
   readVersion,
 } from "../../cache/cache";
 import { cacheKeys } from "../../cache/cacheKeys";
-import { AppError } from "../../common/helpers/appError";
 import {
   getWishlistAndCartItem,
   readPageMarks,
@@ -21,50 +16,22 @@ import {
   productPreviewPublicSelect,
   productPublicSelect,
 } from "../../common/prisma-selects/product.select";
-import { roundAverageRating } from "../reviews/review.serializer";
-import { readReviewState } from "../reviews/review-state";
 import type { Owner } from "../../common/types/owner";
-import { PRODUCT_ERROR_CODES } from "./constants/product.constants";
+import { readReviewState } from "../reviews/review-state";
+import {
+  PRODUCT_DEFAULT_PAGE_SIZE,
+  PRODUCT_LIST_ORDER_BY,
+  PUBLIC_PRODUCT_WHERE,
+} from "./constants/product.constants";
 import type { CreateProductDto } from "./dto/create-product.dto";
-
-type ProductRating = { averageRating: number; reviewCount: number };
-
-/**
- * The rating of every product on one page, from the reviews a customer may read.
- * One grouped query for the whole page, never one per card (spec 0021, AC-3).
- */
-const readPageRatings = async (
-  productIds: Product["id"][],
-): Promise<Map<Product["id"], ProductRating>> => {
-  if (productIds.length === 0) {
-    return new Map();
-  }
-
-  const rows = await prisma.review.groupBy({
-    by: ["productId"],
-    where: { productId: { in: productIds }, status: ReviewStatus.APPROVED },
-    _count: { _all: true },
-    _avg: { rating: true },
-  });
-
-  return new Map(
-    rows.map((row) => [
-      row.productId,
-      {
-        averageRating: roundAverageRating(row._avg.rating),
-        reviewCount: row._count._all,
-      },
-    ]),
-  );
-};
+import {
+  invalidCursor,
+  productNotFound,
+  sellerNotAssigned,
+} from "./helpers/product.errors";
+import { readPageRatings } from "./helpers/product-rating.helpers";
 
 export class ProductService {
-  /**
-   * The shared row comes from Redis, the caller's own marks and review state
-   * stay live, so two readers share one cached product and each sees its own
-   * wishlist, cart and review state (spec 0022, AC-2, AC-3). A visitor with no
-   * identity owns no mark, so the shared row is all it reads (spec 0028, AC-6).
-   */
   async getProduct(owner: Owner | null, productId: Product["id"]) {
     const version = await readVersion(cacheKeys.productVersion(productId));
 
@@ -96,31 +63,55 @@ export class ProductService {
 
   async getRecommendations(
     owner: Owner | null,
-    filters?: {
+    cursor?: string,
+    limit: number = PRODUCT_DEFAULT_PAGE_SIZE,
+  ) {
+    const epoch = await readVersion(cacheKeys.listsEpoch());
+
+    const page = await getOrSet({
+      key: cacheKeys.recommendations(epoch, cursor),
+      ttlSeconds: listTtlSeconds(),
+      epochKey: cacheKeys.listsEpoch(),
+      load: async () => await this.loadCataloguePage({}, cursor, limit),
+    });
+
+    return await this.withMarks(owner, page);
+  }
+
+  async getCategoryProducts(
+    owner: Owner | null,
+    filters: {
       category?: ProductCategory;
       search_query?: string;
     },
     cursor?: string,
-    limit: number = 8,
+    limit: number = PRODUCT_DEFAULT_PAGE_SIZE,
   ) {
     const epoch = await readVersion(cacheKeys.listsEpoch());
-    const key = filters?.category
-      ? cacheKeys.category(
-          epoch,
-          filters.category,
-          filters.search_query,
-          cursor,
-        )
-      : cacheKeys.recommendations(epoch, cursor);
 
     const page = await getOrSet({
-      key,
+      key: cacheKeys.catalogue(
+        epoch,
+        filters.category ?? "all",
+        filters.search_query,
+        cursor,
+      ),
       ttlSeconds: listTtlSeconds(),
       epochKey: cacheKeys.listsEpoch(),
       load: async () => await this.loadCataloguePage(filters, cursor, limit),
     });
 
-    // Two queries for the page, merged after the cached payload is read (AC-4).
+    return await this.withMarks(owner, page);
+  }
+
+  private async withMarks<T extends { id: string }>(
+    owner: Owner | null,
+    page: {
+      products: T[];
+      nextCursor: string | null;
+      hasNextPage: boolean;
+    },
+  ) {
     const marks = await readPageMarks(
       owner,
       page.products.map((product) => product.id),
@@ -137,8 +128,6 @@ export class ProductService {
     };
   }
 
-  getCategoryProducts = this.getRecommendations;
-
   async createProduct(userId: string, dto: CreateProductDto) {
     const business = await prisma.business.findUnique({
       where: { ownerUserId: userId },
@@ -146,66 +135,63 @@ export class ProductService {
     });
 
     if (!business) {
-      throw new AppError(
-        403,
-        "SELLER_NOT_ASSIGNED",
-        "No business is assigned to this seller.",
-      );
+      throw sellerNotAssigned();
     }
 
     const product = await prisma.product.create({
       data: { ...dto, businessId: business.id },
     });
 
-    // A new row can appear on any list, so every list key goes cold (AC-7 e).
     await invalidateLists();
 
     return product;
   }
 
-  /** Only a fetched row reaches the cache: a missing product writes no key (AC-2). */
   private async loadPublicProduct(productId: Product["id"]) {
     const product = await prisma.product.findUnique({
       where: {
         id: productId,
-        isDeleted: false,
-        visibility: "Public",
-        status: "Published",
+        ...PUBLIC_PRODUCT_WHERE,
       },
       select: productPublicSelect,
     });
 
     if (!product) {
-      throw new AppError(
-        404,
-        PRODUCT_ERROR_CODES.notFound,
-        "Product not found",
-      );
+      throw productNotFound();
     }
 
     return product;
   }
 
-  /** The shared half of a catalogue page: two queries for the whole page (AC-4). */
   private async loadCataloguePage(
-    filters?: { category?: ProductCategory; search_query?: string },
+    filters: { category?: ProductCategory; search_query?: string },
     cursor?: string,
-    limit: number = 8,
+    limit: number = PRODUCT_DEFAULT_PAGE_SIZE,
   ) {
-    const products = await prisma.product.findMany({
+    if (cursor !== undefined) {
+      const anchor = await prisma.product.findFirst({
+        where: { id: cursor, ...PUBLIC_PRODUCT_WHERE },
+        select: { id: true },
+      });
+
+      if (anchor === null) {
+        throw invalidCursor();
+      }
+    }
+
+    const rows = await prisma.product.findMany({
       where: {
-        isDeleted: false,
-        visibility: "Public",
-        status: "Published",
-        ...(filters?.category ? { category: filters.category } : {}),
-        ...(filters?.search_query
+        ...PUBLIC_PRODUCT_WHERE,
+        ...(filters.category ? { category: filters.category } : {}),
+        ...(filters.search_query
           ? {
               name: { contains: filters.search_query, mode: "insensitive" },
             }
           : {}),
       },
       select: productPreviewPublicSelect,
-      take: limit,
+      orderBy: PRODUCT_LIST_ORDER_BY,
+      take: limit + 1,
       skip: cursor ? 1 : 0,
       cursor: cursor
         ? {
@@ -214,11 +200,11 @@ export class ProductService {
         : undefined,
     });
 
-    let nextCursor = null;
-
-    if (products.length === limit) {
-      nextCursor = products[products.length - 1].id;
-    }
+    const hasNextPage = rows.length > limit;
+    const products = hasNextPage ? rows.slice(0, limit) : rows;
+    const nextCursor = hasNextPage
+      ? (products[products.length - 1]?.id ?? null)
+      : null;
 
     const ratings = await readPageRatings(
       products.map((product) => product.id),
@@ -235,7 +221,7 @@ export class ProductService {
         };
       }),
       nextCursor,
-      hasNextPage: !!nextCursor,
+      hasNextPage,
     };
   }
 }

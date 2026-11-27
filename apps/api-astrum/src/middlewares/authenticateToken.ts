@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import { verify } from "jsonwebtoken";
 
+import { describeError } from "../common/helpers/describeError";
 import { logger } from "../common/helpers/logger";
 import type {
   AuthenticatedRequest,
@@ -9,69 +9,57 @@ import type {
 } from "../common/types/jwt.payload";
 import {
   loggedSid,
-  type SessionStore,
   sessionKey,
-} from "../session/sessionStore";
+  sessionOwner,
+} from "../session/helpers/session.helpers";
+import type { SessionStore } from "../session/types/session.types";
+import {
+  SESSION_REFUSAL_CODES,
+  SESSION_REFUSAL_MESSAGES,
+} from "./constants/session.constants";
+import { refuse, routeOf } from "./helpers/http.helpers";
+import { authCookie, verifySessionToken } from "./helpers/token.helpers";
 
-type RefusalCode =
-  | "SESSION_MISSING"
-  | "TOKEN_INVALID"
-  | "SESSION_REVOKED"
-  | "SESSION_STORE_UNAVAILABLE";
-
-const describeError = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
-
-const refuse = (res: Response, code: RefusalCode, message: string): void => {
-  res.status(StatusCodes.UNAUTHORIZED).json({ code, message });
-};
-
-const sessionOwner = (raw: string): string | undefined => {
-  try {
-    const parsed: unknown = JSON.parse(raw);
-
-    if (typeof parsed !== "object" || parsed === null) {
-      return undefined;
-    }
-
-    const { userId } = parsed as { userId?: unknown };
-
-    return typeof userId === "string" ? userId : undefined;
-  } catch {
-    return undefined;
-  }
-};
-
-/**
- * The one guard every protected router inherits: the signature proves the token
- * was issued here, the store proves the session still exists, and the record
- * proves it belongs to the user in the token.
- */
 export const createAuthenticateToken =
   (store: SessionStore) =>
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const token = (req.cookies as { __auth?: string } | undefined)?.__auth;
+    const token = authCookie(req);
 
     if (!token) {
-      refuse(res, "SESSION_MISSING", "The session cookie is missing");
+      refuse(
+        res,
+        StatusCodes.UNAUTHORIZED,
+        SESSION_REFUSAL_CODES.missing,
+        SESSION_REFUSAL_MESSAGES.missing,
+      );
       return;
     }
 
     let decoded: JwtData;
 
     try {
-      decoded = verify(token, process.env.JWT_SECRET as string) as JwtData;
+      decoded = verifySessionToken(token);
     } catch {
-      refuse(res, "TOKEN_INVALID", "Invalid or expired token");
+      refuse(
+        res,
+        StatusCodes.UNAUTHORIZED,
+        SESSION_REFUSAL_CODES.tokenInvalid,
+        SESSION_REFUSAL_MESSAGES.tokenInvalid,
+      );
       return;
     }
 
-    const route = { method: req.method, path: `${req.baseUrl}${req.path}` };
+    const route = routeOf(req);
     const sid = decoded.sid;
 
     if (!sid) {
       logger.warn({ event: "session.missing", reason: "no_sid", ...route });
-      refuse(res, "SESSION_REVOKED", "The session is no longer valid");
+      refuse(
+        res,
+        StatusCodes.UNAUTHORIZED,
+        SESSION_REFUSAL_CODES.revoked,
+        SESSION_REFUSAL_MESSAGES.revoked,
+      );
       return;
     }
 
@@ -87,15 +75,21 @@ export const createAuthenticateToken =
       });
       refuse(
         res,
-        "SESSION_STORE_UNAVAILABLE",
-        "The session store is unavailable",
+        StatusCodes.UNAUTHORIZED,
+        SESSION_REFUSAL_CODES.storeUnavailable,
+        SESSION_REFUSAL_MESSAGES.storeUnavailable,
       );
       return;
     }
 
     if (raw === null) {
       logger.warn({ event: "session.missing", ...route, sid: loggedSid(sid) });
-      refuse(res, "SESSION_REVOKED", "The session is no longer valid");
+      refuse(
+        res,
+        StatusCodes.UNAUTHORIZED,
+        SESSION_REFUSAL_CODES.revoked,
+        SESSION_REFUSAL_MESSAGES.revoked,
+      );
       return;
     }
 
@@ -103,7 +97,12 @@ export const createAuthenticateToken =
 
     if (!owner) {
       logger.warn({ event: "session.record.invalid", sid: loggedSid(sid) });
-      refuse(res, "SESSION_REVOKED", "The session is no longer valid");
+      refuse(
+        res,
+        StatusCodes.UNAUTHORIZED,
+        SESSION_REFUSAL_CODES.revoked,
+        SESSION_REFUSAL_MESSAGES.revoked,
+      );
       return;
     }
 
@@ -113,7 +112,12 @@ export const createAuthenticateToken =
         ...route,
         sid: loggedSid(sid),
       });
-      refuse(res, "SESSION_REVOKED", "The session is no longer valid");
+      refuse(
+        res,
+        StatusCodes.UNAUTHORIZED,
+        SESSION_REFUSAL_CODES.revoked,
+        SESSION_REFUSAL_MESSAGES.revoked,
+      );
       return;
     }
 

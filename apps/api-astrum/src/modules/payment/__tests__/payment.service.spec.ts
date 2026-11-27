@@ -20,11 +20,12 @@ jest.mock("../payment.apply", () => ({ applyExpiredEvent: jest.fn() }));
 
 import { prisma } from "../../../../lib/prisma";
 import { AppError } from "../../../common/helpers/appError";
+import { IdempotencyKeyReusedError } from "../helpers/payment.errors";
 import { applyExpiredEvent } from "../payment.apply";
 import { applySession, inTransaction } from "../payment.dispatch";
-import type { PaymentGateway, ProviderSession } from "../payment.gateway";
-import { IdempotencyKeyReusedError } from "../payment.gateway";
+import type { PaymentGateway } from "../payment.gateway";
 import { PaymentService } from "../payment.service";
+import type { ProviderSession } from "../types/payment.types";
 
 const prismaMock = prisma as unknown as {
   order: { findFirst: jest.Mock; findFirstOrThrow: jest.Mock };
@@ -66,7 +67,9 @@ const gateway = (overrides: Partial<PaymentGateway> = {}): PaymentGateway => ({
   ...overrides,
 });
 
-const session = (overrides: Partial<ProviderSession> = {}): ProviderSession => ({
+const session = (
+  overrides: Partial<ProviderSession> = {},
+): ProviderSession => ({
   id: "cs-1",
   status: "complete",
   paymentStatus: "paid",
@@ -159,7 +162,11 @@ describe("PaymentService.startPayment", () => {
 
     expect(error.status).toBe(409);
     expect(error.code).toBe("PAYMENT_WINDOW_EXPIRED");
-    expect(expiredMock).toHaveBeenCalledWith(expect.anything(), "order-1", "pay-1");
+    expect(expiredMock).toHaveBeenCalledWith(
+      expect.anything(),
+      "order-1",
+      "pay-1",
+    );
   });
 
   it("повторное нажатие отдаёт сохранённый адрес и не зовёт провайдера (AC-4)", async () => {
@@ -242,7 +249,10 @@ describe("PaymentService.startPayment", () => {
     );
     expect(prismaMock.payment.update).toHaveBeenCalledWith({
       where: { id: "pay-2" },
-      data: { providerSessionId: "cs-2", checkoutUrl: "https://pay.stripe.test/cs-2" },
+      data: {
+        providerSessionId: "cs-2",
+        checkoutUrl: "https://pay.stripe.test/cs-2",
+      },
     });
   });
 

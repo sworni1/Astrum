@@ -8,7 +8,6 @@ import { cache } from "react";
 const secretKey = process.env.JWT_SECRET;
 const encodedKey = new TextEncoder().encode(secretKey);
 
-/** The cookie lives exactly as long as the token inside it. */
 const SESSION_LIFETIME_MS = 24 * 60 * 60 * 1000;
 const LOGOUT_TIMEOUT_MS = 2000;
 const SESSION_PROBE_TIMEOUT_MS = 2000;
@@ -56,12 +55,6 @@ export async function deleteSession() {
   cookieStore.delete("__auth");
 }
 
-/**
- * Ends the session on the server before it ends in the browser, so a copied
- * cookie stops working at the next request. A backend that is down or slow must
- * never trap the customer inside the account, so the cookie is deleted either
- * way and the failure only reaches the logs.
- */
 export async function endSession(): Promise<void> {
   const cookieStore = await cookies();
   const token = cookieStore.get("__auth")?.value;
@@ -92,16 +85,6 @@ export async function endSession(): Promise<void> {
   redirect("/auth/signin");
 }
 
-/**
- * The signed cookie proves only that this shop issued it. The session record it
- * points at lives in the gateway's store, so a token whose record is gone still
- * verifies here, the screen renders, and every hook behind it then fetches its
- * own refusal. One question to the gateway settles it before anything renders.
- *
- * A gateway that is down or slow must never lock the customer out: only an
- * explicit `401` ends the session, any other outcome lets the screen load and
- * report what it could not reach.
- */
 const sessionWasDropped = async (cookie: string): Promise<boolean> => {
   try {
     const response = await fetch(`${GATEWAY_URL}/api/users/me`, {
@@ -140,10 +123,6 @@ export const readVerifiedSession = async () => {
 
 export const verifySession = cache(readVerifiedSession);
 
-/**
- * The shell's own question: is there a signed session at all? No cookie is an
- * answer, not a failure, because a guest reads the shop too (spec 0028, AC-13).
- */
 export const readSessionUserId = async (): Promise<string | null> => {
   const cookie = (await cookies()).get("__auth")?.value;
   const session = await decrypt(cookie);

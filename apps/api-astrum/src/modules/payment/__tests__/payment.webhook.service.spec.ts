@@ -1,6 +1,6 @@
 jest.mock("../../../../lib/prisma", () => ({
   prisma: {
-    paymentEvent: { create: jest.fn(), update: jest.fn() },
+    paymentEvent: { create: jest.fn(), update: jest.fn(), delete: jest.fn() },
     payment: { findUnique: jest.fn(), findFirst: jest.fn(), update: jest.fn() },
     order: { findUnique: jest.fn() },
   },
@@ -12,11 +12,11 @@ jest.mock("../payment.dispatch", () => ({
 
 import { prisma } from "../../../../lib/prisma";
 import { applyProviderEvent } from "../payment.dispatch";
-import type { ProviderEvent } from "../payment.gateway";
 import { handleWebhookEvent } from "../payment.webhook.service";
+import type { ProviderEvent } from "../types/payment.types";
 
 const prismaMock = prisma as unknown as {
-  paymentEvent: { create: jest.Mock; update: jest.Mock };
+  paymentEvent: { create: jest.Mock; update: jest.Mock; delete: jest.Mock };
   payment: { findUnique: jest.Mock; findFirst: jest.Mock; update: jest.Mock };
   order: { findUnique: jest.Mock };
 };
@@ -61,8 +61,11 @@ const paidEvent = (overrides: Partial<ProviderEvent> = {}): ProviderEvent => ({
 beforeEach(() => {
   jest.spyOn(console, "info").mockImplementation(() => undefined);
   jest.spyOn(console, "warn").mockImplementation(() => undefined);
-  prismaMock.paymentEvent.create.mockReset().mockResolvedValue({ id: "event-1" });
+  prismaMock.paymentEvent.create
+    .mockReset()
+    .mockResolvedValue({ id: "event-1" });
   prismaMock.paymentEvent.update.mockReset().mockResolvedValue({});
+  prismaMock.paymentEvent.delete.mockReset().mockResolvedValue({});
   prismaMock.payment.findUnique.mockReset().mockResolvedValue(attempt);
   prismaMock.payment.findFirst.mockReset().mockResolvedValue(null);
   prismaMock.payment.update.mockReset().mockResolvedValue(attempt);
@@ -100,6 +103,17 @@ describe("handleWebhookEvent", () => {
       orderId: "order-1",
       attemptId: "pay-1",
     });
+  });
+
+  it("освобождает запись, когда применение падает, чтобы повтор провайдера не считался повтором", async () => {
+    dispatchMock.mockRejectedValue(new Error("db down"));
+
+    await expect(handleWebhookEvent(paidEvent())).rejects.toThrow("db down");
+
+    expect(prismaMock.paymentEvent.delete).toHaveBeenCalledWith({
+      where: { id: "event-1" },
+    });
+    expect(prismaMock.paymentEvent.update).not.toHaveBeenCalled();
   });
 
   it("повторная доставка того же event id не применяется и не пишет (AC-5)", async () => {

@@ -7,11 +7,6 @@ import { STAT_GRID, STAT_TILE } from "@/features/general/lib/screenStyles";
 const TILES = [0, 1, 2, 3];
 const ROWS = [0, 1, 2];
 
-/**
- * The page shell of the first load: the heading, the four tiles and three rows
- * as skeletons, so the screen never shows a zero it has not read yet
- * (spec 0026, AC-11).
- */
 const SalesSkeleton = () => {
   const t = useTranslations("seller");
 

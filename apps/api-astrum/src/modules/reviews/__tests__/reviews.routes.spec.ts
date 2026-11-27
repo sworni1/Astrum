@@ -10,11 +10,6 @@ import { userOwner } from "../../../common/types/owner";
 import productRoutes from "../../product/product.routes";
 import { ReviewsService } from "../reviews.service";
 
-/**
- * The router is mounted under the product path by the product module, so this
- * spec boots the real parent router: the only way to prove the child receives
- * the parent's param is to send a request through it (spec 0012, AC-11).
- */
 describe("productReviewsRouter params", () => {
   let server: ReturnType<express.Express["listen"]>;
   let baseUrl = "";
@@ -27,7 +22,7 @@ describe("productReviewsRouter params", () => {
         owner?: ReturnType<typeof userOwner>;
       };
       authenticated.userId = "user-1";
-      // `optionalAuth` sets both: the controllers read the owner (spec 0028).
+
       authenticated.owner = userOwner("user-1");
       next();
     });
@@ -88,7 +83,10 @@ describe("productReviewsRouter params", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ reviewIds: ["review-1"] });
-    expect(likedSet).toHaveBeenCalledWith(userOwner("user-1"), "product-from-path");
+    expect(likedSet).toHaveBeenCalledWith(
+      userOwner("user-1"),
+      "product-from-path",
+    );
   });
 
   it("never reads the product from the request body (AC-11)", async () => {

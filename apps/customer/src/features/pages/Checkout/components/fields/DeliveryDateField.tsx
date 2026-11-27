@@ -29,10 +29,6 @@ type Props = {
   control: Control<CheckoutFormData>;
 };
 
-/**
- * The delivery date stays a `Popover` over a `Calendar` at the mockup's control
- * geometry, never a native date input (spec 0024, AC-12).
- */
 const DeliveryDateField = ({ control }: Props) => {
   const t = useTranslations("cart");
   const format = useFormatter();

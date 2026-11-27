@@ -323,11 +323,29 @@ describe("ReviewsService.getReviewById", () => {
   beforeEach(() => jest.clearAllMocks());
 
   it("answers 404 REVIEW_NOT_FOUND instead of a 500 (AC-11)", async () => {
-    prismaMock.review.findUnique.mockResolvedValue(null);
+    prismaMock.review.findFirst.mockResolvedValue(null);
 
     await expect(service.getReviewById("missing")).rejects.toMatchObject({
       status: 404,
       code: "REVIEW_NOT_FOUND",
     });
+  });
+
+  it("answers an approved review through the public serializer, never the raw row (AC-11)", async () => {
+    prismaMock.review.findFirst.mockResolvedValue(rowFor());
+
+    const review = await service.getReviewById("review-1");
+
+    expect(review).toMatchObject({
+      id: "review-1",
+      authorName: "Ivan",
+    });
+    expect(review).not.toHaveProperty("userId");
+    expect(review).not.toHaveProperty("status");
+    expect(prismaMock.review.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "review-1", status: "APPROVED" },
+      }),
+    );
   });
 });

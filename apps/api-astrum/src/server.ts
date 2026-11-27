@@ -3,9 +3,21 @@ import type { Server } from "node:http";
 import { prisma } from "../lib/prisma";
 import app from "./app";
 import { closeCacheStore } from "./cache/cacheStore";
+import {
+  API_PORT_DEFAULT,
+  REQUIRED_ENV,
+  SHUTDOWN_SIGNALS,
+  SHUTDOWN_TIMEOUT_MS,
+} from "./common/constants/server.constants";
 import { startGuestSweep } from "./modules/guest/guest.sweep";
 import { startOrderShipping } from "./modules/order/order-shipping";
 import { startPaymentSweep } from "./modules/payment/payment.sweep";
+
+for (const name of REQUIRED_ENV) {
+  if (!process.env[name]?.trim()) {
+    throw new Error(`${name} is required: the gateway cannot start without it`);
+  }
+}
 
 if (!process.env.RABBITMQ_URL) {
   throw new Error(
@@ -13,23 +25,16 @@ if (!process.env.RABBITMQ_URL) {
   );
 }
 
-const PORT = Number(process.env.API_PORT ?? 3580);
-const SHUTDOWN_TIMEOUT_MS = 10_000;
+const PORT = Number(process.env.API_PORT ?? API_PORT_DEFAULT);
 
 const server: Server = app.listen(PORT, () => {
   console.log(`API Gateway running at http://localhost:${PORT}/api`);
 });
 
-// The reconciliation pass belongs to the running process, never to app.ts: a
-// test that imports the app must not start a timer (spec 0015, AC-9).
 const sweep = startPaymentSweep();
 
-// An accepted order is marked sent after ORDER_SHIPPING_DELAY_MS, on its own
-// timer, so the payment sweep stays about money (spec 0016, amendments).
 const shipping = startOrderShipping();
 
-// Guest lines nobody claimed die after the retention bound, swept once at boot
-// and then daily (spec 0028, AC-16).
 const guestSweep = startGuestSweep();
 
 const shutdown = (signal: NodeJS.Signals): void => {
@@ -50,5 +55,6 @@ const shutdown = (signal: NodeJS.Signals): void => {
   setTimeout(() => process.exit(1), SHUTDOWN_TIMEOUT_MS).unref();
 };
 
-process.on("SIGTERM", shutdown);
-process.on("SIGINT", shutdown);
+for (const signal of SHUTDOWN_SIGNALS) {
+  process.on(signal, shutdown);
+}

@@ -6,7 +6,6 @@ import {
   PaymentStatus,
 } from "@/common/types/order.types";
 
-/** The catalog keys under `orders.payment`; one per payment method. */
 export type PaymentLabelKey =
   | "onlineCard"
   | "paypal"
@@ -14,7 +13,6 @@ export type PaymentLabelKey =
   | "cardOnDelivery"
   | "cash";
 
-/** One payment method to catalog key table, so a label is written once. */
 export const PAYMENT_KEYS: Record<PaymentMethod, PaymentLabelKey> = {
   [PaymentMethod.ONLINE_CARD]: "onlineCard",
   [PaymentMethod.PAYPAL]: "paypal",
@@ -23,7 +21,6 @@ export const PAYMENT_KEYS: Record<PaymentMethod, PaymentLabelKey> = {
   [PaymentMethod.CASH]: "cash",
 };
 
-/** The catalog keys under `orders.paymentStatus`; one per payment status. */
 export type PaymentStatusKey =
   | "paid"
   | "pending"
@@ -31,7 +28,6 @@ export type PaymentStatusKey =
   | "failed"
   | "refunded";
 
-/** One payment status to catalog key table, so a label is written once. */
 export const PAYMENT_STATUS_KEYS: Record<string, PaymentStatusKey> = {
   [PaymentStatus.PAID]: "paid",
   [PaymentStatus.PENDING]: "pending",
@@ -40,16 +36,10 @@ export const PAYMENT_STATUS_KEYS: Record<string, PaymentStatusKey> = {
   [PaymentStatus.REFUNDED]: "refunded",
 };
 
-/** A status outside the enum has no label; the screen prints the raw value. */
 export const paymentStatusKey = (
   status: string,
 ): PaymentStatusKey | undefined => PAYMENT_STATUS_KEYS[status];
 
-/**
- * A payment the customer tried that nobody has confirmed yet. The return branch
- * prints its copy only for this state, because a paid order is not payable any
- * more and would otherwise carry the "not confirmed" line (AC-14).
- */
 export const paymentUnconfirmed = (order: Order): boolean =>
   order.paymentStatus === PaymentStatus.PENDING ||
   order.paymentStatus === PaymentStatus.FAILED;
@@ -59,12 +49,6 @@ const deadline = (order: Order): number | null =>
     ? null
     : new Date(order.paymentExpiresAt).getTime();
 
-/**
- * The pay control shows only for a live online card order: the right method, an
- * order nobody cancelled, a payment that is pending or failed, and a deadline
- * still ahead. The client clock is a hint; the server refusal is the authority
- * (AC-13).
- */
 export const canPay = (order: Order, now: Date): boolean => {
   const expiresAt = deadline(order);
 
@@ -77,7 +61,6 @@ export const canPay = (order: Order, now: Date): boolean => {
   );
 };
 
-/** The window closed but the sweep has not closed the order yet (AC-13). */
 export const paymentWindowPassed = (order: Order, now: Date): boolean => {
   const expiresAt = deadline(order);
 
@@ -89,15 +72,10 @@ export const paymentWindowPassed = (order: Order, now: Date): boolean => {
   );
 };
 
-/** Money left, then the order was cancelled: the customer is owed a refund (AC-12). */
 export const refundOwed = (order: Order): boolean =>
   order.status === OrderStatus.CANCELED &&
   order.paymentStatus === PaymentStatus.PAID;
 
-/**
- * A paid order that holds a cancelled line: the shop cancelled the item after
- * the money left, so that line's money is owed back (AC-9).
- */
 export const lineRefundOwed = (order: Order): boolean =>
   order.paymentStatus === PaymentStatus.PAID &&
   order.orderItems.some((item) => item.status === OrderItemStatus.CANCELLED);

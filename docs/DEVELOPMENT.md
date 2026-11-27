@@ -183,7 +183,7 @@ The worker has no root script of its own: `pnpm --filter @astrum/worker dev`.
 Husky hooks:
 
 - **pre-commit**: empty (`exit 0`), so a commit stays instant and formatting runs by hand.
-- **pre-push**: `pnpm quality-gate`, meaning types, lint and tests across every package.
+- **pre-push**: empty (`exit 0`), so a push does not spawn a full turbo run; the gate is manual — `pnpm quality-gate` (types, lint, tests across every package) before pushing.
 - **commit-msg**: commitlint through the local binary, and a regular expression check when the binary is missing.
 
 Run a hook without committing: `git hook run pre-push`.

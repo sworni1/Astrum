@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { describeError } from "../logger";
+import { describeError } from "../helpers/error.helpers";
 
 test("AC-4: an AggregateError reports the message hidden one level down", () => {
   const refused = new AggregateError(

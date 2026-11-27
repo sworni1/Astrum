@@ -1,0 +1,7 @@
+export const DEFAULT_LIST_TTL_SECONDS = 30;
+
+export const DEFAULT_PRODUCT_TTL_SECONDS = 60;
+
+export const LIST_TTL_JITTER_SECONDS = 4;
+
+export const PRODUCT_TTL_JITTER_SECONDS = 7;

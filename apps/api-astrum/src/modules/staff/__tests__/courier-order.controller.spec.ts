@@ -51,7 +51,10 @@ describe("CourierOrderController", () => {
   it("defaults the scope to mine and passes page and limit through (AC-2)", async () => {
     const { res, answer } = resDouble();
 
-    await controller.listCourierOrders(requestOf({ page: "2", limit: "5" }), res);
+    await controller.listCourierOrders(
+      requestOf({ page: "2", limit: "5" }),
+      res,
+    );
 
     expect(serviceMock.listCourierOrders).toHaveBeenCalledWith(
       "courier-1",
@@ -133,7 +136,10 @@ describe("CourierOrderController", () => {
     expect(serviceMock.claim).toHaveBeenCalledWith("order-1", "courier-1");
     expect(serviceMock.release).toHaveBeenCalledWith("order-1", "courier-1");
     expect(serviceMock.handOver).toHaveBeenCalledWith("order-1", "courier-1");
-    expect(serviceMock.cancelOrder).toHaveBeenCalledWith("order-1", "courier-1");
+    expect(serviceMock.cancelOrder).toHaveBeenCalledWith(
+      "order-1",
+      "courier-1",
+    );
   });
 
   it("paints a service refusal through the shared error shape (AC-14)", async () => {

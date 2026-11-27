@@ -10,7 +10,9 @@ const problems = [];
 
 const prismaCli = pkg.devDependencies?.prisma;
 const prismaRuntime = pkg.dependencies?.["@prisma/client"];
-console.log(`[astrum-db] prisma ${prismaCli} / @prisma/client ${prismaRuntime}`);
+console.log(
+  `[astrum-db] prisma ${prismaCli} / @prisma/client ${prismaRuntime}`,
+);
 if (prismaCli !== prismaRuntime) {
   problems.push(`prisma ${prismaCli} is not @prisma/client ${prismaRuntime}`);
 }
@@ -29,7 +31,10 @@ for (const [name, entry] of Object.entries(pkg.exports ?? {})) {
   }
 }
 console.log(`[astrum-db] checked ${targets.length} export targets`);
-for (const target of targets) console.log(`  ${existsSync(join(packageRoot, target)) ? "ok  " : "miss"} ${target}`);
+for (const target of targets)
+  console.log(
+    `  ${existsSync(join(packageRoot, target)) ? "ok  " : "miss"} ${target}`,
+  );
 
 const dist = join(packageRoot, "dist");
 if (!existsSync(dist)) {
@@ -38,10 +43,14 @@ if (!existsSync(dist)) {
   const hashFile = join(dist, ".schema-hash");
   const schema = readFileSync(join(packageRoot, "prisma", "schema.prisma"));
   const expected = createHash("md5").update(schema).digest("hex");
-  const actual = existsSync(hashFile) ? readFileSync(hashFile, "utf8").trim() : "";
+  const actual = existsSync(hashFile)
+    ? readFileSync(hashFile, "utf8").trim()
+    : "";
   console.log(`[astrum-db] schema md5 ${expected} / dist ${actual || "none"}`);
   if (actual !== expected) {
-    problems.push("dist/.schema-hash does not match prisma/schema.prisma, run pnpm build");
+    problems.push(
+      "dist/.schema-hash does not match prisma/schema.prisma, run pnpm build",
+    );
   }
 }
 

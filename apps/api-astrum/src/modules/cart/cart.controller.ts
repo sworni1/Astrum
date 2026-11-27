@@ -2,13 +2,13 @@ import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { handleErrors } from "../../common/helpers/errorHandler";
 import type { AuthenticatedUserRequest } from "../../common/types/jwt.payload";
-import { GuestMergeService } from "../guest/guest-merge.service";
 import {
   clearGuestCookie,
   ownerForRead,
   ownerForWrite,
   readGuestId,
 } from "../guest/guest.identity";
+import { GuestMergeService } from "../guest/guest-merge.service";
 import { CartService } from "./cart.service";
 
 const cartService = new CartService();
@@ -69,11 +69,6 @@ export class CartController {
     }
   }
 
-  /**
-   * The visitor picked a cart before signing in, so the account absorbs it
-   * (spec 0028, AC-11). The cookie is cleared only after the move committed, so
-   * a failed merge leaves the guest lines where a retry finds them.
-   */
   async mergeGuestCart(req: Request, res: Response) {
     try {
       const { userId } = req as AuthenticatedUserRequest;

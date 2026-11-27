@@ -10,10 +10,6 @@ type Props = {
   guest: boolean;
 };
 
-/**
- * Only a link to `/checkout`: the selection is already in the handoff key, so
- * the button writes nothing and one place owns that key (spec 0024, AC-2).
- */
 const CheckoutButton = ({ selectedCount, guest }: Props) => {
   const t = useTranslations("cart");
 
@@ -26,8 +22,6 @@ const CheckoutButton = ({ selectedCount, guest }: Props) => {
     );
   }
 
-  // Checkout needs an account, so a guest is sent to sign in and comes back
-  // here with the cart it already picked (spec 0028, AC-14).
   const target = guest ? "/auth/signin?next=/checkout" : "/checkout";
 
   return (

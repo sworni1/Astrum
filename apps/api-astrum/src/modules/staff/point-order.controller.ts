@@ -9,10 +9,6 @@ import { PointOrderService } from "./point-order.service";
 
 const service = new PointOrderService();
 
-/**
- * The point the role guard resolved from the caller's own row. A point named by
- * the request is never read, so the scope cannot be chosen by the caller (AC-1).
- */
 const pointOf = (req: Request): string => {
   const staff = (req as StaffRequest).staff;
 

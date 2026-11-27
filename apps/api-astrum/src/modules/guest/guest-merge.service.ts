@@ -1,29 +1,9 @@
 import { prisma } from "../../../lib/prisma";
+import { LIVE_PRODUCT_SELECT } from "./constants/guest.constants";
+import { isLive } from "./helpers/guest.helpers";
 
-export type MergeCounts = { cartLines: number; wishlistLines: number };
+type MergeCounts = { cartLines: number; wishlistLines: number };
 
-const LIVE_PRODUCT_SELECT = {
-  isDeleted: true,
-  visibility: true,
-  status: true,
-} as const;
-
-const isLive = (product: {
-  isDeleted: boolean;
-  visibility: string;
-  status: string;
-}): boolean =>
-  !product.isDeleted &&
-  product.visibility === "Public" &&
-  product.status === "Published";
-
-/**
- * One transaction moves everything a visitor picked into the account it just
- * signed into: the cart line becomes `min(account + guest, stock)`, a wishlist
- * line becomes an account line unless one exists, and every guest row goes,
- * the line of a gone product included (spec 0028, AC-11). A throw rolls the
- * whole move back, so a retry works.
- */
 export class GuestMergeService {
   async merge(userId: string, guestId: string | null): Promise<MergeCounts> {
     if (!guestId) {
@@ -42,8 +22,6 @@ export class GuestMergeService {
           select: { quantity: true, ...LIVE_PRODUCT_SELECT },
         });
 
-        // A gone product is dropped rather than carried, and a product with no
-        // stock leaves an existing account line exactly as it was (AC-11).
         if (!product || !isLive(product) || product.quantity <= 0) {
           continue;
         }
@@ -99,7 +77,6 @@ export class GuestMergeService {
         wishlistLines += 1;
       }
 
-      // Every guest row goes, whether it moved or not: the identity is done.
       await tx.cartItem.deleteMany({ where: { guestId } });
       await tx.wishlistItem.deleteMany({ where: { guestId } });
 

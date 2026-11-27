@@ -8,6 +8,7 @@ jest.mock("../../../../lib/prisma", () => ({
       findFirst: jest.fn(),
       findMany: jest.fn(),
       groupBy: jest.fn(),
+      count: jest.fn(),
     },
   },
 }));
@@ -16,8 +17,9 @@ import { Prisma } from "@astrum/db/client";
 import { prisma } from "../../../../lib/prisma";
 import { AppError } from "../../../common/helpers/appError";
 import type { CreateOrderDto } from "../dto/create-order.dto";
+import { mergeOrderLines } from "../helpers/order-lines.helpers";
 import { idempotencyOf } from "../idempotency";
-import { mergeOrderLines, OrderService } from "../order.service";
+import { OrderService } from "../order.service";
 
 type ProductRow = {
   id: string;
@@ -38,10 +40,14 @@ const prismaMock = prisma as unknown as {
   product: { findMany: jest.Mock };
   business: { findMany: jest.Mock };
   payment: { findFirst: jest.Mock };
-  order: { findFirst: jest.Mock; findMany: jest.Mock; groupBy: jest.Mock };
+  order: {
+    findFirst: jest.Mock;
+    findMany: jest.Mock;
+    groupBy: jest.Mock;
+    count: jest.Mock;
+  };
 };
 
-/** One detail line, with the two ids the detail read joins on. */
 const line = (overrides: Record<string, unknown> = {}) => ({
   id: "line-1",
   price: new Prisma.Decimal("19.99"),
@@ -586,7 +592,12 @@ describe("OrderService.getOrderById", () => {
     const order = await new OrderService().getOrderById("order-1", "user-1");
 
     expect(order.orderItems).toEqual([
-      { id: "line-1", price: new Prisma.Decimal("19.99"), brandName: "", kind: null },
+      {
+        id: "line-1",
+        price: new Prisma.Decimal("19.99"),
+        brandName: "",
+        kind: null,
+      },
     ]);
     expect(order.shippingMethodName).toBe("Standard");
     expect(order.deliveryPrice.toFixed(2)).toBe("5.99");
@@ -600,9 +611,21 @@ describe("OrderService.getOrderById", () => {
       id: "order-1",
       userId: "user-1",
       OrderItem: [
-        line({ id: "line-1", businessId: "business-1", productId: "product-1" }),
-        line({ id: "line-2", businessId: "business-1", productId: "product-2" }),
-        line({ id: "line-3", businessId: "business-2", productId: "product-2" }),
+        line({
+          id: "line-1",
+          businessId: "business-1",
+          productId: "product-1",
+        }),
+        line({
+          id: "line-2",
+          businessId: "business-1",
+          productId: "product-2",
+        }),
+        line({
+          id: "line-3",
+          businessId: "business-2",
+          productId: "product-2",
+        }),
       ],
     });
     prismaMock.business.findMany.mockResolvedValue([
@@ -634,11 +657,13 @@ describe("OrderService.getOrderById", () => {
       orderBy: { paidAt: "desc" },
       select: { paidAt: true },
     });
-    expect(order.orderItems.map((item) => [item.brandName, item.kind])).toEqual([
-      ["Parker", "Ручки"],
-      ["Parker", "Шины"],
-      ["Bic", "Шины"],
-    ]);
+    expect(order.orderItems.map((item) => [item.brandName, item.kind])).toEqual(
+      [
+        ["Parker", "Ручки"],
+        ["Parker", "Шины"],
+        ["Bic", "Шины"],
+      ],
+    );
     expect(order.paidAt).toEqual(new Date("2026-11-14T15:08:00.000Z"));
   });
 
@@ -684,6 +709,7 @@ describe("OrderService.getOrdersByUserId", () => {
     currencyGroups: unknown[],
   ) => {
     prismaMock.order.findMany.mockResolvedValue(rows);
+    prismaMock.order.count.mockResolvedValue(rows.length);
     prismaMock.order.groupBy
       .mockReset()
       .mockResolvedValueOnce(statusGroups)
@@ -750,7 +776,9 @@ describe("OrderService.getOrdersByUserId", () => {
           },
         ],
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: 0,
+      take: 20,
       select: {
         id: true,
         status: true,
@@ -892,7 +920,7 @@ describe("OrderService.updateOrderStatus", () => {
       where: { id: "order-1" },
       data: { status: "CANCELED" },
     });
-    // The payment is resolved in its own write, and the attempt closes with it (AC-11).
+
     expect(tx.order.update).toHaveBeenCalledWith({
       where: { id: "order-1" },
       data: { paymentStatus: "CANCELLED" },

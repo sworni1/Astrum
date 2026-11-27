@@ -12,7 +12,9 @@ describe("orderListKey", () => {
   });
 
   it("складывает статус и запрос в строку запроса (AC-16)", () => {
-    expect(orderListKey({ status: "DELIVERED" })).toBe("/orders?status=DELIVERED");
+    expect(orderListKey({ status: "DELIVERED" })).toBe(
+      "/orders?status=DELIVERED",
+    );
     expect(orderListKey({ status: "CANCELED", q: "parker" })).toBe(
       "/orders?status=CANCELED&q=parker",
     );

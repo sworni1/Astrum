@@ -17,8 +17,8 @@ import { AcmeLogo } from "@/features/general/AcmeLogo";
 import { useGetOrders } from "@/hooks/order/useGetOrders";
 import { useGetCart } from "@/hooks/product/useCart/useGetCart";
 import { useGetWishlist } from "@/hooks/product/useWishlist/useGetWishlist";
-import { useUser } from "@/hooks/user/useUser";
 import { hasRole } from "@/hooks/staff/staff.types";
+import { useUser } from "@/hooks/user/useUser";
 import { MobileMenuSheet } from "./MobileMenuSheet";
 import NavItem from "./NavItem";
 import Searchbar from "./Searchbar";
@@ -39,9 +39,6 @@ export default function Navbar({ guest }: NavbarProps) {
   const isSeller = profileData?.isSeller === true;
   const staffRoles = profileData?.staffRoles ?? [];
 
-  // A failed read is a side effect, so the toast is raised from an effect and
-  // never from the render body (storefront rule S4). One toast per failed read,
-  // shared with a screen that watches the same key (spec 0025, AC-13).
   useEffect(() => {
     showLoadFailureOnce(cartError, t("cartFailed"));
     showLoadFailureOnce(wishlistError, t("wishlistFailed"));

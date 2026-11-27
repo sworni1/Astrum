@@ -8,10 +8,9 @@ import { useFetcher } from "@/hooks/useFetcher";
 import { isOrderListKey } from "./orderListKey";
 
 export interface UsePayOrderReturn {
-  /** Opens a provider session and answers where the browser goes (AC-13). */
   startPayment: () => Promise<PayOrderResponse>;
   isStarting: boolean;
-  /** Re reads the order and the list, and never rejects on a failed read. */
+
   revalidateOrder: () => Promise<void>;
 }
 
@@ -22,8 +21,6 @@ export const usePayOrder = (orderId: string): UsePayOrderReturn => {
   const orderKey = `/orders/${orderId}`;
 
   const revalidateOrder = useCallback(async (): Promise<void> => {
-    // allSettled, not all: the toast is the answer the customer needs, and a
-    // failed re read must not replace it (AC-13).
     await Promise.allSettled([mutate(orderKey), mutate(isOrderListKey)]);
   }, [mutate, orderKey]);
 

@@ -9,10 +9,6 @@ type Props = {
   onRetry: () => void;
 };
 
-/**
- * A failed read is visible and retryable, and the toast is raised from an
- * effect here, because the block may not raise one from a render body (AC-6).
- */
 const ReviewsError = ({ onRetry }: Props) => {
   const t = useTranslations("reviews");
 

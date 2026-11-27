@@ -2,87 +2,92 @@ import type { Product } from "@astrum/db/client";
 import { prisma } from "../../../lib/prisma";
 import {
   getCartItem,
-  getWishlistProductIds,
   ownerColumns,
   ownerUniqueKey,
 } from "../../common/helpers/getWishlistAndCart";
 import { productPreviewPublicSelect } from "../../common/prisma-selects/product.select";
 import type { Owner } from "../../common/types/owner";
+import { productNotFound } from "../product/helpers/product.errors";
+import { PUBLIC_PRODUCT_WHERE } from "../product/constants/product.constants";
+import { WISHLIST_ITEM_SELECT } from "./constants/wishlist.constants";
 import type { AddProductToWishlistDto } from "./dto/add-product.dto";
+import {
+  toWishlistMutationJson,
+  toWishlistProductJson,
+} from "./helpers/wishlist.helpers";
 
 export class WishlistService {
   async getWishlist(owner: Owner | null) {
-    try {
-      if (!owner) {
-        return [];
-      }
+    if (!owner) {
+      return [];
+    }
 
-      const wishlistProductIds = await getWishlistProductIds(owner);
+    const wishlistRows = await prisma.wishlistItem.findMany({
+      where: ownerColumns(owner),
+      select: { productId: true },
+    });
 
-      const wishlist = await prisma.product.findMany({
+    if (wishlistRows.length === 0) {
+      return [];
+    }
+
+    const productIds = wishlistRows.map((row) => row.productId);
+
+    const [products, cartRows] = await Promise.all([
+      prisma.product.findMany({
         where: {
-          id: { in: wishlistProductIds },
-          isDeleted: false,
-          visibility: "Public",
-          status: "Published",
+          id: { in: productIds },
+          ...PUBLIC_PRODUCT_WHERE,
         },
         select: productPreviewPublicSelect,
-      });
+      }),
+      prisma.cartItem.findMany({
+        where: { ...ownerColumns(owner), productId: { in: productIds } },
+        select: { productId: true, quantity: true },
+      }),
+    ]);
 
-      const wishlistWithData = await Promise.all(
-        wishlist.map(async (product) => {
-          const cartItem = await getCartItem(owner, product.id);
+    const quantities = new Map(
+      cartRows.map((row) => [row.productId, row.quantity]),
+    );
 
-          return {
-            ...product,
-            isWishlisted: true,
-            quantityInCart: cartItem ? cartItem.quantity : 0,
-          };
-        }),
-      );
-
-      return wishlistWithData;
-    } catch {
-      throw new Error(`getWishlist error`);
-    }
+    return products.map((product) =>
+      toWishlistProductJson(product, quantities.get(product.id) ?? 0),
+    );
   }
 
-  /** A second press answers `200` and leaves one row instead of failing (AC-10). */
   async addProductToWishlist(owner: Owner, dto: AddProductToWishlistDto) {
-    try {
-      const cartItem = await getCartItem(owner, dto.productId);
+    const product = await prisma.product.findFirst({
+      where: { id: dto.productId, ...PUBLIC_PRODUCT_WHERE },
+      select: { id: true },
+    });
 
-      const wishlistItem = await prisma.wishlistItem.upsert({
-        where: ownerUniqueKey(owner, dto.productId),
-        create: { ...ownerColumns(owner), productId: dto.productId },
-        update: {},
-        select: { id: true, productId: true, createdAt: true },
-      });
-
-      return {
-        ...wishlistItem,
-        isWishlisted: true,
-        quantityInCart: cartItem ? cartItem.quantity : 0,
-      };
-    } catch {
-      throw new Error(`addProductToWishlist error`);
+    if (!product) {
+      throw productNotFound();
     }
+
+    const cartItem = await getCartItem(owner, dto.productId);
+
+    const wishlistItem = await prisma.wishlistItem.upsert({
+      where: ownerUniqueKey(owner, dto.productId),
+      create: { ...ownerColumns(owner), productId: dto.productId },
+      update: {},
+      select: WISHLIST_ITEM_SELECT,
+    });
+
+    return toWishlistMutationJson(wishlistItem, cartItem);
   }
 
   async deleteProductFromWishlist(owner: Owner, productId: Product["id"]) {
-    try {
-      const cartItem = await getCartItem(owner, productId);
+    const cartItem = await getCartItem(owner, productId);
 
-      await prisma.wishlistItem.delete({
-        where: ownerUniqueKey(owner, productId),
-      });
+    await prisma.wishlistItem.deleteMany({
+      where: { ...ownerColumns(owner), productId },
+    });
 
-      return {
-        isWishlisted: false,
-        quantityInCart: cartItem ? cartItem.quantity : 0,
-      };
-    } catch {
-      throw new Error(`deleteProductFromWishlist error`);
-    }
+    return {
+      isWishlisted: false,
+      quantityInCart: cartItem ? cartItem.quantity : 0,
+    };
   }
 }

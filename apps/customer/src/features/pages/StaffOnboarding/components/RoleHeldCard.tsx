@@ -3,12 +3,11 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { staffRoleHref, staffRoleLabelKey } from "@/common/helpers/staffRoles";
-import { Button } from "@/components/ui/button";
 import type { StaffRole } from "@/common/types/user.types";
+import { Button } from "@/components/ui/button";
 
 type Props = { role: StaffRole };
 
-/** A role the account already holds: the confirmation line and the way in (AC-3). */
 const RoleHeldCard = ({ role }: Props) => {
   const t = useTranslations("staff");
   const isPoint = role === "POINT_WORKER";

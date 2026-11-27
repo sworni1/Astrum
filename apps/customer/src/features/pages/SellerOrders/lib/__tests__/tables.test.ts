@@ -3,7 +3,10 @@ import {
   OrderItemStatus,
   type SellerLineCounts,
 } from "@/common/types/order.types";
-import { SALES_COLUMNS, columnLabel } from "@/features/pages/SellerOrders/lib/columns";
+import {
+  columnLabel,
+  SALES_COLUMNS,
+} from "@/features/pages/SellerOrders/lib/columns";
 import {
   BADGE_TONE,
   badgeToneOf,

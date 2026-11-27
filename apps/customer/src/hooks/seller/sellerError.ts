@@ -4,10 +4,6 @@ export type SellerErrorKind = "none" | "notSeller" | "failure";
 
 export const sellerErrorCode = refusalCode;
 
-/**
- * The list route answers three refusals the screen renders as a screen of
- * their own, and everything else is a failure with a retry.
- */
 export const sellerErrorKind = (error: unknown): SellerErrorKind => {
   if (!error) {
     return "none";

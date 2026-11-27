@@ -2,19 +2,17 @@
 
 import { useTranslations } from "next-intl";
 import type { SellerLineRow } from "@/common/types/order.types";
-import { SALES_COLUMNS } from "@/features/pages/SellerOrders/lib/columns";
-import { HEAD_CELL, TABLE_CARD } from "@/features/pages/SellerOrders/lib/styles";
 import SalesRow from "@/features/pages/SellerOrders/components/SalesRow";
+import { SALES_COLUMNS } from "@/features/pages/SellerOrders/lib/columns";
+import {
+  HEAD_CELL,
+  TABLE_CARD,
+} from "@/features/pages/SellerOrders/lib/styles";
 
 type Props = {
   items: readonly SellerLineRow[];
 };
 
-/**
- * One flat table, one row per order line, six mockup columns. Below `sm` the
- * head hides and every row stacks into a card that names its own cells
- * (spec 0026, AC-9, AC-12).
- */
 const SalesTable = ({ items }: Props) => {
   const t = useTranslations("seller");
 

@@ -4,18 +4,11 @@ import { AppError } from "../../common/helpers/appError";
 import { handleErrors } from "../../common/helpers/errorHandler";
 import type { AuthenticatedRequest } from "../../common/types/jwt.payload";
 import { STAFF_ERROR_CODES } from "./constants/staff.constants";
-import {
-  type CourierScope,
-  CourierOrderService,
-} from "./courier-order.service";
+import { CourierOrderService } from "./courier-order.service";
+import type { CourierScope } from "./types/staff-order.types";
 
 const service = new CourierOrderService();
 
-/**
- * The list the caller asked for. `validateDto` reads a body only, so the query is
- * checked here, and a repeated `scope` arrives as an array and is refused like any
- * other unknown value (AC-2).
- */
 const readScope = (value: unknown): CourierScope => {
   if (value === undefined) {
     return "mine";
@@ -52,10 +45,7 @@ export class CourierOrderController {
   async claim(req: Request, res: Response) {
     try {
       const { userId } = req as AuthenticatedRequest;
-      const answer = await service.claim(
-        req.params.orderId as string,
-        userId,
-      );
+      const answer = await service.claim(req.params.orderId as string, userId);
 
       res.status(StatusCodes.OK).json(answer);
     } catch (error) {

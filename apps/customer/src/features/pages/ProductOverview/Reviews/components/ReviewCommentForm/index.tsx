@@ -8,8 +8,8 @@ import { useForm, useWatch } from "react-hook-form";
 import { showToast } from "@/common/helpers/showToast";
 import type { ReviewCommentWriteAnswer } from "@/common/types/review.types";
 import {
-  createReviewCommentFormSchema,
   type CreateReviewCommentFormValues,
+  createReviewCommentFormSchema,
 } from "@/common/zodSchemes/create-review-comment.scheme";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,7 +29,6 @@ import { useCreateReviewComment } from "@/hooks/review/useCreateReviewComment";
 
 const EMPTY_VALUES: CreateReviewCommentFormValues = { body: "" };
 
-/** The thread's own send lock, so two presses in one tick still send once. */
 const sendsInFlight = new Set<string>();
 
 type Props = {
@@ -37,12 +36,6 @@ type Props = {
   onCreated: (answer: ReviewCommentWriteAnswer) => void;
 };
 
-/**
- * The form at the bottom of the thread: the label is the field's accessible
- * name, the submit control is refused while the body is out of range, and one
- * press sends one request. A refusal keeps the typed text where it is
- * (spec 0014, AC-9, AC-11).
- */
 const ReviewCommentForm = ({ reviewId, onCreated }: Props) => {
   const t = useTranslations("reviews");
   const validation = useTranslations("validation");
@@ -84,8 +77,6 @@ const ReviewCommentForm = ({ reviewId, onCreated }: Props) => {
     } catch (error) {
       const refusal = classifyCommentRefusal(error);
 
-      // The confirmation branch already raised its own toast with a resend
-      // action, so a second one would only repeat it.
       if (refusal !== "emailNotConfirmed") {
         showToast({ title: t(COMMENT_REFUSAL_KEYS[refusal]), type: "error" });
       }

@@ -53,9 +53,16 @@ describe("guest identity", () => {
     const valid = token({ guestId: "guest-1", typ: "guest" });
     const [head, payload, signature] = valid.split(".");
     const modified = `${head}.${payload}.${signature.slice(0, -1)}A`;
-    const foreign = token({ guestId: "guest-1", typ: "guest" }, "another-secret");
+    const foreign = token(
+      { guestId: "guest-1", typ: "guest" },
+      "another-secret",
+    );
     const expired = token(
-      { guestId: "guest-1", typ: "guest", exp: Math.floor(Date.now() / 1000) - 60 },
+      {
+        guestId: "guest-1",
+        typ: "guest",
+        exp: Math.floor(Date.now() / 1000) - 60,
+      },
       SECRET,
     );
 
@@ -105,7 +112,7 @@ describe("guest identity", () => {
       kind: "guest",
       guestId,
     });
-    // A live cookie is not renewed: the identity is issued once.
+
     expect(second.cookie).not.toHaveBeenCalled();
   });
 
@@ -122,6 +129,20 @@ describe("guest identity", () => {
 
   it("answers no owner for a request with nothing to read (AC-6)", () => {
     expect(ownerForRead(request())).toBeNull();
+  });
+
+  it("refuses a write while the session store is unavailable instead of minting a guest", () => {
+    const req = request() as Request & { sessionStoreUnavailable?: boolean };
+    req.sessionStoreUnavailable = true;
+    const { res, cookie } = response();
+
+    expect(() => ownerForWrite(req, res)).toThrow(
+      expect.objectContaining({
+        status: 503,
+        code: "SESSION_STORE_UNAVAILABLE",
+      }),
+    );
+    expect(cookie).not.toHaveBeenCalled();
   });
 
   it("sets and clears the cookie with the same attributes", () => {

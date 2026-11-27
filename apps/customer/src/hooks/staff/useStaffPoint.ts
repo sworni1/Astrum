@@ -14,7 +14,6 @@ export interface UseStaffPointReturn {
   mutate: KeyedMutator<StaffAnswer>;
 }
 
-/** The point the signed in worker is attached to, including a switched off one (AC-9). */
 export const useStaffPoint = (): UseStaffPointReturn => {
   const { getData } = useFetcher();
   const { data, error, isLoading, mutate } = useSWR<StaffAnswer>(

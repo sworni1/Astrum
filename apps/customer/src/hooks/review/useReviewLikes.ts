@@ -19,17 +19,10 @@ const NO_OVERRIDES: Record<string, boolean> = {};
 export type ReviewLikes = {
   isLiked: (reviewId: string) => boolean;
   isPending: (reviewId: string) => boolean;
-  /** `null` means a request for this review was already in flight. */
+
   toggle: (reviewId: string) => Promise<ReviewLikeAnswer | null>;
 };
 
-/**
- * The caller's own liked set for one product, and the press that moves it.
- * A press is optimistic: the override flips before the answer, and the answer
- * corrects it. On failure the override goes back and the set is re read, so a
- * refusal never leaves a control showing a state the server does not hold
- * (spec 0014, AC-3, AC-6).
- */
 export const useReviewLikes = (productId: string): ReviewLikes => {
   const { getData, putItem, deleteItem } = useFetcher();
   const { data, mutate: revalidateLikedSet } = useSWR<ReviewLikedSet>(
@@ -79,10 +72,6 @@ export const useReviewLikes = (productId: string): ReviewLikes => {
     [productId],
   );
 
-  /**
-   * One request per review: a second press while the first runs returns before
-   * sending, and `null` tells the caller that nothing left the browser.
-   */
   const toggle = useCallback(
     async (reviewId: string): Promise<ReviewLikeAnswer | null> => {
       if (inFlight.current.has(reviewId)) {
@@ -107,7 +96,6 @@ export const useReviewLikes = (productId: string): ReviewLikes => {
       } catch (error) {
         writeOverride(reviewId, wasLiked);
 
-        // Never rejects: a failed re read must not replace the real refusal.
         await revalidateLikedSet().catch(() => undefined);
 
         throw error;

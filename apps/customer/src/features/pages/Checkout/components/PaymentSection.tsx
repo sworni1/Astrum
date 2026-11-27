@@ -9,7 +9,6 @@ type Props = {
   form: UseFormReturn<CheckoutFormData>;
 };
 
-/** The third card: the three payment methods as radio cards (spec 0024, AC-10, AC-11). */
 const PaymentSection = ({ form }: Props) => {
   const t = useTranslations("cart");
 

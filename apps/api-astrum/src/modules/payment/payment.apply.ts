@@ -1,45 +1,23 @@
-import type { Order, OrderItem } from "@astrum/db/client";
 import { Prisma } from "@astrum/db/client";
 import type { PaymentStatus } from "@astrum/db/enums";
 import { logger } from "../../common/helpers/logger";
 import {
   closeOrder,
   lockOrder,
+  type OrderWithLines,
   recomputeOrderStatus,
-} from "../order/order-status.helpers";
-import { toMinorUnits } from "./payment.money";
+} from "../order/order-status";
+import {
+  ATTEMPT_OPEN_STATUSES,
+  ORDER_WITH_LINES_INCLUDE,
+  PAYMENT_ERROR_MESSAGE_LIMIT,
+  PAYMENT_FAILED_FROM_STATUSES,
+  PAYMENT_PAID_FROM_STATUSES,
+  PAYMENT_PENDING_STATUSES,
+  PAYMENT_UNKNOWN_ERROR_CODE,
+} from "./constants/payment.constants";
+import type { ApplyResult, ExpiryOutcome } from "./types/payment.types";
 
-export type OrderWithLines = Order & { OrderItem: OrderItem[] };
-
-/** What an expiry did: it closed an untouched order, or it left a seller's one. */
-export type ExpiryOutcome = "closed" | "seller" | "unchanged";
-
-export type ApplyResult = "applied" | "ignored";
-
-const UNKNOWN_ERROR_CODE = "unknown";
-
-const ERROR_MESSAGE_LIMIT = 255;
-
-/**
- * The amount and the currency the provider reports against the stored order,
- * compared in the one conversion helper both sides share (AC-5, invariant 5).
- */
-export const amountMatchesOrder = (
-  order: Order,
-  amount: number | null,
-  currency: string | null,
-): boolean => {
-  if (amount === null || currency === null) {
-    return false;
-  }
-
-  return (
-    amount === toMinorUnits(order.grandTotal) &&
-    currency.toLowerCase() === order.currency.toLowerCase()
-  );
-};
-
-/** Every write below happens under the order row lock, so two callers serialise. */
 const loadLockedOrder = async (
   tx: Prisma.TransactionClient,
   orderId: string,
@@ -48,7 +26,7 @@ const loadLockedOrder = async (
 
   return await tx.order.findFirstOrThrow({
     where: { id: orderId },
-    include: { OrderItem: true },
+    include: ORDER_WITH_LINES_INCLUDE,
   });
 };
 
@@ -66,15 +44,6 @@ const setPaymentStatus = async (
   return count;
 };
 
-/**
- * Money arrived. The order status is never touched by hand: it follows its
- * lines through `recomputeOrderStatus`, so the order reads ACCEPTED at once.
- * The shipping pass in `order-shipping.ts` marks it sent one minute later,
- * because this project runs no real delivery. Stock never moves here, because it
- * left the shelf when the order was created. An attempt that was cancelled or
- * expired first still becomes PAID, and the line says a refund is owed rather
- * than dropping money that did leave (AC-2, AC-3, AC-4).
- */
 export const applyPaidEvent = async (
   tx: Prisma.TransactionClient,
   orderId: string,
@@ -91,8 +60,6 @@ export const applyPaidEvent = async (
 
   const order = await loadLockedOrder(tx, orderId);
 
-  // An order another attempt already paid is written once: the sync can find an
-  // older FAILED attempt, and `newestOpenAttempt` never reads the paid one (AC-4).
   if (order.paymentStatus === "PAID") {
     return "ignored";
   }
@@ -108,15 +75,8 @@ export const applyPaidEvent = async (
     },
   });
 
-  await setPaymentStatus(
-    tx,
-    order.id,
-    ["PENDING", "FAILED", "CANCELLED"],
-    "PAID",
-  );
+  await setPaymentStatus(tx, order.id, PAYMENT_PAID_FROM_STATUSES, "PAID");
 
-  // Only a line waiting for the money is confirmed; a cancelled, delivered or
-  // returned line keeps what it says (AC-3). The shipping pass ships it later.
   const { count: lineCount } = await tx.orderItem.updateMany({
     where: { orderId: order.id, status: "PENDING" },
     data: { status: "CONFIRMED" },
@@ -148,19 +108,13 @@ export const applyPaidEvent = async (
   return "applied";
 };
 
-/**
- * The window closed. An order no seller has touched is closed through the same
- * helper the customer cancel uses, so the stock comes back once; an order the
- * seller already accepted keeps its lines and stock and only loses its payment
- * (AC-8).
- */
 export const applyExpiredEvent = async (
   tx: Prisma.TransactionClient,
   orderId: string,
   attemptId: string,
 ): Promise<ExpiryOutcome> => {
   const { count } = await tx.payment.updateMany({
-    where: { id: attemptId, status: { in: ["PENDING", "FAILED"] } },
+    where: { id: attemptId, status: { in: [...ATTEMPT_OPEN_STATUSES] } },
     data: { status: "EXPIRED" },
   });
 
@@ -170,7 +124,12 @@ export const applyExpiredEvent = async (
 
   const order = await loadLockedOrder(tx, orderId);
 
-  await setPaymentStatus(tx, order.id, ["PENDING", "FAILED"], "CANCELLED");
+  await setPaymentStatus(
+    tx,
+    order.id,
+    PAYMENT_FAILED_FROM_STATUSES,
+    "CANCELLED",
+  );
 
   if (order.status !== "PENDING") {
     logger.warn({
@@ -188,10 +147,6 @@ export const applyExpiredEvent = async (
   return "closed";
 };
 
-/**
- * The card was declined. The attempt stays PENDING, because the hosted session
- * is still usable for a retry; only the reason and the order label change (AC-7).
- */
 export const applyDeclinedEvent = async (
   tx: Prisma.TransactionClient,
   orderId: string,
@@ -209,17 +164,22 @@ export const applyDeclinedEvent = async (
   await tx.payment.update({
     where: { id: attempt.id },
     data: {
-      lastErrorCode: decline.code ?? UNKNOWN_ERROR_CODE,
-      lastErrorMessage: decline.message?.slice(0, ERROR_MESSAGE_LIMIT) ?? null,
+      lastErrorCode: decline.code ?? PAYMENT_UNKNOWN_ERROR_CODE,
+      lastErrorMessage:
+        decline.message?.slice(0, PAYMENT_ERROR_MESSAGE_LIMIT) ?? null,
     },
   });
 
-  const changed = await setPaymentStatus(tx, orderId, ["PENDING"], "FAILED");
+  const changed = await setPaymentStatus(
+    tx,
+    orderId,
+    PAYMENT_PENDING_STATUSES,
+    "FAILED",
+  );
 
   return changed > 0 ? "applied" : "ignored";
 };
 
-/** An async failure ends the attempt; the stock stays where it is (AC-7). */
 export const applyAsyncFailedEvent = async (
   tx: Prisma.TransactionClient,
   orderId: string,
@@ -234,7 +194,7 @@ export const applyAsyncFailedEvent = async (
     return "ignored";
   }
 
-  await setPaymentStatus(tx, orderId, ["PENDING"], "FAILED");
+  await setPaymentStatus(tx, orderId, PAYMENT_PENDING_STATUSES, "FAILED");
 
   return "applied";
 };

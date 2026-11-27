@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { decrypt } from "./common/helpers/session";
 
-/** A visitor with no account reads these paths; everything else needs a session. */
 const guestPaths = ["/", "/cart", "/wishlist"];
 const guestPrefixes = ["/auth", "/categories", "/products"];
 

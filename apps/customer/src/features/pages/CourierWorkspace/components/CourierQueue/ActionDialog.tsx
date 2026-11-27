@@ -23,17 +23,10 @@ type Props = {
   action: CourierOrderActionName;
   busy: boolean;
   onRun: (order: CourierOrder, action: CourierOrderActionName) => void;
-  /** Where the focus lands once the dialog closes: the heading of its section (AC-13). */
+
   onClosed: () => void;
 };
 
-/**
- * One irreversible move with the confirmation in front of it: nothing is sent
- * until the confirm control is pressed, and the keep control takes the initial
- * focus. The trigger keeps `aria-disabled` while a request runs rather than
- * `disabled`, because a disabled trigger unmounts with the dialog and drops focus
- * to the body (spec 0019, AC-12).
- */
 const ActionDialog = ({ order, action, busy, onRun, onClosed }: Props) => {
   const t = useTranslations("staff.courier.queue");
   const keepRef = useRef<HTMLButtonElement>(null);
@@ -58,8 +51,6 @@ const ActionDialog = ({ order, action, busy, onRun, onClosed }: Props) => {
           keepRef.current?.focus();
         }}
         onCloseAutoFocus={(event) => {
-          // The row the trigger lives on may be gone by now, so the focus goes
-          // to the section heading rather than to a node that unmounted.
           event.preventDefault();
           onClosed();
         }}

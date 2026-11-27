@@ -57,12 +57,7 @@ const read = (
   prismaMock.orderItem.findMany.mockResolvedValue(rows);
   prismaMock.$queryRaw.mockResolvedValue(totals);
 
-  return service.getSellerOrders(
-    args[0],
-    args[1] as never,
-    args[2],
-    args[3],
-  );
+  return service.getSellerOrders(args[0], args[1] as never, args[2], args[3]);
 };
 
 describe("SellerOrderService", () => {
@@ -169,22 +164,67 @@ describe("SellerOrderService", () => {
   });
 
   it("counts every line of the seller and buckets OUT_OF_STOCK as canceled (AC-4)", async () => {
-    const result = await read(new SellerOrderService(), ["seller-1"], [], [
-      aggregateRow({ status: "DELIVERED", count: 3, units: "7", revenue: "900.00" }),
-      aggregateRow({ status: "CANCELLED", count: 2, units: "4", revenue: "800.00" }),
-      aggregateRow({ status: "OUT_OF_STOCK", count: 1, units: "1", revenue: "50.00" }),
-      aggregateRow({ status: "PENDING", count: 4, units: "6", revenue: "300.00" }),
-    ]);
+    const result = await read(
+      new SellerOrderService(),
+      ["seller-1"],
+      [],
+      [
+        aggregateRow({
+          status: "DELIVERED",
+          count: 3,
+          units: "7",
+          revenue: "900.00",
+        }),
+        aggregateRow({
+          status: "CANCELLED",
+          count: 2,
+          units: "4",
+          revenue: "800.00",
+        }),
+        aggregateRow({
+          status: "OUT_OF_STOCK",
+          count: 1,
+          units: "1",
+          revenue: "50.00",
+        }),
+        aggregateRow({
+          status: "PENDING",
+          count: 4,
+          units: "6",
+          revenue: "300.00",
+        }),
+      ],
+    );
 
     expect(result.counts).toEqual({ all: 10, delivered: 3, canceled: 3 });
   });
 
   it("sums revenue and units over delivered lines only, per currency (AC-5)", async () => {
-    const result = await read(new SellerOrderService(), ["seller-1"], [], [
-      aggregateRow({ status: "DELIVERED", currency: "RUB", units: "7", revenue: "900.40" }),
-      aggregateRow({ status: "DELIVERED", currency: "USD", units: "3", revenue: "12.10" }),
-      aggregateRow({ status: "CANCELLED", currency: "RUB", units: "9", revenue: "7000.00" }),
-    ]);
+    const result = await read(
+      new SellerOrderService(),
+      ["seller-1"],
+      [],
+      [
+        aggregateRow({
+          status: "DELIVERED",
+          currency: "RUB",
+          units: "7",
+          revenue: "900.40",
+        }),
+        aggregateRow({
+          status: "DELIVERED",
+          currency: "USD",
+          units: "3",
+          revenue: "12.10",
+        }),
+        aggregateRow({
+          status: "CANCELLED",
+          currency: "RUB",
+          units: "9",
+          revenue: "7000.00",
+        }),
+      ],
+    );
 
     expect(result.stats).toEqual({
       revenue: [
@@ -196,19 +236,42 @@ describe("SellerOrderService", () => {
   });
 
   it("leaves a currency with no delivered line out of the revenue (AC-5)", async () => {
-    const result = await read(new SellerOrderService(), ["seller-1"], [], [
-      aggregateRow({ status: "DELIVERED", currency: "RUB", revenue: "100.00" }),
-      aggregateRow({ status: "CANCELLED", currency: "USD", revenue: "999.00" }),
-    ]);
+    const result = await read(
+      new SellerOrderService(),
+      ["seller-1"],
+      [],
+      [
+        aggregateRow({
+          status: "DELIVERED",
+          currency: "RUB",
+          revenue: "100.00",
+        }),
+        aggregateRow({
+          status: "CANCELLED",
+          currency: "USD",
+          revenue: "999.00",
+        }),
+      ],
+    );
 
     expect(result.stats.revenue).toEqual([{ currency: "RUB", amount: 100 }]);
     expect(result.stats.units).toBe(2);
   });
 
   it("answers an empty revenue array for a shop with no delivered line (AC-5)", async () => {
-    const result = await read(new SellerOrderService(), ["seller-1"], [], [
-      aggregateRow({ status: "PENDING", currency: "RUB", count: 2, revenue: "0.00" }),
-    ]);
+    const result = await read(
+      new SellerOrderService(),
+      ["seller-1"],
+      [],
+      [
+        aggregateRow({
+          status: "PENDING",
+          currency: "RUB",
+          count: 2,
+          revenue: "0.00",
+        }),
+      ],
+    );
 
     expect(result.stats).toEqual({ revenue: [], units: 0 });
     expect(result.counts).toEqual({ all: 2, delivered: 0, canceled: 0 });

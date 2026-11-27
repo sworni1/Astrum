@@ -1,8 +1,7 @@
 import type { Product } from "@astrum/db/client";
 import { prisma } from "../../../lib/prisma";
+import { hasNotFoundCode } from "../../common/helpers/prismaErrors";
 import {
-  getCartProductIds,
-  getWishlistAndCartItem,
   getWishlistItem,
   ownerColumns,
   ownerUniqueKey,
@@ -12,24 +11,23 @@ import {
   cartPublicSelect,
 } from "../../common/prisma-selects/product.select";
 import type { Owner } from "../../common/types/owner";
+import { PUBLIC_PRODUCT_WHERE } from "../product/constants/product.constants";
 import { ProductService } from "../product/product.service";
 import type { AddProductToCartDto } from "./dto/add-product.dto";
 import type { ChangeQuantityDto } from "./dto/change-quantity.dto";
+import { cartItemNotFound, quantityLimit } from "./helpers/cart.errors";
+import { toCartLineJson, toCartProductJson } from "./helpers/cart.helpers";
 
 export class CartService {
   private productService = new ProductService();
 
-  /**
-   * One line per owner and product: a repeated add raises the quantity capped at
-   * the stock instead of failing on the unique key (spec 0028, AC-10).
-   */
   async addProductToCart(owner: Owner, dto: AddProductToCartDto) {
     const { productId } = dto;
 
     const product = await this.productService.getProduct(owner, productId);
 
     if (product.quantity <= 0) {
-      throw new Error("Product quantity limit");
+      throw quantityLimit();
     }
 
     const wishlistItem = await getWishlistItem(owner, productId);
@@ -52,11 +50,7 @@ export class CartService {
       });
     });
 
-    return {
-      ...cartItem,
-      isWishlisted: !!wishlistItem,
-      quantityInCart: cartItem.quantity,
-    };
+    return toCartLineJson(cartItem, wishlistItem);
   }
 
   async changeProductCartQuantity(
@@ -64,89 +58,89 @@ export class CartService {
     productId: string,
     dto: ChangeQuantityDto,
   ) {
+    const product = await this.productService.getProduct(owner, productId);
+
+    if (dto.quantity <= 0) {
+      return await this.deleteProductFromCart(owner, productId);
+    }
+
+    if (product.quantity < dto.quantity) {
+      throw quantityLimit();
+    }
+
+    const wishlistItem = await getWishlistItem(owner, productId);
+
     try {
-      const product = await this.productService.getProduct(owner, productId);
+      const cartItem = await prisma.cartItem.update({
+        where: ownerUniqueKey(owner, productId),
+        data: { quantity: dto.quantity },
+        select: cartActionsPublicSelect,
+      });
 
-      if (dto.quantity > 0) {
-        if (product.quantity >= dto.quantity) {
-          const wishlistItem = await getWishlistItem(owner, productId);
-
-          const cartItem = await prisma.cartItem.update({
-            where: ownerUniqueKey(owner, productId),
-            data: { quantity: dto.quantity },
-            select: cartActionsPublicSelect,
-          });
-
-          return {
-            ...cartItem,
-            isWishlisted: !!wishlistItem,
-            quantityInCart: cartItem.quantity,
-          };
-        } else {
-          throw new Error(`Product quantity limit`);
-        }
-      } else {
-        return this.deleteProductFromCart(owner, productId);
+      return toCartLineJson(cartItem, wishlistItem);
+    } catch (error) {
+      if (hasNotFoundCode(error)) {
+        throw cartItemNotFound();
       }
-    } catch (_error) {
-      throw new Error(`changeProductCartQuantity error`);
+
+      throw error;
     }
   }
 
   async getCart(owner: Owner | null) {
-    try {
-      if (!owner) {
-        return [];
-      }
+    if (!owner) {
+      return [];
+    }
 
-      const cartProductIds = await getCartProductIds(owner);
+    const cartRows = await prisma.cartItem.findMany({
+      where: ownerColumns(owner),
+      select: { productId: true, quantity: true },
+    });
 
-      const cart = await prisma.product.findMany({
+    if (cartRows.length === 0) {
+      return [];
+    }
+
+    const productIds = cartRows.map((row) => row.productId);
+
+    const [products, wishlistRows] = await Promise.all([
+      prisma.product.findMany({
         where: {
-          id: { in: cartProductIds },
-          isDeleted: false,
-          visibility: "Public",
-          status: "Published",
+          id: { in: productIds },
+          ...PUBLIC_PRODUCT_WHERE,
         },
         select: cartPublicSelect,
-      });
+      }),
+      prisma.wishlistItem.findMany({
+        where: { ...ownerColumns(owner), productId: { in: productIds } },
+        select: { productId: true },
+      }),
+    ]);
 
-      const cartWithData = await Promise.all(
-        cart.map(async (product) => {
-          const { wishlistItem, cartItem } = await getWishlistAndCartItem(
-            owner,
-            product.id,
-          );
+    const quantities = new Map(
+      cartRows.map((row) => [row.productId, row.quantity]),
+    );
+    const wishlisted = new Set(wishlistRows.map((row) => row.productId));
 
-          return {
-            ...product,
-            isWishlisted: !!wishlistItem,
-            quantityInCart: cartItem ? cartItem.quantity : 0,
-          };
-        }),
-      );
-
-      return cartWithData;
-    } catch (_error) {
-      throw new Error(`getWishlist error`);
-    }
+    return products.map((product) =>
+      toCartProductJson(
+        product,
+        wishlisted.has(product.id),
+        quantities.get(product.id) ?? 0,
+      ),
+    );
   }
 
   async deleteProductFromCart(owner: Owner, productId: Product["id"]) {
-    try {
-      // Awaited on purpose: without it every delete answered `true` (AC-8).
-      const wishlistItem = await getWishlistItem(owner, productId);
+    const wishlistItem = await getWishlistItem(owner, productId);
 
-      await prisma.cartItem.delete({
-        where: ownerUniqueKey(owner, productId),
-      });
+    await prisma.cartItem.deleteMany({
+      where: { ...ownerColumns(owner), productId },
+    });
 
-      return {
-        isWishlisted: !!wishlistItem,
-        quantityInCart: 0,
-      };
-    } catch (_error) {
-      throw new Error(`deleteProductFromCart error`);
-    }
+    return {
+      isWishlisted: !!wishlistItem,
+      quantityInCart: 0,
+    };
   }
 }

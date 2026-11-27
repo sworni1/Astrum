@@ -1,7 +1,10 @@
 import { act, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ReviewStateStatus, type ReviewState } from "@/common/types/review.types";
+import {
+  type ReviewState,
+  ReviewStateStatus,
+} from "@/common/types/review.types";
 import ReviewWriteAction from "@/features/pages/ProductOverview/Reviews/components/ReviewWriteAction";
 
 vi.mock("next-intl", () => ({
@@ -17,7 +20,9 @@ vi.mock("@/hooks/review/useCreateReview", () => ({
 }));
 
 vi.mock("@/components/ui/dialog", () => {
-  const Pass = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
+  const Pass = ({ children }: { children?: ReactNode }) => (
+    <div>{children}</div>
+  );
 
   return {
     Dialog: Pass,

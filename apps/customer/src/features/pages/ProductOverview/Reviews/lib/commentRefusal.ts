@@ -1,10 +1,5 @@
 import axios from "axios";
 
-/**
- * What the thread does with a refusal, keyed by the answer the gateway gave
- * (spec 0014, AC-9). `emailNotConfirmed` raises no toast here: the shared
- * fetcher already raised the confirmation toast with its resend action.
- */
 export type CommentRefusal =
   | "invalid"
   | "rateLimited"
@@ -38,8 +33,6 @@ export const classifyCommentRefusal = (error: unknown): CommentRefusal => {
 
   const status = error.response?.status;
 
-  // No answer at all: the gateway may have written the row before the answer
-  // was lost, so the customer is told the result is unknown.
   if (!status) {
     return "unconfirmed";
   }
@@ -65,7 +58,6 @@ export const classifyCommentRefusal = (error: unknown): CommentRefusal => {
   return "unconfirmed";
 };
 
-/** The copy key each refusal raises, under the `reviews` namespace (AC-13). */
 export const COMMENT_REFUSAL_KEYS = {
   invalid: "comments.refused.invalid",
   rateLimited: "comments.refused.rateLimited",

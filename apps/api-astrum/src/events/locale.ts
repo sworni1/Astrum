@@ -7,11 +7,6 @@ export const DEFAULT_LETTER_LOCALE: LetterLocale = "en";
 const isLetterLocale = (value: string): value is LetterLocale =>
   (LETTER_LOCALES as readonly string[]).includes(value);
 
-/**
- * The storefront sends one explicit language, so the first tag wins and an
- * unknown or missing header falls back to English instead of reaching the
- * broker as an unreadable value.
- */
 export const resolveLetterLocale = (
   header: string | undefined,
 ): LetterLocale => {

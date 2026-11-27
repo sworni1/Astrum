@@ -65,7 +65,11 @@ describe("getOrSet", () => {
       31,
     );
     expect(readLines(info)).toEqual([
-      expect.objectContaining({ event: "cache.read", key: "cache:v1:shipping", hit: false }),
+      expect.objectContaining({
+        event: "cache.read",
+        key: "cache:v1:shipping",
+        hit: false,
+      }),
     ]);
   });
 
@@ -294,6 +298,8 @@ describe("lifetimes", () => {
     expect(productTtlSeconds()).toBeLessThan(27);
 
     process.env.CACHE_PRODUCT_TTL_SECONDS = "not a number";
-    expect(productTtlSeconds()).toBeGreaterThanOrEqual(DEFAULT_PRODUCT_TTL_SECONDS);
+    expect(productTtlSeconds()).toBeGreaterThanOrEqual(
+      DEFAULT_PRODUCT_TTL_SECONDS,
+    );
   });
 });

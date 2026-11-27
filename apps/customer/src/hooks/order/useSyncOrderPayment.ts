@@ -6,11 +6,9 @@ import { useSWRConfig } from "swr";
 import { useFetcher } from "@/hooks/useFetcher";
 import { isOrderListKey } from "./orderListKey";
 
-/** Which of the two return branches the provider sent the customer to. */
 export type PaymentReturnBranch = "return" | "cancelled" | null;
 
 export interface UseSyncOrderPaymentReturn {
-  /** True while the one sync call runs, so the page shows the checking copy. */
   isChecking: boolean;
   branch: PaymentReturnBranch;
 }
@@ -25,12 +23,6 @@ const readBranch = (): PaymentReturnBranch => {
   return branch === "return" || branch === "cancelled" ? branch : null;
 };
 
-/**
- * The provider sends the browser back with `?payment=return` or
- * `?payment=cancelled`. The first branch reads the truth from the gateway once
- * (a ref guard, so a double mount sends no second request) and the parameter is
- * dropped in both, so a refresh does not repeat the call (AC-14).
- */
 export const useSyncOrderPayment = (
   orderId: string,
 ): UseSyncOrderPaymentReturn => {
@@ -69,8 +61,6 @@ export const useSyncOrderPayment = (
           mutate(isOrderListKey),
         ]);
       })
-      // A failed sync leaves the order as it was read and still offers the pay
-      // control: the provider page already told the customer what happened.
       .catch(() => undefined)
       .finally(() => {
         setIsChecking(false);

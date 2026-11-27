@@ -18,10 +18,6 @@ type Props = {
   className?: string;
 };
 
-/**
- * A cookie written by a server action does not repaint the screen already on
- * display, so the refresh after the action is what makes the switch visible.
- */
 export default function LocaleSwitcher({ className }: Props) {
   const locale = useLocale();
   const router = useRouter();

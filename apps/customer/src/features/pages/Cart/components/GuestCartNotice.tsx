@@ -3,10 +3,6 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 
-/**
- * One band above the lines: the cart works without an account, checkout does
- * not, so the account is asked for once and in one place (spec 0028, AC-14).
- */
 const GuestCartNotice = () => {
   const t = useTranslations("cart");
 

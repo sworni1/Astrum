@@ -8,7 +8,6 @@ const userIdOf = (req: Request): string =>
 
 const orderIdOf = (req: Request): string => req.params.orderId as string;
 
-/** The two provider routes that sit behind the order mount and its token (AC-4, AC-10). */
 export class PaymentController {
   async startPayment(req: Request, res: Response) {
     try {

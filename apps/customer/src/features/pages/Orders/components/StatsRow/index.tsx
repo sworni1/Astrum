@@ -2,9 +2,9 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import type { OrderListPage } from "@/common/types/order.types";
-import StatTile from "@/features/general/StatTile";
 import { amountListText } from "@/features/general/lib/moneyText";
 import { STAT_GRID } from "@/features/general/lib/screenStyles";
+import StatTile from "@/features/general/StatTile";
 
 type Props = {
   counts?: OrderListPage["counts"];
@@ -25,7 +25,10 @@ const StatsRow = ({ counts, spent }: Props) => {
         label={t("stats.spent")}
         value={spent === undefined ? undefined : amountListText(spent, locale)}
       />
-      <StatTile label={t("stats.received")} value={countOf(counts?.delivered)} />
+      <StatTile
+        label={t("stats.received")}
+        value={countOf(counts?.delivered)}
+      />
     </div>
   );
 };

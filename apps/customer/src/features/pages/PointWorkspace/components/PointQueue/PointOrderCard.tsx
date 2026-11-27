@@ -18,11 +18,6 @@ type Props = {
   onRun: (order: PointOrder, action: PointOrderActionName) => void;
 };
 
-/**
- * One parcel waiting at the counter: its number, when it was placed, every line
- * still inside, the total, and the two moves. No buyer identity and no count
- * that was not read (spec 0018, AC-10).
- */
 const PointOrderCard = ({ order, actionsDisabled, pending, onRun }: Props) => {
   const t = useTranslations("staff");
   const locale = useLocale();
@@ -72,7 +67,9 @@ const PointOrderCard = ({ order, actionsDisabled, pending, onRun }: Props) => {
           <span className="text-muted-foreground">
             {t("point.queue.totalLabel")}
           </span>{" "}
-          <strong>{formatMoney(order.grandTotal, order.currency, locale)}</strong>
+          <strong>
+            {formatMoney(order.grandTotal, order.currency, locale)}
+          </strong>
         </p>
 
         <OrderActions

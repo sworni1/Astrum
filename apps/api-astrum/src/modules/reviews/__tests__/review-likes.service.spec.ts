@@ -16,8 +16,8 @@ jest.mock("../../../../lib/prisma", () => ({
 }));
 
 import { prisma } from "../../../../lib/prisma";
-import { ReviewsService } from "../reviews.service";
 import { userOwner } from "../../../common/types/owner";
+import { ReviewsService } from "../reviews.service";
 
 type Args = Record<string, any>;
 
@@ -36,10 +36,6 @@ const prismaMock = prisma as unknown as {
   };
 };
 
-/**
- * A tiny stateful client: the counter lives beside the like rows, so a test
- * can prove the two agree after any sequence of presses (AC-4).
- */
 type Store = {
   exists: boolean;
   status: string;
@@ -262,7 +258,10 @@ describe("ReviewsService like routes (spec 0014)", () => {
       { reviewId: "review-2" },
     ]);
 
-    const answer = await service.getLikedReviewIds(userOwner("user-1"), "product-1");
+    const answer = await service.getLikedReviewIds(
+      userOwner("user-1"),
+      "product-1",
+    );
 
     expect(answer).toEqual({ reviewIds: ["review-1", "review-2"] });
     expect(prismaMock.reviewLike.findMany).toHaveBeenCalledWith({

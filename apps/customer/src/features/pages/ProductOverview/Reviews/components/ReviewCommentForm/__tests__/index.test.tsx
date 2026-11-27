@@ -2,8 +2,8 @@ import { AxiosError, AxiosHeaders } from "axios";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import ReviewCommentForm from "@/features/pages/ProductOverview/Reviews/components/ReviewCommentForm";
 import { showToast } from "@/common/helpers/showToast";
+import ReviewCommentForm from "@/features/pages/ProductOverview/Reviews/components/ReviewCommentForm";
 
 const mocks = vi.hoisted(() => ({ trigger: vi.fn(), onCreated: vi.fn() }));
 
@@ -152,7 +152,6 @@ describe("ReviewCommentForm (spec 0014)", () => {
 
     expect(mocks.trigger).toHaveBeenCalledTimes(1);
 
-    // Released, so the module's send lock is free for the next test.
     await act(async () => {
       pending.resolve({ comment: { id: "comment-1" }, commentCount: 1 });
     });

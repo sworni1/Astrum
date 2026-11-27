@@ -13,7 +13,6 @@ type Props = {
   onGranted: (role: StaffRole, answer: StaffAnswer) => Promise<void>;
 };
 
-/** The courier half of the page: one button, no point to name (AC-3, AC-7). */
 const CourierGrantCard = ({ pending, onGranted }: Props) => {
   const t = useTranslations("staff");
   const { run, isSubmitting } = useGrantCourier();

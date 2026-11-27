@@ -12,7 +12,6 @@ export interface UsePointWorkerMutationReturn {
   error: unknown;
 }
 
-/** One deliberate action attaches the account to one active point (AC-4). */
 export const useGrantPointWorker = (): UsePointWorkerMutationReturn => {
   const { postItem } = useFetcher();
 
@@ -26,7 +25,6 @@ export const useGrantPointWorker = (): UsePointWorkerMutationReturn => {
   return { run: trigger, isSubmitting: isMutating, error };
 };
 
-/** The same route with a different point writes the move of AC-8. */
 export const useMovePointWorker = (): UsePointWorkerMutationReturn => {
   const { patchItem } = useFetcher();
 

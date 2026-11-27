@@ -7,8 +7,8 @@ import {
 } from "../../middlewares/staffRole";
 import { validateDto } from "../../middlewares/validateDto";
 import { STAFF_ERROR_CODES } from "./constants/staff.constants";
-import { CreatePointWorkerDto } from "./dto/create-point-worker.dto";
 import { CourierOrderController } from "./courier-order.controller";
+import { CreatePointWorkerDto } from "./dto/create-point-worker.dto";
 import { PointOrderController } from "./point-order.controller";
 import { StaffController } from "./staff.controller";
 
@@ -22,8 +22,6 @@ const validatePoint = validateDto(CreatePointWorkerDto, {
   code: STAFF_ERROR_CODES.validation,
 });
 
-// The writes carry the account gate; the role guard sits after it, so a
-// PENDING account is refused before its role is read (AC-8).
 staffRoutes.post(
   "/staff/point-worker",
   requireActiveAccount,
@@ -45,14 +43,10 @@ staffRoutes.post(
   controller.grantCourier,
 );
 
-// A read is open to a PENDING account: confirmation gates writes only (AC-9).
 staffRoutes.get("/staff/point", requirePointWorker, controller.readPoint);
 
 staffRoutes.get("/staff/courier", requireCourier, controller.readCourier);
 
-// The counter's queue and its two writes. The read stays open to a PENDING
-// account, and each write carries the account gate before the role guard
-// (spec 0018, AC-1, AC-4, AC-6).
 staffRoutes.get(
   "/staff/point/orders",
   requirePointWorker,
@@ -73,9 +67,6 @@ staffRoutes.patch(
   pointOrderController.cancel,
 );
 
-// The courier's pool and its four writes. No write takes a body, so none mounts
-// `validateDto`; the scope of the read is checked in the controller, because
-// `validateDto` reads a body only (spec 0019, AC-2 to AC-8).
 staffRoutes.get(
   "/staff/courier/orders",
   requireCourier,

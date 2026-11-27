@@ -56,9 +56,13 @@ vi.mock("@/features/pages/Profile/actions/ChangePasswordForm", () => ({
   default: () => <div data-testid="change-password" />,
 }));
 
-vi.mock("@/features/pages/Profile/actions/LogOutForm", () => ({ default: () => <div /> }));
+vi.mock("@/features/pages/Profile/actions/LogOutForm", () => ({
+  default: () => <div />,
+}));
 
-vi.mock("@/features/pages/Profile/actions/DeleteAccountForm", () => ({ default: () => <div /> }));
+vi.mock("@/features/pages/Profile/actions/DeleteAccountForm", () => ({
+  default: () => <div />,
+}));
 
 import Profile from "@/features/pages/Profile";
 import SellOnAstrum from "@/features/pages/Profile/actions/SellOnAstrum";

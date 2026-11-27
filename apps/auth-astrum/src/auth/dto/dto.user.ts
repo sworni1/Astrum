@@ -10,7 +10,16 @@ import {
   MinLength,
 } from "class-validator";
 import { Gender } from "@astrum/db/enums";
-import { MIN_AGE_YEARS, MinAge } from "./min-age.validator";
+import {
+  MIN_AGE_YEARS,
+  NICKNAME_MAX_LENGTH,
+  NICKNAME_MAX_LENGTH_MESSAGE,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MAX_LENGTH_MESSAGE,
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_MIN_LENGTH_MESSAGE,
+} from "../constants/auth.constants";
+import { MinAge } from "./min-age.validator";
 
 export class RegisterUserDto {
   @IsNotEmpty()
@@ -25,11 +34,11 @@ export class RegisterUserDto {
 
   @IsNotEmpty()
   @IsString()
-  @MinLength(8, {
-    message: "Password must be at least 8 characters",
+  @MinLength(PASSWORD_MIN_LENGTH, {
+    message: PASSWORD_MIN_LENGTH_MESSAGE,
   })
-  @MaxLength(25, {
-    message: "Password cannot exceed 25 characters",
+  @MaxLength(PASSWORD_MAX_LENGTH, {
+    message: PASSWORD_MAX_LENGTH_MESSAGE,
   })
   @ApiProperty({
     required: true,
@@ -63,8 +72,8 @@ export class RegisterUserDto {
 
   @IsString()
   @IsOptional()
-  @MaxLength(25, {
-    message: "Nickname cannot exceed 25 characters",
+  @MaxLength(NICKNAME_MAX_LENGTH, {
+    message: NICKNAME_MAX_LENGTH_MESSAGE,
   })
   @ApiProperty({
     required: false,
@@ -88,11 +97,11 @@ export class SignInUserDto {
 
   @IsNotEmpty()
   @IsString()
-  @MinLength(8, {
-    message: "Password must be at least 8 characters",
+  @MinLength(PASSWORD_MIN_LENGTH, {
+    message: PASSWORD_MIN_LENGTH_MESSAGE,
   })
-  @MaxLength(25, {
-    message: "Password cannot exceed 25 characters",
+  @MaxLength(PASSWORD_MAX_LENGTH, {
+    message: PASSWORD_MAX_LENGTH_MESSAGE,
   })
   @ApiProperty({
     required: true,

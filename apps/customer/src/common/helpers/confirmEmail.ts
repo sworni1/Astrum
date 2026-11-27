@@ -13,11 +13,6 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
-/**
- * The resend route answers 204 whatever happens, so a caller cannot tell an
- * unknown address from a known one. The address travels lowercased because
- * that is the identity the rate limit counts.
- */
 export const requestConfirmationEmail = async (
   email: string,
 ): Promise<void> => {

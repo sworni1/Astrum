@@ -23,11 +23,6 @@ const sourceFiles = (dir: string): string[] =>
     return isSource ? [path] : [];
   });
 
-/**
- * A birth date is a calendar day the api stores at UTC midnight, so printing it
- * in a browser west of Greenwich would name the day before the one the profile
- * means. It keeps the UTC pin on purpose.
- */
 const CALENDAR_DAY_FILES = [
   "features/pages/Profile/actions/EditProfileForm/index.tsx",
 ];
@@ -37,7 +32,6 @@ const isCalendarDayField = (file: string): boolean =>
     file.split(String.fromCharCode(92)).join("/").endsWith(exempt),
   );
 
-/** Every call site, as `file:line`, of a formatter call that brings no zone. */
 const callsWithoutZone = (): string[] =>
   sourceFiles(SRC_DIR).flatMap((file) => {
     if (isCalendarDayField(file)) {

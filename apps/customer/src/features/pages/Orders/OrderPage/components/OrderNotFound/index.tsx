@@ -2,7 +2,6 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 
-/** The failed read, rendered as a screen with a way back to the list. */
 const OrderNotFound = () => {
   const router = useRouter();
   const t = useTranslations("orders");

@@ -6,7 +6,6 @@ type ShippingRow = Pick<
   "id" | "name" | "price" | "currency" | "isPickup"
 >;
 
-/** Each item is exactly `{ id, name, price, currency, isPickup }` (AC-4). */
 export const toShippingMethodJson = (method: ShippingRow) => ({
   id: method.id,
   name: method.name,

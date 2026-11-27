@@ -13,7 +13,6 @@ export interface UseStaffCourierReturn {
   mutate: KeyedMutator<StaffAnswer>;
 }
 
-/** The courier role of the signed in account; a courier carries no point (AC-10). */
 export const useStaffCourier = (): UseStaffCourierReturn => {
   const { getData } = useFetcher();
   const { data, error, isLoading, mutate } = useSWR<StaffAnswer>(

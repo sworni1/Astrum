@@ -2,7 +2,6 @@
 
 import { useTranslations } from "next-intl";
 
-/** The honest empty state: no invented card stands in for a review (AC-6). */
 const ReviewsEmpty = () => {
   const t = useTranslations("reviews");
 

@@ -16,11 +16,6 @@ type Props = {
   currency: Currency;
 };
 
-/**
- * One bought line: the tile, the name, how many, and the line total. Everything
- * printed here comes from the live cart row, never from the handoff
- * (spec 0024, AC-3, AC-10).
- */
 const SelectedLine = ({ line, currency }: Props) => {
   const t = useTranslations("cart");
   const locale = useLocale();

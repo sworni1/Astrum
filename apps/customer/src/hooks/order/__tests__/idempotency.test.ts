@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { createIdempotencyKey, isTerminalAnswer } from "@/hooks/order/idempotency";
+import {
+  createIdempotencyKey,
+  isTerminalAnswer,
+} from "@/hooks/order/idempotency";
 
 const axiosError = (status?: number) => ({
   isAxiosError: true,

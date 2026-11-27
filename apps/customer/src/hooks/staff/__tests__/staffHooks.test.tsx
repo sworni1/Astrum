@@ -49,8 +49,6 @@ const renderProbe = async (probe: React.ReactNode): Promise<void> => {
   document.body.appendChild(container);
   root = createRoot(container);
 
-  // A fresh cache and no dedupe per test, so one test's answer never hides the
-  // next test's refusal.
   await act(async () => {
     root.render(
       <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>

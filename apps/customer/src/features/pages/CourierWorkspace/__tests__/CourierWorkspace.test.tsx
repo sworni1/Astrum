@@ -31,7 +31,10 @@ vi.mock("next-intl", () => ({
   useFormatter: () => ({
     dateTime: (): string => "14 Nov 2026, 11:30",
   }),
-  createTranslator: () => (key: string): string => key,
+  createTranslator:
+    () =>
+    (key: string): string =>
+      key,
 }));
 
 vi.mock("next/link", () => ({

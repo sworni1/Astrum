@@ -1,40 +1,60 @@
 import { Prisma } from "@astrum/db/client";
-import type { PaymentAttemptStatus } from "@astrum/db/enums";
+import { PaymentMethod } from "@astrum/db/enums";
 import { prisma } from "../../../lib/prisma";
 import { logger } from "../../common/helpers/logger";
+import { SWEEP_TRANSACTION_OPTIONS } from "../../common/helpers/sweepTransaction";
+import { describeError } from "../../events/describe-error";
 import { invalidateStockOfOrder } from "../order/order-cache";
-import { applyExpiredEvent, applyPaidEvent } from "./payment.apply";
+import { closeOrder, lockOrder } from "../order/order-status";
 import {
+  PAYMENT_FAILED_FROM_STATUSES,
   PAYMENT_SWEEP_BATCH,
+  PAYMENT_SWEEP_INCLUDE,
   PAYMENT_SWEEP_INTERVAL_MS,
   PAYMENT_SWEEP_LOCK_KEY,
+  PAYMENT_SWEEP_ORDER_STATUSES,
 } from "./constants/payment.constants";
+import { sessionOutcomeOf } from "./helpers/payment.helpers";
+import { applyExpiredEvent, applyPaidEvent } from "./payment.apply";
 import type { PaymentGateway } from "./payment.gateway";
 import { paymentGateway } from "./payment.gateway.registry";
-import { sessionOutcomeOf } from "./payment.money";
 
-const SWEEP_INCLUDE = {
-  payments: {
-    where: { status: { in: ["PENDING", "FAILED"] as PaymentAttemptStatus[] } },
-    orderBy: { createdAt: "desc" as const },
-    take: 1,
-  },
-};
-
-type SweepOrder = Prisma.OrderGetPayload<{ include: typeof SWEEP_INCLUDE }>;
-
-/** A network call per order sits inside this transaction, so it needs room. */
-const SWEEP_TRANSACTION_OPTIONS = {
-  maxWait: 5000,
-  timeout: 60_000,
-  isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
-};
-
-const describe = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
+type SweepOrder = Prisma.OrderGetPayload<{
+  include: typeof PAYMENT_SWEEP_INCLUDE;
+}>;
 
 const logClosed = (orderId: string, paymentId: string): void => {
   logger.info({ event: "payment.sweep.closed", orderId, paymentId });
+};
+
+const closeWithoutAttempt = async (
+  tx: Prisma.TransactionClient,
+  order: SweepOrder,
+  closedOrderIds: string[],
+): Promise<void> => {
+  await lockOrder(tx, order.id);
+
+  const fresh = await tx.order.findFirst({
+    where: { id: order.id, status: "PENDING" },
+    include: { OrderItem: true },
+  });
+
+  if (fresh === null) {
+    return;
+  }
+
+  await closeOrder(tx, fresh);
+  await tx.order.update({
+    where: { id: fresh.id },
+    data: { paymentStatus: "CANCELLED" },
+  });
+
+  closedOrderIds.push(order.id);
+
+  logger.warn({
+    event: "payment.sweep.no_attempt.closed",
+    orderId: order.id,
+  });
 };
 
 const closeWithoutSession = async (
@@ -44,11 +64,7 @@ const closeWithoutSession = async (
   closedOrderIds: string[],
 ): Promise<void> => {
   if (attemptId === null) {
-    logger.warn({
-      event: "payment.sweep.no_attempt",
-      orderId: order.id,
-    });
-
+    await closeWithoutAttempt(tx, order, closedOrderIds);
     return;
   }
 
@@ -60,11 +76,6 @@ const closeWithoutSession = async (
   }
 };
 
-/**
- * The provider session decides on its own: paid applies the paid transition, an
- * expired one the close, and a session still open past its deadline is expired
- * here first. A provider fault leaves the order for the next tick (AC-9).
- */
 const sweepWithSession = async (
   tx: Prisma.TransactionClient,
   gateway: PaymentGateway,
@@ -102,7 +113,7 @@ const sweepWithSession = async (
       event: "payment.sweep.failed",
       orderId: order.id,
       paymentId: attemptId,
-      reason: describe(error),
+      reason: describeError(error),
     });
   }
 };
@@ -136,21 +147,16 @@ const selectOverdueOrders = async (
 ): Promise<SweepOrder[]> =>
   await tx.order.findMany({
     where: {
-      paymentMethod: "ONLINE_CARD",
-      paymentStatus: { in: ["PENDING", "FAILED"] },
+      paymentMethod: PaymentMethod.ONLINE_CARD,
+      paymentStatus: { in: [...PAYMENT_FAILED_FROM_STATUSES] },
       paymentExpiresAt: { lt: new Date() },
-      status: { in: ["PENDING", "CONFIRMED"] },
+      status: { in: [...PAYMENT_SWEEP_ORDER_STATUSES] },
     },
     orderBy: { paymentExpiresAt: "asc" },
     take: PAYMENT_SWEEP_BATCH,
-    include: SWEEP_INCLUDE,
+    include: PAYMENT_SWEEP_INCLUDE,
   });
 
-/**
- * One pass, behind a transaction scoped advisory lock so one replica sweeps and
- * a tick is skipped while another holds it (AC-9). A session level lock would
- * outlive its pooled connection.
- */
 export const runPaymentSweep = async (
   gateway: PaymentGateway | null = paymentGateway(),
 ): Promise<void> => {
@@ -172,19 +178,17 @@ export const runPaymentSweep = async (
     }
   }, SWEEP_TRANSACTION_OPTIONS);
 
-  // A closed order returned its stock, so the counters follow the commit (AC-7 b).
   for (const orderId of closedOrderIds) {
     await invalidateStockOfOrder(orderId);
   }
 };
 
-/** Started from `server.ts` and never from `app.ts` (AC-9). */
 export const startPaymentSweep = (): NodeJS.Timeout => {
   const timer = setInterval(() => {
     void runPaymentSweep().catch((error: unknown) => {
       logger.error({
         event: "payment.sweep.crashed",
-        reason: describe(error),
+        reason: describeError(error),
       });
     });
   }, PAYMENT_SWEEP_INTERVAL_MS);

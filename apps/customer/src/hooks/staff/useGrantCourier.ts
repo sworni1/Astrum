@@ -10,7 +10,6 @@ export interface UseGrantCourierReturn {
   error: unknown;
 }
 
-/** One button takes the courier job; no point is named (AC-7). */
 export const useGrantCourier = (): UseGrantCourierReturn => {
   const { postItem } = useFetcher();
 

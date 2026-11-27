@@ -20,11 +20,6 @@ const REFUSALS: Record<string, RefusalToast> = {
   VALIDATION: { key: "validation", retry: false },
 };
 
-/**
- * Every refusal the counter shows comes from the response code, never from the
- * server prose. Only an unreadable account state, a server fault and a dropped
- * answer are worth a retry (spec 0018, AC-12).
- */
 export const refusalToastFor = (error: unknown): RefusalToast => {
   const code = refusalCode(error);
 

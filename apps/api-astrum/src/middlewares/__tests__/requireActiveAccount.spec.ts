@@ -12,14 +12,13 @@ jest.mock("../../../lib/prisma", () => ({
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { requireActiveAccount } =
-  require("../requireActiveAccount") as {
-    requireActiveAccount: (
-      req: Request,
-      res: Response,
-      next: NextFunction,
-    ) => Promise<void>;
-  };
+const { requireActiveAccount } = require("../requireActiveAccount") as {
+  requireActiveAccount: (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => Promise<void>;
+};
 
 const createMockReq = (): Request =>
   ({

@@ -12,15 +12,6 @@ type Props = {
   alt: string;
 };
 
-/**
- * The 96px tile of one line. An empty column value and a source that fails to
- * load both render the parcel icon the mockup draws, because a broken image is
- * not what the screen is supposed to show (spec 0025, AC-11).
- *
- * A source that already failed before hydration never raises `error`, so the
- * mounted node is asked once through its ref: `complete` with a zero
- * `naturalWidth` is exactly a failed load.
- */
 const LineImageTile = ({ src, alt }: Props) => {
   const [failed, setFailed] = useState(false);
 

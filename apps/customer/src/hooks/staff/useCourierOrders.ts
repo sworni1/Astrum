@@ -7,8 +7,7 @@ import type {
   CourierOrdersPage,
   CourierScope,
 } from "./courierOrder.types";
-
-const PAGE_SIZE = 20;
+import { STAFF_PAGE_SIZE } from "./staffPage";
 
 export interface UseCourierOrdersReturn {
   orders: CourierOrder[];
@@ -22,12 +21,6 @@ export interface UseCourierOrdersReturn {
   mutate: () => Promise<void>;
 }
 
-/**
- * One of the courier's two lists, one page at a time. `showMore` appends the next
- * page, and `mutate` drops every accumulated page and re-reads the first one, so
- * a claimed or closed parcel can never leave a shifted offset behind
- * (spec 0019, AC-10).
- */
 export const useCourierOrders = (
   scope: CourierScope,
 ): UseCourierOrdersReturn => {
@@ -51,10 +44,9 @@ export const useCourierOrders = (
 
       try {
         const answer = (await getData(
-          `/staff/courier/orders?scope=${scope}&page=${target}&limit=${PAGE_SIZE}`,
+          `/staff/courier/orders?scope=${scope}&page=${target}&limit=${STAFF_PAGE_SIZE}`,
         )) as CourierOrdersPage;
 
-        // A newer read has started, so this answer is already stale.
         if (generation.current !== own) {
           return;
         }

@@ -36,11 +36,6 @@ type DialogProps = {
   onRun: (order: PointOrder, action: PointOrderActionName) => void;
 };
 
-/**
- * One irreversible move with the confirmation in front of it: nothing is sent
- * until the confirm control is pressed, and the keep control takes the initial
- * focus (spec 0018, AC-11, AC-14).
- */
 const OrderDialog = ({ order, action, busy, disabled, onRun }: DialogProps) => {
   const t = useTranslations("staff");
   const keepRef = useRef<HTMLButtonElement>(null);
@@ -84,7 +79,6 @@ const OrderDialog = ({ order, action, busy, disabled, onRun }: DialogProps) => {
   );
 };
 
-/** The two controls of one parcel: hand it over, or cancel it at the buyer's request. */
 const OrderActions = ({ order, disabled, pending, onRun }: Props) => {
   const action = pending?.orderId === order.id ? pending.action : null;
 

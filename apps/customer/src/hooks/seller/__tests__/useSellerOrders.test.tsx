@@ -7,13 +7,13 @@ const { getData } = vi.hoisted(() => ({ getData: vi.fn() }));
 
 vi.mock("@/hooks/useFetcher", () => ({ useFetcher: () => ({ getData }) }));
 
+import { Currency } from "@/common/types/product.types";
 import {
   SELLER_ORDERS_PAGE_SIZE,
+  type SellerOrdersFilters,
   sellerOrdersKey,
   useSellerOrders,
-  type SellerOrdersFilters,
 } from "@/hooks/seller/useSellerOrders";
-import { Currency } from "@/common/types/product.types";
 
 type Snapshot = {
   kind: string;
@@ -102,7 +102,9 @@ describe("sellerOrdersKey", () => {
     expect(sellerOrdersKey({ status: "ALL" })).toBe(
       "/seller/orders?page=1&limit=20",
     );
-    expect(sellerOrdersKey({ q: "   " })).toBe("/seller/orders?page=1&limit=20");
+    expect(sellerOrdersKey({ q: "   " })).toBe(
+      "/seller/orders?page=1&limit=20",
+    );
   });
 
   it("carries the chosen tab, the trimmed query and the page (AC-2)", () => {

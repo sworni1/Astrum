@@ -14,13 +14,12 @@ type Props = {
   paymentBranch: PaymentReturnBranch;
 };
 
-/**
- * The screen the mockup draws: one left card holding the header, the lines, the
- * pickup block and the payment block, and one right column holding the total, its
- * breakdown and the receiving block. Below 1024px the two stack (spec 0027,
- * AC-2 to AC-6).
- */
-const OrderScreen = ({ order, isCancelling, onCancel, paymentBranch }: Props) => (
+const OrderScreen = ({
+  order,
+  isCancelling,
+  onCancel,
+  paymentBranch,
+}: Props) => (
   <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-6 px-4 pt-6 lg:px-10 lg:pt-9">
     <div
       className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_380px]"

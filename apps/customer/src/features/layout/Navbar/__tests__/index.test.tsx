@@ -42,7 +42,9 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("@/common/helpers/showToast", () => ({ showToast: vi.fn() }));
-vi.mock("@/features/layout/Navbar/Searchbar", () => ({ default: () => <span data-searchbar="" /> }));
+vi.mock("@/features/layout/Navbar/Searchbar", () => ({
+  default: () => <span data-searchbar="" />,
+}));
 vi.mock("@/components/LocaleSwitcher", () => ({
   default: () => <span data-locale="" />,
 }));
@@ -109,7 +111,6 @@ const openMobileSheet = async (): Promise<void> => {
   });
 };
 
-/** The sheet renders through a portal, so its links sit outside the container. */
 const sheetLinks = (selector = SELLER_HREF): HTMLAnchorElement[] =>
   Array.from(document.querySelectorAll<HTMLAnchorElement>(selector)).filter(
     (link) => !container.contains(link),
@@ -268,7 +269,6 @@ describe("Point and courier items in the navigation", () => {
   });
 });
 
-
 describe("A failed read in the navigation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -293,7 +293,6 @@ describe("A failed read in the navigation", () => {
     container?.remove();
   });
 
-  /** Every read answers, except the orders one, which failed once. */
   const renderWithFailedOrders = async (error: object): Promise<void> => {
     useGetCart.mockReturnValue({
       cart: [],

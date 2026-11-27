@@ -6,7 +6,6 @@ export enum Gender {
   Female,
 }
 
-// Single source of truth: the zod schema the register form validates against.
 export type SignUpCredentials = z.infer<
   ReturnType<typeof createRegisterFormSchema>
 >;

@@ -8,18 +8,14 @@ import type {
 } from "@/common/types/review.types";
 import { useFetcher } from "@/hooks/useFetcher";
 import { mergeCommentPages } from "./commentPages";
-import { reviewCommentsKey, reviewCommentsPageKey } from "./reviewsKeys";
+import {
+  NO_PAGES,
+  reviewCommentsKey,
+  reviewCommentsPageKey,
+} from "./reviewsKeys";
 
 type ExtraPages = { reviewId: string; pages: ReviewCommentPage[] };
 
-const NO_PAGES: ReviewCommentPage[] = [];
-
-/**
- * One page at a time, oldest first. A row this customer just wrote is held in
- * its own list below the loaded pages, because the thread pages oldest first
- * and a new row is not provably last while pages remain unloaded (AC-11). A
- * deleted row is patched in place, so the stub never depends on a re read.
- */
 export const useReviewComments = (reviewId: string) => {
   const { getData } = useFetcher();
 

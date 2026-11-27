@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   CHECKOUT_BLOCK_HINTS,
   CHECKOUT_FIELD_HINTS,
-  checkoutHint,
   type CheckoutHintState,
+  checkoutHint,
 } from "@/features/pages/Checkout/lib/hints";
 
 const ready: CheckoutHintState = {
@@ -30,7 +30,11 @@ describe("checkoutHint", () => {
 
   it("names an unavailable list before any field (AC-14)", () => {
     expect(
-      checkoutHint({ ...ready, methodsUnavailable: true, deliveryDate: undefined }),
+      checkoutHint({
+        ...ready,
+        methodsUnavailable: true,
+        deliveryDate: undefined,
+      }),
     ).toBe(CHECKOUT_BLOCK_HINTS.methodsUnavailable);
   });
 
@@ -79,6 +83,8 @@ describe("checkoutHint", () => {
     expect(checkoutHint({ ...ready, deliveryAddress: "   Tver   " })).toBe(
       CHECKOUT_FIELD_HINTS.deliveryAddress,
     );
-    expect(checkoutHint({ ...ready, deliveryAddress: "Tverskaya 12" })).toBeNull();
+    expect(
+      checkoutHint({ ...ready, deliveryAddress: "Tverskaya 12" }),
+    ).toBeNull();
   });
 });

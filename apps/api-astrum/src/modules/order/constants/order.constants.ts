@@ -1,9 +1,11 @@
+import { Prisma } from "@astrum/db/client";
 import type {
   OrderItemStatus,
+  OrderStatus,
+  PaymentAttemptStatus,
   PaymentMethod,
 } from "@astrum/db/enums";
 
-/** Machine readable codes the storefront branches on. */
 export const ORDER_ERROR_CODES = {
   outOfStock: "OUT_OF_STOCK",
   cartMismatch: "CART_MISMATCH",
@@ -27,22 +29,16 @@ export const ORDER_ERROR_CODES = {
   searchQueryTooLong: "SEARCH_QUERY_TOO_LONG",
 } as const;
 
-/**
- * The three tabs of the orders screen, as the read receives them (spec 0025,
- * AC-2). `ALL` means no status filter, and no other value is accepted.
- */
 export const ORDER_LIST_STATUSES = ["ALL", "DELIVERED", "CANCELED"] as const;
 
 export type OrderListStatus = (typeof ORDER_LIST_STATUSES)[number];
 
-/** A search query longer than this is refused, not truncated (spec 0025, AC-2). */
+export const ORDER_LIST_STATUS_FILTERS = ORDER_LIST_STATUSES.filter(
+  (value): value is Exclude<OrderListStatus, "ALL"> => value !== "ALL",
+);
+
 export const ORDER_SEARCH_MAX_LENGTH = 64;
 
-/**
- * The line status one payment method writes when the order is created (AC-1):
- * a cash order is accepted by the shop at once, a prepaid one waits for the
- * money. The `Record` forces a decision for every method added later.
- */
 export const LINE_STATUS_BY_PAYMENT_METHOD: Record<
   PaymentMethod,
   OrderItemStatus
@@ -54,35 +50,114 @@ export const LINE_STATUS_BY_PAYMENT_METHOD: Record<
   STRIPE: "PENDING",
 };
 
-/** At most 50 lines per order (AC-7). */
 export const MAX_ORDER_LINES = 50;
 
-/** At most 999 units per line, also after repeated products are merged (AC-7). */
 export const MAX_LINE_QUANTITY = 999;
 
-/** An idempotency key is 8 to 128 characters from this alphabet (spec 0003, AC-4). */
 export const IDEMPOTENCY_KEY_MIN_LENGTH = 8;
 export const IDEMPOTENCY_KEY_MAX_LENGTH = 128;
 export const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_-]+$/;
 
-/** A keyed refusal re-reads the key three times, 100 ms apart (spec 0003, AC-6). */
 export const REPLAY_ATTEMPTS = 3;
 export const REPLAY_RETRY_DELAY_MS = 100;
 
-/**
- * How long an accepted order waits before the platform marks it sent. This
- * project runs no real delivery, so an order the shop accepted (paid online, or
- * placed with cash) is on its way after this delay. Change this one number to
- * change the wait everywhere.
- */
 export const ORDER_SHIPPING_DELAY_MS = 60_000;
 
-/**
- * How often the shipping pass looks for orders that waited long enough. Equal to
- * the delay, so an order becomes sent between the delay and the delay plus one
- * tick (60 to 120 seconds after it was accepted).
- */
 export const ORDER_SHIPPING_INTERVAL_MS = 60_000;
 
-/** One pass ships at most this many orders, so a tick stays short. */
 export const ORDER_SHIPPING_BATCH = 20;
+
+export const IDEMPOTENCY_HEADER = "Idempotency-Key";
+
+export const CUSTOMER_CANCELLATION_BLOCKERS: readonly OrderItemStatus[] = [
+  "SHIPPED",
+  "DELIVERED",
+  "ISSUED",
+  "RETURNED",
+  "BACKORDERED",
+  "REPLACED",
+];
+
+export const ORDER_DETAIL_INCLUDE = { OrderItem: true } as const;
+
+export const ORDER_LIST_SELECT = {
+  id: true,
+  status: true,
+  createdAt: true,
+  grandTotal: true,
+  currency: true,
+  OrderItem: {
+    select: {
+      id: true,
+      name: true,
+      previewImage: true,
+      quantity: true,
+      status: true,
+      receiptDate: true,
+    },
+    orderBy: { id: "asc" },
+  },
+} as const;
+
+export const ORDER_LIST_TRANSACTION_OPTIONS = {
+  isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+} as const;
+
+export const PRODUCT_SELECT = {
+  id: true,
+  businessId: true,
+  name: true,
+  previewImage: true,
+  price: true,
+  currency: true,
+  quantity: true,
+  isOutOfStock: true,
+  isDeleted: true,
+  visibility: true,
+  status: true,
+} as const;
+
+export const SHIPPING_INCLUDE = {
+  payments: {
+    where: { status: "PAID" as PaymentAttemptStatus },
+    orderBy: { paidAt: "desc" as const },
+    take: 1,
+  },
+} as const;
+
+export const SOLD_LINE_STATUSES = ["DELIVERED", "ISSUED"] as const;
+
+export const ACTIVE_LINE_STATUSES = [
+  "PENDING",
+  "CONFIRMED",
+  "SHIPPED",
+  "DELIVERED",
+  "ISSUED",
+] as const;
+
+export type ActiveLineStatus = (typeof ACTIVE_LINE_STATUSES)[number];
+
+export const ORDER_STATUS_BY_LINE_STATUS: Record<
+  ActiveLineStatus,
+  OrderStatus
+> = {
+  PENDING: "PENDING",
+  CONFIRMED: "CONFIRMED",
+  SHIPPED: "SHIPPED",
+  DELIVERED: "DELIVERED",
+  ISSUED: "ISSUED",
+};
+
+export const ORDER_STATUS_PRIORITY: Record<OrderStatus, number> = {
+  PENDING: 0,
+  CONFIRMED: 1,
+  SHIPPED: 2,
+  DELIVERED: 3,
+  ISSUED: 4,
+  CANCELED: 5,
+};
+
+export const STOCK_RETURN_STATUSES: readonly OrderItemStatus[] = [
+  "PENDING",
+  "CONFIRMED",
+];

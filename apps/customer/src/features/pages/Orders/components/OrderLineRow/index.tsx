@@ -3,7 +3,6 @@
 import { useFormatter, useTranslations } from "next-intl";
 import type { OrderLineRow as OrderLineRowData } from "@/common/types/order.types";
 import { OrderItemStatus } from "@/common/types/order.types";
-import { browserTimeZone } from "@/features/pages/SellerOrders/lib/format";
 import { lineStateOf } from "@/features/pages/Orders/lib/lineState";
 import {
   LINE_DOT,
@@ -14,18 +13,13 @@ import {
   LINE_TEXT,
   LINE_TITLE,
 } from "@/features/pages/Orders/lib/styles";
+import { browserTimeZone } from "@/features/pages/SellerOrders/lib/format";
 import LineImageTile from "./LineImageTile";
 
 type Props = {
   line: OrderLineRowData;
 };
 
-/**
- * One line of a group: the image tile, the product name, its quantity and the
- * line state with the receipt date when the column carries one (spec 0025,
- * AC-11). An issued line prints no date, because `receiptDate` is the arrival
- * and the issue moment belongs to the receiving block (spec 0031, AC-7).
- */
 const OrderLineRow = ({ line }: Props) => {
   const t = useTranslations("orders");
   const format = useFormatter();

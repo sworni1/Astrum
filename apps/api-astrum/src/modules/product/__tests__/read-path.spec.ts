@@ -1,6 +1,6 @@
 jest.mock("../../../../lib/prisma", () => ({
   prisma: {
-    product: { findMany: jest.fn() },
+    product: { findMany: jest.fn(), findFirst: jest.fn() },
     review: { groupBy: jest.fn() },
     cartItem: { findMany: jest.fn() },
     wishlistItem: { findMany: jest.fn() },
@@ -42,21 +42,21 @@ jest.mock("../../../cache/cache", () => {
 });
 
 import { prisma } from "../../../../lib/prisma";
-import { ProductService } from "../product.service";
 import { userOwner } from "../../../common/types/owner";
+import { ProductService } from "../product.service";
 
 type Mocked = jest.Mock;
 
 const prismaMock = prisma as unknown as {
-  product: { findMany: Mocked };
+  product: { findMany: Mocked; findFirst: Mocked };
   review: { groupBy: Mocked };
   cartItem: { findMany: Mocked };
   wishlistItem: { findMany: Mocked };
 };
 
-/** Every query the service issues, of any model, counts once. */
 const queryCount = (): number =>
   prismaMock.product.findMany.mock.calls.length +
+  prismaMock.product.findFirst.mock.calls.length +
   prismaMock.review.groupBy.mock.calls.length +
   prismaMock.cartItem.findMany.mock.calls.length +
   prismaMock.wishlistItem.findMany.mock.calls.length;
@@ -75,20 +75,18 @@ const page = (count: number) =>
     currency: "RUB",
   }));
 
-/**
- * A cursor keeps each test on its own cache key, because the stub store lives
- * for the whole file while the mocks reset per test.
- */
 const CURSOR_MISS = "cursor-miss-then-hit";
 const CURSOR_AGGREGATE = "cursor-aggregate";
 const CURSOR_MARKS = "cursor-marks";
 const CURSOR_ACCOUNT = "cursor-account";
+const CURSOR_ORDER = "cursor-order";
 
 describe("ProductService.getRecommendations", () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
     prismaMock.product.findMany.mockResolvedValue(page(8));
+    prismaMock.product.findFirst.mockResolvedValue({ id: "cursor" });
     prismaMock.review.groupBy.mockResolvedValue([
       { productId: "p1", _count: { _all: 2 }, _avg: { rating: 4.5 } },
     ]);
@@ -96,34 +94,31 @@ describe("ProductService.getRecommendations", () => {
     prismaMock.wishlistItem.findMany.mockResolvedValue([]);
   });
 
-  it("costs four queries on a miss and two on a hit for a page of eight (AC-4)", async () => {
+  it("costs five queries on a miss and two on a hit for a page of eight (AC-4)", async () => {
     const service = new ProductService();
 
     const first = await service.getRecommendations(
       userOwner("user-1"),
-      {},
       CURSOR_MISS,
       8,
     );
 
-    expect(queryCount()).toBe(4);
+    expect(queryCount()).toBe(5);
     expect(first.products).toHaveLength(8);
 
     const second = await service.getRecommendations(
       userOwner("user-1"),
-      {},
       CURSOR_MISS,
       8,
     );
 
-    expect(queryCount()).toBe(6);
+    expect(queryCount()).toBe(7);
     expect(second).toEqual(first);
   });
 
   it("reads the rating of the page in one grouped query, never one per card (AC-4)", async () => {
     await new ProductService().getRecommendations(
       userOwner("user-1"),
-      {},
       CURSOR_AGGREGATE,
       8,
     );
@@ -150,25 +145,71 @@ describe("ProductService.getRecommendations", () => {
     );
     const service = new ProductService();
 
-    const mine = await service.getRecommendations(userOwner("user-1"), {}, CURSOR_MARKS);
-    const theirs = await service.getRecommendations(userOwner("user-2"), {}, CURSOR_MARKS);
+    const mine = await service.getRecommendations(
+      userOwner("user-1"),
+      CURSOR_MARKS,
+    );
+    const theirs = await service.getRecommendations(
+      userOwner("user-2"),
+      CURSOR_MARKS,
+    );
 
-    expect(mine.products[0]).toMatchObject({ isWishlisted: false, quantityInCart: 2 });
-    expect(mine.products[1]).toMatchObject({ isWishlisted: true, quantityInCart: 0 });
-    expect(theirs.products[0]).toMatchObject({ isWishlisted: false, quantityInCart: 0 });
-    expect(theirs.products[1]).toMatchObject({ isWishlisted: false, quantityInCart: 0 });
+    expect(mine.products[0]).toMatchObject({
+      isWishlisted: false,
+      quantityInCart: 2,
+    });
+    expect(mine.products[1]).toMatchObject({
+      isWishlisted: true,
+      quantityInCart: 0,
+    });
+    expect(theirs.products[0]).toMatchObject({
+      isWishlisted: false,
+      quantityInCart: 0,
+    });
+    expect(theirs.products[1]).toMatchObject({
+      isWishlisted: false,
+      quantityInCart: 0,
+    });
     expect(theirs.nextCursor).toBe(mine.nextCursor);
     expect(theirs.products).toHaveLength(8);
+  });
+
+  it("orders the page deterministically and reads one extra row for hasNextPage", async () => {
+    await new ProductService().getRecommendations(userOwner("user-1"), CURSOR_ORDER);
+
+    expect(prismaMock.product.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: 9,
+      }),
+    );
+  });
+
+  it("refuses a cursor that does not point at a public product", async () => {
+    prismaMock.product.findFirst.mockResolvedValue(null);
+
+    await expect(
+      new ProductService().getRecommendations(userOwner("user-1"), "junk"),
+    ).rejects.toMatchObject({
+      status: 400,
+      code: "PRODUCT_INVALID_CURSOR",
+    });
   });
 
   it("keeps the cache key free of any account (AC-3)", async () => {
     const service = new ProductService();
 
-    const mine = await service.getRecommendations(userOwner("user-1"), {}, CURSOR_ACCOUNT);
-    const theirs = await service.getRecommendations(userOwner("user-2"), {}, CURSOR_ACCOUNT);
+    const mine = await service.getRecommendations(
+      userOwner("user-1"),
+      CURSOR_ACCOUNT,
+    );
+    const theirs = await service.getRecommendations(
+      userOwner("user-2"),
+      CURSOR_ACCOUNT,
+    );
 
     expect(theirs.nextCursor).toBe(mine.nextCursor);
-    // The second call reads the same stored page: one product query in total.
+
     expect(prismaMock.product.findMany).toHaveBeenCalledTimes(1);
   });
 });

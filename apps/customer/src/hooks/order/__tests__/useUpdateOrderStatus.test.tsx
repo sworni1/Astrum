@@ -83,7 +83,6 @@ describe("useUpdateOrderStatus", () => {
       [expect.any(Function)],
     ]);
 
-    // The list matcher covers the filtered keys too, and never the detail key.
     const [matcher] = state.mutate.mock.calls[2];
 
     expect(matcher("/orders?status=DELIVERED&q=pen")).toBe(true);

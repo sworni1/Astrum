@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
-import { FIELD, FIELD_HINT, FIELD_LABEL } from "@/features/pages/Profile/lib/styles";
+import {
+  FIELD,
+  FIELD_HINT,
+  FIELD_LABEL,
+} from "@/features/pages/Profile/lib/styles";
 
 type Props = {
   label: string;
@@ -8,7 +12,6 @@ type Props = {
   children: ReactNode;
 };
 
-/** One labelled control of a card body: label, control, optional hint (AC-5). */
 const ProfileField = ({ label, htmlFor, hint, children }: Props) => (
   <div className={FIELD}>
     <label className={FIELD_LABEL} htmlFor={htmlFor}>

@@ -20,12 +20,6 @@ const REFUSALS: Record<string, RefusalToast> = {
   VALIDATION: { key: "validation", retry: false },
 };
 
-/**
- * Every refusal the courier screen shows comes from the response code, never from
- * the server prose. `EMAIL_NOT_CONFIRMED` is not here on purpose: the shared
- * interceptor already raises that toast with a resend action, so a second copy
- * would fire twice (spec 0019, AC-12).
- */
 export const refusalToastFor = (error: unknown): RefusalToast => {
   const code = refusalCode(error);
 

@@ -1,39 +1,7 @@
-import { enCopy } from "./letters/en";
-import { ruCopy } from "./letters/ru";
+import { CATALOG } from "./constants/letter.constants";
+import { escapeHtml } from "./helpers/letter.helpers";
+import type { Letter, LetterLocale } from "./types/worker.types";
 
-export type Letter = {
-  subject: string;
-  text: string;
-  html: string;
-};
-
-export type LetterLocale = "en" | "ru";
-
-export type LetterCopy = {
-  subject: string;
-  greeting: string;
-  intro: string;
-  action: string;
-  hint: string;
-};
-
-const CATALOG: Record<LetterLocale, LetterCopy> = {
-  en: enCopy,
-  ru: ruCopy,
-};
-
-/** An unknown or missing language is English, never a failed delivery. */
-export const resolveLetterLocale = (value: unknown): LetterLocale =>
-  value === "ru" ? "ru" : "en";
-
-const escapeHtml = (value: string): string =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-
-/** One link, a plain part and a minimal HTML part, nothing else. */
 export const buildConfirmationLetter = (
   link: string,
   locale: LetterLocale = "en",

@@ -1,14 +1,8 @@
+import { describeError } from "../common/helpers/describeError";
 import { logger } from "../common/helpers/logger";
-import { loggedSid, type SessionStore, sessionKey } from "./sessionStore";
+import { loggedSid, sessionKey } from "./helpers/session.helpers";
+import type { SessionStore } from "./types/session.types";
 
-const describeError = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
-
-/**
- * Deletes the record of one session. A store failure is logged and swallowed:
- * the caller answers success, because signing the customer out of a session
- * that may still be alive is better than refusing a password change.
- */
 export const revokeSession = async (
   store: SessionStore,
   sid: string | undefined,

@@ -11,12 +11,6 @@ type Props = {
   currency: Order["currency"];
 };
 
-/**
- * One line of the order: the thumb, the shop, the name, the kind with its
- * quantity, the optional line status pill, and at the right the line amount with
- * its unit price pill (spec 0027, AC-3). The amount arrives multiplied from the
- * server, so nothing here computes money.
- */
 const OrderLine = ({ item, currency }: Props) => {
   const t = useTranslations("orders");
   const locale = useLocale();

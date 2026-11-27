@@ -11,22 +11,23 @@ export type FakeOrder = {
   id?: string;
   status?: string;
   paymentStatus?: string;
-  OrderItem?: Array<{ id: string; productId: string; quantity: number; status: string }>;
+  OrderItem?: Array<{
+    id: string;
+    productId: string;
+    quantity: number;
+    status: string;
+  }>;
 };
 
 type FakeTxOptions = {
   order?: FakeOrder;
   attempt?: FakeAttempt;
-  /** Rows the conditional attempt update reports as touched. */
+
   attemptUpdates?: number;
-  /** Rows the conditional order payment status update reports as touched. */
+
   orderUpdates?: number;
 };
 
-/**
- * One in memory transaction client for the payment transitions: every writer the
- * apply path uses is a jest mock, so a test asserts the exact write it expects.
- */
 export const createFakeTx = (options: FakeTxOptions = {}) => {
   const order = {
     id: "order-1",
@@ -72,11 +73,9 @@ export const createFakeTx = (options: FakeTxOptions = {}) => {
 
 export type FakeTx = ReturnType<typeof createFakeTx>;
 
-/** The apply functions take the real Prisma client type; a fake satisfies it at runtime. */
 export const asTx = (tx: FakeTx): Prisma.TransactionClient =>
   tx as unknown as Prisma.TransactionClient;
 
-/** The structured log lines a run wrote, parsed back from the console spy calls. */
 export const loggedEvents = (spy: jest.SpyInstance): string[] =>
   spy.mock.calls.map((call: unknown[]) => {
     const line = JSON.parse(String(call[0])) as { event?: string };

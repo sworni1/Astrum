@@ -51,7 +51,11 @@ describe("refusalReaction", () => {
   it("делает то же для выключенного метода (AC-6)", () => {
     expect(
       refusalReaction(new CheckoutRefusal("SHIPPING_METHOD_INACTIVE")),
-    ).toEqual({ key: "shippingInactive", resetMethod: true, resetPoint: false });
+    ).toEqual({
+      key: "shippingInactive",
+      resetMethod: true,
+      resetPoint: false,
+    });
   });
 
   it("оставляет поля как есть при несовпадении валюты (AC-6)", () => {

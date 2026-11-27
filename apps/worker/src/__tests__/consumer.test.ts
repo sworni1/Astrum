@@ -2,14 +2,13 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { ConsumeMessage } from "amqplib";
 import { createConfirmationHandler } from "../consumer";
-import type { Letter } from "../letter";
-import type { Mailer } from "../mailer";
 import {
   ATTEMPT_HEADER,
   CONFIRMATION_QUEUE,
   DEAD_LETTER_QUEUE,
   retryQueueName,
 } from "../topology";
+import type { Letter, Mailer } from "../types/worker.types";
 
 type Sent = { queue: string; headers: Record<string, unknown> };
 

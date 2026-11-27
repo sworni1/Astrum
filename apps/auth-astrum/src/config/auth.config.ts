@@ -1,32 +1,13 @@
+import {
+  readRequired,
+  withoutTrailingSlash,
+} from "./helpers/auth-config.helpers";
+
 export type AuthConfig = {
   rabbitUrl: string;
   storefrontUrl: string;
 };
 
-export type ConfirmOutcome = "ok" | "expired" | "used" | "invalid";
-
-const readRequired = (
-  env: NodeJS.ProcessEnv,
-  name: string,
-  hint: string,
-): string => {
-  const value = env[name]?.trim();
-
-  if (!value) {
-    throw new Error(`${name} is required: ${hint}`);
-  }
-
-  return value;
-};
-
-const withoutTrailingSlash = (value: string): string =>
-  value.replace(/\/+$/, "");
-
-/**
- * Checked before the Nest application is created, so a missing variable ends
- * the boot with a readable reason instead of a confirm route that redirects
- * somewhere broken.
- */
 export const loadAuthConfig = (
   env: NodeJS.ProcessEnv = process.env,
 ): AuthConfig => ({
@@ -43,8 +24,3 @@ export const loadAuthConfig = (
     ),
   ),
 });
-
-export const confirmRedirectUrl = (
-  storefrontUrl: string,
-  outcome: ConfirmOutcome,
-): string => `${storefrontUrl}/auth/confirm-email?status=${outcome}`;

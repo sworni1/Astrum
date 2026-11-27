@@ -7,11 +7,6 @@ type Props = {
   alt: string;
 };
 
-/**
- * The 64 by 64 thumb of a line, with the parcel icon as its fallback. The broken
- * source is a piece of state, so React owns the node and nothing is written
- * behind it (spec 0027, AC-3).
- */
 const OrderItemImage = ({ src, alt }: Props) => {
   const [failed, setFailed] = useState(false);
 

@@ -1,6 +1,5 @@
 import { refusalAnswered, refusalCode } from "@/common/helpers/apiRefusal";
 
-/** The catalog keys under `orders.payment` that answer a refused pay request. */
 export type PaymentRefusalKey =
   | "notPayable"
   | "alreadyPaid"
@@ -10,11 +9,10 @@ export type PaymentRefusalKey =
 
 export type PaymentRefusal = {
   key: PaymentRefusalKey;
-  /** True when the screen must re read the order before showing the message. */
+
   revalidate: boolean;
 };
 
-/** Every code the pay route can answer, in one table (AC-13, AC-15). */
 const REFUSAL_KEYS: Record<string, PaymentRefusalKey> = {
   ORDER_NOT_FOUND: "failed",
   ORDER_NOT_PAYABLE: "notPayable",
@@ -23,11 +21,6 @@ const REFUSAL_KEYS: Record<string, PaymentRefusalKey> = {
   PAYMENT_PROVIDER_UNAVAILABLE: "providerUnavailable",
 };
 
-/**
- * The global fetcher interceptor reads a code on `401` and `403` only, so these
- * branches come through `apiRefusal`, which reads one on any status. A request
- * that got no answer at all is not a refusal and answers the generic copy.
- */
 export const paymentRefusal = (error: unknown): PaymentRefusal => {
   if (!refusalAnswered(error)) {
     return { key: "failed", revalidate: false };

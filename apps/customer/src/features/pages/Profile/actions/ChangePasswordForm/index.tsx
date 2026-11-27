@@ -36,7 +36,6 @@ import {
 } from "@/features/pages/Profile/lib/styles";
 import { useUser } from "@/hooks/user/useUser";
 
-/** One row of the security card: the password change behind a dialog (AC-7). */
 const ChangePasswordForm = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 

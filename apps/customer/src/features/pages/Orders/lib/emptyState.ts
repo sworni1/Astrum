@@ -1,4 +1,3 @@
-/** Which of the three empty states applies, or none of them. */
 export type OrdersEmptyState = "none" | "noOrders" | "noResults" | "emptyTab";
 
 export type OrdersEmptyInput = {
@@ -9,11 +8,6 @@ export type OrdersEmptyInput = {
   isValidating: boolean;
 };
 
-/**
- * The precedence is fixed: a read in flight claims nothing, then "no orders at
- * all", then "nothing found", then "this tab is empty". Every gate reads the
- * settled query, never the raw input (spec 0025, AC-12).
- */
 export const ordersEmptyState = ({
   itemCount,
   allCount,
@@ -41,7 +35,6 @@ export type OrdersEmptyCopy = {
   textKey: "emptyText" | "emptySearchText" | "emptyTabText";
 };
 
-/** The copy of each state; the "no orders at all" pair is reused, not duplicated. */
 export const EMPTY_COPY: Record<
   Exclude<OrdersEmptyState, "none">,
   OrdersEmptyCopy

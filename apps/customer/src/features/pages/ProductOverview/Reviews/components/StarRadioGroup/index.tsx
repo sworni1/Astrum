@@ -11,10 +11,6 @@ type Props = {
   onChange: (value: number) => void;
 };
 
-/**
- * Four of these make the dialog: native radios inside a fieldset, so a keyboard
- * tabs into the group and the arrows move the pick (AC-8).
- */
 const StarRadioGroup = ({ name, label, value, onChange }: Props) => {
   const t = useTranslations("reviews");
 

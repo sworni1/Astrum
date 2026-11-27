@@ -15,7 +15,6 @@ const SIGN_IN_PATH = "/auth/signin";
 
 type ErrorsTranslator = ReturnType<typeof useTranslations<"errors">>;
 
-/** Messages for a toast raised before any screen has mounted. */
 const fallbackTranslator = createTranslator({
   locale: "en",
   messages: en,
@@ -27,19 +26,8 @@ let activeTranslator: ErrorsTranslator | undefined;
 const translateErrors = (): ErrorsTranslator =>
   activeTranslator ?? fallbackTranslator;
 
-/**
- * The session is really gone: the cookie cannot be used any more. A missing
- * cookie is not in this list, because a guest with no cookie reads the shop and
- * a redirect on the first render would kill the page (spec 0028, AC-13); a
- * cookie that never existed is caught by the route guard on the next navigation.
- */
 const SESSION_GONE_CODES = ["SESSION_REVOKED", "TOKEN_INVALID"];
 
-/**
- * One session ends once, however many requests notice it: the flag stops a
- * burst of refused calls (including the SWR retries) from stacking toasts and
- * navigations. A successful sign in resets it.
- */
 let sessionEnded = false;
 let storeWarningShown = false;
 let confirmationWarningShown = false;
@@ -48,7 +36,6 @@ export const resetSessionEnded = (): void => {
   sessionEnded = false;
 };
 
-/** A refusal code rides on a `401` and on a `403`; nothing else carries one. */
 const REFUSAL_STATUSES = [401, 403];
 
 const refusalCode = (error: unknown): string | undefined => {
@@ -56,8 +43,6 @@ const refusalCode = (error: unknown): string | undefined => {
     return undefined;
   }
 
-  // The EMAIL_NOT_CONFIRMED branch below is a `403`, so reading only a `401`
-  // left it unreachable (spec 0012, AC-10).
   const status = error.response?.status;
 
   if (!status || !REFUSAL_STATUSES.includes(status)) {
@@ -90,7 +75,6 @@ const endSessionHere = async (t: ErrorsTranslator): Promise<void> => {
     type: "error",
   });
 
-  // A full reload is the point: it drops every cached answer of the ended session.
   window.location.href = SIGN_IN_PATH;
 };
 
@@ -241,10 +225,6 @@ export const useFetcher = () => {
   const putItem = useCallback(
     async <TData>(url: string, { arg }: { arg?: TData } = {}) => {
       try {
-        // A route that takes no body is called with no body: the instance pins
-        // `Content-Type: application/json`, so axios would serialize `null`
-        // into the literal `null`, which `express.json()` refuses with a 400
-        // before any route runs (spec 0014, AC-4).
         const response = await fetcher.put(url, arg ?? undefined);
         return response.data;
       } catch (error) {

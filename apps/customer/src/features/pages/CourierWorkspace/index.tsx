@@ -8,7 +8,6 @@ import { resolveStaffPageState } from "@/hooks/staff/staffPage";
 import { useStaffCourier } from "@/hooks/staff/useStaffCourier";
 import CourierCard from "./components/CourierCard";
 
-/** The page of a courier: no point, because a courier names none (spec 0017, AC-13). */
 export default function CourierWorkspace() {
   const t = useTranslations("staff");
   const { isLoading, error, mutate } = useStaffCourier();

@@ -1,6 +1,3 @@
-// Graceful shutdown wrapper for the Next.js standalone server.
-// The generated server.js does not close its HTTP server on SIGTERM, so listen()
-// is patched to keep a reference and drain in-flight requests before exit.
 const http = require("node:http");
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;

@@ -14,19 +14,20 @@ type Row = { guestId: string | null; updatedAt: Date };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** A table that really deletes, so the test reads the surviving rows. */
 const table = (rows: Row[]) => ({
-  deleteMany: jest.fn(async ({ where }: { where: { updatedAt: { lt: Date } } }) => {
-    const before = rows.length;
-    const survivors = rows.filter(
-      (row) => !(row.updatedAt < where.updatedAt.lt && row.guestId !== null),
-    );
+  deleteMany: jest.fn(
+    async ({ where }: { where: { updatedAt: { lt: Date } } }) => {
+      const before = rows.length;
+      const survivors = rows.filter(
+        (row) => !(row.updatedAt < where.updatedAt.lt && row.guestId !== null),
+      );
 
-    rows.length = 0;
-    rows.push(...survivors);
+      rows.length = 0;
+      rows.push(...survivors);
 
-    return { count: before - survivors.length };
-  }),
+      return { count: before - survivors.length };
+    },
+  ),
 });
 
 const NOW = new Date("2026-11-18T12:00:00.000Z");
@@ -50,14 +51,16 @@ describe("runGuestSweep", () => {
       wishlistItem: table(wishRows),
     };
 
-    (prisma as unknown as { $transaction: jest.Mock }).$transaction.mockImplementation(
+    (
+      prisma as unknown as { $transaction: jest.Mock }
+    ).$transaction.mockImplementation(
       async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx),
     );
 
     const counts = await runGuestSweep(NOW);
 
     expect(counts).toEqual({ cartLines: 1, wishlistLines: 1 });
-    // The account row is never a candidate, however old it is.
+
     expect(cartRows.map((row) => row.guestId)).toEqual(["fresh", null]);
     expect(logger.info).toHaveBeenCalledWith({
       event: "guest.sweep.done",
@@ -75,12 +78,16 @@ describe("runGuestSweep", () => {
     };
     let cutoff: Date | undefined;
 
-    tx.cartItem.deleteMany.mockImplementation(async ({ where }: { where: { updatedAt: { lt: Date } } }) => {
-      cutoff = where.updatedAt.lt;
-      return { count: 0 };
-    });
+    tx.cartItem.deleteMany.mockImplementation(
+      async ({ where }: { where: { updatedAt: { lt: Date } } }) => {
+        cutoff = where.updatedAt.lt;
+        return { count: 0 };
+      },
+    );
 
-    (prisma as unknown as { $transaction: jest.Mock }).$transaction.mockImplementation(
+    (
+      prisma as unknown as { $transaction: jest.Mock }
+    ).$transaction.mockImplementation(
       async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx),
     );
 
@@ -98,7 +105,9 @@ describe("runGuestSweep", () => {
       wishlistItem: table([]),
     };
 
-    (prisma as unknown as { $transaction: jest.Mock }).$transaction.mockImplementation(
+    (
+      prisma as unknown as { $transaction: jest.Mock }
+    ).$transaction.mockImplementation(
       async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx),
     );
 

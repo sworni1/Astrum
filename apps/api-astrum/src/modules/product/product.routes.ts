@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireActiveAccount } from "../../middlewares/requireActiveAccount";
 import { requireSession } from "../../middlewares/resolveOwner";
 import { validateDto } from "../../middlewares/validateDto";
 import {
@@ -20,15 +21,14 @@ productRoutes.get(
 productRoutes.post(
   "/",
   requireSession,
+  requireActiveAccount,
   validateDto(CreateProductDto),
   productController.createProduct,
 );
 productRoutes.get("/:productId", productController.getProduct);
 
-// Nested review routes for a specific product
 productRoutes.use("/:productId/reviews", productReviewsRouter);
 
-// The caller's own liked set for this product (spec 0014, AC-3)
 productRoutes.use("/:productId/review-likes", productReviewLikesRouter);
 
 export default productRoutes;

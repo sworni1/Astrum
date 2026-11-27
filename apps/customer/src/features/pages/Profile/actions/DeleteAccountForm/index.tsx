@@ -24,7 +24,6 @@ import {
 } from "@/features/pages/Profile/lib/styles";
 import { useUser } from "@/hooks/user/useUser";
 
-/** The account removal card: the last card of the screen, in red (AC-7). */
 const DeleteAccountForm = () => {
   const { deleteAccountTrigger } = useUser();
   const t = useTranslations("profile");
@@ -35,10 +34,7 @@ const DeleteAccountForm = () => {
   };
 
   return (
-    <ProfileCard
-      className={DESTRUCTIVE_CARD}
-      testId="delete-account-card"
-    >
+    <ProfileCard className={DESTRUCTIVE_CARD} testId="delete-account-card">
       <div className={ROW}>
         <div>
           <h2 className={DESTRUCTIVE_TITLE}>{t("deleteTitle")}</h2>

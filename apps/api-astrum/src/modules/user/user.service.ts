@@ -1,18 +1,30 @@
-import { hash, verify } from "argon2";
-import { StatusCodes } from "http-status-codes";
-import { Prisma, type User } from "@astrum/db/client";
+import type { User } from "@astrum/db/client";
 import { UserStatus } from "@astrum/db/enums";
+import { hash, verify } from "argon2";
 import { prisma } from "../../../lib/prisma";
-import { AppError } from "../../common/helpers/appError";
+import {
+  hasForeignKeyViolationCode,
+  hasNotFoundCode,
+  isUniqueViolation,
+} from "../../common/helpers/prismaErrors";
 import { staffRolesOf } from "../../common/helpers/staffRoles";
 import { DEFAULT_LETTER_LOCALE, type LetterLocale } from "../../events/locale";
 import { publishConfirmationRequested } from "../../events/publisher";
 import { revokeSession } from "../../session/revokeSession";
 import { getSessionStore, type SessionStore } from "../../session/sessionStore";
+import { USER_PROFILE_SELECT } from "./constants/user.constants";
 import type {
   UpdateUserDto,
   updateUserPasswordDto,
 } from "./dto/update-user.dto";
+import {
+  deleteRestricted,
+  emailNotConfirmed,
+  emailTaken,
+  emailUnchanged,
+  invalidOldPassword,
+  userNotFound,
+} from "./helpers/user.errors";
 
 export class UserService {
   constructor(private readonly sessions: SessionStore = getSessionStore()) {}
@@ -20,20 +32,11 @@ export class UserService {
   async userInfo(userId: User["id"]) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        nickName: true,
-        email: true,
-        dateOfBirth: true,
-        gender: true,
-        status: true,
-        business: { select: { id: true } },
-        pointWorker: { select: { id: true } },
-        courier: { select: { id: true } },
-      },
+      select: USER_PROFILE_SELECT,
     });
 
     if (!user) {
-      throw new Error("User not found");
+      throw userNotFound();
     }
 
     const { business, pointWorker, courier, ...profile } = user;
@@ -57,26 +60,18 @@ export class UserService {
     });
 
     if (!user) {
-      throw new Error("User not found");
+      throw userNotFound();
     }
 
     const wantsNickName = dto.nickName !== undefined;
     const wantsEmail = dto.email !== undefined;
 
     if (user.status !== UserStatus.ACTIVE && wantsNickName) {
-      throw new AppError(
-        StatusCodes.FORBIDDEN,
-        "EMAIL_NOT_CONFIRMED",
-        "Confirm the email address to change other profile fields",
-      );
+      throw emailNotConfirmed();
     }
 
     if (wantsEmail && dto.email === user.email) {
-      throw new AppError(
-        StatusCodes.BAD_REQUEST,
-        "EMAIL_UNCHANGED",
-        "The address is already on your account",
-      );
+      throw emailUnchanged();
     }
 
     let updatedUser: User;
@@ -103,15 +98,8 @@ export class UserService {
         return updated;
       });
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
-        throw new AppError(
-          StatusCodes.CONFLICT,
-          "EMAIL_TAKEN",
-          "The address belongs to another account",
-        );
+      if (isUniqueViolation(error)) {
+        throw emailTaken();
       }
 
       throw error;
@@ -140,18 +128,16 @@ export class UserService {
     });
 
     if (!user) {
-      throw new Error("User not found");
+      throw userNotFound();
     }
 
     const pwMatches = await verify(user.passwordhash, dto.oldPassword);
 
     if (!pwMatches) {
-      throw new Error("The old password is incorrect");
+      throw invalidOldPassword();
     }
 
     const newHashedPassword = await hash(dto.newPassword);
-
-    await revokeSession(this.sessions, sid);
 
     const updatedUser = await prisma.user.update({
       where: {
@@ -162,20 +148,30 @@ export class UserService {
       },
     });
 
+    await revokeSession(this.sessions, sid);
+
     return this.userInfo(updatedUser.id);
   }
 
   async deleteUser(userId: User["id"], sid: string | undefined) {
-    await revokeSession(this.sessions, sid);
-
     try {
       await prisma.user.delete({
         where: {
           id: userId,
         },
       });
-    } catch {
-      throw new Error(`User not found`);
+    } catch (error) {
+      if (hasNotFoundCode(error)) {
+        throw userNotFound();
+      }
+
+      if (hasForeignKeyViolationCode(error)) {
+        throw deleteRestricted();
+      }
+
+      throw error;
     }
+
+    await revokeSession(this.sessions, sid);
   }
 }

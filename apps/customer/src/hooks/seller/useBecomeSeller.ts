@@ -12,7 +12,6 @@ export interface UseBecomeSellerReturn {
   error: unknown;
 }
 
-/** One deliberate action opens the shop of the signed in account (spec 0008). */
 export const useBecomeSeller = (): UseBecomeSellerReturn => {
   const { postItem } = useFetcher();
 

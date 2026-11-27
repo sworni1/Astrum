@@ -15,11 +15,6 @@ type Props = {
   bodyClassName?: string;
 };
 
-/**
- * One card of the checkout screen: a title row with an optional icon over a
- * 1px rule, then a padded body. The shell is the mockup's, not the shadcn
- * `Card`, which carries a shadow the drawing has none of (spec 0024, AC-10).
- */
 const CheckoutCard = ({ title, icon, children, bodyClassName }: Props) => (
   <section className={CARD}>
     <div className={CARD_HEADER}>

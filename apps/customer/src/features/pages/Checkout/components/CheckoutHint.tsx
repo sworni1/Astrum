@@ -6,10 +6,6 @@ type Props = {
   hint: CheckoutHintKey | null;
 };
 
-/**
- * The line under the submit button: the first field still blocking the order,
- * at most one, from the table in `lib/hints` (spec 0024, AC-14).
- */
 const CheckoutHint = ({ hint }: Props) => {
   const t = useTranslations("cart");
 

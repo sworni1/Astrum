@@ -16,10 +16,6 @@ import WorkOnAstrum from "./actions/WorkOnAstrum";
 import ProfileHeader from "./components/ProfileHeader";
 import ProfileSecurityCard from "./components/ProfileSecurityCard";
 
-/**
- * The account screen: a header, the profile data, the two role cards, the
- * security card and the removal card (spec 0023, AC-4 to AC-7).
- */
 export default function Profile() {
   const { profileData, profileIsLoading, profileIsError } = useUser();
   const t = useTranslations("profile");

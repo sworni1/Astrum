@@ -1,20 +1,16 @@
 import { ShoppingBag } from "lucide-react";
-import { Fragment } from "react";
 import { useTranslations } from "next-intl";
+import { Fragment } from "react";
 import type { Currency, ProductCartProps } from "@/common/types/product.types";
 import CheckoutCard from "@/features/pages/Checkout/components/CheckoutCard";
 import SelectedLine from "@/features/pages/Checkout/components/SelectedLine";
-import {
-  CARD_BODY_LINES,
-  RULE,
-} from "@/features/pages/Checkout/lib/styles";
+import { CARD_BODY_LINES, RULE } from "@/features/pages/Checkout/lib/styles";
 
 type Props = {
   lines: ProductCartProps[];
   currency: Currency;
 };
 
-/** The first card: what is being bought, one row per kept line (spec 0024, AC-10). */
 const SelectedLines = ({ lines, currency }: Props) => {
   const t = useTranslations("cart");
 

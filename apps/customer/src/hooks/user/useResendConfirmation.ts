@@ -7,11 +7,6 @@ import { showToast } from "@/common/helpers/showToast";
 
 export const RESEND_COOLDOWN_SECONDS = 60;
 
-/**
- * One cooldown for every resend button on the site: the address is sent
- * lowercased, and the button refuses to fire again for a minute after each
- * accepted request.
- */
 export const useResendConfirmation = () => {
   const t = useTranslations("confirmEmail");
   const [cooldown, setCooldown] = useState(0);

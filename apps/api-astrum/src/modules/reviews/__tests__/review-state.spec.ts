@@ -6,8 +6,8 @@ jest.mock("../../../../lib/prisma", () => ({
 }));
 
 import { prisma } from "../../../../lib/prisma";
-import { readReviewState } from "../review-state";
 import { userOwner } from "../../../common/types/owner";
+import { readReviewState } from "../review-state";
 
 const prismaMock = prisma as unknown as {
   orderItem: { findFirst: jest.Mock };

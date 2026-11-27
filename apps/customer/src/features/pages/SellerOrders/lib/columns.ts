@@ -16,17 +16,13 @@ export type SalesColumnKey =
 
 export type SalesColumn = {
   id: SalesColumnId;
-  /** The table head label. */
+
   headKey: SalesColumnKey;
-  /** The label the stacked card prints beside the value below `sm`. */
+
   labelKey: SalesColumnKey;
   align: "left" | "right";
 };
 
-/**
- * The six columns of the mockup, in its own order. One list keeps the table
- * head, the stacked card labels and the tests in step (spec 0026, AC-9, AC-12).
- */
 export const SALES_COLUMNS: readonly SalesColumn[] = [
   {
     id: "order",
@@ -66,7 +62,6 @@ export const SALES_COLUMNS: readonly SalesColumn[] = [
   },
 ];
 
-/** The mobile label of one column, so a cell never repeats a catalog key. */
 export const columnLabel = (id: SalesColumnId): SalesColumnKey => {
   const column = SALES_COLUMNS.find((entry) => entry.id === id);
 

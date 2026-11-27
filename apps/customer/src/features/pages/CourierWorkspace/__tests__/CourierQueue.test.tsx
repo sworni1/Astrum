@@ -129,9 +129,7 @@ const press = async (element: Element | null): Promise<void> => {
 };
 
 const triggers = (): Element[] =>
-  Array.from(
-    container.querySelectorAll('[data-slot="alert-dialog-trigger"]'),
-  );
+  Array.from(container.querySelectorAll('[data-slot="alert-dialog-trigger"]'));
 
 describe("CourierQueue", () => {
   beforeEach(() => {
@@ -198,10 +196,7 @@ describe("CourierQueue", () => {
 
     await press(document.querySelector('[data-slot="alert-dialog-action"]'));
 
-    expect(mocks.action.run).toHaveBeenCalledWith(
-      "order-bbbbbbbb",
-      "handover",
-    );
+    expect(mocks.action.run).toHaveBeenCalledWith("order-bbbbbbbb", "handover");
 
     const mine = mocks.queues.mine as QueueData;
     const available = mocks.queues.available as QueueData;
@@ -222,7 +217,9 @@ describe("CourierQueue", () => {
   });
 
   it("opens the cancel dialog with the money sentence on a paid parcel (AC-12)", async () => {
-    mocks.queues.mine = queueOf([order("order-bbbbbbbb", "Tverskaya 12", true)]);
+    mocks.queues.mine = queueOf([
+      order("order-bbbbbbbb", "Tverskaya 12", true),
+    ]);
     await renderQueue();
 
     await press(triggers()[1] ?? null);
@@ -230,9 +227,7 @@ describe("CourierQueue", () => {
     const dialog = document.querySelector('[role="alertdialog"]');
 
     expect(dialog?.textContent).toContain("staff.courier.queue.cancelTitle");
-    expect(dialog?.textContent).toContain(
-      "staff.courier.queue.cancelPaidText",
-    );
+    expect(dialog?.textContent).toContain("staff.courier.queue.cancelPaidText");
   });
 
   it("shows the refusal the response code names, not the server prose (AC-12)", async () => {
@@ -311,7 +306,8 @@ describe("CourierQueue", () => {
     await renderQueue();
 
     const more = Array.from(container.querySelectorAll("button")).filter(
-      (element) => element.textContent?.includes("staff.courier.queue.showMore"),
+      (element) =>
+        element.textContent?.includes("staff.courier.queue.showMore"),
     );
 
     expect(more).toHaveLength(1);

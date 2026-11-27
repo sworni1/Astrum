@@ -1,4 +1,4 @@
-import type { LetterCopy } from "../letter";
+import type { LetterCopy } from "../types/worker.types";
 
 export const ruCopy: LetterCopy = {
   subject: "Подтвердите адрес почты в Astrum",

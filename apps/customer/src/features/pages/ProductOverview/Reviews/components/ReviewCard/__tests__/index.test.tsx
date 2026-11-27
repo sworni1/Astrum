@@ -1,11 +1,11 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ProductReview } from "@/common/types/review.types";
 import { showToast } from "@/common/helpers/showToast";
-import { useReviewLikes } from "@/hooks/review/useReviewLikes";
+import type { ProductReview } from "@/common/types/review.types";
 import ReviewCard from "@/features/pages/ProductOverview/Reviews/components/ReviewCard";
 import { useReviewCounts } from "@/features/pages/ProductOverview/Reviews/hooks/useReviewCounts";
+import { useReviewLikes } from "@/hooks/review/useReviewLikes";
 
 const mocks = vi.hoisted(() => ({
   getData: vi.fn(),
@@ -43,7 +43,6 @@ const reviewOf = (overrides: Partial<ProductReview> = {}): ProductReview => ({
   ...overrides,
 });
 
-/** The same wiring the block uses: one liked set and one count map per block. */
 const Harness = ({ reviews }: { reviews: ProductReview[] }) => {
   const likes = useReviewLikes("product-1");
   const counts = useReviewCounts();
@@ -132,8 +131,7 @@ describe("ReviewCard like control (spec 0014)", () => {
     expect(likes[0].getAttribute("aria-pressed")).toBe("true");
     expect(likes[0].textContent).toContain("4");
     expect(likes[0].getAttribute("aria-busy")).toBe("true");
-    // No body: the route takes none, and a JSON `null` body is refused by
-    // `express.json()` before the route runs (spec 0014, AC-4).
+
     expect(mocks.putItem).toHaveBeenCalledWith("/reviews/review-1/like");
 
     await act(async () => {

@@ -22,7 +22,6 @@ export interface UseGetOrderByIdReturn {
 export const useGetOrderById = (orderId: string): UseGetOrderByIdReturn => {
   const { getData } = useFetcher();
 
-  // Ensure orderId is valid before making the request
   const shouldFetch = orderId && orderId.trim() !== "";
   const key = shouldFetch ? `/orders/${orderId}` : null;
 

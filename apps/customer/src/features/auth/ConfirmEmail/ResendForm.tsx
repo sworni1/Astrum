@@ -11,10 +11,6 @@ type Props = {
   defaultEmail?: string;
 };
 
-/**
- * One form for every state a confirmation link can land in: the address is
- * prefilled when the session knows it.
- */
 export default function ResendForm({ defaultEmail = "" }: Props) {
   const t = useTranslations("confirmEmail");
   const [typedEmail, setTypedEmail] = useState<string | null>(null);

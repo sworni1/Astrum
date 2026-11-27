@@ -18,7 +18,6 @@ export interface UseShippingMethodsReturn {
   mutate: KeyedMutator<ShippingMethodsResponse>;
 }
 
-/** The delivery methods the shop offers, read from the gateway (AC-8). */
 export const useShippingMethods = (): UseShippingMethodsReturn => {
   const { getData } = useFetcher();
   const { data, error, isLoading, mutate } = useSWR<

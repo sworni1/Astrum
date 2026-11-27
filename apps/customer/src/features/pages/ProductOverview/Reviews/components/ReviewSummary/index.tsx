@@ -2,14 +2,16 @@
 
 import { useTranslations } from "next-intl";
 import type { ReviewAggregate } from "@/common/types/review.types";
-import { distributionRows, formatAverageRating } from "@/features/pages/ProductOverview/Reviews/lib/distribution";
 import StarRating from "@/features/pages/ProductOverview/Reviews/components/StarRating";
+import {
+  distributionRows,
+  formatAverageRating,
+} from "@/features/pages/ProductOverview/Reviews/lib/distribution";
 
 type Props = {
   aggregate: ReviewAggregate;
 };
 
-/** Average, total and the five shares; nothing at all when nothing is rated. */
 const ReviewSummary = ({ aggregate }: Props) => {
   const t = useTranslations("reviews");
 
@@ -44,7 +46,9 @@ const ReviewSummary = ({ aggregate }: Props) => {
                 style={{ width: `${row.share}%` }}
               />
             </div>
-            <dd className="w-10 text-end text-muted-foreground">{row.share}%</dd>
+            <dd className="w-10 text-end text-muted-foreground">
+              {row.share}%
+            </dd>
           </div>
         ))}
       </dl>

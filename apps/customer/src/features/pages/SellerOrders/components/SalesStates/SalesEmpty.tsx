@@ -11,10 +11,6 @@ type Props = {
   query: string;
 };
 
-/**
- * One of the three empty states. The search field stays visible above, so the
- * seller can always clear the query from here (spec 0026, AC-11).
- */
 const SalesEmpty = ({ state, query }: Props) => {
   const t = useTranslations("seller");
   const copy = SALES_EMPTY_COPY[state];

@@ -22,12 +22,6 @@ jest.mock("../../../../lib/prisma", () => ({
 
 import shippingRoutes from "../shipping.routes";
 
-/**
- * `app.ts` cannot be imported here: it needs `AUTH_SERVICE_URL`, a Redis
- * session store and a live Prisma client at module load. So the router is
- * mounted in a bare app with a counting stub where the real session middleware
- * sits, which is the seam `app.ts` wires (AC-14).
- */
 const SESSION_COOKIE = "__auth=session";
 const APP_SOURCE = readFileSync(join(__dirname, "../../../app.ts"), "utf8");
 

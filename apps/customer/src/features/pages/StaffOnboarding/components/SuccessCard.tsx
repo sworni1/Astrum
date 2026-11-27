@@ -10,11 +10,6 @@ import type { StaffPoint } from "@/hooks/staff/staff.types";
 
 type Props = { granted: GrantedRole };
 
-/**
- * The card a successful action leaves behind: the stored role, and for the
- * point the stored name and address. It takes focus and is announced, so a
- * keyboard reader learns the job landed (AC-3, AC-15).
- */
 const SuccessCard = ({ granted }: Props) => {
   const t = useTranslations("staff");
   const heading = useRef<HTMLHeadingElement>(null);

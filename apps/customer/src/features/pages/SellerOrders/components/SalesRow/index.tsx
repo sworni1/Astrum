@@ -5,7 +5,10 @@ import { itemStatusKey } from "@/common/helpers/itemStatus";
 import { formatMoney } from "@/common/helpers/money";
 import type { SellerLineRow } from "@/common/types/order.types";
 import { browserTimeZone } from "@/features/pages/SellerOrders/lib/format";
-import { badgeToneOf, BADGE_TONE_CLASS } from "@/features/pages/SellerOrders/lib/status";
+import {
+  BADGE_TONE_CLASS,
+  badgeToneOf,
+} from "@/features/pages/SellerOrders/lib/status";
 import {
   AMOUNT,
   BADGE,
@@ -21,11 +24,6 @@ type Props = {
   line: SellerLineRow;
 };
 
-/**
- * One line of the table: the order number, the product, where it is received,
- * the line subtotal, the order date and the status badge. No control sends a
- * request (spec 0026, AC-9).
- */
 const SalesRow = ({ line }: Props) => {
   const t = useTranslations("seller");
   const tStatus = useTranslations("orders.itemStatus");
@@ -45,7 +43,10 @@ const SalesRow = ({ line }: Props) => {
     <tr className={ROW}>
       <td className={CELL}>
         <span className={CELL_LABEL}>{t("columns.orderNumber")}</span>
-        <span className={ORDER_NUMBER} aria-label={t("orderNumber", { number: orderNumber })}>
+        <span
+          className={ORDER_NUMBER}
+          aria-label={t("orderNumber", { number: orderNumber })}
+        >
           {orderNumber}
         </span>
       </td>
@@ -74,7 +75,9 @@ const SalesRow = ({ line }: Props) => {
 
       <td className={`${CELL} sm:justify-end`}>
         <span className={CELL_LABEL}>{t("columns.status")}</span>
-        <span className={`${BADGE} ${BADGE_TONE_CLASS[badgeToneOf(line.status)]}`}>
+        <span
+          className={`${BADGE} ${BADGE_TONE_CLASS[badgeToneOf(line.status)]}`}
+        >
           {statusKey === undefined ? line.status : tStatus(statusKey)}
         </span>
       </td>

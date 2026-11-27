@@ -12,7 +12,6 @@ type Props = {
   testId?: string;
 };
 
-/** The one status pill of this screen, on the three token sets of AC-8. */
 const Pill = ({ tone, children, testId }: Props) => (
   <span
     className={cn(PILL_CLASS, PILL_TONE_CLASSES[tone])}

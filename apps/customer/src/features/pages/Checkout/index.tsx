@@ -13,10 +13,6 @@ import {
   CHECKOUT_WRAPPER,
 } from "@/features/pages/Checkout/lib/styles";
 
-/**
- * The checkout screen: the route states, the title block and the two columns
- * (spec 0024, AC-1, AC-9). It holds no state of its own.
- */
 export default function Checkout() {
   const route = useCheckoutRoute();
   const t = useTranslations("cart");

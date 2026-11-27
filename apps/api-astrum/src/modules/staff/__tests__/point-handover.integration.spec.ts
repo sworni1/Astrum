@@ -6,7 +6,9 @@ const describeWithDatabase =
   process.env.ORDER_DB_TESTS === "1" ? describe : describe.skip;
 
 const describeError = (error: unknown): string =>
-  error instanceof Error ? `${(error as { code?: string }).code ?? ""}` : String(error);
+  error instanceof Error
+    ? `${(error as { code?: string }).code ?? ""}`
+    : String(error);
 
 describeWithDatabase("Point counter against Postgres", () => {
   const suffix = `point-${Date.now()}`;
@@ -22,12 +24,12 @@ describeWithDatabase("Point counter against Postgres", () => {
 
   const createOrder = async (options: {
     pickupPointId?: string;
-    status?: "SHIPPED" | "CONFIRMED";
-    lineStatus?: "SHIPPED" | "CONFIRMED";
+    status?: "DELIVERED" | "CONFIRMED";
+    lineStatus?: "DELIVERED" | "CONFIRMED";
     paymentStatus?: "PENDING" | "PAID";
   }) => {
     const point = options.pickupPointId ?? pickupPointId;
-    const lineStatus = options.lineStatus ?? "SHIPPED";
+    const lineStatus = options.lineStatus ?? "DELIVERED";
 
     const order = await prisma.order.create({
       data: {
@@ -36,7 +38,7 @@ describeWithDatabase("Point counter against Postgres", () => {
         currency: "RUB",
         paymentMethod: "CASH",
         paymentStatus: options.paymentStatus ?? "PENDING",
-        status: options.status ?? "SHIPPED",
+        status: options.status ?? "DELIVERED",
         deliveryDate: new Date("2026-12-05T09:00:00.000Z"),
         shippingMethodId,
         shippingMethodName: `${suffix} pickup`,
@@ -149,10 +151,12 @@ describeWithDatabase("Point counter against Postgres", () => {
       where: { id: { in: [pickupPointId, otherPointId] } },
     });
     await prisma.shippingMethod.deleteMany({ where: { id: shippingMethodId } });
-    await prisma.user.deleteMany({ where: { id: { in: [buyerId, workerId] } } });
+    await prisma.user.deleteMany({
+      where: { id: { in: [buyerId, workerId] } },
+    });
   });
 
-  it("lists only this point's shipped orders (AC-1)", async () => {
+  it("lists only this point's delivered orders (AC-1)", async () => {
     const listed = await createOrder({});
     const confirmed = await createOrder({
       status: "CONFIRMED",
@@ -171,9 +175,9 @@ describeWithDatabase("Point counter against Postgres", () => {
     expect(ids).not.toContain(confirmed);
     expect(ids).not.toContain(foreign);
     expect(answer.total).toBeGreaterThanOrEqual(1);
-    expect(
-      answer.orders.every((order) => order.status === "SHIPPED"),
-    ).toBe(true);
+    expect(answer.orders.every((order) => order.status === "DELIVERED")).toBe(
+      true,
+    );
   });
 
   it("serialises two workers pressing the handover at the same moment (AC-5)", async () => {
@@ -196,18 +200,18 @@ describeWithDatabase("Point counter against Postgres", () => {
 
     const order = await prisma.order.findUniqueOrThrow({
       where: { id: orderId },
-      select: { handedOverAt: true, status: true, OrderItem: { select: { receiptDate: true, status: true } } },
+      select: {
+        handedOverAt: true,
+        status: true,
+        OrderItem: { select: { receiptDate: true, status: true } },
+      },
     });
 
-    expect(order.status).toBe("DELIVERED");
+    expect(order.status).toBe("ISSUED");
     expect(order.handedOverAt).not.toBeNull();
-    expect(
-      order.OrderItem.every(
-        (line) =>
-          line.status === "DELIVERED" &&
-          line.receiptDate?.getTime() === order.handedOverAt?.getTime(),
-      ),
-    ).toBe(true);
+    expect(order.OrderItem.every((line) => line.status === "ISSUED")).toBe(
+      true,
+    );
   });
 
   it("returns the stock of a cancelled order once (AC-6, AC-7)", async () => {

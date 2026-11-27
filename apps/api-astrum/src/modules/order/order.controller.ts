@@ -1,10 +1,11 @@
 import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { handleErrors } from "../../common/helpers/errorHandler";
+import { parsePagination } from "../../common/helpers/pagination";
+import { invalidPagination } from "./helpers/order-errors.helpers";
 import { toOrderJson, toOrderListJson } from "./order.mapper";
-import { parseOrderListQuery } from "./order-list-query";
 import { OrderService } from "./order.service";
-import { parseSellerOrderQuery } from "./seller-order-query";
+import { parseOrderListQuery, parseSellerOrderQuery } from "./order-query";
 import { SellerOrderService } from "./seller-order.service";
 
 const orderService = new OrderService();
@@ -12,7 +13,6 @@ const sellerOrderService = new SellerOrderService();
 
 const userIdOf = (req: Request): string =>
   (req as Request & { userId: string }).userId;
-
 
 export class OrderController {
   async createOrder(req: Request, res: Response) {
@@ -37,9 +37,18 @@ export class OrderController {
 
   async getOrdersByUserId(req: Request, res: Response) {
     try {
+      const { page: pageInput, limit: limitInput, ...query } = req.query ?? {};
+      const pagination = parsePagination(
+        pageInput,
+        limitInput,
+        invalidPagination,
+      );
+
       const page = await orderService.getOrdersByUserId(
         userIdOf(req),
-        parseOrderListQuery(req.query),
+        parseOrderListQuery(query),
+        pagination.page,
+        pagination.limit,
       );
 
       res.status(StatusCodes.OK).json(toOrderListJson(page));

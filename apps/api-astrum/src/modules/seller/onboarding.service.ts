@@ -1,25 +1,15 @@
 import { randomUUID } from "node:crypto";
-import { Prisma } from "@astrum/db/client";
 import { prisma } from "../../../lib/prisma";
 import { logger } from "../../common/helpers/logger";
-
-const BUSINESS_ID_PREFIX = "biz_";
+import { isUniqueViolation } from "../../common/helpers/prismaErrors";
+import {
+  BUSINESS_ID_PREFIX,
+  OWNED_SHOP_SELECT,
+} from "./constants/seller.constants";
+import { readOwnedShop } from "./helpers/onboarding.helpers";
 
 export type OnboardingResult = { isSeller: true; businessName: string };
 
-type OwnedShop = { id: string; name: string };
-
-const readOwnedShop = (userId: string): Promise<OwnedShop | null> =>
-  prisma.business.findUnique({
-    where: { ownerUserId: userId },
-    select: { id: true, name: true },
-  });
-
-/**
- * Opens one shop for the account. The first call creates the row; a repeat and
- * a lost race both answer with the existing shop, so the unique index on
- * `ownerUserId` stays the single source of "one shop per account" (AC-7).
- */
 export class SellerOnboardingService {
   async createShop(userId: string, name: string): Promise<OnboardingResult> {
     const existing = await readOwnedShop(userId);
@@ -35,7 +25,7 @@ export class SellerOnboardingService {
           name,
           ownerUserId: userId,
         },
-        select: { id: true, name: true },
+        select: OWNED_SHOP_SELECT,
       });
 
       logger.info({
@@ -46,10 +36,7 @@ export class SellerOnboardingService {
 
       return { isSeller: true, businessName: created.name };
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
+      if (isUniqueViolation(error)) {
         const winner = await readOwnedShop(userId);
 
         if (winner) {

@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  OrderItemStatus,
-  PaymentStatus,
-} from "@/common/types/order.types";
+import { OrderItemStatus, PaymentStatus } from "@/common/types/order.types";
 import {
   lineTone,
   PAYMENT_TONES,

@@ -14,12 +14,6 @@ type CartSelection = {
   toggleAll: (checked: boolean) => void;
 };
 
-/**
- * The ticked lines of the cart. It is the only writer of the checkout handoff
- * key: a restored id the live cart no longer holds is dropped, and the write
- * happens on every change so a return from `/checkout` finds the same lines
- * (spec 0024, AC-2, AC-6).
- */
 export const useCartSelection = (items: ProductCartProps[]): CartSelection => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const restored = useRef(false);

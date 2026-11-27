@@ -1,10 +1,11 @@
 import { prisma } from "../../../lib/prisma";
 import { logger } from "../../common/helpers/logger";
-import { amountMatchesOrder } from "./payment.apply";
+import { hasUniqueViolationCode } from "../../common/helpers/prismaErrors";
+import { PAYMENT_PROVIDER } from "./constants/payment.constants";
+import { amountMatchesOrder, toMinorUnits } from "./helpers/payment.helpers";
 import { findAttemptForEvent } from "./payment.attempts";
 import { applyProviderEvent } from "./payment.dispatch";
-import type { ProviderEvent } from "./payment.gateway";
-import { toMinorUnits } from "./payment.money";
+import type { ProviderEvent } from "./types/payment.types";
 
 export type WebhookOutcome =
   | "applied"
@@ -13,21 +14,11 @@ export type WebhookOutcome =
   | "mismatch"
   | "ignored";
 
-const isUniqueViolation = (error: unknown): boolean =>
-  typeof error === "object" &&
-  error !== null &&
-  (error as { code?: unknown }).code === "P2002";
-
-/**
- * The delivery is written down before it is applied, and the unique key decides
- * a race: the loser of two concurrent deliveries answers without a second write
- * (AC-5).
- */
 const recordDelivery = async (event: ProviderEvent) => {
   try {
     return await prisma.paymentEvent.create({
       data: {
-        provider: "STRIPE",
+        provider: PAYMENT_PROVIDER,
         eventId: event.id,
         type: event.type,
         orderId: event.orderId,
@@ -39,7 +30,7 @@ const recordDelivery = async (event: ProviderEvent) => {
       },
     });
   } catch (error) {
-    if (isUniqueViolation(error)) {
+    if (hasUniqueViolationCode(error)) {
       return null;
     }
 
@@ -47,11 +38,18 @@ const recordDelivery = async (event: ProviderEvent) => {
   }
 };
 
-/**
- * A verified callback: recorded, matched to one attempt, checked against the
- * stored order, then applied. Every branch answers 200 to the provider, because
- * a retry would only repeat the same outcome (AC-5).
- */
+const releaseDelivery = async (id: string): Promise<void> => {
+  try {
+    await prisma.paymentEvent.delete({ where: { id } });
+  } catch (error) {
+    logger.error({
+      event: "payment.webhook.release_failed",
+      paymentEventId: id,
+      reason: error instanceof Error ? error.message : String(error),
+    });
+  }
+};
+
 export const handleWebhookEvent = async (
   event: ProviderEvent,
 ): Promise<WebhookOutcome> => {
@@ -63,6 +61,18 @@ export const handleWebhookEvent = async (
     return "replayed";
   }
 
+  try {
+    return await applyStoredEvent(stored.id, event);
+  } catch (error) {
+    await releaseDelivery(stored.id);
+    throw error;
+  }
+};
+
+const applyStoredEvent = async (
+  storedId: string,
+  event: ProviderEvent,
+): Promise<WebhookOutcome> => {
   const attempt = await findAttemptForEvent(event);
 
   if (attempt === null) {
@@ -76,9 +86,7 @@ export const handleWebhookEvent = async (
     return "unmatched";
   }
 
-  if (
-    !amountMatchesOrder(attempt.order, event.amount, event.currency)
-  ) {
+  if (!amountMatchesOrder(attempt.order, event.amount, event.currency)) {
     logger.warn({
       event: "payment.webhook.amount_mismatch",
       eventId: event.id,
@@ -101,7 +109,7 @@ export const handleWebhookEvent = async (
   }
 
   await prisma.paymentEvent.update({
-    where: { id: stored.id },
+    where: { id: storedId },
     data: { applied: true, paymentId: attempt.id },
   });
 

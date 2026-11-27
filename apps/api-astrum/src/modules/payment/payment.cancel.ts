@@ -1,16 +1,11 @@
 import { logger } from "../../common/helpers/logger";
+import { describeError } from "../../events/describe-error";
 import { newestOpenAttempt } from "./payment.attempts";
 import { paymentGateway } from "./payment.gateway.registry";
 
-const describe = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
-
-/**
- * The customer cancel expires the hosted session before its transaction opens,
- * because the network call must never run while the order row is locked. A
- * failure is logged and does not block the cancellation (AC-11).
- */
-export const expireSessionForCancel = async (orderId: string): Promise<void> => {
+export const expireSessionForCancel = async (
+  orderId: string,
+): Promise<void> => {
   const gateway = paymentGateway();
 
   if (gateway === null) {
@@ -30,7 +25,7 @@ export const expireSessionForCancel = async (orderId: string): Promise<void> => 
       event: "payment.cancel.expire_failed",
       orderId,
       paymentId: attempt.id,
-      reason: describe(error),
+      reason: describeError(error),
     });
   }
 };

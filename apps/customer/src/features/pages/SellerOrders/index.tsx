@@ -19,11 +19,6 @@ import StatsRow from "./components/StatsRow";
 import { useSalesFilters } from "./hooks/useSalesFilters";
 import { StateScreen } from "./StateScreen";
 
-/**
- * The seller sales screen: four tiles, three tabs with their counts, one search
- * field, one flat line table and its pager. Composition only, and no control
- * writes anything (spec 0026).
- */
 export default function SellerOrders() {
   const t = useTranslations("seller");
   const screen = useSalesFilters();
@@ -54,8 +49,12 @@ export default function SellerOrders() {
               <h1 className={HEADING}>{t("title")}</h1>
               <p className={HEADING_MUTED}>{t("subtitle")}</p>
             </div>
-            {page === undefined || screen.failed || screen.empty !== "none" ? null : (
-              <p className={HEADING_MUTED}>{t("found", { count: page.total })}</p>
+            {page === undefined ||
+            screen.failed ||
+            screen.empty !== "none" ? null : (
+              <p className={HEADING_MUTED}>
+                {t("found", { count: page.total })}
+              </p>
             )}
           </div>
 

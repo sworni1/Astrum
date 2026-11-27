@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { avatarInitial, roleBadgeKey } from "@/features/pages/Profile/lib/roleBadge";
+import {
+  avatarInitial,
+  roleBadgeKey,
+} from "@/features/pages/Profile/lib/roleBadge";
 
 describe("roleBadgeKey", () => {
   it("labels a seller as a seller (AC-8)", () => {

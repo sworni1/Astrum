@@ -17,10 +17,6 @@ type Props = {
   lines: ProductCartProps[];
 };
 
-/**
- * The two columns inside one `<form>`: the three cards on the left, the sticky
- * summary on the right (spec 0024, AC-9, AC-13).
- */
 const CheckoutForm = ({ lines }: Props) => {
   const { form, state, submit } = useCheckoutForm(lines);
 

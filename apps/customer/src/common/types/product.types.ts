@@ -40,7 +40,6 @@ export type GetRecommendationsType = {
   hasNextPage: boolean;
 };
 
-//
 export enum PropertyLabel {
   Color = "Color",
   Size = "Size",

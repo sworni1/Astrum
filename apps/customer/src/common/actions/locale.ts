@@ -8,11 +8,6 @@ import {
   LOCALE_COOKIE_MAX_AGE_SECONDS,
 } from "@/i18n/config";
 
-/**
- * The language is a preference, not a secret, so the cookie stays readable by
- * the request helpers that follow it. Any value outside the two known ones is
- * ignored rather than guessed at.
- */
 export async function setLocale(locale: string): Promise<void> {
   if (!isLocale(locale)) {
     return;
