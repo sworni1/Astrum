@@ -1,5 +1,6 @@
 jest.mock("../../../../lib/prisma", () => ({
   prisma: {
+    user: { updateMany: jest.fn() },
     business: { findUnique: jest.fn(), create: jest.fn() },
   },
 }));
@@ -10,6 +11,7 @@ import { logger } from "../../../common/helpers/logger";
 import { SellerOnboardingService } from "../onboarding.service";
 
 const prismaMock = prisma as unknown as {
+  user: { updateMany: jest.Mock };
   business: { findUnique: jest.Mock; create: jest.Mock };
 };
 

@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
+import { UserRole } from "@astrum/db/enums";
 import { prisma } from "../../../lib/prisma";
+import { addRole } from "../../common/helpers/addRole";
 import { logger } from "../../common/helpers/logger";
 import { isUniqueViolation } from "../../common/helpers/prismaErrors";
 import {
@@ -27,6 +29,8 @@ export class SellerOnboardingService {
         },
         select: OWNED_SHOP_SELECT,
       });
+
+      await addRole(userId, UserRole.SELLER);
 
       logger.info({
         event: "seller.onboarding.completed",

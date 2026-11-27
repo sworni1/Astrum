@@ -1,5 +1,7 @@
+import { UserRole } from "@astrum/db/enums";
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "../../../lib/prisma";
+import { addRole } from "../../common/helpers/addRole";
 import { AppError } from "../../common/helpers/appError";
 import { logger } from "../../common/helpers/logger";
 import { isUniqueViolation } from "../../common/helpers/prismaErrors";
@@ -121,6 +123,8 @@ export class StaffService {
       throw error;
     }
 
+    await addRole(userId, UserRole.POINT_WORKER);
+
     logger.info({ event: "staff.point-worker.granted", userId, pickupPointId });
 
     return { staffRoles: await this.staffRoles(userId), point };
@@ -135,6 +139,7 @@ export class StaffService {
     if (!existing) {
       try {
         await prisma.courier.create({ data: { userId } });
+        await addRole(userId, UserRole.COURIER);
         logger.info({ event: "staff.courier.granted", userId });
       } catch (error) {
         if (!isUniqueViolation(error)) {

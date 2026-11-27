@@ -1,6 +1,6 @@
 jest.mock("../../../../lib/prisma", () => ({
   prisma: {
-    user: { findUnique: jest.fn() },
+    user: { findUnique: jest.fn(), updateMany: jest.fn() },
     business: { findUnique: jest.fn(), create: jest.fn() },
   },
 }));

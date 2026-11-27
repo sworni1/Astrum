@@ -29,7 +29,8 @@
     "prisma:deploy": "prisma migrate deploy && prisma generate",
     "seed:excel": "node --max-old-space-size=8192 ./node_modules/tsx/dist/cli.mjs prisma/seedFromExcel.ts",
     "assign-business": "tsx scripts/assignBusiness.ts",
-    "pickup-point": "tsx scripts/pickupPoint.ts"
+    "pickup-point": "tsx scripts/pickupPoint.ts",
+    "user-role": "tsx scripts/userRole.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.1",

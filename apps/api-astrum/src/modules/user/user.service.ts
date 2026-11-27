@@ -7,6 +7,7 @@ import {
   hasNotFoundCode,
   isUniqueViolation,
 } from "../../common/helpers/prismaErrors";
+import { permissionsOf } from "../../common/helpers/permissions";
 import { staffRolesOf } from "../../common/helpers/staffRoles";
 import { DEFAULT_LETTER_LOCALE, type LetterLocale } from "../../events/locale";
 import { publishConfirmationRequested } from "../../events/publisher";
@@ -39,12 +40,14 @@ export class UserService {
       throw userNotFound();
     }
 
-    const { business, pointWorker, courier, ...profile } = user;
+    const { business, pointWorker, courier, roles, ...profile } = user;
 
     return {
       ...profile,
       isSeller: business !== null,
       staffRoles: staffRolesOf({ pointWorker, courier }),
+      roles,
+      permissions: permissionsOf(roles),
     };
   }
 

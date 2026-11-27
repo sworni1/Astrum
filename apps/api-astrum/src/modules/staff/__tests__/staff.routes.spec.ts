@@ -1,6 +1,6 @@
 jest.mock("../../../../lib/prisma", () => ({
   prisma: {
-    user: { findUnique: jest.fn() },
+    user: { findUnique: jest.fn(), updateMany: jest.fn() },
     pickupPoint: { findUnique: jest.fn() },
     pointWorker: {
       findUnique: jest.fn(),
@@ -25,7 +25,7 @@ import {
 import staffRoutes from "../staff.routes";
 
 const prismaMock = prisma as unknown as {
-  user: { findUnique: jest.Mock };
+  user: { findUnique: jest.Mock; updateMany: jest.Mock };
   pickupPoint: { findUnique: jest.Mock };
   pointWorker: { findUnique: jest.Mock; create: jest.Mock; update: jest.Mock };
   courier: { findUnique: jest.Mock; create: jest.Mock };

@@ -22,6 +22,7 @@ model User {
   preferredCategories String[]
   dateOfBirth         DateTime
   status              UserStatus          @default(PENDING)
+  roles               UserRole[]          @default([CUSTOMER])
   business            Business?
   lastViewedProduct   LastViewedProduct[]
   reviews             Review[]
@@ -347,6 +348,14 @@ enum Gender {
 enum UserStatus {
   PENDING
   ACTIVE
+}
+
+enum UserRole {
+  CUSTOMER
+  SELLER
+  POINT_WORKER
+  COURIER
+  OWNER
 }
 
 enum ReviewStatus {

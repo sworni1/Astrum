@@ -3,10 +3,13 @@ jest.mock("../../../../lib/prisma", () => ({
 }));
 
 import { prisma } from "../../../../lib/prisma";
+import { PERMISSIONS, permissionsOf } from "../../../common/helpers/permissions";
 import type { SessionStore } from "../../../session/sessionStore";
 import { UserService } from "../user.service";
 
 const findUnique = prisma.user.findUnique as unknown as jest.Mock;
+
+const customerPermissions = permissionsOf(["CUSTOMER"]);
 
 const baseUser = {
   nickName: "ivan",
@@ -14,6 +17,7 @@ const baseUser = {
   dateOfBirth: new Date("2000-01-01T00:00:00.000Z"),
   gender: "MALE",
   status: "ACTIVE",
+  roles: ["CUSTOMER"],
 };
 
 describe("UserService.userInfo", () => {
@@ -33,7 +37,12 @@ describe("UserService.userInfo", () => {
 
     const result = await service.userInfo("user-1");
 
-    expect(result).toEqual({ ...baseUser, isSeller: true, staffRoles: [] });
+    expect(result).toEqual({
+      ...baseUser,
+      isSeller: true,
+      staffRoles: [],
+      permissions: customerPermissions,
+    });
   });
 
   it("answers isSeller false without a business and keeps the account state (AC-2)", async () => {
@@ -52,6 +61,7 @@ describe("UserService.userInfo", () => {
       status: "PENDING",
       isSeller: false,
       staffRoles: [],
+      permissions: customerPermissions,
     });
   });
 
@@ -99,6 +109,7 @@ describe("UserService.userInfo", () => {
       ...baseUser,
       isSeller: false,
       staffRoles: ["POINT_WORKER"],
+      permissions: customerPermissions,
     });
   });
 
@@ -136,5 +147,20 @@ describe("UserService.userInfo", () => {
         courier: { select: { id: true } },
       }),
     });
+  });
+
+  it("returns the stored roles and grants the owner every permission", async () => {
+    findUnique.mockResolvedValue({
+      ...baseUser,
+      roles: ["OWNER"],
+      business: null,
+      pointWorker: null,
+      courier: null,
+    });
+
+    const result = await service.userInfo("user-1");
+
+    expect(result.roles).toEqual(["OWNER"]);
+    expect(result.permissions).toEqual([...PERMISSIONS]);
   });
 });

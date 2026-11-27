@@ -4,6 +4,7 @@ export const USER_PROFILE_SELECT = {
   dateOfBirth: true,
   gender: true,
   status: true,
+  roles: true,
   business: { select: { id: true } },
   pointWorker: { select: { id: true } },
   courier: { select: { id: true } },
