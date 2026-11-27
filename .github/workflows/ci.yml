@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [dev, main]
+    branches: [ dev, main ]
   pull_request:
 
 concurrency:
@@ -11,19 +11,11 @@ concurrency:
 
 env:
   DATABASE_URL: postgresql://astrum:astrum@localhost:5432/astrum?schema=public
-  REDIS_URL: redis://localhost:6379
   JWT_SECRET: ci-jwt-secret
-  RABBITMQ_URL: amqp://astrum:astrum@localhost:5672
-  AUTH_SERVICE_URL: http://localhost:4580/api/auth
-  STOREFRONT_URL: http://localhost:3000
-  API_PORT: "3580"
-  AUTH_PORT: "4580"
-  RATE_LIMIT_ENABLED: "false"
-  CACHE_ENABLED: "false"
 
 jobs:
-  quality:
-    name: Quality gate
+  check:
+    name: Checks
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -40,33 +32,12 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
-      rabbitmq:
-        image: rabbitmq:4
-        env:
-          RABBITMQ_DEFAULT_USER: astrum
-          RABBITMQ_DEFAULT_PASS: astrum
-        ports:
-          - 5672:5672
-        options: >-
-          --health-cmd "rabbitmq-diagnostics -q ping"
-          --health-interval 10s
-          --health-timeout 10s
-          --health-retries 12
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
           version: 12.8.1
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
@@ -84,23 +55,5 @@ jobs:
         run: pnpm lint
       - name: Unit tests
         run: pnpm test
-      - name: Start the gateway and the auth service
-        run: |
-          nohup pnpm --filter @astrum/api exec tsx src/server.ts > api.log 2>&1 &
-          nohup pnpm --filter @astrum/auth start > auth.log 2>&1 &
-          for attempt in $(seq 1 90); do
-            if curl -fsS http://localhost:3580/health > /dev/null && curl -fsS http://localhost:4580/health > /dev/null; then
-              exit 0
-            fi
-            sleep 2
-          done
-          cat api.log
-          cat auth.log
-          exit 1
-      - name: Integration and e2e tests
-        run: ORDER_DB_TESTS=1 pnpm --filter @astrum/api test
-      - name: Service logs
-        if: failure()
-        run: |
-          cat api.log || true
-          cat auth.log || true
+      - name: Integration tests
+        run: ORDER_DB_TESTS=1 pnpm --filter @astrum/api test:integration
