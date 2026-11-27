@@ -23,6 +23,9 @@
     "check-types": {
       "dependsOn": ["^build", "^check-types"]
     },
+    "@astrum/db#check-types": {
+      "dependsOn": ["^build", "build"]
+    },
     "test": {
       "dependsOn": ["^build"]
     },

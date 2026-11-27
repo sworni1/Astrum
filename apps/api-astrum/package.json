@@ -9,6 +9,8 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --passWithNoTests",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "test:cov": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "test:integration": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathIgnorePatterns order-flow.e2e",
+    "test:e2e": "node --experimental-vm-modules node_modules/jest/bin/jest.js order-flow.e2e",
     "lint": "echo \"[api-astrum] no ESLint configured — skipping\" && exit 0",
     "format": "echo \"[api-astrum] no Prettier configured — skipping\" && exit 0",
     "format:check": "echo \"[api-astrum] no Prettier configured — skipping\" && exit 0",
