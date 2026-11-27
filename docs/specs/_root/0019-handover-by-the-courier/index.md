@@ -1,7 +1,7 @@
 # 0019. Handover by the courier
 
 **Date**: 2026-11-14
-**Status**: In Progress
+**Status**: Paused
 
 _This is the build spec. The decision record (context, options, rationale) lives in [rationale.md](rationale.md); the verification steps live in [verify.md](verify.md)._
 
