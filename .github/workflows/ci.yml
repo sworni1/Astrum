@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DATABASE_URL: postgresql://astrum:astrum@localhost:5432/astrum?schema=public
+  REDIS_URL: redis://localhost:6379
+  JWT_SECRET: ci-jwt-secret
+  RABBITMQ_URL: amqp://astrum:astrum@localhost:5672
+  AUTH_SERVICE_URL: http://localhost:4580/api/auth
+  STOREFRONT_URL: http://localhost:3000
+  API_PORT: "3580"
+  AUTH_PORT: "4580"
+  RATE_LIMIT_ENABLED: "false"
+  CACHE_ENABLED: "false"
+
+jobs:
+  quality:
+    name: Quality gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: astrum
+          POSTGRES_PASSWORD: astrum
+          POSTGRES_DB: astrum
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U astrum -d astrum"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      rabbitmq:
+        image: rabbitmq:4
+        env:
+          RABBITMQ_DEFAULT_USER: astrum
+          RABBITMQ_DEFAULT_PASS: astrum
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 10s
+          --health-timeout 10s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.8.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Generate the Prisma client
+        run: pnpm db:generate
+      - name: Apply migrations
+        run: pnpm prisma:migrate:deploy
+      - name: Build the shared database client
+        run: pnpm --filter @astrum/db build
+      - name: Type check
+        run: pnpm check-types
+      - name: Lint
+        run: pnpm lint
+      - name: Unit tests
+        run: pnpm test
+      - name: Start the gateway and the auth service
+        run: |
+          nohup pnpm --filter @astrum/api exec tsx src/server.ts > api.log 2>&1 &
+          nohup pnpm --filter @astrum/auth start > auth.log 2>&1 &
+          for attempt in $(seq 1 90); do
+            if curl -fsS http://localhost:3580/health > /dev/null && curl -fsS http://localhost:4580/health > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat api.log
+          cat auth.log
+          exit 1
+      - name: Integration and e2e tests
+        run: ORDER_DB_TESTS=1 pnpm --filter @astrum/api test
+      - name: Service logs
+        if: failure()
+        run: |
+          cat api.log || true
+          cat auth.log || true
